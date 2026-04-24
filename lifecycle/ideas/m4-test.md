@@ -1,7 +1,7 @@
 ---
 title: M4 Test Artifact
 type: idea
-status: clarifying
+status: rejected
 lineage: m4-test
 ---
 
