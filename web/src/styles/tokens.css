@@ -1,0 +1,79 @@
+/* Design tokens — CSS custom properties */
+:root {
+  /* Colour palette — light mode */
+  --color-bg: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-border-dark: #334155;
+
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+
+  --color-accent: #2563eb;
+  --color-accent-subtle: #dbeafe;
+
+  --color-error: #dc2626;
+  --color-warning: #d97706;
+  --color-success: #16a34a;
+
+  /* Sidebar (always dark) */
+  --color-sidebar: #1e293b;
+  --color-sidebar-text: #e2e8f0;
+  --color-sidebar-text-muted: #94a3b8;
+  --color-sidebar-hover: rgba(255,255,255,0.06);
+  --color-sidebar-active: #2563eb;
+
+  /* Spacing (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Typography */
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.125rem;
+  --text-xl:   1.25rem;
+  --text-2xl:  1.5rem;
+
+  /* Radii */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+
+  /* Node type colours (used by graph) */
+  --node-type-idea:          #f59e0b;
+  --node-type-requirement:   #3b82f6;
+  --node-type-plan:          #8b5cf6;
+  --node-type-implementation:#10b981;
+  --node-type-test:          #06b6d4;
+  --node-type-release:       #ef4444;
+  --node-type-default:       #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-border: #334155;
+
+    --color-text: #f1f5f9;
+    --color-text-muted: #94a3b8;
+
+    --color-accent: #3b82f6;
+    --color-accent-subtle: #1e3a5f;
+
+    --color-error: #f87171;
+    --color-warning: #fbbf24;
+    --color-success: #4ade80;
+  }
+}
