@@ -31,6 +31,11 @@ const router = createRouter({
           component: () => import('@/views/project/ArtifactListView.vue'),
         },
         {
+          path: 'artifacts/:pathMatch(.*)+',
+          name: 'artifact-editor',
+          component: () => import('@/views/project/ArtifactEditorView.vue'),
+        },
+        {
           path: 'graph',
           name: 'graph',
           component: () => import('@/views/project/PlaceholderView.vue'),
