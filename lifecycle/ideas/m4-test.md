@@ -1,7 +1,7 @@
 ---
 title: M4 Test Artifact
 type: idea
-status: draft
+status: clarifying
 lineage: m4-test
 ---
 
