@@ -74,14 +74,37 @@ func (s *Server) buildRouter() chi.Router {
 
 			// Artifacts
 			r.Get("/artifacts", s.handleListArtifacts)
-			// Chi wildcards are greedy, so dispatch history vs content manually.
+			r.Post("/artifacts", s.handleCreateArtifact)
+			// Chi wildcards are greedy, so dispatch sub-routes manually.
 			r.Get("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
-				if strings.HasSuffix(chi.URLParam(r, "*"), "/history") {
+				param := chi.URLParam(r, "*")
+				if strings.HasSuffix(param, "/history") {
 					s.handleGetArtifactHistory(w, r)
 					return
 				}
 				s.handleGetArtifact(w, r)
 			})
+			r.Put("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
+				s.handleUpdateArtifact(w, r)
+			})
+			r.Delete("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
+				param := chi.URLParam(r, "*")
+				// Strip any accidental trailing slash.
+				r2 := r.WithContext(r.Context())
+				_ = param
+				s.handleDeleteArtifact(w, r2)
+			})
+			r.Post("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
+				param := chi.URLParam(r, "*")
+				if strings.HasSuffix(param, "/rename") {
+					s.handleRenameArtifact(w, r)
+					return
+				}
+				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
+			})
+
+			// WebSocket
+			r.Get("/ws", s.handleWebSocket)
 
 			// Graph and discovery
 			r.Get("/graph", s.handleGraph)

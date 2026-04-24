@@ -2,7 +2,7 @@
 
 Living document summarising project state. Updated on every commit per the Commit Conventions in [CLAUDE.md](../CLAUDE.md).
 
-**Current stage:** M2 complete — artifact indexing, SQLite index, read-only HTTP API. Next: M3 (write path + git integration).
+**Current stage:** M3 complete — write path, git integration, fsnotify watcher, WebSocket hub. Next: M4 (auth + workflow engine).
 
 ---
 
@@ -14,6 +14,7 @@ Rolling log — add a dated bullet per commit.
 - **2026-04-24** — Requirements flow completed: Q&A rounds, detailed spec distilled, lifecycle directory structure established, `CLAUDE.md` created with commit conventions, first implementation-plan artifact (`plans/create-claude-md.md`) saved.
 - **2026-04-24** — Three development plans generated from the detailed requirements: backend (`…-2-be.md`), frontend (`…-3-fe.md`), test (`…-4-test.md`). Each phased into 6 milestones with cross-plan coordination noted.
 - **2026-04-24** — M1 + M2 implemented: repo scaffold (`cmd/`, `internal/`, `web/`, `Makefile`), `internal/artifact` parser, `internal/index` SQLite layer, `internal/project` container, full read-only HTTP API (`/artifacts`, `/graph`, `/labels`, `/lineages`, `/parse-errors`). Fixed chi wildcard routing (greedy wildcard requires inline dispatch for suffix-matched sub-routes). Acceptance verified: 7 lifecycle artifacts indexed, graph returns 7 nodes + 19 edges.
+- **2026-04-24** — M3 implemented: `internal/sandbox` (path traversal guard), `internal/git` (go-git wrapper: branch-per-lineage, AddAndCommit, Log, identity resolution), `internal/hub` (WebSocket broadcast), `internal/watcher` (fsnotify debouncer → incremental re-index + events), write API (`POST /artifacts`, `PUT /artifacts/*`, `DELETE /artifacts/*`, `POST /artifacts/*/rename`), WebSocket endpoint (`GET /api/p/:project/ws`), git history handler. Acceptance verified: create via API → file on disk + branch created + commit; rename → inbound links rewritten in one atomic commit; external file drop → re-indexed in < 500 ms.
 
 ---
 
@@ -29,17 +30,19 @@ Rolling log — add a dated bullet per commit.
 - Test plan — [lifecycle/test-plans/Innovation Maker - Making Releases from Ideas-4-test.md](../lifecycle/test-plans/Innovation Maker - Making Releases from Ideas-4-test.md)
 - **M1 (skeleton)**: `cmd/kaos-control/main.go`, `Makefile`, `web/embed.go`, config loading, project registry, signal handling
 - **M2 (artifact indexing)**: `internal/artifact` (parser, links, types), `internal/index` (SQLite schema, scan, all queries), `internal/project` (runtime container), HTTP API (`/artifacts`, `/graph`, `/labels`, `/lineages`, `/parse-errors`)
+- **M3 (write path + git)**: `internal/sandbox`, `internal/git`, `internal/hub`, `internal/watcher`; write API + WebSocket endpoint; git history; watcher-driven re-index
 
 ---
 
 ## Planned
 
-### Next: M3 — Write path + Git (≈ 3 days)
-- `POST /artifacts`, `PUT /artifacts/*`, `DELETE /artifacts/*`
-- Slug rename with link rewrite (atomic git commit)
-- go-git wrapper: commit per change with templated message, branch-per-lineage creation
-- fsnotify watcher → incremental re-index + WebSocket `file.changed` event
-- **Acceptance** (from BE plan §18): create artifact via API → file created, branch created, commit emitted, event broadcast; rename slug → inbound links rewritten in one commit; external file drop → re-indexed in < 1 s
+### Next: M4 — Auth & Workflow (≈ 2 days)
+- argon2id local accounts (`POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`)
+- Session cookie middleware; CSRF double-submit cookie
+- Workflow engine: transitions, role authorisation, `CanTransition`
+- `POST /artifacts/*path/transition` endpoint + rejection-child-artifact creation
+- Required-plans gate (`GateReady`)
+- **Acceptance**: login flow works; transitioning respects role matrix; rejection creates child artifact with reviewer note
 
 ---
 

@@ -424,6 +424,42 @@ func (idx *Index) Lineages() ([]*LineageSummary, error) {
 	return result, nil
 }
 
+// NextIndexForLineage returns the next monotonic index to use when creating a new
+// artifact for lineage. Returns 0 if the lineage has no artifacts yet (originating
+// file), 2 if only the originating file exists, or max+1 otherwise.
+func (idx *Index) NextIndexForLineage(lineage string) (int, error) {
+	var maxIdx sql.NullInt64
+	err := idx.db.QueryRow(`SELECT MAX(idx) FROM artifacts WHERE lineage = ?`, lineage).Scan(&maxIdx)
+	if err != nil {
+		return 0, err
+	}
+	if !maxIdx.Valid {
+		return 0, nil // no artifacts for this lineage yet → originating file
+	}
+	if maxIdx.Int64 == 0 {
+		return 2, nil // only the originating file exists → next is -2
+	}
+	return int(maxIdx.Int64) + 1, nil
+}
+
+// InboundLinks returns the distinct source paths of all links pointing at dstPath.
+func (idx *Index) InboundLinks(dstPath string) ([]string, error) {
+	rows, err := idx.db.Query(`SELECT DISTINCT src FROM links WHERE dst = ?`, dstPath)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var srcs []string
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		srcs = append(srcs, s)
+	}
+	return srcs, rows.Err()
+}
+
 // ParseErrors returns all recorded parse errors.
 type ParseErrorRow struct {
 	Path    string `json:"path"`

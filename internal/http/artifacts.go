@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/artifact"
+	git "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/index"
 )
 
@@ -83,7 +85,29 @@ func (s *Server) handleGetArtifact(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetArtifactHistory handles GET /api/p/:project/artifacts/*path/history
-// Stub for M2 — full git history comes in M3.
 func (s *Server) handleGetArtifactHistory(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"commits": []any{}})
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	param := chi.URLParam(r, "*")
+	relPath := filepath.ToSlash(strings.TrimSuffix(param, "/history"))
+
+	if p.Git == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"commits": []any{}, "note": "project is not a git repository"})
+		return
+	}
+
+	limit := 20
+	commits, err := p.Git.Log(relPath, limit)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("git_error", err.Error()))
+		return
+	}
+	if commits == nil {
+		commits = []*git.CommitInfo{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"commits": commits})
 }

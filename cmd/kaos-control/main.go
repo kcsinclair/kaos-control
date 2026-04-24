@@ -45,6 +45,9 @@ func run() error {
 		return fmt.Errorf("loading project registry from %s: %w", appCfg.ProjectsDir, err)
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	// Open each project (loads config + opens/scans SQLite index).
 	projects := make(map[string]*project.Project, len(entries))
 	for _, e := range entries {
@@ -58,6 +61,11 @@ func run() error {
 		projects[e.Name] = p
 	}
 
+	// Start file watchers (non-blocking; each runs until ctx is cancelled).
+	for _, p := range projects {
+		p.StartWatcher(ctx)
+	}
+
 	srv := khttp.New(khttp.ServerConfig{
 		Listen:   appCfg.Server.Listen,
 		TLSOn:    appCfg.Server.TLS.Enabled,
@@ -65,9 +73,6 @@ func run() error {
 		TLSKey:   appCfg.Server.TLS.KeyFile,
 		Frontend: web.FS,
 	}, projects)
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	return srv.ListenAndServe(ctx)
 }

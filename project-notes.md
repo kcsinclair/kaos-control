@@ -63,6 +63,13 @@ Then going to use a sonnet agent to start creating the code.
 
 ### third prompt for the coding backend
 
+Switch model to Sonnet
+
+```
+Please review the development plan in "lifecycle/backend-plans/Innovation Maker - Making Releases from Ideas-2-be.md"
+Please proceed, and let me know if you have any questions.
+```
+
 ### fourth prompt for the coding frontend
 
 ### fifth prompt for the coding tests
