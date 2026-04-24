@@ -23,7 +23,7 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: (to) => `/p/${to.params.project}/artifacts`,
+          redirect: (to) => `/p/${to.params.project}/graph`,
         },
         {
           path: 'artifacts',
@@ -38,7 +38,7 @@ const router = createRouter({
         {
           path: 'graph',
           name: 'graph',
-          component: () => import('@/views/project/PlaceholderView.vue'),
+          component: () => import('@/views/project/GraphView.vue'),
         },
         {
           path: 'agents',

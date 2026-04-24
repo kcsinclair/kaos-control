@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "3d-force-graph": "^1.80.0",
+    "lucide-vue-next": "^1.0.0",
     "markdown-it": "^14.1.0",
     "pinia": "^2.1.7",
     "vue": "^3.4.21",
@@ -23,6 +25,9 @@
     "vue-tsc": "^2.0.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "vue-demi"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "vue-demi"
+    ]
   }
 }

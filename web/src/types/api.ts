@@ -76,6 +76,34 @@ export interface LineageSummary {
   statuses: Record<string, number>
 }
 
+export interface GraphNode {
+  id: string
+  title: string
+  type: string
+  status: string
+  stage: string
+  lineage: string
+  slug: string
+  index: number
+}
+
+export interface GraphEdge {
+  source: string
+  target: string
+  kind: string
+}
+
+export interface GraphData {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+}
+
+export interface GraphFilter {
+  types?: string[]
+  statuses?: string[]
+  lineages?: string[]
+}
+
 export type WsEventType =
   | 'file.changed'
   | 'artifact.indexed'

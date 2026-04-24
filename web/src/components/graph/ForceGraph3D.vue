@@ -1,0 +1,117 @@
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import ForceGraph3D from '3d-force-graph'
+import type { GraphNode, GraphEdge } from '@/types/api'
+
+const props = defineProps<{
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+}>()
+
+const emit = defineEmits<{
+  nodeClick: [node: GraphNode]
+}>()
+
+const container = ref<HTMLElement>()
+
+const NODE_COLORS: Record<string, string> = {
+  idea: '#f59e0b',
+  requirement: '#3b82f6',
+  plan: '#8b5cf6',
+  implementation: '#10b981',
+  test: '#06b6d4',
+  release: '#ef4444',
+}
+
+const EDGE_COLORS: Record<string, string> = {
+  parent: '#94a3b8',
+  depends_on: '#f97316',
+  blocks: '#ef4444',
+  related_to: '#64748b',
+}
+
+function nodeColor(n: GraphNode): string {
+  return NODE_COLORS[n.type] ?? '#6b7280'
+}
+
+function edgeColor(e: GraphEdge): string {
+  return EDGE_COLORS[e.kind] ?? '#64748b'
+}
+
+// Non-reactive: the library owns this reference
+let graph: ReturnType<typeof ForceGraph3D> | null = null
+let ro: ResizeObserver | null = null
+
+function buildGraphData() {
+  // Spread to plain objects so the library can augment them (x/y/z) without
+  // tripping over Vue's reactivity proxies.
+  return {
+    nodes: props.nodes.map((n) => ({ ...n })),
+    links: props.edges.map((e) => ({ ...e })),
+  }
+}
+
+onMounted(() => {
+  if (!container.value) return
+
+  graph = ForceGraph3D()(container.value)
+    .nodeId('id')
+    .nodeLabel((n: object) => {
+      const node = n as GraphNode
+      return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:#1e293b;border-radius:4px;color:#f1f5f9">${node.title || node.slug}<br/><span style="opacity:.6">${node.type} · ${node.status}</span></div>`
+    })
+    .nodeColor((n: object) => nodeColor(n as GraphNode))
+    .nodeVal((n: object) => {
+      const node = n as GraphNode
+      // Size slightly by lineage position — earlier artifacts are anchor points
+      return Math.max(1, 4 - node.index * 0.3)
+    })
+    .linkSource('source')
+    .linkTarget('target')
+    .linkColor((l: object) => edgeColor(l as GraphEdge))
+    .linkWidth(0.5)
+    .linkDirectionalArrowLength(3)
+    .linkDirectionalArrowRelPos(1)
+    .linkCurvature(0.1)
+    .backgroundColor('#0f172a')
+    .showNavInfo(false)
+    .onNodeClick((n: object, _event: MouseEvent) => emit('nodeClick', n as GraphNode))
+    .graphData(buildGraphData())
+
+  // Fit camera after initial layout settles
+  setTimeout(() => graph?.zoomToFit(400, 80), 1000)
+
+  // Keep canvas filling its container
+  ro = new ResizeObserver(() => {
+    if (container.value) {
+      graph?.width(container.value.clientWidth).height(container.value.clientHeight)
+    }
+  })
+  ro.observe(container.value)
+})
+
+onUnmounted(() => {
+  ro?.disconnect()
+  graph?._destructor()
+  graph = null
+})
+
+// Refresh graph data when props change (filters applied upstream)
+watch(
+  () => [props.nodes, props.edges],
+  () => graph?.graphData(buildGraphData()),
+  { deep: false },
+)
+</script>
+
+<template>
+  <div ref="container" class="force-graph-container" />
+</template>
+
+<style scoped>
+.force-graph-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+</style>
