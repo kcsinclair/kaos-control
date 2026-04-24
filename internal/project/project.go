@@ -7,10 +7,12 @@ import (
 	"log/slog"
 	"path/filepath"
 
+	"github.com/kaos-control/kaos-control/internal/agent"
 	"github.com/kaos-control/kaos-control/internal/config"
 	kgit "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
+	"github.com/kaos-control/kaos-control/internal/lock"
 	"github.com/kaos-control/kaos-control/internal/watcher"
 	"github.com/kaos-control/kaos-control/internal/workflow"
 )
@@ -24,12 +26,19 @@ type Project struct {
 	Hub      *hub.Hub
 	Watcher  *watcher.Watcher
 	Workflow *workflow.Engine
+	Locks    *lock.Manager
+	Agents   *agent.Manager // nil if no agents configured
+}
+
+// OpenOptions configures optional parameters for Open.
+type OpenOptions struct {
+	MaxConcurrentAgents int
 }
 
 // Open loads the project config, opens the SQLite index, scans the lifecycle tree,
 // and initialises the git repo wrapper and event hub.
 // dbDir is the app-level data directory; per-project DBs live at dbDir/<name>/index.db.
-func Open(entry *config.ProjectEntry, dbDir string) (*Project, error) {
+func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project, error) {
 	cfg, err := config.LoadProject(entry.Path)
 	if err != nil {
 		return nil, fmt.Errorf("project %q: loading config: %w", entry.Name, err)
@@ -45,7 +54,6 @@ func Open(entry *config.ProjectEntry, dbDir string) (*Project, error) {
 
 	w, err := watcher.New(entry.Path, idx, h)
 	if err != nil {
-		// Non-fatal: log and continue without file watching.
 		slog.Warn("project: failed to create watcher", "name", entry.Name, "err", err)
 		w = nil
 	}
@@ -62,7 +70,29 @@ func Open(entry *config.ProjectEntry, dbDir string) (*Project, error) {
 
 	wf := workflow.New(cfg.Transitions)
 
-	return &Project{Entry: entry, Cfg: cfg, Idx: idx, Git: gitRepo, Hub: h, Watcher: w, Workflow: wf}, nil
+	locks := lock.New(idx, h)
+
+	maxConcurrent := opts.MaxConcurrentAgents
+	if maxConcurrent <= 0 {
+		maxConcurrent = 4
+	}
+
+	var agentMgr *agent.Manager
+	if len(cfg.Agents) > 0 {
+		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, entry.Path)
+	}
+
+	return &Project{
+		Entry:    entry,
+		Cfg:      cfg,
+		Idx:      idx,
+		Git:      gitRepo,
+		Hub:      h,
+		Watcher:  w,
+		Workflow: wf,
+		Locks:    locks,
+		Agents:   agentMgr,
+	}, nil
 }
 
 // StartWatcher launches the fsnotify watcher goroutine.
@@ -76,6 +106,11 @@ func (p *Project) StartWatcher(ctx context.Context) {
 			slog.Error("watcher stopped with error", "project", p.Entry.Name, "err", err)
 		}
 	}()
+}
+
+// StartLockReaper launches the lock reaper goroutine.
+func (p *Project) StartLockReaper(ctx context.Context) {
+	p.Locks.StartReaper(ctx)
 }
 
 // Close releases resources held by the project.

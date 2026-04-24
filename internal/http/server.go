@@ -119,6 +119,13 @@ func (s *Server) buildRouter() chi.Router {
 				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
 			})
 
+			// Agents
+			r.Get("/agents", s.handleListAgents)
+			r.Post("/agents/{name}/run", s.handleStartAgentRun)
+			r.Get("/agents/runs", s.handleListAgentRuns)
+			r.Get("/agents/runs/{run_id}", s.handleGetAgentRun)
+			r.Post("/agents/runs/{run_id}/kill", s.handleKillAgentRun)
+
 			// WebSocket
 			r.Get("/ws", s.handleWebSocket)
 

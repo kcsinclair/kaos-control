@@ -147,6 +147,37 @@ func BranchNameFor(template, slug, lineage string) string {
 	return strings.TrimRight(r.Replace(template), "-/")
 }
 
+// ModifiedFiles returns project-relative paths of files that are new or modified
+// in the working tree but not yet committed. If allowedPaths is non-empty, only
+// files whose path starts with one of those prefixes are included.
+func (repo *Repo) ModifiedFiles(allowedPaths []string) ([]string, error) {
+	wt, err := repo.r.Worktree()
+	if err != nil {
+		return nil, fmt.Errorf("getting worktree: %w", err)
+	}
+	status, err := wt.Status()
+	if err != nil {
+		return nil, fmt.Errorf("git status: %w", err)
+	}
+	var out []string
+	for path, s := range status {
+		if s.Worktree != gogit.Untracked && s.Worktree != gogit.Modified && s.Worktree != gogit.Added {
+			continue
+		}
+		if len(allowedPaths) == 0 {
+			out = append(out, path)
+			continue
+		}
+		for _, ap := range allowedPaths {
+			if strings.HasPrefix(path, ap) {
+				out = append(out, path)
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
 // ResolveIdentity returns the author name/email to use for commits.
 // Falls back to defaults when the git config has no user identity set.
 func (repo *Repo) ResolveIdentity() (name, email string) {

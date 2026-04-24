@@ -460,6 +460,273 @@ func (idx *Index) InboundLinks(dstPath string) ([]string, error) {
 	return srcs, rows.Err()
 }
 
+// ----- agent runs -----
+
+// ErrLocked is returned when a lineage lock is already held.
+var ErrLocked = fmt.Errorf("lineage already locked")
+
+// AgentRunRow is a record in the agent_runs table.
+type AgentRunRow struct {
+	RunID             string     `json:"run_id"`
+	AgentName         string     `json:"agent_name"`
+	Role              string     `json:"role"`
+	TargetPath        string     `json:"target_path"`
+	StartedAt         time.Time  `json:"started_at"`
+	FinishedAt        *time.Time `json:"finished_at,omitempty"`
+	Status            string     `json:"status"` // running|done|failed|killed
+	ExitCode          *int       `json:"exit_code,omitempty"`
+	StderrTail        string     `json:"stderr_tail"`
+	ArtifactsProduced []string   `json:"artifacts_produced"`
+}
+
+// LockRow is a record in the lineage_locks table.
+type LockRow struct {
+	Lineage       string    `json:"lineage"`
+	Holder        string    `json:"holder"`
+	Kind          string    `json:"kind"` // editor|agent
+	AcquiredAt    time.Time `json:"acquired_at"`
+	LastHeartbeat time.Time `json:"last_heartbeat"`
+}
+
+// InsertAgentRun inserts a new agent run record with status=running.
+func (idx *Index) InsertAgentRun(r *AgentRunRow) error {
+	produced, _ := json.Marshal(r.ArtifactsProduced)
+	_, err := idx.db.Exec(
+		`INSERT INTO agent_runs (run_id, agent_name, role, target_path, started_at, status, stderr_tail, artifacts_produced_json)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		r.RunID, r.AgentName, r.Role, r.TargetPath,
+		r.StartedAt.Unix(), r.Status, r.StderrTail, string(produced),
+	)
+	return err
+}
+
+// UpdateAgentRun updates the mutable fields of an existing run record.
+func (idx *Index) UpdateAgentRun(r *AgentRunRow) error {
+	produced, _ := json.Marshal(r.ArtifactsProduced)
+	var finishedAt *int64
+	if r.FinishedAt != nil {
+		v := r.FinishedAt.Unix()
+		finishedAt = &v
+	}
+	_, err := idx.db.Exec(
+		`UPDATE agent_runs SET status=?, finished_at=?, exit_code=?, stderr_tail=?, artifacts_produced_json=?
+		 WHERE run_id=?`,
+		r.Status, finishedAt, r.ExitCode, r.StderrTail, string(produced), r.RunID,
+	)
+	return err
+}
+
+// GetAgentRun retrieves a single run by ID, or nil if not found.
+func (idx *Index) GetAgentRun(runID string) (*AgentRunRow, error) {
+	row := idx.db.QueryRow(
+		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
+		 FROM agent_runs WHERE run_id = ?`, runID,
+	)
+	return scanAgentRun(row)
+}
+
+// ListAgentRuns returns runs optionally filtered by status, newest first.
+func (idx *Index) ListAgentRuns(status string, limit int) ([]*AgentRunRow, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	var rows *sql.Rows
+	var err error
+	if status != "" {
+		rows, err = idx.db.Query(
+			`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
+			 FROM agent_runs WHERE status = ? ORDER BY started_at DESC LIMIT ?`,
+			status, limit,
+		)
+	} else {
+		rows, err = idx.db.Query(
+			`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
+			 FROM agent_runs ORDER BY started_at DESC LIMIT ?`,
+			limit,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*AgentRunRow
+	for rows.Next() {
+		r, err := scanAgentRunRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// RecoverRunningRuns marks any runs still in status=running as failed (called on startup).
+func (idx *Index) RecoverRunningRuns() error {
+	_, err := idx.db.Exec(
+		`UPDATE agent_runs SET status='failed', finished_at=? WHERE status='running'`,
+		time.Now().Unix(),
+	)
+	return err
+}
+
+func scanAgentRun(row *sql.Row) (*AgentRunRow, error) {
+	var r AgentRunRow
+	var startedAt int64
+	var finishedAt sql.NullInt64
+	var exitCode sql.NullInt64
+	var producedJSON string
+	err := row.Scan(
+		&r.RunID, &r.AgentName, &r.Role, &r.TargetPath,
+		&startedAt, &finishedAt, &r.Status, &exitCode,
+		&r.StderrTail, &producedJSON,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	r.StartedAt = time.Unix(startedAt, 0)
+	if finishedAt.Valid {
+		t := time.Unix(finishedAt.Int64, 0)
+		r.FinishedAt = &t
+	}
+	if exitCode.Valid {
+		v := int(exitCode.Int64)
+		r.ExitCode = &v
+	}
+	_ = json.Unmarshal([]byte(producedJSON), &r.ArtifactsProduced)
+	return &r, nil
+}
+
+func scanAgentRunRow(rows *sql.Rows) (*AgentRunRow, error) {
+	var r AgentRunRow
+	var startedAt int64
+	var finishedAt sql.NullInt64
+	var exitCode sql.NullInt64
+	var producedJSON string
+	err := rows.Scan(
+		&r.RunID, &r.AgentName, &r.Role, &r.TargetPath,
+		&startedAt, &finishedAt, &r.Status, &exitCode,
+		&r.StderrTail, &producedJSON,
+	)
+	if err != nil {
+		return nil, err
+	}
+	r.StartedAt = time.Unix(startedAt, 0)
+	if finishedAt.Valid {
+		t := time.Unix(finishedAt.Int64, 0)
+		r.FinishedAt = &t
+	}
+	if exitCode.Valid {
+		v := int(exitCode.Int64)
+		r.ExitCode = &v
+	}
+	_ = json.Unmarshal([]byte(producedJSON), &r.ArtifactsProduced)
+	return &r, nil
+}
+
+// ----- lineage locks -----
+
+// AcquireLock attempts to insert a lineage lock. Returns ErrLocked if already held.
+func (idx *Index) AcquireLock(lineage, holder, kind string) error {
+	now := time.Now().Unix()
+	_, err := idx.db.Exec(
+		`INSERT INTO lineage_locks (lineage, holder, kind, acquired_at, last_heartbeat) VALUES (?, ?, ?, ?, ?)`,
+		lineage, holder, kind, now, now,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return ErrLocked
+		}
+		return err
+	}
+	return nil
+}
+
+// HeartbeatLock updates the last_heartbeat for the given lineage.
+func (idx *Index) HeartbeatLock(lineage string) error {
+	_, err := idx.db.Exec(
+		`UPDATE lineage_locks SET last_heartbeat=? WHERE lineage=?`,
+		time.Now().Unix(), lineage,
+	)
+	return err
+}
+
+// ReleaseLock removes the lock for the given lineage.
+func (idx *Index) ReleaseLock(lineage string) error {
+	_, err := idx.db.Exec(`DELETE FROM lineage_locks WHERE lineage=?`, lineage)
+	return err
+}
+
+// GetLock returns the current lock for the lineage, or nil if unlocked.
+func (idx *Index) GetLock(lineage string) (*LockRow, error) {
+	var r LockRow
+	var acquiredAt, lastHeartbeat int64
+	err := idx.db.QueryRow(
+		`SELECT lineage, holder, kind, acquired_at, last_heartbeat FROM lineage_locks WHERE lineage=?`, lineage,
+	).Scan(&r.Lineage, &r.Holder, &r.Kind, &acquiredAt, &lastHeartbeat)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	r.AcquiredAt = time.Unix(acquiredAt, 0)
+	r.LastHeartbeat = time.Unix(lastHeartbeat, 0)
+	return &r, nil
+}
+
+// ListActiveLocks returns all current locks.
+func (idx *Index) ListActiveLocks() ([]*LockRow, error) {
+	rows, err := idx.db.Query(
+		`SELECT lineage, holder, kind, acquired_at, last_heartbeat FROM lineage_locks`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*LockRow
+	for rows.Next() {
+		var r LockRow
+		var acquiredAt, lastHeartbeat int64
+		if err := rows.Scan(&r.Lineage, &r.Holder, &r.Kind, &acquiredAt, &lastHeartbeat); err != nil {
+			return nil, err
+		}
+		r.AcquiredAt = time.Unix(acquiredAt, 0)
+		r.LastHeartbeat = time.Unix(lastHeartbeat, 0)
+		out = append(out, &r)
+	}
+	return out, rows.Err()
+}
+
+// ReapLocks deletes locks whose last_heartbeat is older than maxAge and returns their lineages.
+func (idx *Index) ReapLocks(maxAge time.Duration) ([]string, error) {
+	cutoff := time.Now().Add(-maxAge).Unix()
+	rows, err := idx.db.Query(`SELECT lineage FROM lineage_locks WHERE last_heartbeat < ?`, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var lineages []string
+	for rows.Next() {
+		var l string
+		if err := rows.Scan(&l); err != nil {
+			return nil, err
+		}
+		lineages = append(lineages, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for _, l := range lineages {
+		if _, err := idx.db.Exec(`DELETE FROM lineage_locks WHERE lineage=?`, l); err != nil {
+			return lineages, err
+		}
+	}
+	return lineages, nil
+}
+
 // ParseErrors returns all recorded parse errors.
 type ParseErrorRow struct {
 	Path    string `json:"path"`

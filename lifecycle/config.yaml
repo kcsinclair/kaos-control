@@ -15,6 +15,24 @@ users:
   - email: keith@sinclair.org.au
     roles: [product-owner, reviewer, approver]
 
+agents:
+  - name: backend-planner
+    role: [backend-planner]
+    driver: claude-code-cli
+    allowed_write_paths:
+      - lifecycle/backend-plans
+    git_identity:
+      name: Backend Planner Agent
+      email: backend-planner@kaos-control.local
+    prompt_templates:
+      backend-planner: |
+        You are a backend planning agent for the Innovation Maker project.
+        Read the requirements artifact at {target_path} and produce a
+        detailed backend implementation plan as a new markdown artifact in
+        lifecycle/backend-plans/. The artifact must have YAML frontmatter
+        with fields: title, type: plan, status: draft, lineage, parent.
+        Follow the lineage filename convention from CLAUDE.md.
+
 required_plans:
   ticket: []
   epic: []
