@@ -58,6 +58,15 @@ export interface ArtifactRow {
 export interface ArtifactDetail extends ArtifactRow {
   body: string
   body_html: string
+  file_sha: string
+}
+
+export interface LockRow {
+  lineage: string
+  holder: string
+  kind: string
+  acquired_at: string
+  last_heartbeat: string
 }
 
 export interface ArtifactFilter {

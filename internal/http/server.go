@@ -126,6 +126,12 @@ func (s *Server) buildRouter() chi.Router {
 			r.Get("/agents/runs/{run_id}", s.handleGetAgentRun)
 			r.Post("/agents/runs/{run_id}/kill", s.handleKillAgentRun)
 
+			// Locks
+			r.Get("/locks", s.handleListLocks)
+			r.Post("/locks", s.handleAcquireLock)
+			r.Delete("/locks/{lineage}", s.handleReleaseLock)
+			r.Post("/locks/{lineage}/heartbeat", s.handleHeartbeatLock)
+
 			// WebSocket
 			r.Get("/ws", s.handleWebSocket)
 

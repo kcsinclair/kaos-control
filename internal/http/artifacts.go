@@ -1,6 +1,8 @@
 package http
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -76,11 +78,14 @@ func (s *Server) handleGetArtifact(w http.ResponseWriter, r *http.Request) {
 
 	body := artifact.Parse(raw, relPath, row.Mtime).Body
 	bodyHTML := artifact.RenderHTML(body)
+	sum := sha256.Sum256(raw)
+	fileSHA := hex.EncodeToString(sum[:])
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"artifact": row,
 		"body":     body,
 		"body_html": bodyHTML,
+		"file_sha": fileSHA,
 	})
 }
 

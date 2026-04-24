@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { ArtifactRow, ArtifactDetail, ArtifactFilter, LineageSummary } from '@/types/api'
+import type { ArtifactRow, ArtifactDetail, ArtifactFilter, ArtifactFrontmatter, LineageSummary } from '@/types/api'
 
 function filterParams(f: ArtifactFilter): string {
   const p = new URLSearchParams()
@@ -32,4 +32,15 @@ export function listLabels(project: string) {
 
 export function listLineages(project: string) {
   return api.get<{ lineages: LineageSummary[] }>(`/p/${encodeURIComponent(project)}/lineages`)
+}
+
+export function updateArtifact(
+  project: string,
+  path: string,
+  payload: { frontmatter: ArtifactFrontmatter; body: string; expected_sha?: string },
+) {
+  return api.put<{ artifact: ArtifactRow }>(
+    `/p/${encodeURIComponent(project)}/artifacts/${path}`,
+    payload,
+  )
 }
