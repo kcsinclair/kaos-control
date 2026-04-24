@@ -1,0 +1,1 @@
+import{d as o,c as s,b as t,t as a,j as c,l as n,o as r,_ as p}from"./index-C4bETVue.js";const _={class:"placeholder-view"},l={class:"muted"},i=o({__name:"PlaceholderView",setup(d){const e=(n().path.split("/").pop()??"").replace("-"," ");return(m,f)=>(r(),s("div",_,[t("p",l,a(c(e))+" — coming soon.",1)]))}}),v=p(i,[["__scopeId","data-v-ecf99984"]]);export{v as default};

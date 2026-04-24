@@ -69,6 +69,26 @@ export interface LockRow {
   last_heartbeat: string
 }
 
+export interface AgentSummary {
+  name: string
+  roles: string[]
+  driver: string
+  allowed_write_paths?: string[]
+}
+
+export interface AgentRunRow {
+  run_id: string
+  agent_name: string
+  role: string
+  target_path: string
+  started_at: string
+  finished_at?: string
+  status: string
+  exit_code?: number
+  stderr_tail: string
+  artifacts_produced: string[]
+}
+
 export interface ArtifactFilter {
   stage?: string
   status?: string

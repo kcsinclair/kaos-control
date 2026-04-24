@@ -43,7 +43,7 @@ const router = createRouter({
         {
           path: 'agents',
           name: 'agents',
-          component: () => import('@/views/project/PlaceholderView.vue'),
+          component: () => import('@/views/project/AgentsRunsView.vue'),
         },
         {
           path: 'parse-errors',

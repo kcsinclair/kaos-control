@@ -3,6 +3,8 @@ import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useArtifactsStore } from '@/stores/artifacts'
 import MarkdownPreview from './MarkdownPreview.vue'
+import TransitionDialog from './TransitionDialog.vue'
+import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import type { GraphNode, ArtifactDetail, GraphEdge } from '@/types/api'
 
 const props = defineProps<{
@@ -19,6 +21,20 @@ const store = useArtifactsStore()
 const detail = ref<ArtifactDetail | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const showTransition = ref(false)
+const showRunAgent = ref(false)
+
+function onTransitioned(newStatus: string) {
+  showTransition.value = false
+  // Update the local status display optimistically
+  if (detail.value) detail.value = { ...detail.value, status: newStatus }
+}
+
+function onRunStarted() {
+  showRunAgent.value = false
+  router.push(`/p/${props.project}/agents`)
+  emit('close')
+}
 
 // Edges for the current node
 const inbound = computed(() =>
@@ -99,10 +115,9 @@ const STATUS_TEXT: Record<string, string> = {
         </div>
 
         <div class="modal-actions">
-          <button class="action-btn action-btn--primary" @click="openEditor">
-            Edit
-          </button>
-          <span class="action-hint">(Open in IDE — backend endpoint not yet implemented)</span>
+          <button class="action-btn action-btn--primary" @click="openEditor">Edit</button>
+          <button class="action-btn" @click="showTransition = true">Change Status</button>
+          <button class="action-btn" @click="showRunAgent = true">Run Agent</button>
         </div>
 
         <div class="modal-body">
@@ -137,6 +152,23 @@ const STATUS_TEXT: Record<string, string> = {
         <button class="modal-close" @click="emit('close')" aria-label="Close">✕</button>
       </div>
     </div>
+
+    <TransitionDialog
+      v-if="showTransition && node"
+      :project="project"
+      :path="node.id"
+      :current-status="detail?.status ?? node.status"
+      @transitioned="onTransitioned"
+      @cancel="showTransition = false"
+    />
+
+    <RunAgentDialog
+      v-if="showRunAgent && node"
+      :project="project"
+      :target-path="node.id"
+      @started="onRunStarted"
+      @cancel="showRunAgent = false"
+    />
   </Teleport>
 </template>
 
@@ -222,10 +254,12 @@ const STATUS_TEXT: Record<string, string> = {
   color: #fff;
 }
 .action-btn--primary:hover { opacity: 0.88; }
-.action-hint {
-  font-size: 11px;
-  color: var(--color-text-muted);
+.action-btn:not(.action-btn--primary) {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
 }
+.action-btn:not(.action-btn--primary):hover { background: var(--color-border); }
 .modal-body {
   flex: 1;
   overflow-y: auto;

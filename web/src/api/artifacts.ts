@@ -34,6 +34,18 @@ export function listLineages(project: string) {
   return api.get<{ lineages: LineageSummary[] }>(`/p/${encodeURIComponent(project)}/lineages`)
 }
 
+export function transitionArtifact(
+  project: string,
+  path: string,
+  to: string,
+  comment?: string,
+) {
+  return api.post<{ artifact: ArtifactRow; rejection_artifact?: string }>(
+    `/p/${encodeURIComponent(project)}/artifacts/${path}/transition`,
+    { to, comment },
+  )
+}
+
 export function updateArtifact(
   project: string,
   path: string,
