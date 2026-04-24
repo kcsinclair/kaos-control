@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/project"
 )
 
@@ -36,6 +37,7 @@ type ServerConfig struct {
 	TLSKey   string
 	TLSOn    bool
 	Frontend embed.FS
+	Auth     *auth.Store // nil when auth is not configured
 }
 
 // New constructs and wires the server. projects maps project name → project.Project.
@@ -61,9 +63,19 @@ func (s *Server) buildRouter() chi.Router {
 	r.Use(middleware.RealIP)
 	r.Use(slogMiddleware)
 	r.Use(middleware.Recoverer)
+	r.Use(s.sessionMiddleware)
+	r.Use(s.csrfMiddleware)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
+
+		// Auth endpoints
+		r.Post("/auth/login", s.handleLogin)
+		r.Post("/auth/logout", s.handleLogout)
+		r.Get("/auth/me", s.handleMe)
+
+		// Admin: user management
+		r.Post("/admin/users", s.handleCreateUser)
 
 		// Project registry
 		r.Get("/projects", s.handleListProjects)
@@ -98,6 +110,10 @@ func (s *Server) buildRouter() chi.Router {
 				param := chi.URLParam(r, "*")
 				if strings.HasSuffix(param, "/rename") {
 					s.handleRenameArtifact(w, r)
+					return
+				}
+				if strings.HasSuffix(param, "/transition") {
+					s.handleTransitionArtifact(w, r)
 					return
 				}
 				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))

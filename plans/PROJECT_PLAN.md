@@ -2,7 +2,7 @@
 
 Living document summarising project state. Updated on every commit per the Commit Conventions in [CLAUDE.md](../CLAUDE.md).
 
-**Current stage:** M3 complete — write path, git integration, fsnotify watcher, WebSocket hub. Next: M4 (auth + workflow engine).
+**Current stage:** M4 complete — local auth, session cookies, CSRF, workflow state machine, transition API, rejection child artifacts. Next: M5 (agent runner).
 
 ---
 
@@ -31,18 +31,19 @@ Rolling log — add a dated bullet per commit.
 - **M1 (skeleton)**: `cmd/kaos-control/main.go`, `Makefile`, `web/embed.go`, config loading, project registry, signal handling
 - **M2 (artifact indexing)**: `internal/artifact` (parser, links, types), `internal/index` (SQLite schema, scan, all queries), `internal/project` (runtime container), HTTP API (`/artifacts`, `/graph`, `/labels`, `/lineages`, `/parse-errors`)
 - **M3 (write path + git)**: `internal/sandbox`, `internal/git`, `internal/hub`, `internal/watcher`; write API + WebSocket endpoint; git history; watcher-driven re-index
+- **M4 (auth + workflow)**: `internal/auth` (argon2id, session store), `internal/workflow` (state machine, GateReady); login/logout/me/create-user endpoints; CSRF double-submit; session middleware; `POST /transition` with role-matrix enforcement; rejection child artifact creation; `lifecycle/config.yaml` user binding
 
 ---
 
 ## Planned
 
-### Next: M4 — Auth & Workflow (≈ 2 days)
-- argon2id local accounts (`POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`)
-- Session cookie middleware; CSRF double-submit cookie
-- Workflow engine: transitions, role authorisation, `CanTransition`
-- `POST /artifacts/*path/transition` endpoint + rejection-child-artifact creation
-- Required-plans gate (`GateReady`)
-- **Acceptance**: login flow works; transitioning respects role matrix; rejection creates child artifact with reviewer note
+### Next: M5 — Agent Runner (≈ 4 days)
+- Driver interface + `claude-code-cli` implementation
+- Run tracking in `agent_runs` table; kill/crash/partial-commit flows
+- Scope enforcement via pre-commit diff check
+- WebSocket events for agent lifecycle (`agent.started`, `agent.progress`, `agent.finished`, `agent.failed`)
+- Lineage lock manager (editor + agent unified)
+- **Acceptance**: triggering the configured planner agent produces plan files on the ticket branch; kill button terminates subprocess; crashed runs produce partial commits; same-lineage double-run is refused
 
 ---
 

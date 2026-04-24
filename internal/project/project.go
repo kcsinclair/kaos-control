@@ -12,16 +12,18 @@ import (
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/watcher"
+	"github.com/kaos-control/kaos-control/internal/workflow"
 )
 
 // Project is the runtime services container for one registered project.
 type Project struct {
-	Entry   *config.ProjectEntry
-	Cfg     *config.Project
-	Idx     *index.Index
-	Git     *kgit.Repo // nil if the project directory is not a git repo
-	Hub     *hub.Hub
-	Watcher *watcher.Watcher
+	Entry    *config.ProjectEntry
+	Cfg      *config.Project
+	Idx      *index.Index
+	Git      *kgit.Repo // nil if the project directory is not a git repo
+	Hub      *hub.Hub
+	Watcher  *watcher.Watcher
+	Workflow *workflow.Engine
 }
 
 // Open loads the project config, opens the SQLite index, scans the lifecycle tree,
@@ -58,7 +60,9 @@ func Open(entry *config.ProjectEntry, dbDir string) (*Project, error) {
 		slog.Info("project: not a git repo, write operations will not commit", "name", entry.Name)
 	}
 
-	return &Project{Entry: entry, Cfg: cfg, Idx: idx, Git: gitRepo, Hub: h, Watcher: w}, nil
+	wf := workflow.New(cfg.Transitions)
+
+	return &Project{Entry: entry, Cfg: cfg, Idx: idx, Git: gitRepo, Hub: h, Watcher: w, Workflow: wf}, nil
 }
 
 // StartWatcher launches the fsnotify watcher goroutine.

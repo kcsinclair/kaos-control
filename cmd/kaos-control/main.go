@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
 	khttp "github.com/kaos-control/kaos-control/internal/http"
 	"github.com/kaos-control/kaos-control/internal/project"
@@ -66,12 +67,23 @@ func run() error {
 		p.StartWatcher(ctx)
 	}
 
+	// Open the auth database (accounts + sessions, shared across projects).
+	authStore, err := auth.Open(
+		filepath.Join(appCfg.DataDir, "auth.db"),
+		appCfg.Auth.SessionTTL,
+	)
+	if err != nil {
+		slog.Warn("failed to open auth database; authentication will be unavailable", "err", err)
+		authStore = nil
+	}
+
 	srv := khttp.New(khttp.ServerConfig{
 		Listen:   appCfg.Server.Listen,
 		TLSOn:    appCfg.Server.TLS.Enabled,
 		TLSCert:  appCfg.Server.TLS.CertFile,
 		TLSKey:   appCfg.Server.TLS.KeyFile,
 		Frontend: web.FS,
+		Auth:     authStore,
 	}, projects)
 
 	return srv.ListenAndServe(ctx)

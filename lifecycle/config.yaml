@@ -1,0 +1,20 @@
+git:
+  default_branch: main
+  branch_template: "ticket/{slug}"
+
+roles:
+  - product-owner
+  - backend-planner
+  - frontend-planner
+  - developer
+  - qa
+  - reviewer
+  - approver
+
+users:
+  - email: keith@sinclair.org.au
+    roles: [product-owner, reviewer, approver]
+
+required_plans:
+  ticket: []
+  epic: []
