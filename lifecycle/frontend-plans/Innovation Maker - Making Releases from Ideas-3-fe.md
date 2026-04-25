@@ -1,10 +1,14 @@
 ---
 title: Frontend Development Plan — kaos-control v1
 type: plan-frontend
-status: planning
-parent: requirements/Innovation Maker - Making Releases from Ideas-1.md
+status: done
 lineage: innovation-maker
-labels: [frontend, vue, vite, v1]
+parent: requirements/Innovation Maker - Making Releases from Ideas-1.md
+labels:
+    - frontend
+    - vue
+    - vite
+    - v1
 ---
 
 > Target implementer: developer agent (Sonnet). Produces a Vue 3 + Vite SPA that is embedded into the Go binary via `embed.FS`. All section numbers in the form §N.N refer to the parent requirements document. API and event contracts come from the backend plan (sibling).
