@@ -1,39 +1,91 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) when working in this repository.
 
-## Current state
+## What this is
 
-This project — working name **kaos-control**, product name **Innovation Maker** (to be finalised) — is in a **pre-code, requirements-driven stage**. There is no source code, no build system, no tests, no package manifests. The entire repository is markdown artifacts organised under `lifecycle/`.
+**kaos-control** (product name *Innovation Maker*, to be finalised) is a single-binary lifecycle management tool: a Go server with an embedded Vue 3 SPA that indexes markdown artifacts under `lifecycle/`, exposes a graph + editor UI, and orchestrates agent runs that produce new artifacts and code.
 
-The project is **meta**: it is building a tool that enforces a specific requirements-to-release lifecycle, and the same lifecycle structure is being applied to this repo to produce the tool itself.
+The project is **meta**: it enforces a specific requirements-to-release lifecycle, and the same lifecycle structure is applied to this repo to produce the tool itself.
 
 ## Authoritative spec
 
-Before making any substantive suggestions about scope, design, or implementation, read:
+[lifecycle/requirements/Innovation Maker - Making Releases from Ideas-1.md](lifecycle/requirements/Innovation Maker - Making Releases from Ideas-1.md) is the source of truth for product scope, file format, workflow states, roles, and configuration. Read it before any substantive design discussion. Do not restate it here.
 
-[lifecycle/requirements/Innovation Maker - Making Releases from Ideas-1.md](lifecycle/requirements/Innovation Maker - Making Releases from Ideas-1.md)
+## Repository layout
 
-It is the source of truth for product scope, tech stack, workflow states, roles, file format, directory layout, and configuration. Do not restate it here.
+```
+kaos-control/
+├── cmd/kaos-control/        Go binary entry point
+├── internal/                Go packages
+│   ├── agent/               agent runner, ClaudeCodeDriver, supervisor
+│   ├── artifact/            markdown + frontmatter parser, type vocab
+│   ├── auth/                argon2id password hashing, sessions
+│   ├── config/              app + project YAML config loaders
+│   ├── git/                 go-git wrapper (branches, commits, history)
+│   ├── http/                chi router, REST + WebSocket handlers
+│   ├── hub/                 WebSocket broadcast hub
+│   ├── index/               SQLite cache (modernc.org/sqlite, pure Go)
+│   ├── lock/                lineage lock manager (heartbeat + reaper)
+│   ├── project/             per-project runtime container
+│   ├── sandbox/             path-traversal-safe filesystem resolver
+│   ├── watcher/             fsnotify → incremental re-index
+│   └── workflow/            transition state machine + plan gating
+├── web/                     Vue 3 + Vite 5 + TypeScript + Pinia SPA
+│   ├── src/                 source
+│   └── dist/                built assets, embedded into Go binary
+├── lifecycle/               this project's own artifacts
+│   ├── config.yaml          per-project config (roles, agents, gates)
+│   ├── ideas/               originating idea docs
+│   ├── requirements/        detailed specs
+│   ├── backend-plans/       per-feature backend implementation plans
+│   ├── frontend-plans/      per-feature frontend implementation plans
+│   ├── test-plans/          per-feature test plans
+│   ├── tests/               artifacts describing what the test code in /tests covers
+│   ├── prototypes/
+│   ├── defects/             defect artifacts raised by the qa agent
+│   ├── releases/
+│   └── sprints/
+├── tests/                   integration test code (test-developer agent target)
+├── plans/                   PROJECT_PLAN.md + per-change implementation plans
+└── Makefile                 build, run, test, lint targets
+```
 
-Original idea and Q&A history:
-- [lifecycle/ideas/Innovation Maker - Making Releases from Ideas.md](lifecycle/ideas/Innovation Maker - Making Releases from Ideas.md)
-- [lifecycle/ideas/Innovation Maker - Making Releases from Ideas-questions.md](lifecycle/ideas/Innovation Maker - Making Releases from Ideas-questions.md)
+## Build & run
 
-## Lifecycle directory semantics
+```sh
+make build-web    # pnpm install + pnpm build → web/dist/
+make build        # go build → ./dist/kaos-control (embeds web/dist)
+make run          # development mode (LOG_LEVEL=debug)
+make lint         # go vet + staticcheck
+make test-unit    # go test ./... -short
+```
 
-Artifacts live in stage-named subdirectories under `lifecycle/`. A directory being empty means *"this stage hasn't happened yet"*, not that it's unused.
+App config lives at `~/.kaos-control/config.yaml`; project registrations at `~/.kaos-control/projects/*.yaml`.
 
-- `lifecycle/ideas/` — original idea docs. Populated.
-- `lifecycle/requirements/` — detailed spec. Populated.
-- `lifecycle/backend-plans/`, `lifecycle/frontend-plans/`, `lifecycle/test-plans/` — **empty**, awaiting Opus to generate plans (see next section).
-- `lifecycle/dev-plans/`, `lifecycle/tests/`, `lifecycle/prototypes/`, `lifecycle/releases/`, `lifecycle/sprints/` — per the spec, will exist when the relevant stage runs.
+## Tech stack (in use)
 
-Top-level `src/`, `go.mod`, `package.json`, CI configs etc. **do not exist yet** and should not be invented. If the user asks to scaffold code, confirm intent first and follow the planned tech stack below.
+**Backend** — Go 1.25+ stdlib `net/http` + `go-chi/chi`; `goldmark` (markdown), `gopkg.in/yaml.v3`, `fsnotify`, `coder/websocket`, `modernc.org/sqlite` (pure-Go), `go-git/go-git`.
+
+**Frontend** — Vite 5, Vue 3.5 SFCs, TypeScript, Pinia, Vue Router 4, `markdown-it`, `3d-force-graph` + three.js (3D), Cytoscape.js + cytoscape-fcose (2D), CodeMirror 6 (editor), lucide-vue-next (icons).
+
+**Distribution** — single Go binary; frontend embedded via `embed.FS` from `web/dist/`.
+
+## Roles & agents
+
+Roles split by lifecycle phase:
+- **Think**: `analyst` — reads ideas → writes requirements; reads requirements → writes 3 plans.
+- **Make**: `backend-developer` (Go in `internal/`, `cmd/`), `frontend-developer` (Vue/TS in `web/src/`), `test-developer` (integration tests in `tests/` + artifacts in `lifecycle/tests/`).
+- **Verify**: `qa` — runs tests, raises defects in `lifecycle/defects/`, assigns to the right developer role.
+- **Cross-cutting**: `product-owner`, `reviewer`, `approver`.
+
+Six agents are configured in [lifecycle/config.yaml](lifecycle/config.yaml): `analyst-requirements`, `analyst-planner`, `backend-developer`, `frontend-developer`, `test-developer`, `qa`. Each has scoped `allowed_write_paths` and a focused prompt template.
+
+`required_plans.ticket = [plan-backend, plan-frontend, plan-test]` gates `planning → in-development`.
 
 ## Lineage filename convention
 
-Artifacts for a single idea share a **slug** and carry a **monotonic index** across stages, with optional stage suffix. Example:
+Artifacts for a single idea share a **slug** and carry a **monotonic index** across stages, with optional stage suffix:
 
 ```
 lifecycle/ideas/login.md            (originating, no suffix)
@@ -43,41 +95,26 @@ lifecycle/frontend-plans/login-4-fe.md
 lifecycle/test-plans/login-5-test.md
 ```
 
-Rules:
 - First file in a lineage has **no suffix**. Indices start at `-2`.
 - Index is monotonic **per lineage, across stages** — never reused.
 - Rejected-and-replanned artifacts get the **next** index; superseded files stay in place and in git history.
 - Every non-originating artifact has `parent:` in its YAML frontmatter pointing to the previous file.
 
-See §3.3 and §4.4 of the spec for the full rule.
+Full rule: §3.3 and §4.4 of the spec.
 
-## Current workflow stage
+## Frontmatter requirements
 
-The **next planned action** is to prompt Opus to read the detailed requirements and produce three plan artifacts:
+Required fields on every artifact: `title`, `type`, `status`, `lineage`. Type vocabulary (§4.2 of spec): `idea`, `ticket`, `epic`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`, `defect`. Status vocabulary: `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`.
 
-- `lifecycle/backend-plans/Innovation Maker - Making Releases from Ideas-2-be.md`
-- `lifecycle/frontend-plans/Innovation Maker - Making Releases from Ideas-3-fe.md`
-- `lifecycle/test-plans/Innovation Maker - Making Releases from Ideas-4-test.md`
+## Indexing behaviour
 
-The exact prompt the user intends to run is recorded in [project-notes.md](project-notes.md). After those three plans exist, the user plans to use Sonnet agents to implement code from each.
+The SQLite index is a cache; disk is authoritative. Updates happen at:
+1. **Startup** — full scan of `lifecycle/**/*.md` (after schema check).
+2. **Live** — `fsnotify` watcher with 150 ms debounce, broadcasts `artifact.indexed` and `file.changed` WS events.
+3. **API writes** — `PUT /artifacts/*`, `POST /artifacts` re-index synchronously before responding.
 
-## Planned tech stack
+## Commit conventions
 
-When code does arrive, per §12 of the spec:
-
-- **Backend**: Go 1.22+, stdlib `net/http`, `go-chi/chi`, `goldmark` (markdown + frontmatter), `gopkg.in/yaml.v3`, `fsnotify`, `nhooyr.io/websocket` or `gorilla/websocket`, `modernc.org/sqlite` (pure-Go, no cgo), `go-git/go-git`.
-- **Frontend**: Vite build pipeline, Vue 3 SFCs, 3d-force-graph, Cytoscape.js, `markdown-it`.
-- **Distribution**: single Go binary with embedded frontend via `embed.FS`.
-
-Use these choices for any early scaffolding suggestions; do not propose alternatives unless the user asks.
-
-## What's intentionally absent
-
-No README, no CI, no `.gitignore`, no package manifests, no code. These belong to later lifecycle stages and should not be created as a side effect of other work.
-
-## Commit Conventions
-
-- **Plans**: Every git commit must include an updated `plans/PROJECT_PLAN.md` reflecting what changed and the current project state. Update the "Recent Changes" section and any affected "Completed" or "Planned" items before committing.
-- **Implementation plans**: When a Claude Code plan file (`~/.claude/plans/*.md`) was used for implementation, copy it into `plans/` with a descriptive name (e.g., `plans/geolite2-country-lookup.md`) and include it in the commit.
-
-
+- **Project plan**: every commit updates `plans/PROJECT_PLAN.md` — bump the "Recent Changes" log and any affected "Completed"/"Planned" entries.
+- **Implementation plans**: when a Claude Code plan file (`~/.claude/plans/*.md`) drove the change, copy it into `plans/<descriptive-name>.md` and include it in the same commit.
+- Commits should be small and focused. Don't amend; create new commits.
