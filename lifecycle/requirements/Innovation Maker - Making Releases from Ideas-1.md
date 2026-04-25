@@ -1,3 +1,17 @@
+---
+title: Innovation Maker — Detailed Requirements
+type: requirements
+status: done
+lineage: innovation-maker
+parent: ideas/Innovation Maker - Making Releases from Ideas-questions.md
+labels:
+    - backend
+    - go
+    - v1
+---
+
+requirements/Innovation Maker - Making Releases from Ideas-1.md
+
 # Innovation Maker — Detailed Requirements
 
 > Working name: **kaos-control**. A Go web application that turns ideas into releases by shepherding markdown artifacts through a configurable lifecycle, with AI agents performing work at each stage.
