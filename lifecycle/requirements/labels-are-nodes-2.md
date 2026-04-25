@@ -1,5 +1,5 @@
 ---
-title: "Labels as Graph Nodes with Priority Visualisation"
+title: Labels as Graph Nodes with Priority Visualisation
 type: ticket
 status: draft
 lineage: labels-are-nodes
@@ -101,5 +101,10 @@ Finally, the current `NODE_COLORS` map only covers a subset of artifact types (`
 ## Open Questions
 
 1. Should label nodes be filterable independently (e.g., show only the "auth" label node), or is the global show/hide toggle sufficient for v1?
+> toggle all label nodes for now.
+
 2. What should happen when a label node is clicked — open a mini-modal summarising which artifacts carry that label, or apply a graph filter to isolate those artifacts?
+> open a mini-modal summarising which artifacts carry that label
+
 3. Should the priority ring be visible when the node is very small (zoomed out in 3D)? If so, should ring thickness scale with zoom?
+> yes, displayed when small and be thicker when the node is larger
