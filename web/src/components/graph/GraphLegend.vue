@@ -1,19 +1,17 @@
 <script setup lang="ts">
-const nodeTypes = [
-  { type: 'idea', color: '#f59e0b', label: 'Idea' },
-  { type: 'requirement', color: '#3b82f6', label: 'Requirement' },
-  { type: 'plan', color: '#8b5cf6', label: 'Plan' },
-  { type: 'implementation', color: '#10b981', label: 'Implementation' },
-  { type: 'test', color: '#06b6d4', label: 'Test' },
-  { type: 'release', color: '#ef4444', label: 'Release' },
-]
+import { NODE_COLORS, EDGE_COLORS } from './graphConstants'
 
-const edgeKinds = [
-  { kind: 'parent', color: '#94a3b8', label: 'Parent' },
-  { kind: 'depends_on', color: '#f97316', label: 'Depends on' },
-  { kind: 'blocks', color: '#ef4444', label: 'Blocks' },
-  { kind: 'related_to', color: '#64748b', label: 'Related to' },
-]
+const nodeTypes = Object.entries(NODE_COLORS).map(([type, color]) => ({
+  type,
+  color,
+  label: type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+}))
+
+const edgeKinds = Object.entries(EDGE_COLORS).map(([kind, color]) => ({
+  kind,
+  color,
+  label: kind.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+}))
 </script>
 
 <template>

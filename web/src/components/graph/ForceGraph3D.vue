@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import ForceGraph3D from '3d-force-graph'
 import type { GraphNode, GraphEdge } from '@/types/api'
+import { NODE_COLORS, EDGE_COLORS } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
@@ -13,22 +14,6 @@ const emit = defineEmits<{
 }>()
 
 const container = ref<HTMLElement>()
-
-const NODE_COLORS: Record<string, string> = {
-  idea: '#f59e0b',
-  requirement: '#3b82f6',
-  plan: '#8b5cf6',
-  implementation: '#10b981',
-  test: '#06b6d4',
-  release: '#ef4444',
-}
-
-const EDGE_COLORS: Record<string, string> = {
-  parent: '#94a3b8',
-  depends_on: '#f97316',
-  blocks: '#ef4444',
-  related_to: '#64748b',
-}
 
 function nodeColor(n: GraphNode): string {
   return NODE_COLORS[n.type] ?? '#6b7280'

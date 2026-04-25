@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import type { GraphNode, GraphEdge } from '@/types/api'
+import { NODE_COLORS } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
@@ -10,15 +11,6 @@ const props = defineProps<{
 
 const container = ref<HTMLDivElement | null>(null)
 let cy: any = null
-
-const NODE_COLORS: Record<string, string> = {
-  idea: '#f59e0b',
-  requirement: '#3b82f6',
-  plan: '#8b5cf6',
-  implementation: '#10b981',
-  test: '#06b6d4',
-  release: '#ef4444',
-}
 
 function nodeColor(type: string): string {
   return NODE_COLORS[type] ?? '#6b7280'
