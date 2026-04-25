@@ -5,6 +5,7 @@ status: draft
 lineage: architectural-artefacts
 labels:
     - architecture
+    - artefacts
 ---
 
 # Architectural Artefacts
