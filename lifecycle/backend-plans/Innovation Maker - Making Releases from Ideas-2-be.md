@@ -1,10 +1,13 @@
 ---
 title: Backend Development Plan — kaos-control v1
 type: plan-backend
-status: planning
-parent: requirements/Innovation Maker - Making Releases from Ideas-1.md
+status: done
 lineage: innovation-maker
-labels: [backend, go, v1]
+parent: requirements/Innovation Maker - Making Releases from Ideas-1.md
+labels:
+    - backend
+    - go
+    - v1
 ---
 
 > Target implementer: developer agent (Sonnet). Produces a Go web application that serves the frontend, indexes artifacts, runs agents, talks to git, and exposes the authoritative REST + WebSocket API. All section numbers in the form §N.N refer to the parent requirements document.
