@@ -5,6 +5,7 @@ import { useGraphData } from '@/composables/useGraphData'
 import ForceGraph3D from '@/components/graph/ForceGraph3D.vue'
 import GraphFilters from '@/components/graph/GraphFilters.vue'
 import GraphLegend from '@/components/graph/GraphLegend.vue'
+import LabelModal from '@/components/graph/LabelModal.vue'
 import ArtifactModal from '@/components/artifact/ArtifactModal.vue'
 import type { GraphNode } from '@/types/api'
 
@@ -19,14 +20,23 @@ const project = route.params.project as string
 const store = useGraphData(project)
 
 const selectedNode = ref<GraphNode | null>(null)
+const selectedLabelName = ref<string | null>(null)
 const view = ref<'3d' | '2d'>('3d')
 
 function onNodeClick(node: GraphNode) {
-  selectedNode.value = node
+  if (node.type === 'label') {
+    // Label nodes have id like 'label::<name>'
+    selectedLabelName.value = node.title || node.slug
+    selectedNode.value = null
+  } else {
+    selectedNode.value = node
+    selectedLabelName.value = null
+  }
 }
 
 function closeModal() {
   selectedNode.value = null
+  selectedLabelName.value = null
 }
 </script>
 
@@ -99,6 +109,14 @@ function closeModal() {
     :node="selectedNode"
     :project="project"
     :edges="store.rawEdges"
+    @close="closeModal"
+  />
+
+  <LabelModal
+    v-if="selectedLabelName"
+    :label-name="selectedLabelName"
+    :project="project"
+    :all-nodes="store.augmentedNodes"
     @close="closeModal"
   />
 </template>
