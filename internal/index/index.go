@@ -378,7 +378,7 @@ type GraphNode struct {
 	Slug     string   `json:"slug"`
 	Index    int      `json:"index"`
 	Priority string   `json:"priority,omitempty"`
-	Labels   []string `json:"labels,omitempty"`
+	Labels   []string `json:"labels"`
 }
 
 // GraphEdge is a directed relationship between two nodes.
@@ -450,6 +450,8 @@ func (idx *Index) Graph(f Filter) (*GraphData, error) {
 		for _, n := range nodes {
 			if lbls, ok := labelMap[n.ID]; ok {
 				n.Labels = lbls
+			} else {
+				n.Labels = []string{}
 			}
 		}
 	}
