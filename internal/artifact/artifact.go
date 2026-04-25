@@ -55,6 +55,7 @@ type Frontmatter struct {
 	Type      string     `yaml:"type"                json:"type"`
 	Status    string     `yaml:"status"              json:"status"`
 	Lineage   string     `yaml:"lineage"             json:"lineage"`
+	Priority  string     `yaml:"priority,omitempty"  json:"priority,omitempty"`
 	Parent    string     `yaml:"parent,omitempty"    json:"parent,omitempty"`
 	Labels    []string   `yaml:"labels,omitempty"    json:"labels,omitempty"`
 	DependsOn []string   `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`

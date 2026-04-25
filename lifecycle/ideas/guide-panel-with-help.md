@@ -1,8 +1,13 @@
 ---
 title: "Guide Panel with Contextual Help"
+priority: normal
 type: idea
 status: draft
 lineage: guide-panel-with-help
+labels:
+    - onboarding
+    - usability
+    - feature 
 ---
 
 # Guide Panel on Right with help for current screen

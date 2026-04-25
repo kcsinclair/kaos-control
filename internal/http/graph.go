@@ -62,6 +62,22 @@ func (s *Server) handleLineages(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"lineages": lineages})
 }
 
+// handlePriorities handles GET /api/p/:project/priorities
+func (s *Server) handlePriorities(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	priorities, err := p.Idx.Priorities()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"priorities": priorities})
+}
+
 // handleParseErrors handles GET /api/p/:project/parse-errors
 func (s *Server) handleParseErrors(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())

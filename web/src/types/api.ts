@@ -31,6 +31,7 @@ export interface ArtifactFrontmatter {
   type: string
   status: string
   lineage: string
+  priority?: string
   parent?: string
   labels?: string[]
   depends_on?: string[]
@@ -95,6 +96,7 @@ export interface ArtifactFilter {
   label?: string
   lineage?: string
   type?: string
+  priority?: string
   limit?: number
   offset?: number
 }
@@ -114,6 +116,8 @@ export interface GraphNode {
   lineage: string
   slug: string
   index: number
+  priority?: string
+  labels?: string[]
 }
 
 export interface GraphEdge {
@@ -131,6 +135,8 @@ export interface GraphFilter {
   types?: string[]
   statuses?: string[]
   lineages?: string[]
+  labels?: string[]
+  priorities?: string[]
 }
 
 export interface ParseErrorRow {

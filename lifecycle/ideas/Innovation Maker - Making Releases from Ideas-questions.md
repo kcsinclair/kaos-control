@@ -1,9 +1,14 @@
 ---
 title: "Innovation Maker — Requirements Clarification Q&A"
+priority: normal
 type: idea
 status: done
 lineage: innovation-maker
 parent: ideas/Innovation Maker - Making Releases from Ideas.md
+labels:
+    - artefacts
+    - og
+    - feature
 ---
 
 # Requirements Clarification Questions

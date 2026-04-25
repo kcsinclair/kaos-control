@@ -24,11 +24,12 @@ func (s *Server) handleListArtifacts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	f := index.Filter{
-		Stage:   r.URL.Query().Get("stage"),
-		Status:  r.URL.Query().Get("status"),
-		Label:   r.URL.Query().Get("label"),
-		Lineage: r.URL.Query().Get("lineage"),
-		Type:    r.URL.Query().Get("type"),
+		Stage:    r.URL.Query().Get("stage"),
+		Status:   r.URL.Query().Get("status"),
+		Label:    r.URL.Query().Get("label"),
+		Lineage:  r.URL.Query().Get("lineage"),
+		Type:     r.URL.Query().Get("type"),
+		Priority: r.URL.Query().Get("priority"),
 	}
 	if v := r.URL.Query().Get("limit"); v != "" {
 		f.Limit, _ = strconv.Atoi(v)

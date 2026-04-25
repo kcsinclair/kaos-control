@@ -18,7 +18,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/config"
 )
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 // Index wraps the SQLite database for one project.
 type Index struct {
@@ -232,10 +232,10 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 
 	_, err = tx.Exec(`
 		INSERT OR REPLACE INTO artifacts
-			(path, slug, lineage, idx, stage, type, status, title, frontmatter_json, body_sha256, mtime)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.Path, a.Slug, a.FM.Lineage, a.Index, a.Stage,
-		a.FM.Type, a.FM.Status, a.FM.Title,
+		a.FM.Type, a.FM.Status, a.FM.Title, a.FM.Priority,
 		string(fmJSON), a.SHA256[:], a.Mtime.Unix(),
 	)
 	if err != nil {
@@ -288,13 +288,14 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 
 // Filter holds list/graph query parameters.
 type Filter struct {
-	Stage   string
-	Status  string
-	Label   string
-	Lineage string
-	Type    string
-	Limit   int
-	Offset  int
+	Stage    string
+	Status   string
+	Label    string
+	Lineage  string
+	Type     string
+	Priority string
+	Limit    int
+	Offset   int
 }
 
 func (f *Filter) withDefaults() Filter {
@@ -368,14 +369,16 @@ func (idx *Index) Get(relPath string) (*ArtifactRow, error) {
 
 // GraphNode is a single node in the visualisation graph.
 type GraphNode struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Type    string `json:"type"`
-	Status  string `json:"status"`
-	Stage   string `json:"stage"`
-	Lineage string `json:"lineage"`
-	Slug    string `json:"slug"`
-	Index   int    `json:"index"`
+	ID       string   `json:"id"`
+	Title    string   `json:"title"`
+	Type     string   `json:"type"`
+	Status   string   `json:"status"`
+	Stage    string   `json:"stage"`
+	Lineage  string   `json:"lineage"`
+	Slug     string   `json:"slug"`
+	Index    int      `json:"index"`
+	Priority string   `json:"priority,omitempty"`
+	Labels   []string `json:"labels,omitempty"`
 }
 
 // GraphEdge is a directed relationship between two nodes.
@@ -395,7 +398,7 @@ type GraphData struct {
 func (idx *Index) Graph(f Filter) (*GraphData, error) {
 	where, args := buildWhere(f)
 	rows, err := idx.db.Query(
-		`SELECT path, slug, lineage, idx, stage, type, status, title FROM artifacts`+where+
+		`SELECT path, slug, lineage, idx, stage, type, status, title, priority FROM artifacts`+where+
 			` ORDER BY lineage, idx`,
 		args...,
 	)
@@ -408,7 +411,7 @@ func (idx *Index) Graph(f Filter) (*GraphData, error) {
 	var nodes []*GraphNode
 	for rows.Next() {
 		n := &GraphNode{}
-		if err := rows.Scan(&n.ID, &n.Slug, &n.Lineage, &n.Index, &n.Stage, &n.Type, &n.Status, &n.Title); err != nil {
+		if err := rows.Scan(&n.ID, &n.Slug, &n.Lineage, &n.Index, &n.Stage, &n.Type, &n.Status, &n.Title, &n.Priority); err != nil {
 			return nil, err
 		}
 		nodes = append(nodes, n)
@@ -416,6 +419,39 @@ func (idx *Index) Graph(f Filter) (*GraphData, error) {
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+
+	// Populate labels for each node from labels_index.
+	if len(nodes) > 0 {
+		labelMap := map[string][]string{}
+		placeholders := make([]string, len(nodes))
+		labelArgs := make([]any, len(nodes))
+		for i, n := range nodes {
+			placeholders[i] = "?"
+			labelArgs[i] = n.ID
+		}
+		lq := `SELECT artifact, label FROM labels_index WHERE artifact IN (` +
+			strings.Join(placeholders, ",") + `) ORDER BY artifact, label`
+		lrows, err := idx.db.Query(lq, labelArgs...)
+		if err != nil {
+			return nil, err
+		}
+		defer lrows.Close()
+		for lrows.Next() {
+			var art, lbl string
+			if err := lrows.Scan(&art, &lbl); err != nil {
+				return nil, err
+			}
+			labelMap[art] = append(labelMap[art], lbl)
+		}
+		if err := lrows.Err(); err != nil {
+			return nil, err
+		}
+		for _, n := range nodes {
+			if lbls, ok := labelMap[n.ID]; ok {
+				n.Labels = lbls
+			}
+		}
 	}
 
 	// Edges: only include edges where both endpoints are in the node set.
@@ -460,6 +496,26 @@ func (idx *Index) Labels() ([]string, error) {
 		labels = append(labels, l)
 	}
 	return labels, rows.Err()
+}
+
+// Priorities returns all distinct non-empty priority values across the project.
+func (idx *Index) Priorities() ([]string, error) {
+	rows, err := idx.db.Query(
+		`SELECT DISTINCT priority FROM artifacts WHERE priority != '' ORDER BY priority`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
 }
 
 // LineageSummary is a summary of one lineage group.
@@ -785,7 +841,7 @@ func (idx *Index) ListActiveLocks() ([]*LockRow, error) {
 // ReapLocks deletes locks whose last_heartbeat is older than maxAge and returns their lineages.
 func (idx *Index) ReapLocks(maxAge time.Duration) ([]string, error) {
 	cutoff := time.Now().Add(-maxAge).Unix()
-	rows, err := idx.db.Query(`SELECT lineage FROM lineage_locks WHERE last_heartbeat < ?`, cutoff)
+	rows, err := idx.db.Query(`SELECT lineage FROM lineage_locks WHERE last_heartbeat <= ?`, cutoff)
 	if err != nil {
 		return nil, err
 	}
@@ -879,15 +935,17 @@ CREATE TABLE artifacts (
     type              TEXT NOT NULL,
     status            TEXT NOT NULL,
     title             TEXT NOT NULL,
+    priority          TEXT NOT NULL DEFAULT '',
     frontmatter_json  TEXT NOT NULL,
     body_sha256       BLOB NOT NULL,
     mtime             INTEGER NOT NULL
 );
-CREATE INDEX idx_artifacts_lineage ON artifacts(lineage);
-CREATE INDEX idx_artifacts_stage   ON artifacts(stage);
-CREATE INDEX idx_artifacts_status  ON artifacts(status);
-CREATE INDEX idx_artifacts_slug    ON artifacts(slug);
-CREATE INDEX idx_artifacts_type    ON artifacts(type);
+CREATE INDEX idx_artifacts_lineage  ON artifacts(lineage);
+CREATE INDEX idx_artifacts_stage    ON artifacts(stage);
+CREATE INDEX idx_artifacts_status   ON artifacts(status);
+CREATE INDEX idx_artifacts_slug     ON artifacts(slug);
+CREATE INDEX idx_artifacts_type     ON artifacts(type);
+CREATE INDEX idx_artifacts_priority ON artifacts(priority);
 
 CREATE TABLE links (
     src    TEXT NOT NULL,
@@ -960,6 +1018,10 @@ func buildWhere(f Filter) (clause string, args []any) {
 	if f.Label != "" {
 		conds = append(conds, "path IN (SELECT artifact FROM labels_index WHERE label = ?)")
 		args = append(args, f.Label)
+	}
+	if f.Priority != "" {
+		conds = append(conds, "priority = ?")
+		args = append(args, f.Priority)
 	}
 	if len(conds) == 0 {
 		return "", args

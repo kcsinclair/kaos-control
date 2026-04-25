@@ -1,10 +1,12 @@
 ---
 title: Artefacts for Defects
+priority: normal
 type: idea
 status: draft
 lineage: artefacts-for-defects
 labels:
     - artefacts
+    - enhancement
 ---
 
 # artefacts for defects 

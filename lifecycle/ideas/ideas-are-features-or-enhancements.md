@@ -1,8 +1,13 @@
 ---
 title: "Ideas are Features or Enhancements"
+priority: normal
 type: idea
 status: draft
 lineage: ideas-are-features-or-enhancements
+labels:
+    - workflow
+    - artefacts
+    - feature
 ---
 
 # ideas are features or enhancements

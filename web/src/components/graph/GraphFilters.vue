@@ -6,6 +6,8 @@ const props = defineProps<{
   uniqueTypes: string[]
   uniqueStatuses: string[]
   uniqueLineages: string[]
+  uniqueLabels: string[]
+  uniquePriorities: string[]
   nodeCount: number
   totalCount: number
 }>()
@@ -21,7 +23,9 @@ const isActive = (key: keyof GraphFilter, value: string) =>
 const hasFilters = () =>
   (props.filter.types?.length ?? 0) +
   (props.filter.statuses?.length ?? 0) +
-  (props.filter.lineages?.length ?? 0) > 0
+  (props.filter.lineages?.length ?? 0) +
+  (props.filter.labels?.length ?? 0) +
+  (props.filter.priorities?.length ?? 0) > 0
 </script>
 
 <template>
@@ -70,6 +74,32 @@ const hasFilters = () =>
           :class="{ 'chip--active': isActive('lineages', l) }"
           @click="emit('toggle', 'lineages', l)"
         >{{ l }}</button>
+      </div>
+    </div>
+
+    <div class="filter-group" v-if="uniqueLabels.length">
+      <div class="group-label">Label</div>
+      <div class="chip-list">
+        <button
+          v-for="l in uniqueLabels"
+          :key="l"
+          class="chip"
+          :class="{ 'chip--active': isActive('labels', l) }"
+          @click="emit('toggle', 'labels', l)"
+        >{{ l }}</button>
+      </div>
+    </div>
+
+    <div class="filter-group" v-if="uniquePriorities.length">
+      <div class="group-label">Priority</div>
+      <div class="chip-list">
+        <button
+          v-for="p in uniquePriorities"
+          :key="p"
+          class="chip"
+          :class="{ 'chip--active': isActive('priorities', p) }"
+          @click="emit('toggle', 'priorities', p)"
+        >{{ p }}</button>
       </div>
     </div>
   </aside>

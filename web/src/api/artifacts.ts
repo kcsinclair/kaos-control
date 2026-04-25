@@ -3,13 +3,14 @@ import type { ArtifactRow, ArtifactDetail, ArtifactFilter, ArtifactFrontmatter, 
 
 function filterParams(f: ArtifactFilter): string {
   const p = new URLSearchParams()
-  if (f.stage)   p.set('stage', f.stage)
-  if (f.status)  p.set('status', f.status)
-  if (f.label)   p.set('label', f.label)
-  if (f.lineage) p.set('lineage', f.lineage)
-  if (f.type)    p.set('type', f.type)
-  if (f.limit)   p.set('limit', String(f.limit))
-  if (f.offset)  p.set('offset', String(f.offset))
+  if (f.stage)    p.set('stage', f.stage)
+  if (f.status)   p.set('status', f.status)
+  if (f.label)    p.set('label', f.label)
+  if (f.lineage)  p.set('lineage', f.lineage)
+  if (f.type)     p.set('type', f.type)
+  if (f.priority) p.set('priority', f.priority)
+  if (f.limit)    p.set('limit', String(f.limit))
+  if (f.offset)   p.set('offset', String(f.offset))
   const s = p.toString()
   return s ? '?' + s : ''
 }
@@ -28,6 +29,10 @@ export function getArtifact(project: string, path: string) {
 
 export function listLabels(project: string) {
   return api.get<{ labels: string[] }>(`/p/${encodeURIComponent(project)}/labels`)
+}
+
+export function listPriorities(project: string) {
+  return api.get<{ priorities: string[] }>(`/p/${encodeURIComponent(project)}/priorities`)
 }
 
 export function listLineages(project: string) {

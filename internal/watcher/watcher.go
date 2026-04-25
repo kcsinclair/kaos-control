@@ -98,7 +98,12 @@ func (w *Watcher) handleChange(absPath string) {
 	}
 	resolvedFile, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
+		// File no longer exists (deleted). EvalSymlinks would partially resolve
+		// the root (e.g. /var → /private/var on macOS) but leave the file path
+		// raw, causing filepath.Rel to produce "../.." paths.  Use Clean for
+		// both so the prefixes are consistent.
 		resolvedFile = filepath.Clean(absPath)
+		resolvedRoot = filepath.Clean(w.projectRoot)
 	}
 	relPath, err := filepath.Rel(resolvedRoot, resolvedFile)
 	if err != nil {

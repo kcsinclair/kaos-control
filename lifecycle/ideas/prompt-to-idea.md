@@ -1,8 +1,14 @@
 ---
 title: "Prompt to Idea"
+priority: normal
 type: idea
 status: draft
 lineage: prompt-to-idea
+labels:
+    - artefacts
+    - workflow
+    - usability
+    - agent
 ---
 
 # prompt to idea

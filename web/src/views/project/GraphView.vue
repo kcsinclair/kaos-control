@@ -37,10 +37,12 @@ function closeModal() {
       :unique-types="store.uniqueTypes"
       :unique-statuses="store.uniqueStatuses"
       :unique-lineages="store.uniqueLineages"
+      :unique-labels="store.uniqueLabels"
+      :unique-priorities="store.uniquePriorities"
       :node-count="store.filteredNodes.length"
       :total-count="store.rawNodes.length"
       @toggle="store.toggleFilterValue"
-      @reset="store.setFilter({ types: [], statuses: [], lineages: [] })"
+      @reset="store.setFilter({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })"
     />
 
     <div class="graph-main">

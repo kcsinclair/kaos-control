@@ -1,8 +1,14 @@
 ---
 title: "Flesh Out Ideas with Agent"
+priority: normal
 type: idea
 status: draft
 lineage: flesh-out-ideas-with-agent
+labels:
+    - agent
+    - workflow
+    - process
+    - feature
 ---
 
 # flesh out ideas with agent

@@ -9,11 +9,17 @@ export const useGraphStore = defineStore('graph', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const filter = ref<GraphFilter>({ types: [], statuses: [], lineages: [] })
+  const filter = ref<GraphFilter>({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })
 
   const uniqueTypes = computed(() => [...new Set(rawNodes.value.map((n) => n.type))].sort())
   const uniqueStatuses = computed(() => [...new Set(rawNodes.value.map((n) => n.status))].sort())
   const uniqueLineages = computed(() => [...new Set(rawNodes.value.map((n) => n.lineage))].sort())
+  const uniqueLabels = computed(() =>
+    [...new Set(rawNodes.value.flatMap((n) => n.labels ?? []))].sort()
+  )
+  const uniquePriorities = computed(() =>
+    [...new Set(rawNodes.value.map((n) => n.priority ?? '').filter(Boolean))].sort()
+  )
 
   const filteredNodes = computed(() => {
     const f = filter.value
@@ -21,6 +27,8 @@ export const useGraphStore = defineStore('graph', () => {
       if (f.types?.length && !f.types.includes(n.type)) return false
       if (f.statuses?.length && !f.statuses.includes(n.status)) return false
       if (f.lineages?.length && !f.lineages.includes(n.lineage)) return false
+      if (f.labels?.length && !n.labels?.some((l) => f.labels!.includes(l))) return false
+      if (f.priorities?.length && !f.priorities.includes(n.priority ?? '')) return false
       return true
     })
   })
@@ -65,6 +73,8 @@ export const useGraphStore = defineStore('graph', () => {
     uniqueTypes,
     uniqueStatuses,
     uniqueLineages,
+    uniqueLabels,
+    uniquePriorities,
     filteredNodes,
     filteredEdges,
     fetchGraph,

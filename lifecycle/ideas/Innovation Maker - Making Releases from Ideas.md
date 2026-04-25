@@ -1,8 +1,13 @@
 ---
 title: Innovation Maker — Making Releases from Ideas
+priority: normal
 type: idea
 status: done
 lineage: innovation-maker
+labels:
+    - artefacts
+    - og
+    - feature
 ---
 
 # Innovation Maker - Making Releases from Ideas

@@ -19,6 +19,7 @@ const selectedStage = ref(store.filter.stage ?? '')
 const selectedStatus = ref(store.filter.status ?? '')
 const selectedLabel = ref(store.filter.label ?? '')
 const selectedType = ref(store.filter.type ?? '')
+const selectedPriority = ref(store.filter.priority ?? '')
 
 function applyFilters() {
   store.fetchList(project, {
@@ -26,6 +27,7 @@ function applyFilters() {
     status: selectedStatus.value || undefined,
     label: selectedLabel.value || undefined,
     type: selectedType.value || undefined,
+    priority: selectedPriority.value || undefined,
     offset: 0,
   })
 }
@@ -35,6 +37,7 @@ function resetFilters() {
   selectedStatus.value = ''
   selectedLabel.value = ''
   selectedType.value = ''
+  selectedPriority.value = ''
   applyFilters()
 }
 
@@ -66,6 +69,7 @@ onMounted(async () => {
   await Promise.all([
     store.fetchList(project),
     store.fetchLabels(project),
+    store.fetchPriorities(project),
   ])
 })
 </script>
@@ -93,6 +97,10 @@ onMounted(async () => {
       <select v-model="selectedLabel" @change="applyFilters" v-if="store.labels.length">
         <option value="">All labels</option>
         <option v-for="l in store.labels" :key="l" :value="l">{{ l }}</option>
+      </select>
+      <select v-model="selectedPriority" @change="applyFilters" v-if="store.priorities.length">
+        <option value="">All priorities</option>
+        <option v-for="p in store.priorities" :key="p" :value="p">{{ p }}</option>
       </select>
       <button class="btn-ghost" @click="resetFilters">Reset</button>
     </div>

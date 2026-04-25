@@ -1,5 +1,6 @@
 ---
 title: Tech Writer Agent
+priority: normal
 type: idea
 status: draft
 lineage: tech-writer-agent

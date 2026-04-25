@@ -140,6 +140,7 @@ func (s *Server) buildRouter() chi.Router {
 			r.Get("/graph", s.handleGraph)
 			r.Get("/labels", s.handleLabels)
 			r.Get("/lineages", s.handleLineages)
+			r.Get("/priorities", s.handlePriorities)
 			r.Get("/parse-errors", s.handleParseErrors)
 
 			// Project config

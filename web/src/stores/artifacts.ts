@@ -13,6 +13,7 @@ export const useArtifactsStore = defineStore('artifacts', () => {
   const detailCache = new Map<string, ArtifactDetail>()
 
   const labels = ref<string[]>([])
+  const priorities = ref<string[]>([])
 
   async function fetchList(project: string, f?: Partial<ArtifactFilter>): Promise<void> {
     if (f) Object.assign(filter, f)
@@ -41,6 +42,11 @@ export const useArtifactsStore = defineStore('artifacts', () => {
     labels.value = data.labels ?? []
   }
 
+  async function fetchPriorities(project: string): Promise<void> {
+    const data = await artifactsApi.listPriorities(project)
+    priorities.value = data.priorities ?? []
+  }
+
   function invalidate(path?: string): void {
     if (path) {
       detailCache.delete(path)
@@ -58,9 +64,11 @@ export const useArtifactsStore = defineStore('artifacts', () => {
     loading,
     filter,
     labels,
+    priorities,
     fetchList,
     fetchOne,
     fetchLabels,
+    fetchPriorities,
     invalidate,
   }
 })

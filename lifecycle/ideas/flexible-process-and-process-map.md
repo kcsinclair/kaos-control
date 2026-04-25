@@ -1,8 +1,13 @@
 ---
 title: "Flexible Process and Process Map"
+priority: normal
 type: idea
 status: draft
 lineage: flexible-process-and-process-map
+labels:
+    - workflow
+    - process
+    - enhancement
 ---
 
 # flexible process and process map
