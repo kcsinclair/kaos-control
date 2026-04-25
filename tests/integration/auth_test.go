@@ -135,8 +135,9 @@ func TestBootstrapFirstUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Should be 401 since users already exist and we're not authenticated.
-	requireStatus(t, resp, 401)
+	// Should be 403: CSRF middleware fires before auth, so unauthenticated
+	// requests without a CSRF token get 403 (csrf_missing), not 401.
+	requireStatus(t, resp, 403)
 	resp.Body.Close()
 
 	// With login, it should succeed.
