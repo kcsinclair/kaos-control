@@ -39,10 +39,12 @@ function closeModal() {
       :unique-lineages="store.uniqueLineages"
       :unique-labels="store.uniqueLabels"
       :unique-priorities="store.uniquePriorities"
-      :node-count="store.filteredNodes.length"
+      :node-count="store.augmentedNodes.length"
       :total-count="store.rawNodes.length"
+      :show-label-nodes="store.showLabelNodes"
       @toggle="store.toggleFilterValue"
       @reset="store.setFilter({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })"
+      @toggle-label-nodes="store.toggleShowLabelNodes"
     />
 
     <div class="graph-main">
@@ -70,14 +72,14 @@ function closeModal() {
       <template v-else>
         <ForceGraph3D
           v-if="view === '3d'"
-          :nodes="store.filteredNodes"
-          :edges="store.filteredEdges"
+          :nodes="store.augmentedNodes"
+          :edges="store.augmentedEdges"
           @node-click="onNodeClick"
         />
         <Graph2DView
           v-else
-          :nodes="store.filteredNodes"
-          :edges="store.filteredEdges"
+          :nodes="store.augmentedNodes"
+          :edges="store.augmentedEdges"
           :on-node-click="onNodeClick"
         />
       </template>

@@ -11,6 +11,8 @@ export const useGraphStore = defineStore('graph', () => {
 
   const filter = ref<GraphFilter>({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })
 
+  const showLabelNodes = ref(false)
+
   const uniqueTypes = computed(() => [...new Set(rawNodes.value.map((n) => n.type))].sort())
   const uniqueStatuses = computed(() => [...new Set(rawNodes.value.map((n) => n.status))].sort())
   const uniqueLineages = computed(() => [...new Set(rawNodes.value.map((n) => n.lineage))].sort())
@@ -38,6 +40,40 @@ export const useGraphStore = defineStore('graph', () => {
     return rawEdges.value.filter((e) => nodeSet.has(e.source) && nodeSet.has(e.target))
   })
 
+  // Synthetic label nodes derived from filtered artifacts
+  const labelNodes = computed<GraphNode[]>(() => {
+    const distinctLabels = [...new Set(filteredNodes.value.flatMap((n) => n.labels ?? []))]
+    return distinctLabels.map((lbl) => ({
+      id: `label::${lbl}`,
+      title: lbl,
+      type: 'label',
+      status: '',
+      stage: '',
+      lineage: '',
+      slug: lbl,
+      index: 0,
+    }))
+  })
+
+  // Edges from each artifact to its label nodes
+  const labelEdges = computed<GraphEdge[]>(() => {
+    const edges: GraphEdge[] = []
+    for (const n of filteredNodes.value) {
+      for (const lbl of n.labels ?? []) {
+        edges.push({ source: n.id, target: `label::${lbl}`, kind: 'label' })
+      }
+    }
+    return edges
+  })
+
+  const augmentedNodes = computed<GraphNode[]>(() =>
+    showLabelNodes.value ? [...filteredNodes.value, ...labelNodes.value] : filteredNodes.value
+  )
+
+  const augmentedEdges = computed<GraphEdge[]>(() =>
+    showLabelNodes.value ? [...filteredEdges.value, ...labelEdges.value] : filteredEdges.value
+  )
+
   async function fetchGraph(project: string): Promise<void> {
     loading.value = true
     error.value = null
@@ -64,12 +100,28 @@ export const useGraphStore = defineStore('graph', () => {
     }
   }
 
+  function toggleShowLabelNodes(): void {
+    showLabelNodes.value = !showLabelNodes.value
+  }
+
+  function updateNodePriority(nodeId: string, priority: string | null): void {
+    const idx = rawNodes.value.findIndex((n) => n.id === nodeId)
+    if (idx === -1) return
+    const updated = { ...rawNodes.value[idx], priority: priority ?? undefined }
+    rawNodes.value = [
+      ...rawNodes.value.slice(0, idx),
+      updated,
+      ...rawNodes.value.slice(idx + 1),
+    ]
+  }
+
   return {
     rawNodes,
     rawEdges,
     loading,
     error,
     filter,
+    showLabelNodes,
     uniqueTypes,
     uniqueStatuses,
     uniqueLineages,
@@ -77,8 +129,14 @@ export const useGraphStore = defineStore('graph', () => {
     uniquePriorities,
     filteredNodes,
     filteredEdges,
+    labelNodes,
+    labelEdges,
+    augmentedNodes,
+    augmentedEdges,
     fetchGraph,
     setFilter,
     toggleFilterValue,
+    toggleShowLabelNodes,
+    updateNodePriority,
   }
 })

@@ -10,11 +10,13 @@ const props = defineProps<{
   uniquePriorities: string[]
   nodeCount: number
   totalCount: number
+  showLabelNodes: boolean
 }>()
 
 const emit = defineEmits<{
   toggle: [key: keyof GraphFilter, value: string]
   reset: []
+  toggleLabelNodes: []
 }>()
 
 const isActive = (key: keyof GraphFilter, value: string) =>
@@ -36,6 +38,18 @@ const hasFilters = () =>
     </div>
     <div class="filter-count">
       {{ nodeCount }} / {{ totalCount }} nodes
+    </div>
+
+    <div class="filter-group">
+      <label class="toggle-label">
+        <input
+          type="checkbox"
+          class="toggle-input"
+          :checked="showLabelNodes"
+          @change="emit('toggleLabelNodes')"
+        />
+        <span class="toggle-text">Show label nodes</span>
+      </label>
     </div>
 
     <div class="filter-group" v-if="uniqueTypes.length">
@@ -172,5 +186,22 @@ const hasFilters = () =>
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: #fff;
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-input {
+  accent-color: var(--color-accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.toggle-text {
+  font-size: 11px;
+  color: var(--color-text-muted);
 }
 </style>
