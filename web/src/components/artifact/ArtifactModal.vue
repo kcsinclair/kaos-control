@@ -2,9 +2,12 @@
 import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useArtifactsStore } from '@/stores/artifacts'
+import { useGraphStore } from '@/stores/graph'
+import { patchPriority } from '@/api/artifacts'
 import MarkdownPreview from './MarkdownPreview.vue'
 import TransitionDialog from './TransitionDialog.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
+import { PRIORITY_COLORS } from '@/components/graph/graphConstants'
 import type { GraphNode, ArtifactDetail, GraphEdge } from '@/types/api'
 
 const props = defineProps<{
@@ -17,12 +20,37 @@ const emit = defineEmits<{ close: [] }>()
 
 const router = useRouter()
 const store = useArtifactsStore()
+const graphStore = useGraphStore()
 
 const detail = ref<ArtifactDetail | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const showTransition = ref(false)
 const showRunAgent = ref(false)
+const priorityEditing = ref(false)
+const priorityError = ref<string | null>(null)
+
+const PRIORITY_OPTIONS = ['high', 'medium', 'normal', 'low']
+
+async function onPriorityChange(e: Event) {
+  if (!props.node) return
+  const value = (e.target as HTMLSelectElement).value || null
+  priorityError.value = null
+  try {
+    await patchPriority(props.project, props.node.id, value)
+    if (detail.value) {
+      detail.value = {
+        ...detail.value,
+        frontmatter: { ...detail.value.frontmatter, priority: value ?? undefined },
+      }
+    }
+    graphStore.updateNodePriority(props.node.id, value)
+  } catch (err: unknown) {
+    priorityError.value = err instanceof Error ? err.message : 'Failed to update priority'
+  } finally {
+    priorityEditing.value = false
+  }
+}
 
 function onTransitioned(newStatus: string) {
   showTransition.value = false
@@ -109,6 +137,52 @@ const STATUS_TEXT: Record<string, string> = {
               class="modal-status"
               :style="{ background: STATUS_COLORS[node.status] ?? '#e5e7eb', color: STATUS_TEXT[node.status] ?? '#374151' }"
             >{{ node.status }}</span>
+
+            <!-- Labels badges -->
+            <template v-if="node.labels && node.labels.length">
+              <span
+                v-for="lbl in node.labels"
+                :key="lbl"
+                class="meta-label-badge"
+              >{{ lbl }}</span>
+            </template>
+
+            <!-- Priority display / inline edit -->
+            <template v-if="!priorityEditing">
+              <span
+                v-if="detail?.frontmatter?.priority"
+                class="meta-priority-badge"
+                :style="{ background: PRIORITY_COLORS[detail.frontmatter.priority] + '33', color: PRIORITY_COLORS[detail.frontmatter.priority], borderColor: PRIORITY_COLORS[detail.frontmatter.priority] + '66' }"
+                title="Click to edit priority"
+                role="button"
+                tabindex="0"
+                @click="priorityEditing = true"
+                @keydown.enter="priorityEditing = true"
+              >{{ detail.frontmatter.priority }}</span>
+              <span
+                v-else-if="detail && !detail.frontmatter?.priority"
+                class="meta-priority-none"
+                title="Click to set priority"
+                role="button"
+                tabindex="0"
+                @click="priorityEditing = true"
+                @keydown.enter="priorityEditing = true"
+              >No priority</span>
+            </template>
+            <select
+              v-else
+              class="priority-select"
+              :value="detail?.frontmatter?.priority ?? ''"
+              autofocus
+              @change="onPriorityChange"
+              @blur="priorityEditing = false"
+            >
+              <option value="">None</option>
+              <option v-for="opt in PRIORITY_OPTIONS" :key="opt" :value="opt">
+                {{ opt.charAt(0).toUpperCase() + opt.slice(1) }}
+              </option>
+            </select>
+            <span v-if="priorityError" class="priority-error">{{ priorityError }}</span>
           </div>
           <h2 class="modal-title">{{ node.title || node.slug }}</h2>
           <div class="modal-path">{{ node.id }}</div>
@@ -322,4 +396,45 @@ const STATUS_TEXT: Record<string, string> = {
   padding: var(--space-1);
 }
 .modal-close:hover { color: var(--color-text); }
+.meta-label-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+.meta-priority-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+.meta-priority-badge:hover { opacity: 0.8; }
+.meta-priority-none {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  opacity: 0.6;
+}
+.meta-priority-none:hover { opacity: 1; }
+.priority-select {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-accent);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.priority-error {
+  font-size: 11px;
+  color: #dc2626;
+}
 </style>

@@ -61,3 +61,10 @@ export function updateArtifact(
     payload,
   )
 }
+
+export function patchPriority(project: string, path: string, priority: string | null) {
+  return api.patch<{ artifact: ArtifactRow }>(
+    `/p/${encodeURIComponent(project)}/artifacts/${path}/priority`,
+    { priority },
+  )
+}
