@@ -1,0 +1,147 @@
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import type { GraphNode, GraphEdge } from '@/types/api'
+
+const props = defineProps<{
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  onNodeClick: (node: GraphNode) => void
+}>()
+
+const container = ref<HTMLDivElement | null>(null)
+let cy: any = null
+
+const NODE_COLORS: Record<string, string> = {
+  idea: '#f59e0b',
+  requirement: '#3b82f6',
+  plan: '#8b5cf6',
+  implementation: '#10b981',
+  test: '#06b6d4',
+  release: '#ef4444',
+}
+
+function nodeColor(type: string): string {
+  return NODE_COLORS[type] ?? '#6b7280'
+}
+
+function buildElements() {
+  const nodes = props.nodes.map((n) => ({
+    data: {
+      id: n.id,
+      label: n.title || n.slug,
+      type: n.type,
+      status: n.status,
+      color: nodeColor(n.type),
+      _raw: n,
+    },
+  }))
+  const edges = props.edges.map((e, i) => ({
+    data: {
+      id: `e${i}`,
+      source: e.source,
+      target: e.target,
+      label: e.kind,
+    },
+  }))
+  return [...nodes, ...edges]
+}
+
+async function init() {
+  if (!container.value) return
+  const [cytoscape, fcose] = await Promise.all([
+    import('cytoscape'),
+    import('cytoscape-fcose'),
+  ])
+  const Cy = cytoscape.default
+  Cy.use(fcose.default)
+
+  cy = Cy({
+    container: container.value,
+    elements: buildElements(),
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'background-color': 'data(color)',
+          label: 'data(label)',
+          color: '#f1f5f9',
+          'font-size': 11,
+          'text-valign': 'bottom',
+          'text-halign': 'center',
+          'text-margin-y': 4,
+          width: 28,
+          height: 28,
+          'text-wrap': 'ellipsis',
+          'text-max-width': 100,
+          'border-width': 1.5,
+          'border-color': 'rgba(255,255,255,0.25)',
+          'overlay-padding': 4,
+        },
+      },
+      {
+        selector: 'node:selected',
+        style: {
+          'border-width': 3,
+          'border-color': '#ffffff',
+        },
+      },
+      {
+        selector: 'edge',
+        style: {
+          width: 1.5,
+          'line-color': '#475569',
+          'target-arrow-color': '#475569',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          label: 'data(label)',
+          'font-size': 9,
+          color: '#94a3b8',
+          'text-background-color': '#1e293b',
+          'text-background-opacity': 0.85,
+          'text-background-padding': '2px',
+        },
+      },
+    ],
+    layout: {
+      name: 'fcose',
+      quality: 'proof',
+      randomize: true,
+      animate: false,
+      nodeSeparation: 120,
+      idealEdgeLength: () => 80,
+    } as any,
+    userZoomingEnabled: true,
+    userPanningEnabled: true,
+    boxSelectionEnabled: false,
+  })
+
+  cy.on('tap', 'node', (evt: any) => {
+    const raw = evt.target.data('_raw') as GraphNode
+    props.onNodeClick(raw)
+  })
+}
+
+function update() {
+  if (!cy) return
+  cy.elements().remove()
+  cy.add(buildElements())
+  cy.layout({ name: 'fcose', quality: 'proof', randomize: false, animate: false } as any).run()
+}
+
+watch(() => [props.nodes, props.edges], update, { deep: false })
+
+onMounted(init)
+onUnmounted(() => { cy?.destroy() })
+</script>
+
+<template>
+  <div ref="container" class="graph-2d" aria-label="2D artifact graph" role="img" />
+</template>
+
+<style scoped>
+.graph-2d {
+  width: 100%;
+  height: 100%;
+  background: #0f172a;
+}
+</style>

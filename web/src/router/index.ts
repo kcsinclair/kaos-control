@@ -48,12 +48,12 @@ const router = createRouter({
         {
           path: 'parse-errors',
           name: 'parse-errors',
-          component: () => import('@/views/project/PlaceholderView.vue'),
+          component: () => import('@/views/project/ParseErrorsView.vue'),
         },
         {
           path: 'config',
           name: 'config',
-          component: () => import('@/views/project/PlaceholderView.vue'),
+          component: () => import('@/views/project/ProjectConfigView.vue'),
         },
       ],
     },

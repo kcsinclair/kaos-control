@@ -133,6 +133,11 @@ export interface GraphFilter {
   lineages?: string[]
 }
 
+export interface ParseErrorRow {
+  path: string
+  message: string
+}
+
 export type WsEventType =
   | 'file.changed'
   | 'artifact.indexed'

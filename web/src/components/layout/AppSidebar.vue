@@ -1,44 +1,76 @@
 <script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
+import { api } from '@/api/client'
+import { useWebSocket } from '@/composables/useWebSocket'
+import type { WsEvent } from '@/types/api'
 
 const route = useRoute()
 const projectStore = useProjectStore()
 
 const projectName = () => route.params.project as string
+const parseErrorCount = ref(0)
+
+async function fetchParseErrors(project: string) {
+  try {
+    const res = await api.get<{ errors: Array<unknown> | null }>(
+      `/p/${encodeURIComponent(project)}/parse-errors`
+    )
+    parseErrorCount.value = res.errors?.length ?? 0
+  } catch {
+    parseErrorCount.value = 0
+  }
+}
+
+onMounted(() => fetchParseErrors(projectName()))
+
+watch(() => route.params.project, (p) => {
+  if (p) fetchParseErrors(p as string)
+})
+
+// Re-check when artifacts are re-indexed (a re-index may fix or introduce errors)
+useWebSocket(projectName(), 'artifact.indexed', (_e: WsEvent) => {
+  fetchParseErrors(projectName())
+})
 
 interface NavItem {
   label: string
   to: string
-  milestone: string
 }
 
 const navItems = (): NavItem[] => {
   const p = projectName()
   return [
-    { label: 'Artifacts', to: `/p/${p}/artifacts`, milestone: 'M2' },
-    { label: 'Graph', to: `/p/${p}/graph`, milestone: 'M3' },
-    { label: 'Agents', to: `/p/${p}/agents`, milestone: 'M5' },
-    { label: 'Parse Errors', to: `/p/${p}/parse-errors`, milestone: 'M6' },
-    { label: 'Config', to: `/p/${p}/config`, milestone: 'M6' },
+    { label: 'Artifacts', to: `/p/${p}/artifacts` },
+    { label: 'Graph', to: `/p/${p}/graph` },
+    { label: 'Agents', to: `/p/${p}/agents` },
+    { label: 'Parse Errors', to: `/p/${p}/parse-errors` },
+    { label: 'Config', to: `/p/${p}/config` },
   ]
 }
 </script>
 
 <template>
-  <nav class="app-sidebar">
+  <nav class="app-sidebar" aria-label="Project navigation">
     <div class="sidebar-project">
       <span class="project-label">Project</span>
       <span class="project-name">{{ projectStore.current?.name ?? projectName() }}</span>
     </div>
-    <ul class="nav-list">
+    <ul class="nav-list" role="list">
       <li v-for="item in navItems()" :key="item.to" class="nav-item">
         <RouterLink
           :to="item.to"
           class="nav-link"
           :class="{ 'nav-link--active': route.path.startsWith(item.to) }"
+          :aria-current="route.path.startsWith(item.to) ? 'page' : undefined"
         >
           {{ item.label }}
+          <span
+            v-if="item.label === 'Parse Errors' && parseErrorCount > 0"
+            class="badge"
+            :aria-label="`${parseErrorCount} parse errors`"
+          >{{ parseErrorCount }}</span>
         </RouterLink>
       </li>
     </ul>
@@ -87,7 +119,9 @@ const navItems = (): NavItem[] => {
   margin-bottom: 2px;
 }
 .nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
   color: var(--color-sidebar-text-muted);
@@ -102,5 +136,23 @@ const navItems = (): NavItem[] => {
 .nav-link--active {
   background: var(--color-sidebar-active);
   color: #fff;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-error);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.nav-link--active .badge {
+  background: rgba(255,255,255,0.25);
 }
 </style>

@@ -1,0 +1,139 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { api } from '@/api/client'
+import type { ParseErrorRow } from '@/types/api'
+
+const route = useRoute()
+const project = route.params.project as string
+
+const errors = ref<ParseErrorRow[]>([])
+const loading = ref(false)
+const loadError = ref<string | null>(null)
+
+async function load() {
+  loading.value = true
+  loadError.value = null
+  try {
+    const res = await api.get<{ errors: ParseErrorRow[] | null }>(
+      `/p/${encodeURIComponent(project)}/parse-errors`
+    )
+    errors.value = res.errors ?? []
+  } catch (e: unknown) {
+    loadError.value = e instanceof Error ? e.message : 'Failed to load'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(load)
+</script>
+
+<template>
+  <div class="parse-errors-view">
+    <div class="view-header">
+      <h2 class="view-title">Parse Errors</h2>
+      <button class="btn-ghost" @click="load" :disabled="loading" aria-label="Reload parse errors">
+        Reload
+      </button>
+    </div>
+
+    <div v-if="loading" class="state-msg" role="status" aria-live="polite">Loading…</div>
+    <div v-else-if="loadError" class="state-msg error" role="alert">{{ loadError }}</div>
+    <div v-else-if="!errors.length" class="state-msg success">
+      No parse errors — all artifacts are clean.
+    </div>
+
+    <table v-else class="errors-table" aria-label="Parse errors">
+      <thead>
+        <tr>
+          <th scope="col">File</th>
+          <th scope="col">Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="err in errors" :key="err.path" class="error-row">
+          <td class="cell-path">{{ err.path }}</td>
+          <td class="cell-msg">{{ err.message }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</template>
+
+<style scoped>
+.parse-errors-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.view-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text);
+}
+.btn-ghost {
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-ghost:hover:not(:disabled) { background: var(--color-surface); }
+.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+.state-msg {
+  padding: var(--space-8) var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.state-msg.error { color: var(--color-error); }
+.state-msg.success { color: var(--color-success); }
+.errors-table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow-y: auto;
+}
+.errors-table th {
+  position: sticky;
+  top: 0;
+  background: var(--color-bg);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  padding: var(--space-2) var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  z-index: 1;
+}
+.error-row {
+  border-bottom: 1px solid var(--color-border);
+}
+.errors-table td {
+  padding: var(--space-3) var(--space-4);
+  vertical-align: top;
+  font-size: var(--text-sm);
+}
+.cell-path {
+  font-family: monospace;
+  color: var(--color-text-muted);
+  width: 35%;
+  word-break: break-all;
+}
+.cell-msg {
+  color: var(--color-error);
+}
+</style>

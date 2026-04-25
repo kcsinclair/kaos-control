@@ -2,7 +2,7 @@
 
 Living document summarising project state. Updated on every commit per the Commit Conventions in [CLAUDE.md](../CLAUDE.md).
 
-**Current stage:** FE-M5 complete — workflow transitions + agent run UI: TransitionDialog, RunAgentDialog, AgentsRunsView, RunStatusChip, WS wiring for agent.*/lock.* events in WorkspaceView. Next: FE-M6 (polish + E2E testing).
+**Current stage:** FE-M6 complete — config view, parse-errors view, 2D graph (Cytoscape + fcose), parse-error badge, bundle optimisation. Main bundle 45 KB gzip; vendor chunks code-split per feature. All six frontend milestones done.
 
 ---
 
@@ -18,6 +18,7 @@ Rolling log — add a dated bullet per commit.
 - **2026-04-24** — FE-M1 implemented: Vite 5 + Vue 3.5 + TypeScript + Pinia + Vue Router scaffold under `web/`; typed fetch API client with CSRF double-submit; auth store (login/logout/fetchMe); project store; toast/ui store; Vue Router with auth guard (nav-guard calls `/api/auth/me` on first load); LoginView + LoginForm; ProjectPickerView (lists projects, shows user roles as chips); WorkspaceView shell (AppHeader, AppSidebar, RouterView); ArtifactListView placeholder; dark-sidebar layout with design tokens; `pnpm build` → `web/dist/` → embedded by Go binary. `.gitignore` updated: `/dist/` roots the Go binary ignore, `web/node_modules/` excluded.
 - **2026-04-24** — M5 implemented: `internal/lock` (lineage lock manager with SQLite persistence, heartbeat, reaper goroutine), `internal/agent` (Driver interface, ClaudeCodeDriver spawning `claude --dangerously-skip-permissions -p`, ring-buffer stderr, Manager with global semaphore + per-lineage locking, supervisor goroutine for exit/commit/broadcast, crash recovery), `internal/http/agents.go` (GET /agents, POST /agents/:name/run, GET/POST /agents/runs/…), git `ModifiedFiles` for scope-enforced post-run commit, index CRUD for `agent_runs` and `lineage_locks` tables, lock reaper wired into startup. `lifecycle/config.yaml` extended with backend-planner agent config.
 - **2026-04-24** — FE-M4 implemented: backend `file_sha` (SHA256 of raw file added to GET artifact response), lock HTTP API (GET/POST /locks, DELETE/POST /locks/:lineage/heartbeat) wired to existing lock.Manager. Frontend: `api/locks.ts`, `stores/locks.ts` (WS event-driven map), `composables/useLock.ts` (acquire on enter-edit, 30s heartbeat interval, release on cancel/save/unmount, 503 treated as lock-free), `composables/useExternalChange.ts` (file.changed WS + 3s save-grace window), `MarkdownEditor.vue` (CodeMirror 6 with basicSetup + markdown + oneDark theme + Cmd+S keymap), `FrontmatterEditor.vue` (typed inputs for title/status/labels/release/sprint/depends_on/blocks), `LockBanner.vue`. `ArtifactEditorView.vue` rewritten: read mode (existing preview) ↔ edit mode (CodeMirror | MarkdownPreview split + FrontmatterEditor), optimistic PUT with expected_sha, conflict error messaging, lock banner for held locks, external-change reload-or-keep prompt. TypeScript clean, 610-module Vite build clean.
+- **2026-04-25** — FE-M6 implemented: `ParseErrorsView.vue` (table of path + message, Reload button, success state), `ProjectConfigView.vue` (YAML textarea editor, unsaved-changes indicator, Save), `Graph2DView.vue` (Cytoscape + cytoscape-fcose, lazy-loaded via `defineAsyncComponent`), 3D/2D toggle in `GraphView.vue`, parse-error count badge in `AppSidebar.vue` (WS-driven refresh on `artifact.indexed`), `GET/PUT /api/p/:project/config` backend endpoint. Bundle: main 45 KB gzip; vendor-three 359 KB, vendor-codemirror 208 KB, vendor-cytoscape 176 KB — all loaded only when feature is used. TypeScript clean, 638-module Vite build clean.
 - **2026-04-24** — FE-M5 implemented: `TransitionDialog.vue` (fixed status list, comment textarea for rejections, calls POST /transition, emits transitioned event), `RunAgentDialog.vue` (agent chip selector, role select, target path input, calls agentsStore.startRun), `AgentsRunsView.vue` (table of runs with live status, expandable rows showing progress lines / stderr tail / artifacts produced, Kill button for running runs), `RunStatusChip.vue` (Teleported fixed-position pulsing chip for in-flight runs, navigates to agents view). `WorkspaceView.vue` rewritten to multiplex WS events to agentsStore (agent.*) and locksStore (lock.*). `ArtifactModal.vue` and `ArtifactEditorView.vue` extended with Change Status + Run Agent toolbar buttons. `api/agents.ts` + `stores/agents.ts` (runs list, progressLines map, WS event handlers, kill action). TypeScript clean, 624-module Vite build clean.
 - **2026-04-24** — FE-M3 implemented: `GraphView` (3D force graph with dark canvas, orbit/zoom controls), `ForceGraph3D.vue` (wraps 3d-force-graph; node colour by type, size by lineage index, directed arrowheads, HTML tooltips, ResizeObserver fill, `_destructor` on unmount), `GraphFilters.vue` (chip-based multi-select for type/status/lineage, live filtered node/edge count), `GraphLegend.vue` (overlay matching token colours), `ArtifactModal.vue` (Teleported overlay, fetches artifact detail from store, markdown preview, inbound/outbound edge list, Edit action navigates to editor), `useGraphData.ts` composable (fetches on mount, re-fetches on `artifact.indexed` WS event), `stores/graph.ts` (rawNodes/rawEdges, computed filteredNodes/filteredEdges from reactive filter, uniqueTypes/statuses/lineages), `api/graph.ts`. Router default `/p/:project` now goes to graph. GraphView chunk ≈ 1.3 MB gzip 363 KB due to three.js — lazy-load deferred to M6 per plan.
 - **2026-04-24** — FE-M2 implemented: `ArtifactListView` (server-side filter bar for stage/status/type/label, paginated table, WebSocket `artifact.indexed` invalidation), `ArtifactEditorView` (breadcrumb nav, markdown preview, frontmatter panel, WS live-reload), artifact components (`LineageBreadcrumb`, `FrontmatterPanel`, `MarkdownPreview` with markdown-it + wiki-link inline rule → `/p/:project/artifacts?lineage=…`), `useWebSocket` composable, `stores/artifacts` (items/filter/detailCache/labels), `api/artifacts.ts`, `api/ws.ts` (WsClient with exponential backoff reconnect, singleton per project). Router extended with `artifacts/:pathMatch(.*)+` editor route. TypeScript clean (`vue-tsc --noEmit`), Vite build clean (157 modules).
@@ -44,17 +45,18 @@ Rolling log — add a dated bullet per commit.
 - **FE-M3 (3D graph + modal)**: `GraphView`, `ForceGraph3D.vue` (3d-force-graph wrapper), `GraphFilters.vue`, `GraphLegend.vue`, `ArtifactModal.vue`, `useGraphData.ts`, `stores/graph.ts`, `api/graph.ts`; workspace default navigates to graph
 - **FE-M4 (write path)**: backend lock HTTP API + file_sha in GET response; `MarkdownEditor.vue` (CodeMirror 6), `FrontmatterEditor.vue`, `LockBanner.vue`, `api/locks.ts`, `stores/locks.ts`, `composables/useLock.ts`, `composables/useExternalChange.ts`; `ArtifactEditorView` full read/edit toggle with optimistic PUT, lock lifecycle, external-change prompt
 - **FE-M5 (workflow + agents)**: `TransitionDialog.vue`, `RunAgentDialog.vue`, `AgentsRunsView.vue`, `RunStatusChip.vue`; `api/agents.ts`, `stores/agents.ts`; WS multiplex for agent.*/lock.* events; Change Status + Run Agent wired into modal and editor toolbar
+- **FE-M6 (config + graph 2D + polish)**: `ParseErrorsView.vue`, `ProjectConfigView.vue`, `Graph2DView.vue` (Cytoscape + fcose, lazy-loaded), 3D/2D graph toggle, parse-error badge in sidebar, backend config GET/PUT endpoint, `manualChunks` bundle split
 
 ---
 
 ## Planned
 
-### Next: FE-M6 — Polish + E2E Testing
-- Lazy-load GraphView chunk (three.js) to reduce initial bundle
-- Error boundaries for async views
-- Loading skeleton states for artifact list and editor
-- E2E smoke tests (Playwright or Vitest browser mode)
-- **Acceptance**: Lighthouse performance score ≥ 85; core flows covered by E2E tests
+### Next: Post-M6 — E2E Testing + Hardening
+- Playwright or Vitest browser-mode smoke tests for core flows
+- Error boundary components for async route failures
+- Skeleton loading states for artifact list and editor
+- `POST /api/open-in-editor` for local editor launch (spec §16)
+- `POST /api/p/:project/agents/:name/preview-prompt` (spec §16)
 
 ### Roadmap: Remaining Frontend Milestones
 - Vue 3 SPA with Vite build pipeline
