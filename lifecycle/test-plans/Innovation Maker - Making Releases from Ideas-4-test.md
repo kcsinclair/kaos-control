@@ -1,7 +1,7 @@
 ---
 title: Test Plan — kaos-control v1
 type: plan-test
-status: approved
+status: in-progress
 lineage: innovation-maker
 parent: requirements/Innovation Maker - Making Releases from Ideas-1.md
 labels:
