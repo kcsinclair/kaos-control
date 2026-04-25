@@ -4,35 +4,224 @@ git:
 
 roles:
   - product-owner
-  - backend-planner
-  - frontend-planner
-  - developer
+  - analyst
+  - backend-developer
+  - frontend-developer
+  - test-developer
   - qa
   - reviewer
   - approver
 
+stages:
+  - {name: ideas,          dir: ideas}
+  - {name: requirements,   dir: requirements}
+  - {name: backend-plans,  dir: backend-plans}
+  - {name: frontend-plans, dir: frontend-plans}
+  - {name: dev-plans,      dir: dev-plans}
+  - {name: test-plans,     dir: test-plans}
+  - {name: tests,          dir: tests}
+  - {name: prototypes,     dir: prototypes}
+  - {name: releases,       dir: releases}
+  - {name: sprints,        dir: sprints}
+  - {name: defects,        dir: defects}
+
 users:
   - email: keith@sinclair.org.au
-    roles: [product-owner, reviewer, approver]
+    roles: [product-owner, analyst, reviewer, approver]
 
 agents:
-  - name: backend-planner
-    role: [backend-planner]
+  # ── Think phase ─────────────────────────────────────────────────────────────
+  - name: analyst-requirements
+    role: [analyst]
+    driver: claude-code-cli
+    allowed_write_paths:
+      - lifecycle/requirements
+    git_identity:
+      name: Analyst (Requirements) Agent
+      email: analyst-requirements@kaos-control.local
+    prompt_templates:
+      analyst: |
+        You are an analyst for the Innovation Maker project.
+        Read the idea artifact at {target_path}.
+
+        Produce a detailed requirement artifact in lifecycle/requirements/.
+        The new file's filename, lineage index, and parent must follow the
+        lineage convention in CLAUDE.md.
+
+        Required frontmatter:
+          title: <concise title>
+          type: ticket
+          status: draft
+          lineage: <same slug as the parent idea>
+          parent: <path to parent idea>
+
+        Body sections (use ## headings):
+          - Problem
+          - Goals / Non-goals
+          - Detailed Requirements (functional + non-functional)
+          - Acceptance Criteria (as a checklist; link related artifacts with [[slug]])
+          - Open Questions
+
+        If the idea is unclear, list specific clarifying questions in an
+        "Open Questions" section — do NOT guess. Keep requirements crisp
+        and testable.
+
+  - name: analyst-planner
+    role: [analyst]
     driver: claude-code-cli
     allowed_write_paths:
       - lifecycle/backend-plans
+      - lifecycle/frontend-plans
+      - lifecycle/test-plans
     git_identity:
-      name: Backend Planner Agent
-      email: backend-planner@kaos-control.local
+      name: Analyst (Planner) Agent
+      email: analyst-planner@kaos-control.local
     prompt_templates:
-      backend-planner: |
-        You are a backend planning agent for the Innovation Maker project.
-        Read the requirements artifact at {target_path} and produce a
-        detailed backend implementation plan as a new markdown artifact in
-        lifecycle/backend-plans/. The artifact must have YAML frontmatter
-        with fields: title, type: plan, status: draft, lineage, parent.
-        Follow the lineage filename convention from CLAUDE.md.
+      analyst: |
+        You are an analyst for the Innovation Maker project.
+        Read the requirement artifact at {target_path}.
+
+        Produce THREE plan artifacts that share the requirement's lineage:
+          1. lifecycle/backend-plans/<slug>-<n>-be.md    (type: plan-backend)
+          2. lifecycle/frontend-plans/<slug>-<n>-fe.md   (type: plan-frontend)
+          3. lifecycle/test-plans/<slug>-<n>-test.md     (type: plan-test)
+
+        Each plan's required frontmatter:
+          title: <plan title>
+          type: plan-{backend|frontend|test}
+          status: draft
+          lineage: <same slug as the requirement>
+          parent: <path to the requirement>
+
+        Structure each plan body as ordered milestones. Each milestone must
+        have: description, files to change, and explicit acceptance criteria.
+        Cross-link plans with [[slug]] where they interact.
+
+        Follow the lineage filename convention in CLAUDE.md. Indices are
+        monotonic per lineage across stages — never reuse an index.
+
+  # ── Make phase ──────────────────────────────────────────────────────────────
+  - name: backend-developer
+    role: [backend-developer]
+    driver: claude-code-cli
+    allowed_write_paths:
+      - internal
+      - cmd
+    git_identity:
+      name: Backend Developer Agent
+      email: backend-developer@kaos-control.local
+    prompt_templates:
+      backend-developer: |
+        You are a backend developer for the Innovation Maker project.
+        Read the backend plan at {target_path} and implement it milestone
+        by milestone in Go.
+
+        Scope of writes: internal/** and cmd/**. Do NOT modify web/,
+        lifecycle/, or test files — those belong to other agents.
+
+        After each milestone:
+          - go build ./...
+          - go vet ./...
+        Both must pass before the milestone is considered complete.
+
+        Commit each milestone as its own git commit with a message that
+        references the plan's milestone heading.
+
+  - name: frontend-developer
+    role: [frontend-developer]
+    driver: claude-code-cli
+    allowed_write_paths:
+      - web/src
+    git_identity:
+      name: Frontend Developer Agent
+      email: frontend-developer@kaos-control.local
+    prompt_templates:
+      frontend-developer: |
+        You are a frontend developer for the Innovation Maker project.
+        Read the frontend plan at {target_path} and implement it milestone
+        by milestone in Vue 3 + TypeScript.
+
+        Scope of writes: web/src/**. Do NOT modify backend code, tests, or
+        lifecycle artifacts — other agents own those.
+
+        After each milestone, run these from the web/ directory:
+          - pnpm exec vue-tsc --noEmit
+          - pnpm build
+        Both must pass before the milestone is considered complete.
+
+        Commit each milestone as its own git commit with a message that
+        references the plan's milestone heading.
+
+  - name: test-developer
+    role: [test-developer]
+    driver: claude-code-cli
+    allowed_write_paths:
+      - tests
+      - lifecycle/tests
+    git_identity:
+      name: Test Developer Agent
+      email: test-developer@kaos-control.local
+    prompt_templates:
+      test-developer: |
+        You are a test developer for the Innovation Maker project.
+        Read the test plan at {target_path} and implement integration tests
+        in the repo-root tests/ directory.
+
+        Scope of writes:
+          - tests/**          (actual integration test code)
+          - lifecycle/tests/  (a `test` artifact documenting what was built)
+
+        For every test plan you complete, also write a companion artifact in
+        lifecycle/tests/ with frontmatter:
+          title: <what this test suite covers>
+          type: test
+          status: draft
+          lineage: <same slug as the test plan>
+          parent: <path to the test plan>
+
+        The artifact body should summarise scenarios covered and point to
+        the specific test files in tests/.
+
+  # ── Verify phase ────────────────────────────────────────────────────────────
+  - name: qa
+    role: [qa]
+    driver: claude-code-cli
+    allowed_write_paths:
+      - lifecycle/defects
+    git_identity:
+      name: QA Agent
+      email: qa@kaos-control.local
+    prompt_templates:
+      qa: |
+        You are a QA agent for the Innovation Maker project.
+        Given the artifact at {target_path} (typically a ticket, release, or
+        test artifact), run the relevant integration tests in tests/ and
+        report results.
+
+        For EACH failing test, create one defect artifact in
+        lifecycle/defects/ with frontmatter:
+          title: <short defect title>
+          type: defect
+          status: draft
+          lineage: <lineage of the feature being tested>
+          parent: <path to the failing test artifact or feature>
+          labels: [defect]
+          assignees:
+            - role: <backend-developer | frontend-developer | test-developer>
+              who: agent
+
+        Route each defect to the correct developer role based on which layer
+        failed:
+          - Backend API / logic / data → backend-developer
+          - UI / component / state → frontend-developer
+          - Flaky or wrong test → test-developer
+
+        Body sections:
+          - Reproduction Steps (exact, numbered)
+          - Expected Behaviour
+          - Actual Behaviour
+          - Logs / Output (include stderr tail or test output)
 
 required_plans:
-  ticket: []
+  ticket: [plan-backend, plan-frontend, plan-test]
   epic: []

@@ -41,11 +41,12 @@ requirements/Innovation Maker - Making Releases from Ideas-1.md
 ### Role list (v1)
 | Role | Responsibility |
 |---|---|
-| `product-owner` | Creates ideas and requirements; final approver on scope |
-| `backend-planner` | Produces backend plans from requirements |
-| `frontend-planner` | Produces frontend plans and UI prototypes |
-| `developer` | Implements code and unit tests from approved plans |
-| `qa` | Produces test plans and implements automated tests |
+| `product-owner` | Creates and curates ideas; decides when work starts |
+| `analyst` | Reads ideas → writes detailed requirements; reads requirements → writes backend, frontend and test plans |
+| `backend-developer` | Implements code from approved backend plans (Go in `internal/`, `cmd/`) |
+| `frontend-developer` | Implements code from approved frontend plans (Vue/TS in `web/src/`) |
+| `test-developer` | Implements integration tests from approved test plans (in repo-root `tests/`) |
+| `qa` | Runs tests, raises defects in `lifecycle/defects/` and assigns them to the right developer role |
 | `reviewer` | Reviews artifacts, may reject with feedback |
 | `approver` | Approves artifacts to unlock the next stage |
 
@@ -128,7 +129,7 @@ Users need a way to authenticate…
 
 ### 4.2 Field rules
 - **Required frontmatter fields**: `title`, `type`, `status`, `lineage`. Everything else is optional.
-- **`type`** vocabulary (v1): `idea`, `ticket`, `epic`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`.
+- **`type`** vocabulary (v1): `idea`, `ticket`, `epic`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`, `defect`.
 - **`status`** vocabulary: `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`.
 - Frontmatter fields not in the canonical list are preserved verbatim — teams can add their own.
 
@@ -152,7 +153,8 @@ Both forms produce edges in the graph. Edge direction follows the field semantic
 ### 5.1 Project root
 ```
 my-project/
-├── src/                    # language-specific code tree (untouched by app in v1)
+├── src/                    # language-specific code tree (developer agents write here)
+├── tests/                  # integration tests (test-developer agent writes here)
 ├── lifecycle/
 │   ├── config.yaml         # per-project kaos-control config
 │   ├── ideas/
@@ -161,17 +163,18 @@ my-project/
 │   ├── frontend-plans/
 │   ├── dev-plans/
 │   ├── test-plans/
-│   ├── tests/
+│   ├── tests/              # `test` artifacts documenting suites in /tests
 │   ├── prototypes/
 │   ├── releases/
-│   └── sprints/
+│   ├── sprints/
+│   └── defects/            # raised by the qa agent
 └── .git/
 ```
 
 ### 5.2 Scope of access
 - The app reads and writes **inside `lifecycle/` only**, plus the project root's `.git/` for version control operations.
-- The developer agent (v1) writes code to the project's code tree; this is the **only** exception to the lifecycle scope and is gated by the agent's configured write paths (see §7.4).
-- The QA agent may write test code to a user-nominated harness directory outside `lifecycle/`.
+- Developer agents (`backend-developer`, `frontend-developer`, `test-developer`) write code to the project's code tree; this is the **only** exception to the lifecycle scope and is gated by each agent's configured `allowed_write_paths` (see §7.4).
+- The `test-developer` agent writes integration test code to a repo-root `tests/` directory in addition to a companion artifact in `lifecycle/tests/`.
 
 ### 5.3 Configurable stage directories
 Stage directory names are declared in `lifecycle/config.yaml`. Defaults above; teams can rename, add, or remove stages. Example override:
@@ -215,10 +218,10 @@ Transitions are stored as events on the artifact (see §8.2) and are permitted o
 
 | From → To | Authorised roles |
 |---|---|
-| `draft → clarifying` | `product-owner` |
-| `clarifying → planning` | `product-owner`, `reviewer` |
+| `draft → clarifying` | `product-owner`, `analyst` |
+| `clarifying → planning` | `product-owner`, `reviewer`, `analyst` |
 | `planning → in-development` | `approver` |
-| `in-development → in-qa` | `developer` |
+| `in-development → in-qa` | `backend-developer`, `frontend-developer`, `test-developer` |
 | `in-qa → approved` | `qa` |
 | `approved → done` | `approver` |
 | any → `rejected` | `reviewer` |
@@ -226,10 +229,10 @@ Transitions are stored as events on the artifact (see §8.2) and are permitted o
 
 The matrix is overridable per project in `config.yaml`.
 
-### 6.3 Plan branches (backend/frontend/dev/test)
-- BE and FE plans are **optional**. A ticket may have either, both, or neither (e.g., infra-only work has neither; a pure UI tweak has only FE).
-- Multiple plan types progress in parallel within `planning`. The ticket leaves `planning` only when **all required plans for its `type`** are `approved`.
-- Required plans per ticket type are declared in `config.yaml` (default: `ticket` requires all that are non-empty — i.e., none mandatory unless created; `epic` has no plan requirement).
+### 6.3 Plan branches (backend/frontend/test)
+- A `ticket` requires all three plan types — `plan-backend`, `plan-frontend`, `plan-test` — in `approved` state before it can leave `planning`. The default is set in `config.yaml` (`required_plans.ticket`).
+- An `epic` has no plan requirement by default; it spans multiple tickets each with their own plans.
+- All three plans are produced by the same `analyst` role (typically the `analyst-planner` agent), and they progress in parallel through review and approval.
 
 ### 6.4 Clarifying questions
 An agent in `clarifying` produces a `questions.md` artifact linked to the requirement. Answering a question updates the artifact in place (no new lineage index) — this is the only stage where in-place edit is standard, because questions are conversational.
@@ -243,28 +246,36 @@ An **agent** is a configured pluggable LLM runner bound to one or more roles. Ag
 
 ```yaml
 agents:
-  - name: claude-planner
-    role: [backend-planner, frontend-planner]
+  - name: analyst-planner
+    role: [analyst]
     driver: claude-code-cli
     model: claude-sonnet-4-6
+    allowed_write_paths:
+      - lifecycle/backend-plans
+      - lifecycle/frontend-plans
+      - lifecycle/test-plans
     git_identity:
-      name: claude-planner
-      email: planner@innovation-maker.local
-  - name: local-dev
-    role: [developer]
-    driver: mcp
-    endpoint: http://localhost:3210
+      name: analyst-planner
+      email: analyst-planner@innovation-maker.local
+  - name: backend-developer
+    role: [backend-developer]
+    driver: claude-code-cli
+    allowed_write_paths:
+      - internal
+      - cmd
     git_identity:
-      name: local-dev-agent
-      email: dev@innovation-maker.local
+      name: backend-developer
+      email: backend-developer@innovation-maker.local
 ```
+
+A single role can be served by multiple agents (e.g., `analyst-requirements` and `analyst-planner` both share `role: [analyst]`), and the operator picks which agent to invoke from the UI.
 
 ### 7.2 Execution drivers
 - **v1**: `claude-code-cli` — spawn Claude Code as a subprocess with a prompt and working directory.
 - **Roadmap**: `anthropic-api`, `openai-api`, `ollama-local`, `mcp` (agent is itself an MCP server the app calls).
 
 ### 7.3 Trigger model
-- Agents are **triggered on demand** from the UI (e.g., "Run backend-planner on this ticket") or by a role-authorised user.
+- Agents are **triggered on demand** from the UI (e.g., "Run analyst-planner on this requirement") or by a role-authorised user.
 - No automatic state-change triggers in v1 (roadmap).
 - When triggered, the app records an **agent run** entity with start time, status, artifact(s) produced, and exit code.
 
@@ -482,9 +493,10 @@ git:
   branch_template: "ticket/{slug}"
 roles:
   - product-owner
-  - backend-planner
-  - frontend-planner
-  - developer
+  - analyst
+  - backend-developer
+  - frontend-developer
+  - test-developer
   - qa
   - reviewer
   - approver
@@ -492,11 +504,11 @@ transitions:
   # overrides of the default matrix, if any
 users:
   - email: keith@sinclair.org.au
-    roles: [product-owner, approver]
+    roles: [product-owner, analyst, reviewer, approver]
 agents:
   # see §7.1
 required_plans:
-  ticket: []          # no plans mandatory; create what you need
+  ticket: [plan-backend, plan-frontend, plan-test]
   epic: []
 ```
 

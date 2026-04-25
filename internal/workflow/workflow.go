@@ -19,14 +19,14 @@ type rule struct {
 
 // defaultRules implement the spec §6.2 transition matrix.
 var defaultRules = []rule{
-	{from: "draft", to: "clarifying", roles: []string{"product-owner"}},
-	{from: "clarifying", to: "planning", roles: []string{"product-owner", "reviewer"}},
+	{from: "draft", to: "clarifying", roles: []string{"product-owner", "analyst"}},
+	{from: "clarifying", to: "planning", roles: []string{"product-owner", "reviewer", "analyst"}},
 	{from: "planning", to: "in-development", roles: []string{"approver"}},
-	{from: "in-development", to: "in-qa", roles: []string{"developer"}},
+	{from: "in-development", to: "in-qa", roles: []string{"backend-developer", "frontend-developer", "test-developer"}},
 	{from: "in-qa", to: "approved", roles: []string{"qa"}},
 	{from: "approved", to: "done", roles: []string{"approver"}},
-	// Terminal fallbacks: clarifying ↔ draft (so product-owner can retract)
-	{from: "clarifying", to: "draft", roles: []string{"product-owner"}},
+	// Terminal fallbacks: clarifying ↔ draft (so product-owner / analyst can retract)
+	{from: "clarifying", to: "draft", roles: []string{"product-owner", "analyst"}},
 	// any → rejected / abandoned
 	{from: "", to: "rejected", roles: []string{"reviewer"}},
 	{from: "", to: "abandoned", roles: []string{"product-owner", "approver"}},

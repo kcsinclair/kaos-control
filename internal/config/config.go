@@ -231,11 +231,13 @@ var defaultStages = []Stage{
 	{Name: "prototypes", Dir: "prototypes"},
 	{Name: "releases", Dir: "releases"},
 	{Name: "sprints", Dir: "sprints"},
+	{Name: "defects", Dir: "defects"},
 }
 
 var defaultRoles = []string{
-	"product-owner", "backend-planner", "frontend-planner",
-	"developer", "qa", "reviewer", "approver",
+	"product-owner", "analyst",
+	"backend-developer", "frontend-developer", "test-developer",
+	"qa", "reviewer", "approver",
 }
 
 func defaultProject() Project {

@@ -75,4 +75,51 @@ Please proceed, and let me know if you have any questions.
 ### fifth prompt for the coding tests
 
 
+# Refining the roles prompt
 
+lets talk about the roles, currently we have:
+roles:
+  - product-owner
+  - backend-planner
+  - frontend-planner
+  - developer
+  - qa
+  - reviewer
+  - approver
+
+proposed roles after consideration:
+  - product-owner
+  - analyst
+  - backend-developer
+  - frontend-developer
+  - test-developer
+  - qa
+  - reviewer
+  - approver
+
+So in the workflow:
+  - product-owner -> Creates and curates ideas, deciding when to start the process
+  - reviewer - reviews artefacts and makes comments or changes if needed
+  - approver - approves artefacts.
+  - analyst -> takes an idea, asks questions if needed, then write a detailed requirement for that idea.
+  - lead-developer -> once detailed requirement is approved, writes the plans for backend, frontend and test.
+  - backend-developer -> once backend plan is approved, takes the backend plan and does the development
+  - frontend-developer -> once frontend plan is approved, takes the frontend plan and does the development
+  - test-developer -> once test plan is approved, takes the test plan and does the development
+  - qa -> runs the test plan and creates defects, and gets the right developer to fix the defect, retests and resolves the defect.
+
+Right now we are in human oversight mode, with the product-owner is also the reviewer and approver and is running an agent when an artefact is ready.
+
+Later reviewer and approver might be different humans or agents and perform that activity separately to the product-owner.
+
+Later an agent could be automatically started when an artefact is approved.
+
+Right now, we need an claude-code-cli agent for analyst, lead-developer, backend-developer, frontend-developer, testing-developer, qa
+
+Later a backend-developer might right the code, and commit to GIT, which creates a pull-request, which is reviewed by the lead-developer and approved.
+
+What changes do we need to the existing schema are needed.
+
+Do you have any questions or suggestions on changes to this proposal?
+
+An analyst reads requirements and write plans, a developer reads plans and writes code.  
