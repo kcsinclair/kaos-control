@@ -1,10 +1,14 @@
 ---
 title: Test Plan — kaos-control v1
 type: plan-test
-status: planning
-parent: requirements/Innovation Maker - Making Releases from Ideas-1.md
+status: approved
 lineage: innovation-maker
-labels: [testing, qa, playwright, v1]
+parent: requirements/Innovation Maker - Making Releases from Ideas-1.md
+labels:
+    - testing
+    - qa
+    - playwright
+    - v1
 ---
 
 > Target implementer: QA agent (Sonnet). Produces an automated test suite spanning unit, integration, and end-to-end layers, runnable locally and in CI. Acceptance criteria reference the milestone bullets in the backend and frontend plans. All section numbers in the form §N.N refer to the parent requirements document unless stated.
