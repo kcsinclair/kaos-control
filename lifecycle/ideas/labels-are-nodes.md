@@ -2,7 +2,7 @@
 title: "Labels are Nodes"
 priority: high
 type: idea
-status: approved
+status: done
 lineage: labels-are-nodes
 labels:
     - enhancement
