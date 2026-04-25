@@ -280,6 +280,41 @@ func makeArtifact(title, typ, status, lineage, parent, body string, labels ...st
 	return sb.String()
 }
 
+// makeArtifactWithPriority is like makeArtifact but also sets the priority field.
+// Pass priority="" to omit the field entirely.
+func makeArtifactWithPriority(title, typ, status, lineage, priority, body string, labels ...string) string {
+	var sb bytes.Buffer
+	sb.WriteString("---\n")
+	sb.WriteString("title: " + title + "\n")
+	sb.WriteString("type: " + typ + "\n")
+	sb.WriteString("status: " + status + "\n")
+	sb.WriteString("lineage: " + lineage + "\n")
+	if priority != "" {
+		sb.WriteString("priority: " + priority + "\n")
+	}
+	if len(labels) > 0 {
+		sb.WriteString("labels:\n")
+		for _, l := range labels {
+			sb.WriteString("    - " + l + "\n")
+		}
+	}
+	sb.WriteString("---\n\n")
+	sb.WriteString(body + "\n")
+	return sb.String()
+}
+
+// findNodeByID locates a graph node by its ID (path) in the nodes slice.
+// Returns nil if not found.
+func findNodeByID(nodes []any, id string) map[string]any {
+	for _, n := range nodes {
+		node, _ := n.(map[string]any)
+		if node["id"] == id {
+			return node
+		}
+	}
+	return nil
+}
+
 // login authenticates against the API and saves cookies + CSRF token.
 func (e *testEnv) login(email, password string) {
 	e.t.Helper()
