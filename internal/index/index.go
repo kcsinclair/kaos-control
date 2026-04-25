@@ -65,9 +65,10 @@ func Open(dbPath, projectRoot string, stages []config.Stage) (*Index, error) {
 	return idx, nil
 }
 
-// pruneEscapingPaths removes rows whose path begins with "..", "/", or contains
-// "/../". Such paths can never refer to an artifact inside the project's
-// lifecycle/ tree and are always stale.
+// pruneEscapingPaths removes rows whose path is not a valid artifact path:
+// either it escapes the project root ("..", "/", "/../") or it isn't a
+// markdown file inside lifecycle/. Such rows can come from past firmlink/Rel
+// mismatches or from agent commits before non-artifact filtering was added.
 func (idx *Index) pruneEscapingPaths() error {
 	tx, err := idx.db.Begin()
 	if err != nil {
@@ -75,7 +76,6 @@ func (idx *Index) pruneEscapingPaths() error {
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	// SQLite LIKE is case-sensitive by default for these patterns.
 	conds := []struct {
 		table, column string
 	}{
@@ -87,10 +87,21 @@ func (idx *Index) pruneEscapingPaths() error {
 	}
 	total := int64(0)
 	for _, c := range conds {
-		res, err := tx.Exec(fmt.Sprintf(
-			`DELETE FROM %s WHERE %s LIKE '..%%' OR %s LIKE '/%%' OR %s LIKE '%%/../%%'`,
-			c.table, c.column, c.column, c.column,
-		))
+		// Drop:
+		//   * paths that escape the project root
+		//   * any path that isn't lifecycle/**.md
+		// SQLite LIKE is case-sensitive by default for these patterns.
+		query := fmt.Sprintf(
+			`DELETE FROM %s WHERE
+				%s LIKE '..%%' OR %s LIKE '/%%' OR %s LIKE '%%/../%%'
+				OR %s NOT LIKE 'lifecycle/%%'
+				OR %s NOT LIKE '%%.md'`,
+			c.table,
+			c.column, c.column, c.column,
+			c.column,
+			c.column,
+		)
+		res, err := tx.Exec(query)
 		if err != nil {
 			return fmt.Errorf("prune %s.%s: %w", c.table, c.column, err)
 		}
@@ -102,7 +113,7 @@ func (idx *Index) pruneEscapingPaths() error {
 		return err
 	}
 	if total > 0 {
-		slog.Info("pruned escaping paths from index", "rows", total)
+		slog.Info("pruned non-artifact paths from index", "rows", total)
 	}
 	return nil
 }
@@ -173,6 +184,11 @@ func (idx *Index) IndexFile(absPath string) error {
 
 	if relPath == ".." || strings.HasPrefix(relPath, "../") || filepath.IsAbs(relPath) {
 		return fmt.Errorf("refusing to index file outside project root: %s", absPath)
+	}
+	// Only `.md` files inside lifecycle/ are artifacts. Code files committed
+	// by developer agents must not end up in the artifact index.
+	if !strings.HasPrefix(relPath, "lifecycle/") || !strings.HasSuffix(relPath, ".md") {
+		return fmt.Errorf("refusing to index non-artifact path: %s", relPath)
 	}
 
 	a := artifact.Parse(raw, relPath, info.ModTime())

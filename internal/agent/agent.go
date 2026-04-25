@@ -478,7 +478,12 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 			if _, commitErr := m.git.AddAndCommit(files, commitMsg, run.GitIdentity.Name, run.GitIdentity.Email); commitErr != nil {
 				slog.Warn("agent: commit failed", "run_id", run.RunID, "err", commitErr)
 			} else {
+				// Only re-index lifecycle markdown — code files committed by
+				// developer agents are not artifacts.
 				for _, f := range files {
+					if !strings.HasPrefix(f, "lifecycle/") || !strings.HasSuffix(f, ".md") {
+						continue
+					}
 					_ = m.idx.IndexFile(m.root + "/" + f)
 				}
 				m.hub.Broadcast(hub.Event{
