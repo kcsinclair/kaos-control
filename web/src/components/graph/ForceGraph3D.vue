@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import ForceGraph3D from '3d-force-graph'
+import * as THREE from 'three'
 import type { GraphNode, GraphEdge } from '@/types/api'
-import { NODE_COLORS, EDGE_COLORS } from './graphConstants'
+import { NODE_COLORS, EDGE_COLORS, PRIORITY_COLORS } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
@@ -21,6 +22,23 @@ function nodeColor(n: GraphNode): string {
 
 function edgeColor(e: GraphEdge): string {
   return EDGE_COLORS[e.kind] ?? '#64748b'
+}
+
+function nodeVal(n: GraphNode): number {
+  return Math.max(1, 4 - n.index * 0.3)
+}
+
+// Build a torus ring for nodes that have a priority colour.
+// 3d-force-graph uses Math.cbrt(nodeVal) * 4 as the sphere radius.
+function priorityRing(n: GraphNode): THREE.Mesh | null {
+  const color = PRIORITY_COLORS[n.priority ?? '']
+  if (!color) return null
+  const sphereR = Math.cbrt(nodeVal(n)) * 4
+  const torusR = sphereR * 1.45
+  const tubeR = sphereR * 0.18
+  const geo = new THREE.TorusGeometry(torusR, tubeR, 8, 20)
+  const mat = new THREE.MeshLambertMaterial({ color })
+  return new THREE.Mesh(geo, mat)
 }
 
 // Non-reactive: the library owns this reference
@@ -46,11 +64,9 @@ onMounted(() => {
       return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:#1e293b;border-radius:4px;color:#f1f5f9">${node.title || node.slug}<br/><span style="opacity:.6">${node.type} · ${node.status}</span></div>`
     })
     .nodeColor((n: object) => nodeColor(n as GraphNode))
-    .nodeVal((n: object) => {
-      const node = n as GraphNode
-      // Size slightly by lineage position — earlier artifacts are anchor points
-      return Math.max(1, 4 - node.index * 0.3)
-    })
+    .nodeVal((n: object) => nodeVal(n as GraphNode))
+    .nodeThreeObjectExtend(true)
+    .nodeThreeObject((n: object) => priorityRing(n as GraphNode) ?? new THREE.Group())
     .linkSource('source')
     .linkTarget('target')
     .linkColor((l: object) => edgeColor(l as GraphEdge))

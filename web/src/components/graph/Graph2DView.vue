@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import type { GraphNode, GraphEdge } from '@/types/api'
-import { NODE_COLORS } from './graphConstants'
+import { NODE_COLORS, PRIORITY_COLORS } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
@@ -24,6 +24,7 @@ function buildElements() {
       type: n.type,
       status: n.status,
       color: nodeColor(n.type),
+      priorityColor: n.priority ? (PRIORITY_COLORS[n.priority] ?? null) : null,
       _raw: n,
     },
   }))
@@ -75,6 +76,14 @@ async function init() {
         style: {
           'border-width': 3,
           'border-color': '#ffffff',
+        },
+      },
+      {
+        // Nodes with a priority colour get a thicker coloured border (ring effect)
+        selector: 'node[priorityColor]',
+        style: {
+          'border-width': 4,
+          'border-color': 'data(priorityColor)',
         },
       },
       {
