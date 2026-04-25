@@ -90,11 +90,25 @@ func (w *Watcher) Start(ctx context.Context) error {
 }
 
 func (w *Watcher) handleChange(absPath string) {
-	relPath, err := filepath.Rel(w.projectRoot, absPath)
+	// Resolve both root and file through EvalSymlinks so firmlinks don't
+	// produce `../..` paths that escape the project root.
+	resolvedRoot, err := filepath.EvalSymlinks(w.projectRoot)
+	if err != nil {
+		resolvedRoot = filepath.Clean(w.projectRoot)
+	}
+	resolvedFile, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		resolvedFile = filepath.Clean(absPath)
+	}
+	relPath, err := filepath.Rel(resolvedRoot, resolvedFile)
 	if err != nil {
 		return
 	}
 	relPath = filepath.ToSlash(relPath)
+	if relPath == ".." || strings.HasPrefix(relPath, "../") || filepath.IsAbs(relPath) {
+		// File is outside the project; ignore.
+		return
+	}
 
 	if err := w.idx.IndexFile(absPath); err != nil {
 		// File was deleted or unreadable — remove from index.

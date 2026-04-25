@@ -57,7 +57,54 @@ func Open(dbPath, projectRoot string, stages []config.Stage) (*Index, error) {
 	if err := idx.Scan(stages); err != nil {
 		return nil, fmt.Errorf("initial scan: %w", err)
 	}
+	// Prune stale rows whose path escapes the project root (e.g. left over
+	// from past firmlink-related Rel computations or a project-path change).
+	if err := idx.pruneEscapingPaths(); err != nil {
+		slog.Warn("pruning escaping paths failed", "err", err)
+	}
 	return idx, nil
+}
+
+// pruneEscapingPaths removes rows whose path begins with "..", "/", or contains
+// "/../". Such paths can never refer to an artifact inside the project's
+// lifecycle/ tree and are always stale.
+func (idx *Index) pruneEscapingPaths() error {
+	tx, err := idx.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// SQLite LIKE is case-sensitive by default for these patterns.
+	conds := []struct {
+		table, column string
+	}{
+		{"artifacts", "path"},
+		{"parse_errors", "path"},
+		{"links", "src"},
+		{"links", "dst"},
+		{"labels_index", "artifact"},
+	}
+	total := int64(0)
+	for _, c := range conds {
+		res, err := tx.Exec(fmt.Sprintf(
+			`DELETE FROM %s WHERE %s LIKE '..%%' OR %s LIKE '/%%' OR %s LIKE '%%/../%%'`,
+			c.table, c.column, c.column, c.column,
+		))
+		if err != nil {
+			return fmt.Errorf("prune %s.%s: %w", c.table, c.column, err)
+		}
+		if n, err := res.RowsAffected(); err == nil {
+			total += n
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if total > 0 {
+		slog.Info("pruned escaping paths from index", "rows", total)
+	}
+	return nil
 }
 
 // Close closes the underlying database connection.
@@ -96,6 +143,8 @@ func (idx *Index) Scan(stages []config.Stage) error {
 }
 
 // IndexFile reads, parses, and upserts one file into the index.
+// Computes relPath against the symlink-resolved project root so firmlinks
+// (e.g. macOS /Users → /System/Volumes/Data/Users) don't produce `..` paths.
 func (idx *Index) IndexFile(absPath string) error {
 	info, err := os.Stat(absPath)
 	if err != nil {
@@ -105,11 +154,26 @@ func (idx *Index) IndexFile(absPath string) error {
 	if err != nil {
 		return err
 	}
-	relPath, err := filepath.Rel(idx.projectRoot, absPath)
+
+	// Resolve both sides through EvalSymlinks so the prefix matches.
+	resolvedRoot, err := filepath.EvalSymlinks(idx.projectRoot)
+	if err != nil {
+		resolvedRoot = filepath.Clean(idx.projectRoot)
+	}
+	resolvedFile, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		resolvedFile = filepath.Clean(absPath)
+	}
+
+	relPath, err := filepath.Rel(resolvedRoot, resolvedFile)
 	if err != nil {
 		return err
 	}
-	relPath = filepath.ToSlash(relPath) // normalise to forward slashes
+	relPath = filepath.ToSlash(relPath)
+
+	if relPath == ".." || strings.HasPrefix(relPath, "../") || filepath.IsAbs(relPath) {
+		return fmt.Errorf("refusing to index file outside project root: %s", absPath)
+	}
 
 	a := artifact.Parse(raw, relPath, info.ModTime())
 	return idx.Upsert(a)
