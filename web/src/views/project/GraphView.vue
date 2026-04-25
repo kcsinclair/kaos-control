@@ -95,7 +95,7 @@ function closeModal() {
       </template>
 
       <div class="graph-legend-wrap">
-        <GraphLegend />
+        <GraphLegend :show-label-nodes="store.showLabelNodes" />
       </div>
 
       <div class="graph-hint" v-if="!store.loading && store.rawNodes.length > 0">

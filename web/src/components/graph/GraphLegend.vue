@@ -1,17 +1,36 @@
 <script setup lang="ts">
-import { NODE_COLORS, EDGE_COLORS } from './graphConstants'
+import { computed } from 'vue'
+import { NODE_COLORS, PRIORITY_COLORS, EDGE_COLORS } from './graphConstants'
 
-const nodeTypes = Object.entries(NODE_COLORS).map(([type, color]) => ({
-  type,
+const props = defineProps<{
+  showLabelNodes?: boolean
+}>()
+
+const nodeTypes = computed(() =>
+  Object.entries(NODE_COLORS)
+    .filter(([type]) => type !== 'label' || props.showLabelNodes)
+    .map(([type, color]) => ({
+      type,
+      color,
+      label: type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    }))
+)
+
+const priorityEntries = Object.entries(PRIORITY_COLORS).map(([level, color]) => ({
+  level,
   color,
-  label: type.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+  label: level.charAt(0).toUpperCase() + level.slice(1),
 }))
 
-const edgeKinds = Object.entries(EDGE_COLORS).map(([kind, color]) => ({
-  kind,
-  color,
-  label: kind.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-}))
+const edgeKinds = computed(() =>
+  Object.entries(EDGE_COLORS)
+    .filter(([kind]) => kind !== 'label' || props.showLabelNodes)
+    .map(([kind, color]) => ({
+      kind,
+      color,
+      label: kind.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+    }))
+)
 </script>
 
 <template>
@@ -20,6 +39,13 @@ const edgeKinds = Object.entries(EDGE_COLORS).map(([kind, color]) => ({
       <div class="legend-title">Nodes</div>
       <div v-for="item in nodeTypes" :key="item.type" class="legend-item">
         <span class="legend-dot" :style="{ background: item.color }" />
+        <span class="legend-label">{{ item.label }}</span>
+      </div>
+    </div>
+    <div class="legend-section">
+      <div class="legend-title">Priority</div>
+      <div v-for="item in priorityEntries" :key="item.level" class="legend-item">
+        <span class="legend-ring" :style="{ borderColor: item.color }" />
         <span class="legend-label">{{ item.label }}</span>
       </div>
     </div>
@@ -67,6 +93,14 @@ const edgeKinds = Object.entries(EDGE_COLORS).map(([kind, color]) => ({
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-ring {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2.5px solid;
+  background: transparent;
   flex-shrink: 0;
 }
 .legend-line {
