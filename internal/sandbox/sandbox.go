@@ -24,12 +24,19 @@ func Resolve(projectRoot, userPath string) (string, error) {
 		return "", ErrPathTraversal
 	}
 
-	abs := filepath.Join(projectRoot, clean)
+	// Resolve the root itself so symlinks in the project path don't cause
+	// false-positive traversal detections (e.g. on macOS where /var→/private/var).
+	resolvedRoot, err := filepath.EvalSymlinks(projectRoot)
+	if err != nil {
+		resolvedRoot = filepath.Clean(projectRoot)
+	}
+
+	abs := filepath.Join(resolvedRoot, clean)
 
 	// If the target exists, resolve symlinks and verify it stays inside the root.
 	resolved, err := filepath.EvalSymlinks(abs)
 	if err == nil {
-		if !hasPrefix(resolved, projectRoot) {
+		if !hasPrefix(resolved, resolvedRoot) {
 			return "", ErrPathTraversal
 		}
 		return resolved, nil
@@ -41,7 +48,7 @@ func Resolve(projectRoot, userPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolving parent directory: %w", err)
 	}
-	if !hasPrefix(resolvedParent, projectRoot) {
+	if !hasPrefix(resolvedParent, resolvedRoot) {
 		return "", ErrPathTraversal
 	}
 	return abs, nil
