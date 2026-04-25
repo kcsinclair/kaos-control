@@ -51,9 +51,11 @@ func Open(dbPath, projectRoot string, stages []config.Stage) (*Index, error) {
 		if err := idx.dropAndRecreate(); err != nil {
 			return nil, err
 		}
-		if err := idx.Scan(stages); err != nil {
-			return nil, fmt.Errorf("initial scan: %w", err)
-		}
+	}
+	// Always scan on startup: the index is a cache and files may have changed
+	// while the server was not running (watcher only covers live changes).
+	if err := idx.Scan(stages); err != nil {
+		return nil, fmt.Errorf("initial scan: %w", err)
 	}
 	return idx, nil
 }
