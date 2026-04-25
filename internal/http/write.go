@@ -163,6 +163,11 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !validPriorities[req.Frontmatter.Priority] {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", `priority must be one of: high, medium, normal, low, "" (unset)`))
+		return
+	}
+
 	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
