@@ -1,3 +1,10 @@
+---
+title: "Innovation Maker — Making Releases from Ideas"
+type: idea
+status: done
+lineage: innovation-maker
+---
+
 # **Innovation Maker - Making Releases from Ideas**
 
 File was high-level-requirements.md

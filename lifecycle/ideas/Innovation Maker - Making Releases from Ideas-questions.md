@@ -1,3 +1,11 @@
+---
+title: "Innovation Maker — Requirements Clarification Q&A"
+type: idea
+status: done
+lineage: innovation-maker
+parent: ideas/Innovation Maker - Making Releases from Ideas.md
+---
+
 # Requirements Clarification Questions
 
 Answer inline under each question. Leave blank (or write `TBD`) for anything you haven't decided yet.
