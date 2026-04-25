@@ -118,6 +118,14 @@ func (s *Server) buildRouter() chi.Router {
 				}
 				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
 			})
+			r.Patch("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
+				param := chi.URLParam(r, "*")
+				if strings.HasSuffix(param, "/priority") {
+					s.handlePatchPriority(w, r)
+					return
+				}
+				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
+			})
 
 			// Agents
 			r.Get("/agents", s.handleListAgents)

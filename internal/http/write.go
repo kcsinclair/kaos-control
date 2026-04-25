@@ -26,6 +26,11 @@ var stageSuffix = map[string]string{
 	"test-plans":     "test",
 }
 
+// validPriorities is the allowed vocabulary for the priority field.
+var validPriorities = map[string]bool{
+	"high": true, "medium": true, "normal": true, "low": true, "": true,
+}
+
 // handleCreateArtifact handles POST /api/p/:project/artifacts
 func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
@@ -355,6 +360,81 @@ func (s *Server) handleRenameArtifact(w http.ResponseWriter, r *http.Request) {
 
 	row, _ := p.Idx.Get(newRelPath)
 	writeJSON(w, http.StatusOK, map[string]any{"artifact": row, "path": newRelPath})
+}
+
+// handlePatchPriority handles PATCH /api/p/:project/artifacts/*path/priority
+// It updates only the priority field in the artifact's YAML frontmatter.
+func (s *Server) handlePatchPriority(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	rawParam := chi.URLParam(r, "*")
+	relPath := strings.TrimSuffix(rawParam, "/priority")
+
+	var req struct {
+		Priority string `json:"priority"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
+		return
+	}
+
+	if !validPriorities[req.Priority] {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", `priority must be one of: high, medium, normal, low, "" (unset)`))
+		return
+	}
+
+	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+		return
+	}
+
+	raw, err := os.ReadFile(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "artifact not found"))
+		} else {
+			writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		}
+		return
+	}
+
+	info, err := os.Stat(absPath)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	a := artifact.Parse(raw, relPath, info.ModTime())
+	a.FM.Priority = req.Priority
+
+	content, err := buildMarkdown(a.FM, a.Body)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("marshal_error", err.Error()))
+		return
+	}
+
+	if err := os.WriteFile(absPath, []byte(content), 0o644); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	if err := p.Idx.IndexFile(absPath); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("index_error", err.Error()))
+		return
+	}
+
+	p.Hub.Broadcast(hub.Event{
+		Type:    "artifact.indexed",
+		Payload: map[string]string{"path": relPath, "action": "updated"},
+	})
+
+	row, _ := p.Idx.Get(relPath)
+	writeJSON(w, http.StatusOK, map[string]any{"artifact": row})
 }
 
 // ----- helpers -----
