@@ -1,8 +1,10 @@
 ---
-title: "Artefacts for Defects"
+title: Artefacts for Defects
 type: idea
 status: draft
 lineage: artefacts-for-defects
+labels:
+    - artefacts
 ---
 
 # artefacts for defects 
