@@ -30,6 +30,7 @@ var KnownStatuses = map[string]bool{
 	"draft": true, "clarifying": true, "planning": true,
 	"in-development": true, "in-qa": true, "approved": true,
 	"rejected": true, "abandoned": true, "done": true,
+	"blocked": true,
 }
 
 // Artifact is a fully parsed lifecycle markdown file.

@@ -3,6 +3,50 @@ import { ref, computed } from 'vue'
 import * as agentsApi from '@/api/agents'
 import type { AgentRunRow, AgentSummary } from '@/types/api'
 
+// formatEvent renders a parsed Claude Code stream-json event as a single line
+// of text suitable for the live progress panel. Falls back to raw JSON on any
+// unknown shape so we never silently drop information.
+function formatEvent(ev: Record<string, unknown>): string {
+  const type = ev.type as string | undefined
+  if (type === 'system' && ev.subtype === 'init') {
+    return '▸ session started'
+  }
+  if (type === 'assistant') {
+    const msg = ev.message as Record<string, unknown> | undefined
+    const content = msg?.content as Array<Record<string, unknown>> | undefined
+    if (content && content.length) {
+      const parts: string[] = []
+      for (const block of content) {
+        if (block.type === 'text' && typeof block.text === 'string') {
+          parts.push(block.text.trim())
+        } else if (block.type === 'tool_use') {
+          const name = block.name as string
+          const input = block.input as Record<string, unknown> | undefined
+          const target = (input?.file_path as string) ?? (input?.path as string) ?? (input?.command as string) ?? ''
+          parts.push(`▸ ${name}${target ? ' ' + target : ''}`)
+        }
+      }
+      if (parts.length) return parts.join('  ')
+    }
+  }
+  if (type === 'user') {
+    const msg = ev.message as Record<string, unknown> | undefined
+    const content = msg?.content as Array<Record<string, unknown>> | undefined
+    if (content && content.length) {
+      const block = content[0]
+      if (block.type === 'tool_result') {
+        const isErr = block.is_error === true
+        return isErr ? '  ✗ tool error' : '  ✓ tool result'
+      }
+    }
+  }
+  if (type === 'result') {
+    const subtype = (ev.subtype as string) ?? ''
+    return `▸ result: ${subtype}`
+  }
+  return JSON.stringify(ev)
+}
+
 export const useAgentsStore = defineStore('agents', () => {
   const runs = ref<AgentRunRow[]>([])
   const agents = ref<AgentSummary[]>([])
@@ -59,10 +103,12 @@ export const useAgentsStore = defineStore('agents', () => {
         })
       }
     } else if (type === 'agent.progress') {
-      const line = payload.line as string
+      const event = payload.event as Record<string, unknown> | undefined
+      const raw = (payload.raw as string) ?? (payload.line as string) ?? ''
+      const formatted = event ? formatEvent(event) : raw
       if (!progressLines.value.has(runId)) progressLines.value.set(runId, [])
       const lines = progressLines.value.get(runId)!
-      lines.push(line)
+      lines.push(formatted)
       if (lines.length > 200) lines.splice(0, lines.length - 200)
     } else if (type === 'agent.finished' || type === 'agent.failed') {
       const idx = runs.value.findIndex((r) => r.run_id === runId)

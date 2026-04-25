@@ -130,7 +130,7 @@ Users need a way to authenticate…
 ### 4.2 Field rules
 - **Required frontmatter fields**: `title`, `type`, `status`, `lineage`. Everything else is optional.
 - **`type`** vocabulary (v1): `idea`, `ticket`, `epic`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`, `defect`.
-- **`status`** vocabulary: `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`.
+- **`status`** vocabulary: `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`, `blocked` (an agent self-marks `blocked` when it cannot proceed due to missing input; only `product-owner` or `analyst` can re-open it).
 - Frontmatter fields not in the canonical list are preserved verbatim — teams can add their own.
 
 ### 4.3 Relationships (for the graph)
@@ -226,6 +226,8 @@ Transitions are stored as events on the artifact (see §8.2) and are permitted o
 | `approved → done` | `approver` |
 | any → `rejected` | `reviewer` |
 | any → `abandoned` | `product-owner`, `approver` |
+| any → `blocked` | `analyst`, `backend-developer`, `frontend-developer`, `test-developer`, `qa` (agent self-block) |
+| `blocked → draft` | `product-owner`, `analyst` (after answering Open Questions) |
 
 The matrix is overridable per project in `config.yaml`.
 
@@ -271,7 +273,10 @@ agents:
 A single role can be served by multiple agents (e.g., `analyst-requirements` and `analyst-planner` both share `role: [analyst]`), and the operator picks which agent to invoke from the UI.
 
 ### 7.2 Execution drivers
-- **v1**: `claude-code-cli` — spawn Claude Code as a subprocess with a prompt and working directory.
+- **v1**: `claude-code-cli` — spawn Claude Code as a subprocess with a prompt and working directory. Invocation is `claude --dangerously-skip-permissions -p <prompt> --output-format stream-json --verbose [--model <name>]`.
+  - `model` (optional, per-agent in `config.yaml`) — Claude alias (`opus`, `sonnet`, `haiku`). Empty defaults to the user's CLI default.
+  - `timeout_minutes` (optional, per-agent) — `0` disables; otherwise after N minutes the run is auto-killed and marked `killed-timeout` (distinct from a user-initiated `killed`).
+  - Stream-json output is parsed line-by-line into structured progress events broadcast over WebSocket; the raw stream is also tee'd to `<data_dir>/<project>/runs/<run_id>.log` for post-mortem.
 - **Roadmap**: `anthropic-api`, `openai-api`, `ollama-local`, `mcp` (agent is itself an MCP server the app calls).
 
 ### 7.3 Trigger model
@@ -291,8 +296,10 @@ A single role can be served by multiple agents (e.g., `analyst-requirements` and
 
 ### 7.6 Visibility and control (v1)
 - Active agent runs are listed in the UI with: agent name, role, target artifact, start time, status, elapsed time, and a **Kill** button.
-- On kill: subprocess is terminated (SIGTERM, then SIGKILL after 10s); any partial output already written is kept (and committed under a `partial` suffix if the agent didn't finalise); the run is marked `killed`.
-- On crash: same behaviour, marked `crashed`, with the captured subprocess exit code and last stderr line.
+- During a run the UI shows live progress (parsed assistant text and tool-call lines from the stream-json stream); after the run the full log file can be opened from the same panel.
+- On kill: subprocess is terminated; any partial output already written within `allowed_write_paths` is committed; the run is marked `killed` (user-initiated) or `killed-timeout` (per-agent `timeout_minutes` exceeded).
+- On crash: same behaviour, marked `failed`, with the captured subprocess exit code and last stderr line.
+- An agent that cannot proceed should self-mark its target artifact `status: blocked` and assign it to `product-owner` (see §6.2). The run itself finishes `done` since the agent stopped cleanly.
 
 ### 7.7 Concurrency
 - **Hard rule**: one agent run per ticket lineage at a time.

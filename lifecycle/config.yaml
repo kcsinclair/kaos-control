@@ -34,8 +34,11 @@ agents:
   - name: analyst-requirements
     role: [analyst]
     driver: claude-code-cli
+    model: opus
+    timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/requirements
+      - lifecycle/ideas       # so the agent can block the input idea when stuck
     git_identity:
       name: Analyst (Requirements) Agent
       email: analyst-requirements@kaos-control.local
@@ -62,17 +65,29 @@ agents:
           - Acceptance Criteria (as a checklist; link related artifacts with [[slug]])
           - Open Questions
 
-        If the idea is unclear, list specific clarifying questions in an
-        "Open Questions" section — do NOT guess. Keep requirements crisp
-        and testable.
+        Keep requirements crisp and testable.
+
+        ── If you get stuck ─────────────────────────────────────────────
+        If you cannot proceed because the input is ambiguous, contradictory,
+        or missing critical detail, do NOT guess. Append a `## Open Questions`
+        section to the artifact at {target_path} listing each blocking
+        question explicitly. Update its frontmatter:
+          status: blocked
+          assignees:
+            - role: product-owner
+              who: agent
+        Then stop — do not write a partial requirement.
 
   - name: analyst-planner
     role: [analyst]
     driver: claude-code-cli
+    model: opus
+    timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/backend-plans
       - lifecycle/frontend-plans
       - lifecycle/test-plans
+      - lifecycle/requirements   # so the agent can block the input requirement when stuck
     git_identity:
       name: Analyst (Planner) Agent
       email: analyst-planner@kaos-control.local
@@ -100,13 +115,27 @@ agents:
         Follow the lineage filename convention in CLAUDE.md. Indices are
         monotonic per lineage across stages — never reuse an index.
 
+        ── If you get stuck ─────────────────────────────────────────────
+        If you cannot proceed because the requirement is ambiguous,
+        contradictory, or missing critical detail, do NOT guess. Append a
+        `## Open Questions` section to the artifact at {target_path} listing
+        each blocking question explicitly. Update its frontmatter:
+          status: blocked
+          assignees:
+            - role: product-owner
+              who: agent
+        Then stop — do not write partial plans.
+
   # ── Make phase ──────────────────────────────────────────────────────────────
   - name: backend-developer
     role: [backend-developer]
     driver: claude-code-cli
+    model: sonnet
+    timeout_minutes: 0
     allowed_write_paths:
       - internal
       - cmd
+      - lifecycle/backend-plans   # so the agent can block the input plan when stuck
     git_identity:
       name: Backend Developer Agent
       email: backend-developer@kaos-control.local
@@ -116,8 +145,9 @@ agents:
         Read the backend plan at {target_path} and implement it milestone
         by milestone in Go.
 
-        Scope of writes: internal/** and cmd/**. Do NOT modify web/,
-        lifecycle/, or test files — those belong to other agents.
+        Scope of writes: internal/** and cmd/**. Do NOT modify web/, tests/,
+        or lifecycle artifacts (other than blocking the input plan as
+        described below) — those belong to other agents.
 
         After each milestone:
           - go build ./...
@@ -127,11 +157,25 @@ agents:
         Commit each milestone as its own git commit with a message that
         references the plan's milestone heading.
 
+        ── If you get stuck ─────────────────────────────────────────────
+        If the plan is ambiguous, contradictory, or missing critical detail
+        you need to implement correctly, do NOT guess. Append a
+        `## Open Questions` section to the artifact at {target_path} listing
+        each blocking question explicitly. Update its frontmatter:
+          status: blocked
+          assignees:
+            - role: product-owner
+              who: agent
+        Then stop — do not commit partial code.
+
   - name: frontend-developer
     role: [frontend-developer]
     driver: claude-code-cli
+    model: sonnet
+    timeout_minutes: 0
     allowed_write_paths:
       - web/src
+      - lifecycle/frontend-plans   # so the agent can block the input plan when stuck
     git_identity:
       name: Frontend Developer Agent
       email: frontend-developer@kaos-control.local
@@ -142,7 +186,8 @@ agents:
         by milestone in Vue 3 + TypeScript.
 
         Scope of writes: web/src/**. Do NOT modify backend code, tests, or
-        lifecycle artifacts — other agents own those.
+        lifecycle artifacts (other than blocking the input plan as
+        described below) — other agents own those.
 
         After each milestone, run these from the web/ directory:
           - pnpm exec vue-tsc --noEmit
@@ -152,12 +197,26 @@ agents:
         Commit each milestone as its own git commit with a message that
         references the plan's milestone heading.
 
+        ── If you get stuck ─────────────────────────────────────────────
+        If the plan is ambiguous, contradictory, or missing critical detail
+        you need to implement correctly, do NOT guess. Append a
+        `## Open Questions` section to the artifact at {target_path} listing
+        each blocking question explicitly. Update its frontmatter:
+          status: blocked
+          assignees:
+            - role: product-owner
+              who: agent
+        Then stop — do not commit partial code.
+
   - name: test-developer
     role: [test-developer]
     driver: claude-code-cli
+    model: sonnet
+    timeout_minutes: 0
     allowed_write_paths:
       - tests
       - lifecycle/tests
+      - lifecycle/test-plans   # so the agent can block the input plan when stuck
     git_identity:
       name: Test Developer Agent
       email: test-developer@kaos-control.local
@@ -182,10 +241,23 @@ agents:
         The artifact body should summarise scenarios covered and point to
         the specific test files in tests/.
 
+        ── If you get stuck ─────────────────────────────────────────────
+        If the test plan is ambiguous, contradictory, or missing critical
+        detail you need to implement correctly, do NOT guess. Append a
+        `## Open Questions` section to the artifact at {target_path} listing
+        each blocking question explicitly. Update its frontmatter:
+          status: blocked
+          assignees:
+            - role: product-owner
+              who: agent
+        Then stop — do not commit partial test code.
+
   # ── Verify phase ────────────────────────────────────────────────────────────
   - name: qa
     role: [qa]
     driver: claude-code-cli
+    model: sonnet
+    timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/defects
     git_identity:

@@ -30,6 +30,10 @@ var defaultRules = []rule{
 	// any → rejected / abandoned
 	{from: "", to: "rejected", roles: []string{"reviewer"}},
 	{from: "", to: "abandoned", roles: []string{"product-owner", "approver"}},
+	// Block-on-questions: any agent role can self-block when stuck on missing input.
+	{from: "", to: "blocked", roles: []string{"analyst", "backend-developer", "frontend-developer", "test-developer", "qa"}},
+	// Unblock: product-owner (and analyst, who can also re-scope) sends it back to draft after answering.
+	{from: "blocked", to: "draft", roles: []string{"product-owner", "analyst"}},
 }
 
 // New builds an Engine, overlaying project-level overrides on the default matrix.

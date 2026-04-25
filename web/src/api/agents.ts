@@ -33,3 +33,14 @@ export function killRun(project: string, runId: string) {
     `/p/${encodeURIComponent(project)}/agents/runs/${encodeURIComponent(runId)}/kill`,
   )
 }
+
+export async function getRunLog(project: string, runId: string): Promise<string> {
+  const res = await fetch(
+    `/api/p/${encodeURIComponent(project)}/agents/runs/${encodeURIComponent(runId)}/log`,
+    { credentials: 'include' },
+  )
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${await res.text()}`)
+  }
+  return res.text()
+}

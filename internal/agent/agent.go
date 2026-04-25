@@ -7,10 +7,14 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -34,10 +38,12 @@ type Run struct {
 	RunID        string
 	AgentName    string
 	Role         string
+	Model        string // empty → CLI default
 	PromptText   string
 	ProjectRoot  string
 	AllowedPaths []string
 	GitIdentity  config.GitIdentity
+	LogPath      string // absolute path; if empty, no log file is written
 }
 
 // Process is a handle to a running agent.
@@ -46,8 +52,8 @@ type Process interface {
 	Wait() error
 	// Kill sends SIGTERM to the running process.
 	Kill() error
-	// Progress returns a channel of output lines (closed on exit).
-	Progress() <-chan string
+	// Progress returns a channel of structured output events (closed on exit).
+	Progress() <-chan ProgressEvent
 	// StderrTail returns the last 4 KB of stderr output.
 	StderrTail() string
 }
@@ -90,12 +96,29 @@ type ClaudeCodeDriver struct{}
 
 type claudeProcess struct {
 	cmd      *exec.Cmd
-	progress chan string
+	progress chan ProgressEvent
 	stderr   *ringBuf
+	logFile  *os.File // nil if no log path was configured
+}
+
+// ProgressEvent is one structured update from the agent. raw is the original
+// stdout line; event is the parsed JSON payload (nil if the line wasn't valid
+// JSON — e.g. when stream-json is disabled or the line is partial).
+type ProgressEvent struct {
+	Raw   string         `json:"raw"`
+	Event map[string]any `json:"event,omitempty"`
 }
 
 func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) {
-	args := []string{"--dangerously-skip-permissions", "-p", run.PromptText}
+	args := []string{
+		"--dangerously-skip-permissions",
+		"-p", run.PromptText,
+		"--output-format", "stream-json",
+		"--verbose",
+	}
+	if run.Model != "" {
+		args = append(args, "--model", run.Model)
+	}
 
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	cmd.Dir = run.ProjectRoot
@@ -110,34 +133,73 @@ func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) 
 	}
 
 	rb := newRingBuf(4 * 1024)
-	progressCh := make(chan string, 64)
+	progressCh := make(chan ProgressEvent, 64)
+
+	// Open the per-run log file if configured.
+	var logFile *os.File
+	if run.LogPath != "" {
+		if err := os.MkdirAll(filepath.Dir(run.LogPath), 0o755); err != nil {
+			slog.Warn("agent: creating log dir failed", "path", run.LogPath, "err", err)
+		} else {
+			f, err := os.OpenFile(run.LogPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+			if err != nil {
+				slog.Warn("agent: opening log file failed", "path", run.LogPath, "err", err)
+			} else {
+				logFile = f
+				fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s model=%s\n# args=%v\n# started=%s\n\n",
+					run.RunID, run.AgentName, run.Role, run.Model, args, time.Now().Format(time.RFC3339))
+			}
+		}
+	}
 
 	if err := cmd.Start(); err != nil {
+		if logFile != nil {
+			_ = logFile.Close()
+		}
 		return nil, fmt.Errorf("starting claude: %w", err)
 	}
 
-	p := &claudeProcess{cmd: cmd, progress: progressCh, stderr: rb}
+	p := &claudeProcess{cmd: cmd, progress: progressCh, stderr: rb, logFile: logFile}
 
-	// Pipe stdout → progress channel.
+	// Pipe stdout: tee to log file, parse each line as JSON, send progress events.
 	go func() {
 		sc := bufio.NewScanner(stdout)
+		// stream-json events can be larger than the default 64 KiB buffer.
+		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 		for sc.Scan() {
 			line := sc.Text()
+			if logFile != nil {
+				_, _ = io.WriteString(logFile, line+"\n")
+			}
+			ev := ProgressEvent{Raw: line}
+			var parsed map[string]any
+			if err := json.Unmarshal([]byte(line), &parsed); err == nil {
+				ev.Event = parsed
+			}
 			select {
-			case progressCh <- line:
+			case progressCh <- ev:
 			default:
 			}
 		}
 	}()
 
-	// Pipe stderr → ring buffer.
+	// Pipe stderr: tee to log file and ring buffer.
 	go func() {
 		defer close(progressCh)
+		defer func() {
+			if logFile != nil {
+				fmt.Fprintf(logFile, "\n# finished=%s\n", time.Now().Format(time.RFC3339))
+				_ = logFile.Close()
+			}
+		}()
 		buf := make([]byte, 1024)
 		for {
 			n, err := stderr.Read(buf)
 			if n > 0 {
 				rb.Write(buf[:n])
+				if logFile != nil {
+					_, _ = logFile.Write(buf[:n])
+				}
 			}
 			if err != nil {
 				break
@@ -148,9 +210,9 @@ func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) 
 	return p, nil
 }
 
-func (p *claudeProcess) Wait() error      { return p.cmd.Wait() }
-func (p *claudeProcess) Progress() <-chan string { return p.progress }
-func (p *claudeProcess) StderrTail() string     { return p.stderr.String() }
+func (p *claudeProcess) Wait() error                     { return p.cmd.Wait() }
+func (p *claudeProcess) Progress() <-chan ProgressEvent  { return p.progress }
+func (p *claudeProcess) StderrTail() string              { return p.stderr.String() }
 
 func (p *claudeProcess) Kill() error {
 	if p.cmd.Process != nil {
@@ -177,14 +239,16 @@ type Manager struct {
 	mu     sync.Mutex
 	active map[string]*activeRun
 
-	idx   *index.Index
-	git   *kgit.Repo
-	hub   *hub.Hub
-	locks *lock.Manager
-	root  string
+	idx     *index.Index
+	git     *kgit.Repo
+	hub     *hub.Hub
+	locks   *lock.Manager
+	root    string
+	logsDir string // per-run log files go in <logsDir>/<run_id>.log
 }
 
 // New creates an agent Manager. maxConcurrent caps parallel runs across the project.
+// logsDir is where per-run .log files are written; empty disables log files.
 func New(
 	agents []config.AgentConfig,
 	maxConcurrent int,
@@ -193,26 +257,37 @@ func New(
 	h *hub.Hub,
 	locks *lock.Manager,
 	root string,
+	logsDir string,
 ) *Manager {
 	if maxConcurrent <= 0 {
 		maxConcurrent = 4
 	}
 	m := &Manager{
-		agents: agents,
-		driver: &ClaudeCodeDriver{},
-		sem:    make(chan struct{}, maxConcurrent),
-		active: make(map[string]*activeRun),
-		idx:    idx,
-		git:    git,
-		hub:    h,
-		locks:  locks,
-		root:   root,
+		agents:  agents,
+		driver:  &ClaudeCodeDriver{},
+		sem:     make(chan struct{}, maxConcurrent),
+		active:  make(map[string]*activeRun),
+		idx:     idx,
+		git:     git,
+		hub:     h,
+		locks:   locks,
+		root:    root,
+		logsDir: logsDir,
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
 	if err := idx.RecoverRunningRuns(); err != nil {
 		slog.Warn("agent manager: error recovering running runs", "err", err)
 	}
 	return m
+}
+
+// LogPath returns the absolute path to the per-run log file, or "" when logging
+// is disabled (no logsDir was configured).
+func (m *Manager) LogPath(runID string) string {
+	if m.logsDir == "" {
+		return ""
+	}
+	return filepath.Join(m.logsDir, runID+".log")
 }
 
 // Agents returns the configured agent list (read-only).
@@ -278,10 +353,12 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		RunID:        runID,
 		AgentName:    agentName,
 		Role:         role,
+		Model:        ag.Model,
 		PromptText:   prompt,
 		ProjectRoot:  m.root,
 		AllowedPaths: ag.AllowedPaths,
 		GitIdentity:  identity,
+		LogPath:      m.LogPath(runID),
 	}
 
 	// Acquire lineage lock.
@@ -306,8 +383,14 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		return "", fmt.Errorf("inserting run record: %w", err)
 	}
 
-	// Start the driver process.
-	runCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	// Start the driver process. timeout_minutes=0 disables the timeout.
+	var runCtx context.Context
+	var cancel context.CancelFunc
+	if ag.TimeoutMinutes > 0 {
+		runCtx, cancel = context.WithTimeout(context.Background(), time.Duration(ag.TimeoutMinutes)*time.Minute)
+	} else {
+		runCtx, cancel = context.WithCancel(context.Background())
+	}
 	proc, err := m.driver.Start(runCtx, run)
 	if err != nil {
 		cancel()
@@ -342,13 +425,18 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		return
 	}
 
-	// Forward progress events.
+	// Forward progress events as structured payloads.
 	go func() {
-		for line := range proc.Progress() {
-			m.hub.Broadcast(hub.Event{
-				Type:    "agent.progress",
-				Payload: map[string]any{"run_id": run.RunID, "line": line},
-			})
+		for ev := range proc.Progress() {
+			payload := map[string]any{
+				"run_id": run.RunID,
+				"line":   ev.Raw, // backward-compat: existing UI reads `line`
+				"raw":    ev.Raw,
+			}
+			if ev.Event != nil {
+				payload["event"] = ev.Event
+			}
+			m.hub.Broadcast(hub.Event{Type: "agent.progress", Payload: payload})
 		}
 	}()
 
@@ -356,21 +444,23 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	finishedAt := time.Now()
 
 	m.mu.Lock()
-	ar, wasActive := m.active[run.RunID]
+	_, wasActive := m.active[run.RunID]
 	delete(m.active, run.RunID)
 	m.mu.Unlock()
 
 	// Release semaphore.
 	<-m.sem
 
-	// Determine exit status.
+	// Determine exit status. Timeouts are distinct from user-initiated kills.
 	exitCode := 0
 	status := "done"
 	if waitErr != nil {
 		status = "failed"
-		if ar != nil && ar.proc != nil {
-			// Check if it was a kill (best-effort: if context was cancelled).
-			if ctx.Err() != nil && wasActive {
+		if wasActive {
+			switch {
+			case errors.Is(ctx.Err(), context.DeadlineExceeded):
+				status = "killed-timeout"
+			case errors.Is(ctx.Err(), context.Canceled):
 				status = "killed"
 			}
 		}
@@ -415,7 +505,7 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	_ = m.idx.UpdateAgentRun(row)
 
 	eventType := "agent.finished"
-	if status == "failed" || status == "killed" {
+	if status == "failed" || status == "killed" || status == "killed-timeout" {
 		eventType = "agent.failed"
 	}
 	m.hub.Broadcast(hub.Event{

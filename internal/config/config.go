@@ -183,6 +183,7 @@ type AgentConfig struct {
 	Model           string      `yaml:"model,omitempty"`
 	Endpoint        string      `yaml:"endpoint,omitempty"`
 	AllowedPaths    []string    `yaml:"allowed_write_paths,omitempty"`
+	TimeoutMinutes  int         `yaml:"timeout_minutes,omitempty"` // 0 = no timeout
 	GitIdentity     GitIdentity `yaml:"git_identity"`
 	PromptTemplates map[string]string `yaml:"prompt_templates,omitempty"` // role -> template
 }

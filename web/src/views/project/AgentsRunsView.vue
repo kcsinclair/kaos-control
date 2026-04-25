@@ -2,15 +2,37 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAgentsStore } from '@/stores/agents'
+import { useUiStore } from '@/stores/ui'
+import * as agentsApi from '@/api/agents'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
 const store = useAgentsStore()
+const ui = useUiStore()
 const project = route.params.project as string
 
 const showRunDialog = ref(false)
 const expandedRun = ref<string | null>(null)
+
+// Per-run log state. logVisible.get(id)===true means the log pane is shown
+// and logContent has the fetched text.
+const logVisible = ref(new Map<string, boolean>())
+const logLoading = ref(new Map<string, boolean>())
+const logContent = ref(new Map<string, string>())
+
+async function loadLog(runId: string) {
+  logLoading.value.set(runId, true)
+  try {
+    const text = await agentsApi.getRunLog(project, runId)
+    logContent.value.set(runId, text || '(empty log)')
+    logVisible.value.set(runId, true)
+  } catch (e: unknown) {
+    ui.error(e instanceof Error ? e.message : 'Failed to load log')
+  } finally {
+    logLoading.value.set(runId, false)
+  }
+}
 
 function toggleExpand(runId: string) {
   expandedRun.value = expandedRun.value === runId ? null : runId
@@ -106,6 +128,17 @@ onMounted(() => store.fetchRuns(project))
                     @click="router.push(`/p/${project}/artifacts/${p}`)"
                   >{{ p }}</button>
                 </div>
+              </div>
+              <!-- Full log -->
+              <div class="detail-section">
+                <div class="detail-label">Run log</div>
+                <button
+                  v-if="logVisible.get(run.run_id) !== true"
+                  class="btn-link"
+                  @click="loadLog(run.run_id)"
+                  :disabled="logLoading.get(run.run_id) === true"
+                >{{ logLoading.get(run.run_id) ? 'Loading…' : 'View full log' }}</button>
+                <pre v-else class="detail-log">{{ logContent.get(run.run_id) }}</pre>
               </div>
               <div v-if="!run.stderr_tail && !run.artifacts_produced?.length && run.status !== 'running'" class="detail-empty">
                 No output recorded.
@@ -237,7 +270,8 @@ onMounted(() => store.fetchRuns(project))
 .status-chip[data-status="running"] { background: #dbeafe; color: #1d4ed8; }
 .status-chip[data-status="done"] { background: #d1fae5; color: #065f46; }
 .status-chip[data-status="failed"] { background: #fee2e2; color: #991b1b; }
-.status-chip[data-status="killed"] { background: #fef3c7; color: #92400e; }
+.status-chip[data-status="killed"] { background: #fee2e2; color: #991b1b; }
+.status-chip[data-status="killed-timeout"] { background: #fef3c7; color: #92400e; }
 .run-detail { background: var(--color-surface); }
 .detail-cell { padding: var(--space-4) var(--space-6) !important; }
 .detail-section { margin-bottom: var(--space-3); }

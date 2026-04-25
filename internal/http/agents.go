@@ -2,7 +2,9 @@ package http
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -130,4 +132,32 @@ func (s *Server) handleKillAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "run_id": runID})
+}
+
+// handleGetAgentRunLog streams the per-run log file as text/plain.
+func (s *Server) handleGetAgentRunLog(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p.Agents == nil {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "agents not configured"))
+		return
+	}
+	runID := chi.URLParam(r, "run_id")
+	logPath := p.Agents.LogPath(runID)
+	if logPath == "" {
+		writeJSON(w, http.StatusNotFound, apiError("no_log", "log files are not enabled for this project"))
+		return
+	}
+	f, err := os.Open(logPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeJSON(w, http.StatusNotFound, apiError("no_log", "no log file for this run yet"))
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, apiError("read_error", err.Error()))
+		return
+	}
+	defer f.Close()
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, f)
 }

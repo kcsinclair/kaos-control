@@ -124,6 +124,7 @@ func (s *Server) buildRouter() chi.Router {
 			r.Post("/agents/{name}/run", s.handleStartAgentRun)
 			r.Get("/agents/runs", s.handleListAgentRuns)
 			r.Get("/agents/runs/{run_id}", s.handleGetAgentRun)
+			r.Get("/agents/runs/{run_id}/log", s.handleGetAgentRunLog)
 			r.Post("/agents/runs/{run_id}/kill", s.handleKillAgentRun)
 
 			// Locks

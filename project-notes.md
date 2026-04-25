@@ -123,3 +123,35 @@ What changes do we need to the existing schema are needed.
 Do you have any questions or suggestions on changes to this proposal?
 
 An analyst reads requirements and write plans, a developer reads plans and writes code.  
+
+# optionally split the lifecycle from the code, 
+
+allow different base directories for the different agents to work in.  allows obsidian integration for project management, but code not in obsidian.
+
+# benefit of all this is
+
+Work where you want when you want, keep things moving, with Visual Studio Code and Obsidian, while your robot waits for work.
+
+# 3. Interactivity — the harder one
+
+## how bad is this?
+claude --dangerously-skip-permissions -p <prompt>
+
+## more
+Claude Code's -p mode is strictly non-interactive. There's no input channel after launch. The agent finishes, success or fail, with whatever it produced. This is a fundamental constraint of the current driver, not a missing feature.
+
+What works today:
+
+Agent writes uncertainty into the artifact itself (the analyst-requirements prompt already says "list specific clarifying questions in an Open Questions section — do NOT guess"). Human reads the artifact, edits in answers, reruns the agent.
+The artifact lock + reviewer/approver flow is the human checkpoint.
+What doesn't work today:
+
+Mid-run "wait, should I do X or Y?" — agent has to commit to one.
+Long-running back-and-forth.
+Real solutions are bigger pieces of work:
+
+1. agent.question event type — agent prints a structured marker on stdout (e.g. [[ASK]] should X be Y or Z?); supervisor pauses the agent, broadcasts a WS event, the UI prompts the human, the answer is piped back to stdin. Requires keeping the subprocess alive and writable, and a new prompt convention.
+2. Switch to Anthropic SDK directly with a tool-use loop including an ask_human tool. More flexibility, but you'd be replacing claude-code-cli with your own Anthropic API integration.
+3. MCP driver — already named in spec §7.2 as roadmap. The agent is itself an MCP server; tighter back-and-forth.
+
+For the immediate term, the lowest-effort improvement is to lean harder on the "agent writes questions into the artifact, human answers, agent re-runs" loop. Update the prompt templates so every agent has an explicit "If unsure, write to Open Questions and stop" instruction.
