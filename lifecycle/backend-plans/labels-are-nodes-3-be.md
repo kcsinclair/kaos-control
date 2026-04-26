@@ -1,7 +1,7 @@
 ---
-title: "Backend Plan: Labels as Graph Nodes with Priority Visualisation"
+title: 'Backend Plan: Labels as Graph Nodes with Priority Visualisation'
 type: plan-backend
-status: draft
+status: done
 lineage: labels-are-nodes
 parent: requirements/labels-are-nodes-2.md
 ---
