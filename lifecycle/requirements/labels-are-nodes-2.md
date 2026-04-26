@@ -1,7 +1,7 @@
 ---
 title: Labels as Graph Nodes with Priority Visualisation
-type: ticket
-status: draft
+type: requirement
+status: done
 lineage: labels-are-nodes
 parent: ideas/labels-are-nodes.md
 labels:

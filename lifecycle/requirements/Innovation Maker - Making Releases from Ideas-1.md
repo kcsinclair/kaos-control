@@ -1,6 +1,6 @@
 ---
 title: Innovation Maker — Detailed Requirements
-type: requirements
+type: requirement
 status: done
 lineage: innovation-maker
 parent: ideas/Innovation Maker - Making Releases from Ideas-questions.md
