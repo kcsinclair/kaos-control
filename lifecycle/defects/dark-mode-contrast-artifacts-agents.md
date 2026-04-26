@@ -1,7 +1,7 @@
 ---
 title: 'Dark Mode: Unreadable Black Text on Dark Backgrounds and Low-Contrast Stage Pills'
 type: defect
-status: in-development
+status: done
 lineage: dark-mode-contrast-artifacts-agents
 priority: normal
 labels:
