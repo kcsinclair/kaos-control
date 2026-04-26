@@ -1,5 +1,19 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { ArtifactFrontmatter } from '@/types/api'
+
+const STATUS_VOCAB = [
+  'draft',
+  'clarifying',
+  'planning',
+  'in-development',
+  'in-qa',
+  'approved',
+  'rejected',
+  'abandoned',
+  'done',
+  'blocked',
+] as const
 
 const props = defineProps<{ modelValue: ArtifactFrontmatter }>()
 const emit = defineEmits<{ 'update:modelValue': [v: ArtifactFrontmatter] }>()
@@ -15,6 +29,8 @@ function parseList(s: string): string[] {
 function formatList(arr: string[] | undefined): string {
   return (arr ?? []).join(', ')
 }
+
+const statusIsUnknown = computed(() => !STATUS_VOCAB.includes(props.modelValue.status as typeof STATUS_VOCAB[number]))
 </script>
 
 <template>
@@ -34,12 +50,18 @@ function formatList(arr: string[] | undefined): string {
 
       <label class="fm-field">
         <span class="fm-label">Status</span>
-        <input
+        <select
           class="fm-input"
-          type="text"
           :value="modelValue.status"
-          @input="update('status', ($event.target as HTMLInputElement).value)"
-        />
+          @change="update('status', ($event.target as HTMLSelectElement).value)"
+        >
+          <option
+            v-if="statusIsUnknown"
+            :value="modelValue.status"
+            disabled
+          >{{ modelValue.status }}</option>
+          <option v-for="s in STATUS_VOCAB" :key="s" :value="s">{{ s }}</option>
+        </select>
       </label>
 
       <div class="fm-field fm-readonly">
