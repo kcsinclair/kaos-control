@@ -2,7 +2,7 @@
 title: "Prompt to Idea"
 priority: normal
 type: idea
-status: in-development
+status: done
 lineage: prompt-to-idea
 labels:
     - artefacts
