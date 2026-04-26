@@ -1,7 +1,7 @@
 ---
 title: Artifacts View 'All Stages' Control Missing Defects and Releases Stages
 type: defect
-status: in-qa
+status: in-development
 lineage: artifacts-view-all-stages-missing-defects-releases
 priority: normal
 labels:
