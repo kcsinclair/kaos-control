@@ -1,7 +1,7 @@
 ---
 title: "Single-Submit Idea Capture – Frontend Plan"
 type: plan-frontend
-status: draft
+status: rejected
 lineage: prompt-to-idea
 parent: lifecycle/requirements/prompt-to-idea-7.md
 labels:
