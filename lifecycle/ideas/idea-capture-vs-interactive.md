@@ -1,9 +1,9 @@
 ---
-title: "Idea Capture vs Interactive"
-priority: normal
+title: Idea Capture vs Interactive
 type: idea
-status: draft
+status: done
 lineage: prompt-to-idea
+priority: normal
 labels:
     - agent
     - workflow
