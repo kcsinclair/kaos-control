@@ -144,6 +144,14 @@ export interface ParseErrorRow {
   message: string
 }
 
+export interface IdeaConverseResponse {
+  session_id: string
+  reply: string
+  status: 'conversing' | 'proposed' | 'created'
+  preview: { frontmatter: Record<string, unknown>; body: string } | null
+  artifact_path: string | null
+}
+
 export type WsEventType =
   | 'file.changed'
   | 'artifact.indexed'
