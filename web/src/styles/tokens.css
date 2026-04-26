@@ -23,6 +23,22 @@
   --color-sidebar-hover: rgba(255,255,255,0.06);
   --color-sidebar-active: #2563eb;
 
+  /* Status badge colours */
+  --badge-done-bg:          #d1fae5;
+  --badge-done-text:        #065f46;
+  --badge-approved-bg:      #dbeafe;
+  --badge-approved-text:    #1e40af;
+  --badge-in-progress-bg:   #fef3c7;
+  --badge-in-progress-text: #92400e;
+  --badge-blocked-bg:       #fee2e2;
+  --badge-blocked-text:     #991b1b;
+  --badge-rejected-bg:      #f3f4f6;
+  --badge-rejected-text:    #374151;
+  --badge-in-qa-bg:         #faf5ff;
+  --badge-in-qa-text:       #6b21a8;
+  --badge-in-dev-bg:        #ecfdf5;
+  --badge-in-dev-text:      #065f46;
+
   /* Spacing (4px base) */
   --space-1: 4px;
   --space-2: 8px;
@@ -51,29 +67,86 @@
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
 
   /* Node type colours (used by graph) */
-  --node-type-idea:          #f59e0b;
-  --node-type-requirement:   #3b82f6;
-  --node-type-plan:          #8b5cf6;
-  --node-type-implementation:#10b981;
-  --node-type-test:          #06b6d4;
-  --node-type-release:       #ef4444;
-  --node-type-default:       #6b7280;
+  --node-type-idea:           #f59e0b;
+  --node-type-requirement:    #3b82f6;
+  --node-type-plan:           #8b5cf6;
+  --node-type-implementation: #10b981;
+  --node-type-test:           #06b6d4;
+  --node-type-release:        #ef4444;
+  --node-type-default:        #6b7280;
+}
+
+/* ─── Dark mode ────────────────────────────────────────────────────────────
+   Two blocks with identical values:
+   1. [data-theme="dark"]  — explicit toggle (set by inline script + store)
+   2. @media fallback      — covers the <1 frame before JS runs, and users
+                             who have no JS (the :not([data-theme="light"])
+                             guard lets the explicit light toggle win)
+   ──────────────────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] {
+  --color-bg: #0d1424;
+  /* surface is lighter than sidebar (#1e293b) so panels are visually distinct */
+  --color-surface: #162233;
+  --color-border: #2c3d52;
+  --color-border-dark: #3d5068;
+
+  --color-text: #e8edf5;
+  --color-text-muted: #8caabe;
+
+  --color-accent: #4a8ef5;
+  --color-accent-subtle: #1b3461;
+
+  --color-error: #f87171;
+  --color-warning: #fbbf24;
+  --color-success: #4ade80;
+
+  --badge-done-bg:          #0d3322;
+  --badge-done-text:        #6ee7b7;
+  --badge-approved-bg:      #0f265c;
+  --badge-approved-text:    #93c5fd;
+  --badge-in-progress-bg:   #3b1c02;
+  --badge-in-progress-text: #fde68a;
+  --badge-blocked-bg:       #3b0a0a;
+  --badge-blocked-text:     #fca5a5;
+  --badge-rejected-bg:      #1e2533;
+  --badge-rejected-text:    #94a3b8;
+  --badge-in-qa-bg:         #2e1a4a;
+  --badge-in-qa-text:       #d8b4fe;
+  --badge-in-dev-bg:        #0d3322;
+  --badge-in-dev-text:      #6ee7b7;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0f172a;
-    --color-surface: #1e293b;
-    --color-border: #334155;
+  :root:not([data-theme="light"]) {
+    --color-bg: #0d1424;
+    --color-surface: #162233;
+    --color-border: #2c3d52;
+    --color-border-dark: #3d5068;
 
-    --color-text: #f1f5f9;
-    --color-text-muted: #94a3b8;
+    --color-text: #e8edf5;
+    --color-text-muted: #8caabe;
 
-    --color-accent: #3b82f6;
-    --color-accent-subtle: #1e3a5f;
+    --color-accent: #4a8ef5;
+    --color-accent-subtle: #1b3461;
 
     --color-error: #f87171;
     --color-warning: #fbbf24;
     --color-success: #4ade80;
+
+    --badge-done-bg:          #0d3322;
+    --badge-done-text:        #6ee7b7;
+    --badge-approved-bg:      #0f265c;
+    --badge-approved-text:    #93c5fd;
+    --badge-in-progress-bg:   #3b1c02;
+    --badge-in-progress-text: #fde68a;
+    --badge-blocked-bg:       #3b0a0a;
+    --badge-blocked-text:     #fca5a5;
+    --badge-rejected-bg:      #1e2533;
+    --badge-rejected-text:    #94a3b8;
+    --badge-in-qa-bg:         #2e1a4a;
+    --badge-in-qa-text:       #d8b4fe;
+    --badge-in-dev-bg:        #0d3322;
+    --badge-in-dev-text:      #6ee7b7;
   }
 }
