@@ -1,7 +1,7 @@
 ---
 title: "Conversational Idea Capture – Frontend Plan"
 type: plan-frontend
-status: draft
+status: in-development
 lineage: prompt-to-idea
 parent: lifecycle/requirements/prompt-to-idea-2.md
 labels:
