@@ -64,6 +64,19 @@ const statusIsUnknown = computed(() => !STATUS_VOCAB.includes(props.modelValue.s
         </select>
       </label>
 
+      <label class="fm-field">
+        <span class="fm-label">Priority</span>
+        <select
+          class="fm-input"
+          :value="modelValue.priority ?? ''"
+          @change="update('priority', ($event.target as HTMLSelectElement).value || undefined)"
+        >
+          <option value="">— none —</option>
+          <option value="normal">normal</option>
+          <option value="high">high</option>
+        </select>
+      </label>
+
       <div class="fm-field fm-readonly">
         <span class="fm-label">Type</span>
         <span class="fm-value">{{ modelValue.type }}</span>
