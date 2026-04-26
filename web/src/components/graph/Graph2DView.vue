@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import type { GraphNode, GraphEdge } from '@/types/api'
-import { NODE_COLORS, PRIORITY_COLORS } from './graphConstants'
+import { NODE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
@@ -11,6 +11,8 @@ const props = defineProps<{
 
 const container = ref<HTMLDivElement | null>(null)
 let cy: any = null
+let pulseInterval: ReturnType<typeof setInterval> | null = null
+let pulseTick = false
 
 function nodeColor(type: string): string {
   return NODE_COLORS[type] ?? '#6b7280'
@@ -141,6 +143,16 @@ async function init() {
     const raw = evt.target.data('_raw') as GraphNode
     props.onNodeClick(raw)
   })
+
+  pulseInterval = setInterval(() => {
+    pulseTick = !pulseTick
+    cy?.nodes().forEach((n: any) => {
+      const color = ACTIVE_STATUS_COLORS[n.data('status')]
+      if (color) {
+        n.style({ 'border-color': color, 'border-width': pulseTick ? 6 : 2 })
+      }
+    })
+  }, 700)
 }
 
 function update() {
@@ -153,7 +165,10 @@ function update() {
 watch(() => [props.nodes, props.edges], update, { deep: false })
 
 onMounted(init)
-onUnmounted(() => { cy?.destroy() })
+onUnmounted(() => {
+  if (pulseInterval !== null) clearInterval(pulseInterval)
+  cy?.destroy()
+})
 </script>
 
 <template>

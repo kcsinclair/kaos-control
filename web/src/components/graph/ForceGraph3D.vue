@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import type { GraphNode, GraphEdge } from '@/types/api'
-import { NODE_COLORS, EDGE_COLORS, PRIORITY_COLORS } from './graphConstants'
+import { NODE_COLORS, EDGE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
@@ -62,19 +62,28 @@ function priorityRing(n: GraphNode): THREE.Mesh | null {
   return new THREE.Mesh(geo, mat)
 }
 
-// Build the Three.js object for a node: torus ring if it has priority,
-// plus a text sprite for synthetic label nodes.
+// Build the Three.js object for a node: priority ring, active pulse ring, text sprite.
 function buildNodeObject(n: GraphNode): THREE.Object3D {
   const group = new THREE.Group()
   const ring = priorityRing(n)
   if (ring) group.add(ring)
+  const activeColor = ACTIVE_STATUS_COLORS[n.status]
+  if (activeColor) {
+    const r = Math.cbrt(nodeVal(n)) * 4
+    const geo = new THREE.TorusGeometry(r * 1.85, r * 0.15, 8, 24)
+    const mat = new THREE.MeshLambertMaterial({ color: activeColor, transparent: true, opacity: 0.55 })
+    const mesh = new THREE.Mesh(geo, mat)
+    activeRings.set(n.id, mesh)
+    group.add(mesh)
+  }
   if (n.type === 'label') group.add(textSprite(n.title || n.slug))
   return group
 }
 
-// Non-reactive: the library owns this reference
+// Non-reactive: the library owns these references
 let graph: ReturnType<typeof ForceGraph3D> | null = null
 let ro: ResizeObserver | null = null
+const activeRings = new Map<string, THREE.Mesh>()
 
 function buildGraphData() {
   // Spread to plain objects so the library can augment them (x/y/z) without
@@ -109,6 +118,10 @@ onMounted(() => {
     .showNavInfo(false)
     .onNodeClick((n: object, _event: MouseEvent) => emit('nodeClick', n as GraphNode))
     .graphData(buildGraphData())
+    .onEngineTick(() => {
+      const s = 1 + 0.15 * Math.sin(Date.now() / 500)
+      activeRings.forEach((mesh) => mesh.scale.setScalar(s))
+    })
 
   // Fit camera after initial layout settles
   setTimeout(() => graph?.zoomToFit(400, 80), 1000)
@@ -126,6 +139,7 @@ onUnmounted(() => {
   ro?.disconnect()
   graph?._destructor()
   graph = null
+  activeRings.clear()
 })
 
 // Refresh graph data when props change (filters applied upstream)

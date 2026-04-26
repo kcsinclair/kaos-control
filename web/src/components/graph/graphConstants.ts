@@ -17,6 +17,12 @@ export const PRIORITY_COLORS: Record<string, string> = {
   low:    '#3b82f6',
 }
 
+export const ACTIVE_STATUS_COLORS: Record<string, string> = {
+  'in-development': '#4ade80',  // green
+  'in-qa':          '#fbbf24',  // amber
+  'in-progress':    '#4ade80',  // green
+}
+
 export const EDGE_COLORS: Record<string, string> = {
   parent:     '#94a3b8',
   depends_on: '#f97316',
