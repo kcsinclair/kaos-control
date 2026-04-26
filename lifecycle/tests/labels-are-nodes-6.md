@@ -1,7 +1,7 @@
 ---
-title: "Integration Tests — Labels as Graph Nodes with Priority Visualisation"
+title: Integration Tests — Labels as Graph Nodes with Priority Visualisation
 type: test
-status: draft
+status: approved
 lineage: labels-are-nodes
 parent: lifecycle/test-plans/labels-are-nodes-5-test.md
 ---
