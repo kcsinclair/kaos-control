@@ -66,7 +66,7 @@ func (s *Server) handleTransitionArtifact(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Required-plans gate: ticket leaving 'planning' must have all required plan types approved.
+	// Required-plans gate: requirement leaving 'planning' must have all required plan types approved.
 	if row.Status == "planning" && req.To == "in-development" {
 		required := p.Cfg.RequiredPlans[row.Type]
 		if ok, missing, err := workflow.GateReady(p.Idx, row.FM.Lineage, required); err != nil {

@@ -1,6 +1,6 @@
 git:
   default_branch: main
-  branch_template: "ticket/{slug}"
+  branch_template: "requirement/{slug}"
 
 roles:
   - product-owner
@@ -53,7 +53,7 @@ agents:
 
         Required frontmatter:
           title: <concise title>
-          type: ticket
+          type: requirement
           status: draft
           lineage: <same slug as the parent idea>
           parent: <path to parent idea>
@@ -266,7 +266,7 @@ agents:
     prompt_templates:
       qa: |
         You are a QA agent for the Innovation Maker project.
-        Given the artifact at {target_path} (typically a ticket, release, or
+        Given the artifact at {target_path} (typically a requirement or
         test artifact), run the relevant integration tests in tests/ and
         report results.
 
@@ -295,5 +295,4 @@ agents:
           - Logs / Output (include stderr tail or test output)
 
 required_plans:
-  ticket: [plan-backend, plan-frontend, plan-test]
-  epic: []
+  requirement: [plan-backend, plan-frontend, plan-test]

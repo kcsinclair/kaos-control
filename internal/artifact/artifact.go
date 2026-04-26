@@ -19,10 +19,9 @@ import (
 
 // KnownTypes is the allowed vocabulary for the type field.
 var KnownTypes = map[string]bool{
-	"idea": true, "ticket": true, "epic": true,
-	"plan-backend": true, "plan-frontend": true, "plan-dev": true, "plan-test": true,
-	"test": true, "prototype": true, "release": true, "sprint": true,
-	"defect": true,
+	"idea": true, "requirement": true,
+	"plan-backend": true, "plan-frontend": true, "plan-test": true,
+	"test": true, "prototype": true, "defect": true,
 }
 
 // KnownStatuses is the allowed vocabulary for the status field.
@@ -296,26 +295,20 @@ func stageToType(stage string) string {
 	case "ideas":
 		return "idea"
 	case "requirements":
-		return "ticket"
+		return "requirement"
 	case "backend-plans":
 		return "plan-backend"
 	case "frontend-plans":
 		return "plan-frontend"
-	case "dev-plans":
-		return "plan-dev"
 	case "test-plans":
 		return "plan-test"
 	case "tests":
 		return "test"
 	case "prototypes":
 		return "prototype"
-	case "releases":
-		return "release"
-	case "sprints":
-		return "sprint"
 	case "defects":
 		return "defect"
 	default:
-		return "ticket"
+		return "requirement"
 	}
 }

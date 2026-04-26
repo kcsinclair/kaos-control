@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kaos Control — Prototype</title>
+  <link rel="stylesheet" href="kc-tokens.css" />
+  <style>
+    @keyframes kc-spin    { to { transform: rotate(360deg); } }
+    @keyframes kc-pulse   { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes kc-slide-in{ from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes kc-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    #root { height: 100vh; display: flex; flex-direction: column; animation: kc-fade-in 0.3s var(--ease); }
+
+    .workspace-shell {
+      flex: 1; display: flex; overflow: hidden;
+    }
+    .main-pane {
+      flex: 1; display: flex; overflow: hidden;
+    }
+
+    /* Variation badge */
+    .var-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: var(--r-full);
+      background: color-mix(in oklch, var(--accent) 15%, transparent);
+      color: var(--accent); font-size: 11px; font-weight: 600;
+      font-family: var(--font-mono); border: 1px solid color-mix(in oklch, var(--accent) 30%, transparent);
+    }
+  </style>
+</head>
+<body>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+  integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
+  crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+  integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
+  crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+  integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
+  crossorigin="anonymous"></script>
+
+<script type="text/babel" src="kc-data.jsx"></script>
+<script type="text/babel" src="kc-common.jsx"></script>
+<script type="text/babel" src="kc-layout.jsx"></script>
+<script type="text/babel" src="kc-graph.jsx"></script>
+<script type="text/babel" src="kc-views.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<div id="root"></div>
+
+<script type="text/babel">
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "studio",
+  "sidebarCompact": false,
+  "graphGlow": true,
+  "graphStyle": "3d",
+  "rightPane": true,
+  "startScreen": "projects"
+}/*EDITMODE-END*/;
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  // ── Theme detection ──
+  const [systemDark] = React.useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const [manualTheme, setManualTheme] = React.useState(null);
+
+  const resolvedTheme = React.useMemo(() => {
+    if (tweaks.theme !== 'system') return tweaks.theme;
+    return manualTheme || (systemDark ? 'cosmos' : 'studio');
+  }, [tweaks.theme, manualTheme, systemDark]);
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+  }, [resolvedTheme]);
+
+  function cycleTheme() {
+    const order = ['cosmos', 'studio', 'void'];
+    const cur = order.indexOf(resolvedTheme);
+    const next = order[(cur + 1) % order.length];
+    setTweak('theme', next);
+    setManualTheme(next);
+  }
+
+  // ── App state ──
+  const [screen, setScreen] = React.useState(tweaks.startScreen || 'login');
+  const [project, setProject] = React.useState(null);
+  const [workspaceTab, setWorkspaceTab] = React.useState('graph');
+  const [stageFilter, setStageFilter] = React.useState('all');
+  const [selectedArtifact, setSelectedArtifact] = React.useState(null);
+  const [editingArtifact, setEditingArtifact] = React.useState(null);
+  const [modalArtifact, setModalArtifact] = React.useState(null);
+  const [userEmail, setUserEmail] = React.useState('keith@sinclair.org.au');
+  const [projects, setProjects] = React.useState(KC_SAMPLE_PROJECTS);
+  const [wsStatus] = React.useState('connected');
+  const { toasts, add: addToast, dismiss } = useToasts();
+
+  const activeAgent = KC_SAMPLE_AGENTS.find(a => a.status === 'running');
+
+  function handleLogin(email) {
+    setUserEmail(email);
+    setScreen('projects');
+  }
+
+  function handleSelectProject(name) {
+    setProject(name);
+    setScreen('workspace');
+  }
+
+  function handleCreateProject(p) {
+    setProjects(prev => [...prev, { ...p, owner: userEmail, artifactCount: 0 }]);
+    addToast(`Project "${p.name}" registered`, 'success');
+  }
+
+  function handleNodeClick(artifact) {
+    if (workspaceTab === 'graph' || workspaceTab === 'graph2d') {
+      setModalArtifact(artifact);
+    } else {
+      setSelectedArtifact(artifact);
+    }
+  }
+
+  function handleEditArtifact(artifact) {
+    setEditingArtifact(artifact);
+    setWorkspaceTab('editor');
+  }
+
+  function handleChangeState(artifact, newStatus) {
+    addToast(`Status changed: ${artifact.status} → ${newStatus}`, 'success');
+  }
+
+  function handleRunAgent(artifact) {
+    addToast(`Run agent dialog opening for ${artifact.path}`, 'info');
+    setWorkspaceTab('agents');
+  }
+
+  function handleNavigate(dest) {
+    if (dest === 'projects') { setScreen('projects'); setProject(null); }
+  }
+
+  // ── Keyboard shortcuts ──
+  React.useEffect(() => {
+    function onKey(e) {
+      if (screen !== 'workspace') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      if (e.key === 'g' || e.key === 'G') setWorkspaceTab('graph');
+      if (e.key === 'a' || e.key === 'A') setWorkspaceTab('artifacts');
+      if (e.key === 'Escape') { setModalArtifact(null); setSelectedArtifact(null); }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [screen]);
+
+  // ── Render screens ──
+  if (screen === 'login') return (
+    <>
+      <LoginView onLogin={handleLogin} />
+      <TweaksPanel>
+        <ThemeTweaks tweaks={tweaks} setTweak={setTweak} />
+      </TweaksPanel>
+      <Toast toasts={toasts} dismiss={dismiss} />
+    </>
+  );
+
+  if (screen === 'projects') return (
+    <>
+      <ProjectPickerView projects={projects} onSelect={handleSelectProject}
+        onCreateProject={handleCreateProject} userEmail={userEmail} />
+      <TweaksPanel>
+        <ThemeTweaks tweaks={tweaks} setTweak={setTweak} />
+      </TweaksPanel>
+      <Toast toasts={toasts} dismiss={dismiss} />
+    </>
+  );
+
+  // Workspace
+  return (
+    <>
+      <div id="root-inner" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <AppHeader
+          project={project}
+          wsStatus={wsStatus}
+          theme={resolvedTheme}
+          onToggleTheme={cycleTheme}
+          onNavigate={handleNavigate}
+          activeAgent={activeAgent}
+        />
+        <div className="workspace-shell">
+          <AppSidebar
+            activeTab={workspaceTab}
+            onTabChange={tab => { setWorkspaceTab(tab); setEditingArtifact(null); }}
+            stageFilter={stageFilter}
+            onStageFilter={setStageFilter}
+            agentCount={KC_SAMPLE_AGENTS.filter(a => a.status === 'running').length}
+            compact={tweaks.sidebarCompact}
+          />
+
+          <div className="main-pane">
+            {/* Main content area */}
+            {workspaceTab === 'editor' && editingArtifact ? (
+              <ArtifactEditorView
+                artifact={editingArtifact}
+                onClose={() => { setWorkspaceTab('artifacts'); setEditingArtifact(null); }}
+                onSave={() => addToast('Saved', 'success')}
+                addToast={addToast}
+              />
+            ) : workspaceTab === 'graph' ? (
+              <GraphView
+                artifacts={KC_SAMPLE_ARTIFACTS}
+                links={KC_SAMPLE_LINKS}
+                onNodeClick={handleNodeClick}
+                selectedNode={selectedArtifact}
+                glowStyle={tweaks.graphGlow}
+              />
+            ) : workspaceTab === 'graph2d' ? (
+              <Graph2DView
+                artifacts={KC_SAMPLE_ARTIFACTS}
+                links={KC_SAMPLE_LINKS}
+                onNodeClick={handleNodeClick}
+              />
+            ) : workspaceTab === 'artifacts' ? (
+              <ArtifactListView
+                artifacts={KC_SAMPLE_ARTIFACTS}
+                onSelect={a => { setSelectedArtifact(a); }}
+                onEdit={handleEditArtifact}
+              />
+            ) : workspaceTab === 'agents' ? (
+              <AgentsRunsView
+                agents={KC_SAMPLE_AGENTS}
+                onKill={id => addToast(`Killing run ${id}`, 'info')}
+                addToast={addToast}
+              />
+            ) : workspaceTab === 'config' ? (
+              <ProjectConfigView addToast={addToast} />
+            ) : null}
+
+            {/* Right pane */}
+            {tweaks.rightPane && (workspaceTab === 'artifacts' || workspaceTab === 'graph') && (
+              <RightPane
+                artifact={selectedArtifact}
+                onClose={() => setSelectedArtifact(null)}
+                onEdit={handleEditArtifact}
+                onRunAgent={handleRunAgent}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Artifact modal */}
+      {modalArtifact && (
+        <ArtifactModal
+          artifact={modalArtifact}
+          onClose={() => setModalArtifact(null)}
+          onEdit={handleEditArtifact}
+          onChangeState={handleChangeState}
+          onRunAgent={handleRunAgent}
+          addToast={addToast}
+        />
+      )}
+
+      <TweaksPanel>
+        <TweakSection label="Theme">
+          <TweakRadio label="Colour theme"
+            options={[{ value: 'cosmos', label: 'Cosmos (dark)' }, { value: 'studio', label: 'Studio (light)' }, { value: 'void', label: 'Void (deep)' }]}
+            value={tweaks.theme} onChange={v => setTweak('theme', v)} />
+        </TweakSection>
+        <TweakSection label="Layout">
+          <TweakToggle label="Compact sidebar" value={tweaks.sidebarCompact} onChange={v => setTweak('sidebarCompact', v)} />
+          <TweakToggle label="Show right pane" value={tweaks.rightPane} onChange={v => setTweak('rightPane', v)} />
+        </TweakSection>
+        <TweakSection label="Graph">
+          <TweakToggle label="Node glow on hover" value={tweaks.graphGlow} onChange={v => setTweak('graphGlow', v)} />
+        </TweakSection>
+        <TweakSection label="Navigation">
+          <TweakRadio label="Start at"
+            options={[{ value: 'login', label: 'Login' }, { value: 'projects', label: 'Projects' }, { value: 'workspace', label: 'Workspace' }]}
+            value={tweaks.startScreen} onChange={v => { setTweak('startScreen', v); setScreen(v); if (v === 'workspace') setProject('customer-portal'); }} />
+        </TweakSection>
+      </TweaksPanel>
+
+      <Toast toasts={toasts} dismiss={dismiss} />
+    </>
+  );
+}
+
+// Inline theme tweaks for login/projects screens
+function ThemeTweaks({ tweaks, setTweak }) {
+  return (
+    <TweakSection label="Theme">
+      <TweakRadio label="Colour theme"
+        options={[{ value: 'cosmos', label: 'Cosmos (dark)' }, { value: 'studio', label: 'Studio (light)' }, { value: 'void', label: 'Void (deep)' }]}
+        value={tweaks.theme} onChange={v => setTweak('theme', v)} />
+    </TweakSection>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

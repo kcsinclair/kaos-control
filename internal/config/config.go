@@ -246,10 +246,10 @@ func defaultProject() Project {
 		Stages: defaultStages,
 		Git: GitConfig{
 			DefaultBranch:  "main",
-			BranchTemplate: "ticket/{slug}",
+			BranchTemplate: "requirement/{slug}",
 		},
 		Roles:         defaultRoles,
-		RequiredPlans: RequiredPlans{"ticket": {}, "epic": {}},
+		RequiredPlans: RequiredPlans{"requirement": {}},
 	}
 }
 
@@ -287,7 +287,7 @@ func validateProject(cfg *Project) error {
 		cfg.Git.DefaultBranch = "main"
 	}
 	if cfg.Git.BranchTemplate == "" {
-		cfg.Git.BranchTemplate = "ticket/{slug}"
+		cfg.Git.BranchTemplate = "requirement/{slug}"
 	}
 	for _, a := range cfg.Agents {
 		if a.Name == "" {
