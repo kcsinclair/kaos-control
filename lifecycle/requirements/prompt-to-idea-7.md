@@ -1,5 +1,5 @@
 ---
-title: "Single-Submit Idea Capture (Brain Dump Mode)"
+title: Single-Submit Idea Capture (Brain Dump Mode)
 type: requirement
 status: draft
 lineage: prompt-to-idea
@@ -116,4 +116,9 @@ The generated artifact must contain valid frontmatter:
 ## Open Questions
 
 1. **Discard the chat panel entirely?** Should `IdeaChatPanel` be removed from the codebase now, or retained as the future UI for [[flesh-out-ideas-with-agent]]? The current recommendation is to retain it but disconnect it from the "New Idea" button.
+
+> Keep it for use later.  New Idea button should use new method.
+
 2. **Defect capture reuse**: The parent idea mentions this pattern should also work for new defects (`"This new idea assistance is great, I think it should be new idea or new defect"`). Should defect brain-dump capture be included in this requirement or tracked as a separate idea?
+
+> yes, please include, good to get it included now.
