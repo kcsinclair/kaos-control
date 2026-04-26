@@ -1,7 +1,7 @@
 ---
-title: "Conversational Idea Capture – Test Plan"
+title: Conversational Idea Capture – Test Plan
 type: plan-test
-status: draft
+status: done
 lineage: prompt-to-idea
 parent: lifecycle/requirements/prompt-to-idea-2.md
 labels:
