@@ -1,5 +1,16 @@
 import { api } from './client'
-import type { IdeaConverseResponse } from '@/types/api'
+import type { IdeaConverseResponse, IdeaGenerateResponse } from '@/types/api'
+
+export function generateIdea(
+  project: string,
+  input: string,
+  type?: 'idea' | 'defect',
+): Promise<IdeaGenerateResponse> {
+  return api.post<IdeaGenerateResponse>(`/p/${encodeURIComponent(project)}/ideas/generate`, {
+    input,
+    ...(type !== undefined ? { type } : {}),
+  })
+}
 
 export function converseIdea(
   project: string,

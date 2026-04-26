@@ -144,6 +144,15 @@ export interface ParseErrorRow {
   message: string
 }
 
+export interface IdeaGenerateResponse {
+  slug: string
+  title: string
+  labels: string[]
+  body: string
+  frontmatter: Record<string, unknown>
+  target_dir: string
+}
+
 export interface IdeaConverseResponse {
   session_id: string
   reply: string
