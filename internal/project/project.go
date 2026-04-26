@@ -11,6 +11,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/config"
 	kgit "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/hub"
+	"github.com/kaos-control/kaos-control/internal/ideachat"
 	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/lock"
 	"github.com/kaos-control/kaos-control/internal/watcher"
@@ -19,15 +20,16 @@ import (
 
 // Project is the runtime services container for one registered project.
 type Project struct {
-	Entry    *config.ProjectEntry
-	Cfg      *config.Project
-	Idx      *index.Index
-	Git      *kgit.Repo // nil if the project directory is not a git repo
-	Hub      *hub.Hub
-	Watcher  *watcher.Watcher
-	Workflow *workflow.Engine
-	Locks    *lock.Manager
-	Agents   *agent.Manager // nil if no agents configured
+	Entry          *config.ProjectEntry
+	Cfg            *config.Project
+	Idx            *index.Index
+	Git            *kgit.Repo // nil if the project directory is not a git repo
+	Hub            *hub.Hub
+	Watcher        *watcher.Watcher
+	Workflow       *workflow.Engine
+	Locks          *lock.Manager
+	Agents         *agent.Manager   // nil if no agents configured
+	IdeaChatStore  *ideachat.Store  // per-project conversational idea-capture sessions
 }
 
 // OpenOptions configures optional parameters for Open.
@@ -84,15 +86,16 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	}
 
 	return &Project{
-		Entry:    entry,
-		Cfg:      cfg,
-		Idx:      idx,
-		Git:      gitRepo,
-		Hub:      h,
-		Watcher:  w,
-		Workflow: wf,
-		Locks:    locks,
-		Agents:   agentMgr,
+		Entry:         entry,
+		Cfg:           cfg,
+		Idx:           idx,
+		Git:           gitRepo,
+		Hub:           h,
+		Watcher:       w,
+		Workflow:      wf,
+		Locks:         locks,
+		Agents:        agentMgr,
+		IdeaChatStore: ideachat.NewStore(),
 	}, nil
 }
 

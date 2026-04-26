@@ -141,6 +141,9 @@ func (s *Server) buildRouter() chi.Router {
 			r.Delete("/locks/{lineage}", s.handleReleaseLock)
 			r.Post("/locks/{lineage}/heartbeat", s.handleHeartbeatLock)
 
+			// Conversational idea capture
+			r.Post("/ideas/converse", s.handleIdeaConverse)
+
 			// WebSocket
 			r.Get("/ws", s.handleWebSocket)
 
