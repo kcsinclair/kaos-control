@@ -32,6 +32,15 @@ const renderedPreviewBody = computed(() => {
   return md.render(store.preview.body)
 })
 
+const previewMeta = computed(() => {
+  const fm = store.preview?.frontmatter ?? {}
+  const lineage = (fm.lineage as string) ?? ''
+  const title = (fm.title as string) ?? ''
+  const labels = Array.isArray(fm.labels) ? (fm.labels as string[]) : []
+  const slug = lineage ? `${lineage}.md` : ''
+  return { title, slug, labels, lineage }
+})
+
 // --- helpers ---
 function scrollToBottom() {
   nextTick(() => {
@@ -202,6 +211,29 @@ onBeforeUnmount(() => {
       <!-- Proposal state: preview + actions -->
       <template v-if="store.status === 'proposed' && store.preview">
         <div class="icp-preview-card">
+          <!-- Metadata summary -->
+          <div class="icp-preview-meta">
+            <div class="icp-meta-row" v-if="previewMeta.title">
+              <span class="icp-meta-label">Title</span>
+              <span class="icp-meta-value">{{ previewMeta.title }}</span>
+            </div>
+            <div class="icp-meta-row" v-if="previewMeta.slug">
+              <span class="icp-meta-label">File</span>
+              <code class="icp-meta-value icp-meta-slug">{{ previewMeta.slug }}</code>
+            </div>
+            <div class="icp-meta-row" v-if="previewMeta.lineage">
+              <span class="icp-meta-label">Lineage</span>
+              <span class="icp-meta-value">{{ previewMeta.lineage }}</span>
+            </div>
+            <div class="icp-meta-row" v-if="previewMeta.labels.length">
+              <span class="icp-meta-label">Labels</span>
+              <span class="icp-meta-chips">
+                <span v-for="lbl in previewMeta.labels" :key="lbl" class="icp-chip">{{ lbl }}</span>
+              </span>
+            </div>
+          </div>
+          <!-- Body preview -->
+          <div class="icp-preview-divider" />
           <div class="icp-preview-body md-preview" v-html="renderedPreviewBody" />
         </div>
         <div class="icp-proposal-actions">
@@ -427,12 +459,75 @@ onBeforeUnmount(() => {
 /* Preview card */
 .icp-preview-card {
   margin: 0 var(--space-6);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-accent);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   overflow-y: auto;
-  max-height: 220px;
+  max-height: 240px;
   flex-shrink: 0;
+}
+
+/* Metadata summary */
+.icp-preview-meta {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.icp-meta-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.icp-meta-label {
+  flex-shrink: 0;
+  width: 52px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+  padding-top: 1px;
+}
+
+.icp-meta-value {
+  color: var(--color-text);
+  font-size: var(--text-xs);
+}
+
+.icp-meta-slug {
+  font-family: monospace;
+  font-size: 11px;
+  background: var(--color-border);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.icp-meta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.icp-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.icp-preview-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0;
 }
 
 .icp-preview-body {
