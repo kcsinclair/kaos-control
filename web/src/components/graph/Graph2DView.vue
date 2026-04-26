@@ -24,8 +24,8 @@ function buildElements() {
       type: n.type,
       status: n.status,
       color: nodeColor(n.type),
-      priorityColor: n.priority
-        ? (n.status === 'done' ? '#6b7280' : (PRIORITY_COLORS[n.priority] ?? '#6b7280'))
+      priorityColor: (n.priority || n.status === 'done')
+        ? (n.status === 'done' ? '#6b7280' : (PRIORITY_COLORS[n.priority!] ?? '#6b7280'))
         : null,
       _raw: n,
     },

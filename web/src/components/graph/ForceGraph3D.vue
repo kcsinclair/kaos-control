@@ -52,8 +52,8 @@ function textSprite(text: string, color = '#e9d5ff'): THREE.Sprite {
 // Build a torus ring for nodes that have a priority colour.
 // 3d-force-graph uses Math.cbrt(nodeVal) * 4 as the sphere radius.
 function priorityRing(n: GraphNode): THREE.Mesh | null {
-  if (!n.priority) return null
-  const color = n.status === 'done' ? '#6b7280' : (PRIORITY_COLORS[n.priority] ?? '#6b7280')
+  if (!n.priority && n.status !== 'done') return null
+  const color = n.status === 'done' ? '#6b7280' : (PRIORITY_COLORS[n.priority!] ?? '#6b7280')
   const sphereR = Math.cbrt(nodeVal(n)) * 4
   const torusR = sphereR * 1.45
   const tubeR = sphereR * 0.18
