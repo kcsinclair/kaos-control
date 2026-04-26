@@ -35,7 +35,7 @@ function onBrainDumpCreated(path: string) {
 
 const project = route.params.project as string
 
-const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'releases']
+const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'releases']
 const statusOptions = ['', 'draft', 'in-progress', 'done', 'approved', 'blocked', 'rejected']
 const typeOptions = ['', 'idea', 'requirement', 'plan-backend', 'plan-frontend', 'plan-test', 'test', 'prototype', 'defect']
 
