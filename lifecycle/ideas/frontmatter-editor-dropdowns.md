@@ -1,7 +1,7 @@
 ---
 title: 'Frontmatter Editor: Add Priority Dropdown and Convert Status to Dropdown'
 type: idea
-status: draft
+status: approved
 lineage: frontmatter-editor-dropdowns
 priority: normal
 labels:
