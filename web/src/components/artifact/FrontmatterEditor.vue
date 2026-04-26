@@ -51,7 +51,7 @@ const statusIsUnknown = computed(() => !STATUS_VOCAB.includes(props.modelValue.s
       <label class="fm-field">
         <span class="fm-label">Status</span>
         <select
-          class="fm-input"
+          class="fm-input fm-select"
           :value="modelValue.status"
           @change="update('status', ($event.target as HTMLSelectElement).value)"
         >
@@ -67,7 +67,7 @@ const statusIsUnknown = computed(() => !STATUS_VOCAB.includes(props.modelValue.s
       <label class="fm-field">
         <span class="fm-label">Priority</span>
         <select
-          class="fm-input"
+          class="fm-input fm-select"
           :value="modelValue.priority ?? ''"
           @change="update('priority', ($event.target as HTMLSelectElement).value || undefined)"
         >
@@ -194,6 +194,15 @@ const statusIsUnknown = computed(() => !STATUS_VOCAB.includes(props.modelValue.s
 .fm-input:focus {
   outline: none;
   border-color: var(--color-accent);
+}
+.fm-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-2) center;
+  padding-right: calc(var(--space-2) * 2 + 10px);
+  cursor: pointer;
 }
 .fm-readonly {
   opacity: 0.6;
