@@ -2,33 +2,34 @@
 import { nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArtifactsStore } from '@/stores/artifacts'
-import { useIdeaChatStore } from '@/stores/ideaChat'
 import { useWebSocket } from '@/composables/useWebSocket'
-import IdeaChatPanel from '@/components/idea/IdeaChatPanel.vue'
+import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
+import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
 const store = useArtifactsStore()
-const ideaChatStore = useIdeaChatStore()
+const ui = useUiStore()
 
-const showIdeaChat = ref(false)
+const showBrainDump = ref(false)
+const brainDumpType = ref<'idea' | 'defect'>('idea')
 const newIdeaButtonEl = ref<HTMLButtonElement | null>(null)
 
-function openIdeaChat() {
-  showIdeaChat.value = true
+function openBrainDump(type: 'idea' | 'defect' = 'idea') {
+  brainDumpType.value = type
+  showBrainDump.value = true
 }
 
-function onIdeaChatClose() {
-  showIdeaChat.value = false
-  ideaChatStore.reset()
+function onBrainDumpClose() {
+  showBrainDump.value = false
   nextTick(() => newIdeaButtonEl.value?.focus())
 }
 
-function onIdeaCreated(path: string) {
-  showIdeaChat.value = false
-  ideaChatStore.reset()
+function onBrainDumpCreated(path: string) {
+  showBrainDump.value = false
+  ui.success('Artifact created!')
   router.push(`/p/${project}/artifacts/${path}`)
 }
 
@@ -102,20 +103,19 @@ onMounted(async () => {
     <div class="list-header">
       <h2 class="list-title">Artifacts</h2>
       <span class="list-count" v-if="!store.loading">{{ store.total }} total</span>
-      <button class="btn-new-idea" ref="newIdeaButtonEl" @click="openIdeaChat">
+      <button class="btn-new-idea" ref="newIdeaButtonEl" @click="openBrainDump('idea')">
         <MessageSquarePlus :size="15" />
         New Idea
       </button>
     </div>
 
-    <Teleport to="body">
-      <IdeaChatPanel
-        v-if="showIdeaChat"
-        :project="project"
-        @close="onIdeaChatClose"
-        @created="onIdeaCreated"
-      />
-    </Teleport>
+    <BrainDumpModal
+      v-if="showBrainDump"
+      :project="project"
+      :artifact-type="brainDumpType"
+      @close="onBrainDumpClose"
+      @created="onBrainDumpCreated"
+    />
 
     <div class="filter-bar">
       <select v-model="selectedStage" @change="applyFilters">
