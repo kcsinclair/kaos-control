@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: Frontmatter Editor Dropdowns'
 type: plan-frontend
-status: draft
+status: in-development
 lineage: frontmatter-editor-dropdowns
 parent: requirements/frontmatter-editor-dropdowns-2.md
 ---
