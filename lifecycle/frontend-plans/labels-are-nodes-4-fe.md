@@ -1,7 +1,7 @@
 ---
-title: "Frontend Plan: Labels as Graph Nodes with Priority Visualisation"
+title: 'Frontend Plan: Labels as Graph Nodes with Priority Visualisation'
 type: plan-frontend
-status: draft
+status: done
 lineage: labels-are-nodes
 parent: requirements/labels-are-nodes-2.md
 ---
