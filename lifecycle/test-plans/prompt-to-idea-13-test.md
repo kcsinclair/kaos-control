@@ -1,7 +1,7 @@
 ---
 title: "Single-Submit Idea & Defect Capture – Test Plan"
 type: plan-test
-status: in-development
+status: done
 lineage: prompt-to-idea
 parent: lifecycle/requirements/prompt-to-idea-7.md
 ---
