@@ -5,7 +5,7 @@ import { useArtifactsStore } from '@/stores/artifacts'
 import { useWebSocket } from '@/composables/useWebSocket'
 import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
 import { useUiStore } from '@/stores/ui'
-import { MessageSquarePlus } from 'lucide-vue-next'
+import { MessageSquarePlus, Bug } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 
 const route = useRoute()
@@ -103,6 +103,10 @@ onMounted(async () => {
     <div class="list-header">
       <h2 class="list-title">Artifacts</h2>
       <span class="list-count" v-if="!store.loading">{{ store.total }} total</span>
+      <button class="btn-new-defect" @click="openBrainDump('defect')">
+        <Bug :size="15" />
+        New Defect
+      </button>
       <button class="btn-new-idea" ref="newIdeaButtonEl" @click="openBrainDump('idea')">
         <MessageSquarePlus :size="15" />
         New Idea
@@ -207,11 +211,26 @@ onMounted(async () => {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
-.btn-new-idea {
+.btn-new-defect {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   margin-left: auto;
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-new-defect:hover { background: var(--color-surface); color: var(--color-text); }
+.btn-new-defect:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.btn-new-idea {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   padding: var(--space-1) var(--space-3);
   background: var(--color-accent);
   color: #fff;
