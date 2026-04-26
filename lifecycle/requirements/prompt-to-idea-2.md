@@ -122,6 +122,17 @@ The agent produces valid frontmatter with at minimum:
 ## Open Questions
 
 1. **Streaming responses**: Should the agent stream its replies token-by-token to the UI (via WebSocket or SSE), or is a request/response pattern sufficient for v1?
+
+> request/reponse for v1 please.
+
 2. **Authentication**: The current app supports auth — should idea-capture sessions be tied to the authenticated user, and should the user be recorded in the artifact frontmatter (e.g., `created_by`)?
+
+> idea-capture will be done by an authenticated user.
+
 3. **Label vocabulary**: Should the agent pick labels from a fixed vocabulary (defined in config), or freely infer them? Free inference risks label sprawl; a fixed list risks missing relevant tags.
+
+> The agent should pick from existing labels.
+
 4. **Edit after creation**: If the user wants to tweak the idea immediately after creation, should the chat panel support a follow-up "edit" mode, or should the user be directed to the existing artifact editor?
+
+> existing artifact editor works.
