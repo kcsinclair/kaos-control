@@ -249,14 +249,14 @@ onMounted(() => store.fetchRuns(project))
 }
 .btn-kill {
   padding: 2px var(--space-2);
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  background: var(--badge-blocked-bg);
+  color: var(--badge-blocked-text);
+  border: 1px solid var(--color-error);
   border-radius: var(--radius-sm);
   font-size: 11px;
   cursor: pointer;
 }
-.btn-kill:hover { background: #fecaca; }
+.btn-kill:hover { opacity: 0.85; }
 .expand-toggle { font-size: 10px; color: var(--color-text-muted); }
 .status-chip {
   display: inline-block;
@@ -267,11 +267,11 @@ onMounted(() => store.fetchRuns(project))
   background: var(--color-border);
   color: var(--color-text);
 }
-.status-chip[data-status="running"] { background: #dbeafe; color: #1d4ed8; }
-.status-chip[data-status="done"] { background: #d1fae5; color: #065f46; }
-.status-chip[data-status="failed"] { background: #fee2e2; color: #991b1b; }
-.status-chip[data-status="killed"] { background: #fee2e2; color: #991b1b; }
-.status-chip[data-status="killed-timeout"] { background: #fef3c7; color: #92400e; }
+.status-chip[data-status="running"]        { background: var(--badge-approved-bg);     color: var(--badge-approved-text); }
+.status-chip[data-status="done"]           { background: var(--badge-done-bg);          color: var(--badge-done-text); }
+.status-chip[data-status="failed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
+.status-chip[data-status="killed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
+.status-chip[data-status="killed-timeout"] { background: var(--badge-in-progress-bg);  color: var(--badge-in-progress-text); }
 .run-detail { background: var(--color-surface); }
 .detail-cell { padding: var(--space-4) var(--space-6) !important; }
 .detail-section { margin-bottom: var(--space-3); }
