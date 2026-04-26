@@ -24,7 +24,9 @@ function buildElements() {
       type: n.type,
       status: n.status,
       color: nodeColor(n.type),
-      priorityColor: n.priority ? (PRIORITY_COLORS[n.priority] ?? null) : null,
+      priorityColor: n.priority
+        ? (n.status === 'done' ? '#6b7280' : (PRIORITY_COLORS[n.priority] ?? '#6b7280'))
+        : null,
       _raw: n,
     },
   }))
@@ -84,6 +86,25 @@ async function init() {
         style: {
           'border-width': 4,
           'border-color': 'data(priorityColor)',
+        },
+      },
+      {
+        // Label nodes: pill-shaped tag with centred text, auto-width to fit label
+        selector: 'node[type="label"]',
+        style: {
+          shape: 'round-rectangle',
+          width: 'label',
+          height: 20,
+          padding: '8px',
+          'background-color': '#2e1a4a',
+          'border-color': '#a855f7',
+          'border-width': 1.5,
+          'text-valign': 'center',
+          'text-halign': 'center',
+          color: '#d8b4fe',
+          'font-size': 10,
+          'font-weight': 'bold',
+          'text-max-width': 200,
         },
       },
       {

@@ -28,17 +28,48 @@ function nodeVal(n: GraphNode): number {
   return Math.max(1, 4 - n.index * 0.3)
 }
 
+// Canvas-based text sprite — used for label nodes so their name is always visible.
+function textSprite(text: string, color = '#e9d5ff'): THREE.Sprite {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')!
+  const fontSize = 26
+  ctx.font = `${fontSize}px sans-serif`
+  const textW = Math.ceil(ctx.measureText(text).width)
+  canvas.width = textW + 20
+  canvas.height = fontSize + 14
+  ctx.font = `${fontSize}px sans-serif`
+  ctx.fillStyle = color
+  ctx.textBaseline = 'middle'
+  ctx.fillText(text, 10, canvas.height / 2)
+  const texture = new THREE.CanvasTexture(canvas)
+  const mat = new THREE.SpriteMaterial({ map: texture, depthWrite: false })
+  const sprite = new THREE.Sprite(mat)
+  sprite.scale.set(canvas.width / 5, canvas.height / 5, 1)
+  sprite.position.set(0, 9, 0)
+  return sprite
+}
+
 // Build a torus ring for nodes that have a priority colour.
 // 3d-force-graph uses Math.cbrt(nodeVal) * 4 as the sphere radius.
 function priorityRing(n: GraphNode): THREE.Mesh | null {
-  const color = PRIORITY_COLORS[n.priority ?? '']
-  if (!color) return null
+  if (!n.priority) return null
+  const color = n.status === 'done' ? '#6b7280' : (PRIORITY_COLORS[n.priority] ?? '#6b7280')
   const sphereR = Math.cbrt(nodeVal(n)) * 4
   const torusR = sphereR * 1.45
   const tubeR = sphereR * 0.18
   const geo = new THREE.TorusGeometry(torusR, tubeR, 8, 20)
   const mat = new THREE.MeshLambertMaterial({ color })
   return new THREE.Mesh(geo, mat)
+}
+
+// Build the Three.js object for a node: torus ring if it has priority,
+// plus a text sprite for synthetic label nodes.
+function buildNodeObject(n: GraphNode): THREE.Object3D {
+  const group = new THREE.Group()
+  const ring = priorityRing(n)
+  if (ring) group.add(ring)
+  if (n.type === 'label') group.add(textSprite(n.title || n.slug))
+  return group
 }
 
 // Non-reactive: the library owns this reference
@@ -66,7 +97,7 @@ onMounted(() => {
     .nodeColor((n: object) => nodeColor(n as GraphNode))
     .nodeVal((n: object) => nodeVal(n as GraphNode))
     .nodeThreeObjectExtend(true)
-    .nodeThreeObject((n: object) => priorityRing(n as GraphNode) ?? new THREE.Group())
+    .nodeThreeObject((n: object) => buildNodeObject(n as GraphNode))
     .linkSource('source')
     .linkTarget('target')
     .linkColor((l: object) => edgeColor(l as GraphEdge))

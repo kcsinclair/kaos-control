@@ -13,7 +13,7 @@ const project = route.params.project as string
 
 const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'releases']
 const statusOptions = ['', 'draft', 'in-progress', 'done', 'approved', 'blocked', 'rejected']
-const typeOptions = ['', 'idea', 'requirement', 'plan', 'test', 'release']
+const typeOptions = ['', 'idea', 'requirement', 'plan-backend', 'plan-frontend', 'plan-test', 'test', 'prototype', 'defect']
 
 const selectedStage = ref(store.filter.stage ?? '')
 const selectedStatus = ref(store.filter.status ?? '')
@@ -268,10 +268,13 @@ onMounted(async () => {
   background: var(--color-border);
   white-space: nowrap;
 }
-.badge[data-status="done"] { background: #d1fae5; color: #065f46; }
-.badge[data-status="approved"] { background: #dbeafe; color: #1e40af; }
-.badge[data-status="in-progress"] { background: #fef3c7; color: #92400e; }
-.badge[data-status="blocked"] { background: #fee2e2; color: #991b1b; }
+.badge[data-status="done"]          { background: var(--badge-done-bg);          color: var(--badge-done-text); }
+.badge[data-status="approved"]      { background: var(--badge-approved-bg);      color: var(--badge-approved-text); }
+.badge[data-status="in-progress"]   { background: var(--badge-in-progress-bg);   color: var(--badge-in-progress-text); }
+.badge[data-status="in-development"]{ background: var(--badge-in-dev-bg);        color: var(--badge-in-dev-text); }
+.badge[data-status="in-qa"]         { background: var(--badge-in-qa-bg);         color: var(--badge-in-qa-text); }
+.badge[data-status="blocked"]       { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
+.badge[data-status="rejected"]      { background: var(--badge-rejected-bg);      color: var(--badge-rejected-text); }
 .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
 .cell-date { white-space: nowrap; }
 .pagination {
