@@ -100,7 +100,7 @@ func (s *Server) handleIdeaConverse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Regular conversation turn – look up the idea-capture agent config.
-	modelCfg, err := resolveIdeaCaptureConfig(p)
+	modelCfg, err := resolveIdeaCaptureConfig(p, "idea-capture")
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("config_error", err.Error()))
 		return
@@ -186,11 +186,17 @@ func writeIdeaArtifact(p *project.Project, sess *ideachat.Session) (string, erro
 }
 
 // resolveIdeaCaptureConfig finds the idea-capture agent configuration in the
-// project config and returns a ModelConfig for the LLM.
-func resolveIdeaCaptureConfig(p *project.Project) (ideachat.ModelConfig, error) {
+// project config and returns a ModelConfig for the given templateKey.
+// Known keys: "idea-capture" (conversational), "idea-generate", "defect-generate".
+// When templateKey is "idea-capture" and no agent is configured, a built-in
+// default prompt is returned so the conversational endpoint keeps working.
+func resolveIdeaCaptureConfig(p *project.Project, templateKey string) (ideachat.ModelConfig, error) {
 	for _, a := range p.Cfg.Agents {
 		if a.Name == "idea-capture" {
-			prompt := a.PromptTemplates["idea-capture"]
+			prompt, ok := a.PromptTemplates[templateKey]
+			if !ok {
+				return ideachat.ModelConfig{}, fmt.Errorf("idea-capture agent has no template %q", templateKey)
+			}
 			model := a.Model
 			if model == "" {
 				model = "claude-sonnet-4-6"
@@ -201,11 +207,14 @@ func resolveIdeaCaptureConfig(p *project.Project) (ideachat.ModelConfig, error) 
 			}, nil
 		}
 	}
-	// No agent configured – use a sensible built-in default.
-	return ideachat.ModelConfig{
-		Model:        "claude-sonnet-4-6",
-		SystemPrompt: defaultIdeaCapturePrompt,
-	}, nil
+	// No agent configured – fall back to the built-in default for the conversational key only.
+	if templateKey == "idea-capture" {
+		return ideachat.ModelConfig{
+			Model:        "claude-sonnet-4-6",
+			SystemPrompt: defaultIdeaCapturePrompt,
+		}, nil
+	}
+	return ideachat.ModelConfig{}, fmt.Errorf("idea-capture agent not configured")
 }
 
 // collectSlugs returns all lineage slugs currently in the project index.

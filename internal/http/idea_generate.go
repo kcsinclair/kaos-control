@@ -3,11 +3,9 @@ package http
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/kaos-control/kaos-control/internal/ideachat"
-	"github.com/kaos-control/kaos-control/internal/project"
 )
 
 // handleIdeaGenerate handles POST /api/p/:project/ideas/generate.
@@ -54,7 +52,7 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 		templateKey = "defect-generate"
 	}
 
-	modelCfg, err := resolveGenerateConfig(p, templateKey)
+	modelCfg, err := resolveIdeaCaptureConfig(p, templateKey)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("config_error", err.Error()))
 		return
@@ -96,29 +94,6 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 		"frontmatter": result.Frontmatter,
 		"target_dir":  result.TargetDir,
 	})
-}
-
-// resolveGenerateConfig looks up the idea-capture agent and returns a ModelConfig
-// using the specified template key. This is refactored in Milestone 4 to share
-// logic with resolveIdeaCaptureConfig.
-func resolveGenerateConfig(p *project.Project, templateKey string) (ideachat.ModelConfig, error) {
-	for _, a := range p.Cfg.Agents {
-		if a.Name == "idea-capture" {
-			prompt, ok := a.PromptTemplates[templateKey]
-			if !ok {
-				return ideachat.ModelConfig{}, fmt.Errorf("idea-capture agent has no template %q", templateKey)
-			}
-			model := a.Model
-			if model == "" {
-				model = "claude-sonnet-4-6"
-			}
-			return ideachat.ModelConfig{
-				Model:        model,
-				SystemPrompt: prompt,
-			}, nil
-		}
-	}
-	return ideachat.ModelConfig{}, fmt.Errorf("idea-capture agent not configured")
 }
 
 // mergeSlugs returns a deduplicated union of two slug slices.
