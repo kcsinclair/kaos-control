@@ -1,13 +1,36 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArtifactsStore } from '@/stores/artifacts'
+import { useIdeaChatStore } from '@/stores/ideaChat'
 import { useWebSocket } from '@/composables/useWebSocket'
+import IdeaChatPanel from '@/components/idea/IdeaChatPanel.vue'
+import { MessageSquarePlus } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
 const store = useArtifactsStore()
+const ideaChatStore = useIdeaChatStore()
+
+const showIdeaChat = ref(false)
+const newIdeaButtonEl = ref<HTMLButtonElement | null>(null)
+
+function openIdeaChat() {
+  showIdeaChat.value = true
+}
+
+function onIdeaChatClose() {
+  showIdeaChat.value = false
+  ideaChatStore.reset()
+  nextTick(() => newIdeaButtonEl.value?.focus())
+}
+
+function onIdeaCreated(path: string) {
+  showIdeaChat.value = false
+  ideaChatStore.reset()
+  router.push(`/p/${project}/artifacts/${path}`)
+}
 
 const project = route.params.project as string
 
@@ -79,7 +102,20 @@ onMounted(async () => {
     <div class="list-header">
       <h2 class="list-title">Artifacts</h2>
       <span class="list-count" v-if="!store.loading">{{ store.total }} total</span>
+      <button class="btn-new-idea" ref="newIdeaButtonEl" @click="openIdeaChat">
+        <MessageSquarePlus :size="15" />
+        New Idea
+      </button>
     </div>
+
+    <Teleport to="body">
+      <IdeaChatPanel
+        v-if="showIdeaChat"
+        :project="project"
+        @close="onIdeaChatClose"
+        @created="onIdeaCreated"
+      />
+    </Teleport>
 
     <div class="filter-bar">
       <select v-model="selectedStage" @change="applyFilters">
@@ -171,6 +207,22 @@ onMounted(async () => {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
+.btn-new-idea {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-new-idea:hover { opacity: 0.88; }
+.btn-new-idea:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .filter-bar {
   display: flex;
   align-items: center;
