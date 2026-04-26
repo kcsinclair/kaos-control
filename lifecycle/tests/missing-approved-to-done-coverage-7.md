@@ -1,7 +1,7 @@
 ---
 title: Integration tests — approved → done transition coverage
 type: test
-status: draft
+status: approved
 lineage: innovation-maker
 parent: lifecycle/defects/missing-approved-to-done-coverage.md
 ---
