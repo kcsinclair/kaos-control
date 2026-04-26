@@ -1,7 +1,7 @@
 ---
 title: "Conversational Idea Capture – Backend Plan"
 type: plan-backend
-status: in-development
+status: done
 lineage: prompt-to-idea
 parent: lifecycle/requirements/prompt-to-idea-2.md
 labels:
