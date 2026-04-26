@@ -143,6 +143,8 @@ func (s *Server) buildRouter() chi.Router {
 
 			// Conversational idea capture
 			r.Post("/ideas/converse", s.handleIdeaConverse)
+			// Single-submit idea / defect capture (preview-only, no disk write)
+			r.Post("/ideas/generate", s.handleIdeaGenerate)
 
 			// WebSocket
 			r.Get("/ws", s.handleWebSocket)
