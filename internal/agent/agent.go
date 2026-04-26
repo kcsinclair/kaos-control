@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
 	"github.com/kaos-control/kaos-control/internal/hub"
@@ -44,6 +45,10 @@ type Run struct {
 	AllowedPaths []string
 	GitIdentity  config.GitIdentity
 	LogPath      string // absolute path; if empty, no log file is written
+	// Status lifecycle fields (copied from AgentConfig).
+	TargetPath    string // project-relative path to the target artifact
+	ActiveStatus  string // status to set on target when run starts (empty = no change)
+	DoneOnSuccess bool   // if true, set target status to "done" on successful completion
 }
 
 // Process is a handle to a running agent.
@@ -322,10 +327,12 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	}
 	prompt := strings.NewReplacer("{target_path}", targetPath).Replace(promptTpl)
 
-	// Determine lineage from the target artifact (if present in index).
+	// Determine lineage and previous status from the target artifact (if present in index).
 	lineage := targetPath
+	prevStatus := ""
 	if row, err := m.idx.Get(targetPath); err == nil && row != nil {
 		lineage = row.FM.Lineage
+		prevStatus = row.Status
 	}
 
 	// Check lineage lock.
@@ -350,15 +357,18 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	}
 
 	run := Run{
-		RunID:        runID,
-		AgentName:    agentName,
-		Role:         role,
-		Model:        ag.Model,
-		PromptText:   prompt,
-		ProjectRoot:  m.root,
-		AllowedPaths: ag.AllowedPaths,
-		GitIdentity:  identity,
-		LogPath:      m.LogPath(runID),
+		RunID:         runID,
+		AgentName:     agentName,
+		Role:          role,
+		Model:         ag.Model,
+		PromptText:    prompt,
+		ProjectRoot:   m.root,
+		AllowedPaths:  ag.AllowedPaths,
+		GitIdentity:   identity,
+		LogPath:       m.LogPath(runID),
+		TargetPath:    targetPath,
+		ActiveStatus:  ag.ActiveStatus,
+		DoneOnSuccess: ag.DoneOnSuccess,
 	}
 
 	// Acquire lineage lock.
@@ -381,6 +391,17 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		_ = m.locks.Release(lineage)
 		<-m.sem
 		return "", fmt.Errorf("inserting run record: %w", err)
+	}
+
+	// If configured, mark the target artifact as active before launching.
+	if ag.ActiveStatus != "" && targetPath != "" {
+		if err := m.setArtifactStatus(targetPath, ag.ActiveStatus); err != nil {
+			slog.Warn("agent: setting active status", "target", targetPath, "status", ag.ActiveStatus, "err", err)
+		} else if m.git != nil {
+			authorName, authorEmail := m.git.ResolveIdentity()
+			msg := fmt.Sprintf("status(%s): %s → %s [run:%s]", lineage, prevStatus, ag.ActiveStatus, runID)
+			_, _ = m.git.AddAndCommit([]string{targetPath}, msg, authorName, authorEmail)
+		}
 	}
 
 	// Start the driver process. timeout_minutes=0 disables the timeout.
@@ -463,6 +484,14 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 			case errors.Is(ctx.Err(), context.Canceled):
 				status = "killed"
 			}
+		}
+	}
+
+	// If configured and successful, mark the target artifact done before committing
+	// so the status change is bundled into the agent's commit automatically.
+	if status == "done" && run.DoneOnSuccess && run.TargetPath != "" {
+		if err := m.setArtifactStatus(run.TargetPath, "done"); err != nil {
+			slog.Warn("agent: setting done status", "target", run.TargetPath, "err", err)
 		}
 	}
 
@@ -553,6 +582,24 @@ func (m *Manager) getProc(runID string) Process {
 	if ar, ok := m.active[runID]; ok {
 		return ar.proc
 	}
+	return nil
+}
+
+// setArtifactStatus patches the status field of an artifact on disk and re-indexes it.
+func (m *Manager) setArtifactStatus(relPath, status string) error {
+	absPath := filepath.Join(m.root, relPath)
+	raw, err := os.ReadFile(absPath)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", relPath, err)
+	}
+	patched, ok := artifact.PatchFrontmatterField(raw, "status", status)
+	if !ok {
+		return fmt.Errorf("status field not found in frontmatter of %s", relPath)
+	}
+	if err := os.WriteFile(absPath, patched, 0o644); err != nil {
+		return fmt.Errorf("writing %s: %w", relPath, err)
+	}
+	_ = m.idx.IndexFile(absPath)
 	return nil
 }
 

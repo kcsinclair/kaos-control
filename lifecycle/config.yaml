@@ -131,6 +131,8 @@ agents:
     role: [backend-developer]
     driver: claude-code-cli
     model: sonnet
+    active_status: in-development
+    done_on_success: true
     timeout_minutes: 0
     allowed_write_paths:
       - internal
@@ -172,6 +174,8 @@ agents:
     role: [frontend-developer]
     driver: claude-code-cli
     model: sonnet
+    active_status: in-development
+    done_on_success: true
     timeout_minutes: 0
     allowed_write_paths:
       - web/src
@@ -212,6 +216,8 @@ agents:
     role: [test-developer]
     driver: claude-code-cli
     model: sonnet
+    active_status: in-development
+    done_on_success: true
     timeout_minutes: 0
     allowed_write_paths:
       - tests
@@ -257,6 +263,7 @@ agents:
     role: [qa]
     driver: claude-code-cli
     model: sonnet
+    active_status: in-qa
     timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/defects

@@ -149,6 +149,29 @@ func Parse(raw []byte, relPath string, mtime time.Time) *Artifact {
 	return a
 }
 
+// PatchFrontmatterField replaces the value of key within the YAML frontmatter.
+// Only the region between the opening and closing --- fences is modified; the
+// document body is left untouched. Returns (patched, true) on success or
+// (raw, false) if the key is not present or the file has no frontmatter fence.
+func PatchFrontmatterField(raw []byte, key, value string) ([]byte, bool) {
+	s := string(raw)
+	if !strings.HasPrefix(s, "---") {
+		return raw, false
+	}
+	closeIdx := strings.Index(s[3:], "\n---")
+	if closeIdx < 0 {
+		return raw, false
+	}
+	fmEnd := 3 + closeIdx
+	fmSection := s[3:fmEnd]
+	lineRe := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(key) + `:\s*.*$`)
+	replaced := lineRe.ReplaceAllLiteralString(fmSection, key+": "+value)
+	if replaced == fmSection {
+		return raw, false
+	}
+	return []byte("---" + replaced + s[fmEnd:]), true
+}
+
 // RenderHTML renders markdown source to HTML using goldmark.
 func RenderHTML(src string) string {
 	var buf bytes.Buffer

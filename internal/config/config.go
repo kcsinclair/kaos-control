@@ -177,15 +177,18 @@ type GitConfig struct {
 
 // AgentConfig is one configured agent binding.
 type AgentConfig struct {
-	Name            string      `yaml:"name"`
-	Roles           []string    `yaml:"role"`
-	Driver          string      `yaml:"driver"`
-	Model           string      `yaml:"model,omitempty"`
-	Endpoint        string      `yaml:"endpoint,omitempty"`
-	AllowedPaths    []string    `yaml:"allowed_write_paths,omitempty"`
-	TimeoutMinutes  int         `yaml:"timeout_minutes,omitempty"` // 0 = no timeout
-	GitIdentity     GitIdentity `yaml:"git_identity"`
+	Name            string            `yaml:"name"`
+	Roles           []string          `yaml:"role"`
+	Driver          string            `yaml:"driver"`
+	Model           string            `yaml:"model,omitempty"`
+	Endpoint        string            `yaml:"endpoint,omitempty"`
+	AllowedPaths    []string          `yaml:"allowed_write_paths,omitempty"`
+	TimeoutMinutes  int               `yaml:"timeout_minutes,omitempty"` // 0 = no timeout
+	GitIdentity     GitIdentity       `yaml:"git_identity"`
 	PromptTemplates map[string]string `yaml:"prompt_templates,omitempty"` // role -> template
+	// Status lifecycle: set target artifact status at run start/end.
+	ActiveStatus  string `yaml:"active_status,omitempty"`   // status to set when run starts (empty = no change)
+	DoneOnSuccess bool   `yaml:"done_on_success,omitempty"` // if true, set status=done when run completes successfully
 }
 
 // GitIdentity is the git author identity for an agent or user commit.

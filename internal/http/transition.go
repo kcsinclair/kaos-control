@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -173,25 +172,6 @@ func writeRejectionArtifact(p *project.Project, row *index.ArtifactRow, relPath,
 	return newRelPath, nil
 }
 
-// patchFrontmatterField replaces the value of key within the YAML frontmatter.
-// Edits only between the opening and closing --- fences; body is unchanged.
-// Returns (patched, true) on success or (raw, false) if the key is not found.
 func patchFrontmatterField(raw []byte, key, value string) ([]byte, bool) {
-	s := string(raw)
-	if !strings.HasPrefix(s, "---") {
-		return raw, false
-	}
-	closeIdx := strings.Index(s[3:], "\n---")
-	if closeIdx < 0 {
-		return raw, false
-	}
-	fmEnd := 3 + closeIdx // index of '\n' before the closing fence
-	fmSection := s[3:fmEnd]
-
-	lineRe := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(key) + `:\s*.*$`)
-	replaced := lineRe.ReplaceAllLiteralString(fmSection, key+": "+value)
-	if replaced == fmSection {
-		return raw, false
-	}
-	return []byte("---" + replaced + s[fmEnd:]), true
+	return artifact.PatchFrontmatterField(raw, key, value)
 }
