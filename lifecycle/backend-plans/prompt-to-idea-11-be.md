@@ -1,7 +1,7 @@
 ---
 title: "Single-Submit Idea & Defect Capture – Backend Plan"
 type: plan-backend
-status: draft
+status: in-development
 lineage: prompt-to-idea
 parent: lifecycle/requirements/prompt-to-idea-7.md
 ---
