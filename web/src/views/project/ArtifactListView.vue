@@ -206,6 +206,7 @@ onMounted(async () => {
   font-size: var(--text-lg);
   font-weight: 600;
   margin: 0;
+  color: var(--color-text);
 }
 .list-count {
   font-size: var(--text-sm);
@@ -329,6 +330,7 @@ onMounted(async () => {
   border-radius: 4px;
   padding: 1px 6px;
   white-space: nowrap;
+  color: var(--color-text);
 }
 .badge {
   display: inline-block;
@@ -337,6 +339,7 @@ onMounted(async () => {
   font-size: 11px;
   font-weight: 500;
   background: var(--color-border);
+  color: var(--color-text);
   white-space: nowrap;
 }
 .badge[data-status="done"]          { background: var(--badge-done-bg);          color: var(--badge-done-text); }
