@@ -117,6 +117,12 @@ func (p *Project) StartLockReaper(ctx context.Context) {
 	p.Locks.StartReaper(ctx)
 }
 
+// StartSessionReaper launches the idea-chat session reaper goroutine.
+// The reaper exits when ctx is cancelled.
+func (p *Project) StartSessionReaper(ctx context.Context) {
+	p.IdeaChatStore.StartReaper(ctx)
+}
+
 // Close releases resources held by the project.
 func (p *Project) Close() error {
 	return p.Idx.Close()

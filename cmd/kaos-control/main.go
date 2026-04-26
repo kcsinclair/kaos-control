@@ -63,10 +63,12 @@ func run() error {
 		projects[e.Name] = p
 	}
 
-	// Start file watchers and lock reapers (non-blocking; each runs until ctx is cancelled).
+	// Start file watchers, lock reapers, and session reapers
+	// (non-blocking; each runs until ctx is cancelled).
 	for _, p := range projects {
 		p.StartWatcher(ctx)
 		p.StartLockReaper(ctx)
+		p.StartSessionReaper(ctx)
 	}
 
 	// Open the auth database (accounts + sessions, shared across projects).
