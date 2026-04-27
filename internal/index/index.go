@@ -26,6 +26,7 @@ type Index struct {
 	db          *sql.DB
 	projectRoot string
 	git         *git.Repo // optional; used for created-date backfill during scan
+	ignore      []string  // glob patterns for files to skip during scan and indexing
 }
 
 // Option configures an Index at construction time.
@@ -35,6 +36,12 @@ type Option func(*Index)
 // date for artifacts that lack a created: frontmatter field.
 func WithGit(repo *git.Repo) Option {
 	return func(idx *Index) { idx.git = repo }
+}
+
+// WithIgnore supplies glob patterns (matched against the base name) for files
+// that should be silently skipped during Scan and IndexFile.
+func WithIgnore(patterns []string) Option {
+	return func(idx *Index) { idx.ignore = patterns }
 }
 
 // Open opens (or creates) the SQLite index at dbPath for the given project root.
@@ -152,6 +159,9 @@ func (idx *Index) Scan(stages []config.Stage) error {
 		err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
 				return err
+			}
+			if config.ShouldIgnore(path, idx.ignore) {
+				return nil
 			}
 			if err := idx.IndexFile(path); err != nil {
 				slog.Warn("index file error", "path", path, "err", err)
