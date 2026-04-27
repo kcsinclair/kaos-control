@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -39,8 +40,22 @@ type testEnv struct {
 
 // newTestEnv creates a temp project dir, inits a git repo, writes a lifecycle/config.yaml,
 // seeds initial artifacts, starts the full HTTP server on a random port, and returns
-// a testEnv ready for API calls.
+// a testEnv ready for API calls. No frontend FS is provided; SPA routes will return 500.
 func newTestEnv(t *testing.T, seeds []seedArtifact) *testEnv {
+	t.Helper()
+	return newTestEnvFull(t, seeds, nil)
+}
+
+// newTestEnvWithFrontend is like newTestEnv but injects a frontend fs.FS so that the
+// SPA catch-all handler can serve index.html. Pass an fs.FS whose root contains a
+// "dist/index.html" file (e.g. a testing/fstest.MapFS stub).
+func newTestEnvWithFrontend(t *testing.T, seeds []seedArtifact, frontendFS fs.FS) *testEnv {
+	t.Helper()
+	return newTestEnvFull(t, seeds, frontendFS)
+}
+
+// newTestEnvFull is the shared implementation for newTestEnv and newTestEnvWithFrontend.
+func newTestEnvFull(t *testing.T, seeds []seedArtifact, frontendFS fs.FS) *testEnv {
 	t.Helper()
 
 	root := t.TempDir()
@@ -206,8 +221,9 @@ required_plans:
 
 	// Start HTTP server.
 	srv := kaoshttp.New(kaoshttp.ServerConfig{
-		Listen: addr,
-		Auth:   authStore,
+		Listen:   addr,
+		Auth:     authStore,
+		Frontend: frontendFS,
 	}, map[string]*project.Project{
 		"testproject": proj,
 	})

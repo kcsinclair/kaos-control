@@ -7,7 +7,19 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
+
+// stubSPAFrontend returns a minimal fs.FS that the test server can use to serve
+// the SPA catch-all route.  It contains only "dist/index.html" with enough HTML
+// to satisfy isSPAResponse.
+func stubSPAFrontend() fstest.MapFS {
+	return fstest.MapFS{
+		"dist/index.html": &fstest.MapFile{
+			Data: []byte(`<!DOCTYPE html><html><head><title>Test SPA</title></head><body><div id="app"></div></body></html>`),
+		},
+	}
+}
 
 // isSPAResponse returns true when the response body looks like the SPA HTML shell
 // (contains a <html> tag), which confirms the catch-all frontend handler served it.
@@ -27,7 +39,7 @@ func isSPAResponse(t *testing.T, resp *http.Response) bool {
 // accidentally 404-ing at the server level.
 // Covers Milestone 3, scenario 1.
 func TestKanbanRouting_BoardRouteServesSPA(t *testing.T) {
-	env := newTestEnv(t, nil)
+	env := newTestEnvWithFrontend(t, nil, stubSPAFrontend())
 
 	resp, err := http.Get(env.baseURL + "/p/testproject/artifacts/board")
 	if err != nil {
@@ -44,7 +56,7 @@ func TestKanbanRouting_BoardRouteServesSPA(t *testing.T) {
 // GET /p/:project/artifacts route still returns 200 with the SPA HTML.
 // Covers Milestone 3, scenario 2.
 func TestKanbanRouting_ListRouteUnchanged(t *testing.T) {
-	env := newTestEnv(t, nil)
+	env := newTestEnvWithFrontend(t, nil, stubSPAFrontend())
 
 	resp, err := http.Get(env.baseURL + "/p/testproject/artifacts")
 	if err != nil {
@@ -62,7 +74,7 @@ func TestKanbanRouting_ListRouteUnchanged(t *testing.T) {
 // intercepted by any new board route pattern.
 // Covers Milestone 3, scenario 3.
 func TestKanbanRouting_ArtifactEditorRouteUnchanged(t *testing.T) {
-	env := newTestEnv(t, nil)
+	env := newTestEnvWithFrontend(t, nil, stubSPAFrontend())
 
 	resp, err := http.Get(env.baseURL + "/p/testproject/artifacts/requirements/kanban-view-3.md")
 	if err != nil {
