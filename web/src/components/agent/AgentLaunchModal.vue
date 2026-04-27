@@ -26,8 +26,8 @@ const running = ref(false)
 const predecessorMap: Record<string, string> = {
   clarifying: 'draft',
   planning: 'approved',
-  'in-development': 'planning',
-  'in-qa': 'in-development',
+  'in-development': 'approved',
+  'in-qa': 'approved',
   approved: 'in-qa',
 }
 
