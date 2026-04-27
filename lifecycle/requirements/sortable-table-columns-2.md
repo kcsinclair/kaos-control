@@ -94,5 +94,11 @@ All data tables in the Innovation Maker UI currently display rows in a fixed ser
 ## Open Questions
 
 1. Should enum sort orders for `status` and `priority` be defined in the frontend only, or derived from the project's `config.yaml` workflow definition?
+
+> you decide
+
 2. Are there columns in any table that should explicitly be **non-sortable** (e.g. an actions column)?
+
+> yes, look for the obvious ones which do not have data in them.
+
 3. When server-side pagination is in use (artifact list fetches pages from the API), client-side sorting can only sort the current page's data — should we defer sorting on paginated API tables until a `sort` query parameter is added to the backend, or fetch all rows client-side first?
