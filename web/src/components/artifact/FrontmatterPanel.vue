@@ -7,6 +7,24 @@ function fmt(v: string | undefined): string {
   if (!v) return '—'
   return v
 }
+
+function formatShortDate(iso: string | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function formatFullDateTime(iso: string | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleString(undefined, {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    timeZoneName: 'short',
+  })
+}
 </script>
 
 <template>
@@ -68,9 +86,21 @@ function fmt(v: string | undefined): string {
         <dt>Sprint</dt>
         <dd>{{ artifact.frontmatter.sprint }}</dd>
       </div>
+      <div class="fm-row" v-if="artifact.created">
+        <dt>Created</dt>
+        <dd>
+          <span class="date-tip" :title="formatFullDateTime(artifact.created)">
+            {{ formatShortDate(artifact.created) }}
+          </span>
+        </dd>
+      </div>
       <div class="fm-row">
         <dt>Modified</dt>
-        <dd>{{ new Date(artifact.mtime).toLocaleString() }}</dd>
+        <dd>
+          <span class="date-tip" :title="formatFullDateTime(artifact.mtime)">
+            {{ formatShortDate(artifact.mtime) }}
+          </span>
+        </dd>
       </div>
     </dl>
   </aside>
@@ -143,4 +173,5 @@ function fmt(v: string | undefined): string {
 .mono-list { font-family: monospace; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
 .assignee { display: flex; gap: var(--space-2); align-items: baseline; }
 .assignee-role { font-size: 11px; color: var(--color-text-muted); }
+.date-tip { cursor: default; }
 </style>
