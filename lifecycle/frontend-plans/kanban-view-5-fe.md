@@ -1,7 +1,7 @@
 ---
 title: "Kanban View — Frontend Plan"
 type: plan-frontend
-status: draft
+status: approved
 lineage: kanban-view
 parent: requirements/kanban-view-3.md
 ---
