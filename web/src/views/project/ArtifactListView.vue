@@ -8,6 +8,24 @@ import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 
+function formatShortDate(iso: string | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function formatFullDateTime(iso: string | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleString(undefined, {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    timeZoneName: 'short',
+  })
+}
+
 const route = useRoute()
 const router = useRouter()
 const store = useArtifactsStore()
@@ -155,6 +173,7 @@ onMounted(async () => {
             <th>Stage</th>
             <th>Status</th>
             <th>Type</th>
+            <th>Created</th>
             <th>Modified</th>
           </tr>
         </thead>
@@ -174,7 +193,12 @@ onMounted(async () => {
             <td><span class="stage-tag">{{ row.stage }}</span></td>
             <td><span class="badge" :data-status="row.status">{{ row.status }}</span></td>
             <td class="muted">{{ row.type }}</td>
-            <td class="muted cell-date">{{ new Date(row.mtime).toLocaleDateString() }}</td>
+            <td class="muted cell-date">
+              <span :title="formatFullDateTime(row.created)">{{ formatShortDate(row.created) }}</span>
+            </td>
+            <td class="muted cell-date">
+              <span :title="formatFullDateTime(row.mtime)">{{ formatShortDate(row.mtime) }}</span>
+            </td>
           </tr>
         </tbody>
       </table>
