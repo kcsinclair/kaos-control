@@ -43,6 +43,37 @@ func TestExistingRulesStillApply(t *testing.T) {
 	}
 }
 
+// TestWorkflowPredecessors verifies that each predecessor → active_status pair
+// used by the agent-launcher-panels feature is a valid workflow transition for
+// the expected role. This ensures eligibility logic in the frontend is grounded
+// in the actual workflow engine rather than hardcoded assumptions.
+// Covers test plan Milestone 4.
+func TestWorkflowPredecessors(t *testing.T) {
+	e := New(nil)
+
+	cases := []struct {
+		from string
+		to   string
+		role string
+	}{
+		// draft → clarifying: analyst (active_status for analyst-requirements agent)
+		{"draft", "clarifying", "analyst"},
+		// clarifying → planning: analyst (active_status for analyst-planner agent)
+		{"clarifying", "planning", "analyst"},
+		// planning → in-development: approver (gates the move to development)
+		{"planning", "in-development", "approver"},
+		// in-development → in-qa: backend-developer (active_status for qa handoff)
+		{"in-development", "in-qa", "backend-developer"},
+	}
+
+	for _, c := range cases {
+		if !e.CanTransition(c.from, c.to, []string{c.role}) {
+			t.Errorf("role %q should be allowed to transition %s → %s",
+				c.role, c.from, c.to)
+		}
+	}
+}
+
 func TestAllowedTargetsForProductOwnerCoversAllStatuses(t *testing.T) {
 	e := New(nil)
 	got := e.AllowedTargets("anything", []string{"product-owner"})
