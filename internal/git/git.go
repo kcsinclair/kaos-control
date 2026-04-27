@@ -147,6 +147,33 @@ func BranchNameFor(template, slug, lineage string) string {
 	return strings.TrimRight(r.Replace(template), "-/")
 }
 
+// FirstCommitDate returns the author date of the earliest commit that touched
+// relPath (relative to the repository root). Returns an error if no commit is
+// found (untracked file) or the log cannot be walked.
+func (repo *Repo) FirstCommitDate(relPath string) (time.Time, error) {
+	iter, err := repo.r.Log(&gogit.LogOptions{
+		FileName: &relPath,
+		Order:    gogit.LogOrderCommitterTime,
+	})
+	if err != nil {
+		return time.Time{}, fmt.Errorf("git log %s: %w", relPath, err)
+	}
+	defer iter.Close()
+
+	var oldest time.Time
+	for {
+		c, err := iter.Next()
+		if err != nil {
+			break
+		}
+		oldest = c.Author.When
+	}
+	if oldest.IsZero() {
+		return time.Time{}, fmt.Errorf("no commits found for %s", relPath)
+	}
+	return oldest, nil
+}
+
 // ModifiedFiles returns project-relative paths of files that are new or modified
 // in the working tree but not yet committed. If allowedPaths is non-empty, only
 // files whose path starts with one of those prefixes are included.

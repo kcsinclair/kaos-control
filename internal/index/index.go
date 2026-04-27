@@ -16,6 +16,7 @@ import (
 
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/config"
+	"github.com/kaos-control/kaos-control/internal/git"
 )
 
 const schemaVersion = 3
@@ -24,12 +25,23 @@ const schemaVersion = 3
 type Index struct {
 	db          *sql.DB
 	projectRoot string
+	git         *git.Repo // optional; used for created-date backfill during scan
+}
+
+// Option configures an Index at construction time.
+type Option func(*Index)
+
+// WithGit supplies an optional git repository used to backfill the created
+// date for artifacts that lack a created: frontmatter field.
+func WithGit(repo *git.Repo) Option {
+	return func(idx *Index) { idx.git = repo }
 }
 
 // Open opens (or creates) the SQLite index at dbPath for the given project root.
 // The schema is created if missing; if the stored schema version differs, the
-// index is dropped and rebuilt from disk.
-func Open(dbPath, projectRoot string, stages []config.Stage) (*Index, error) {
+// index is dropped and rebuilt from disk. Additional options (e.g. WithGit)
+// may be supplied and are applied before the startup scan runs.
+func Open(dbPath, projectRoot string, stages []config.Stage, opts ...Option) (*Index, error) {
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
 		return nil, fmt.Errorf("creating index dir: %w", err)
 	}
@@ -41,6 +53,9 @@ func Open(dbPath, projectRoot string, stages []config.Stage) (*Index, error) {
 	db.SetMaxOpenConns(1) // SQLite is single-writer
 
 	idx := &Index{db: db, projectRoot: projectRoot}
+	for _, o := range opts {
+		o(idx)
+	}
 
 	needRebuild, err := idx.checkSchema()
 	if err != nil {
@@ -192,6 +207,21 @@ func (idx *Index) IndexFile(absPath string) error {
 	}
 
 	a := artifact.Parse(raw, relPath, info.ModTime())
+
+	// Backfill CreatedAt for artifacts that lack a created: frontmatter field.
+	// The on-disk file is NOT modified; the derived value is index-only.
+	if a.FM.Created == "" {
+		if idx.git != nil {
+			if t, err := idx.git.FirstCommitDate(relPath); err == nil {
+				a.CreatedAt = t
+			}
+		}
+		// Fall back to filesystem mtime if git lookup was unavailable or failed.
+		if a.CreatedAt.IsZero() {
+			a.CreatedAt = info.ModTime()
+		}
+	}
+
 	return idx.Upsert(a)
 }
 

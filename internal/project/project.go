@@ -46,8 +46,23 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		return nil, fmt.Errorf("project %q: loading config: %w", entry.Name, err)
 	}
 
+	// Open git first so the index can use it for created-date backfill during scan.
+	var gitRepo *kgit.Repo
+	if kgit.IsRepo(entry.Path) {
+		gitRepo, err = kgit.Open(entry.Path)
+		if err != nil {
+			slog.Warn("project: failed to open git repo", "name", entry.Name, "err", err)
+		}
+	} else {
+		slog.Info("project: not a git repo, write operations will not commit", "name", entry.Name)
+	}
+
 	dbPath := filepath.Join(dbDir, entry.Name, "index.db")
-	idx, err := index.Open(dbPath, entry.Path, cfg.Stages)
+	idxOpts := []index.Option{}
+	if gitRepo != nil {
+		idxOpts = append(idxOpts, index.WithGit(gitRepo))
+	}
+	idx, err := index.Open(dbPath, entry.Path, cfg.Stages, idxOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("project %q: opening index: %w", entry.Name, err)
 	}
@@ -58,16 +73,6 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	if err != nil {
 		slog.Warn("project: failed to create watcher", "name", entry.Name, "err", err)
 		w = nil
-	}
-
-	var gitRepo *kgit.Repo
-	if kgit.IsRepo(entry.Path) {
-		gitRepo, err = kgit.Open(entry.Path)
-		if err != nil {
-			slog.Warn("project: failed to open git repo", "name", entry.Name, "err", err)
-		}
-	} else {
-		slog.Info("project: not a git repo, write operations will not commit", "name", entry.Name)
 	}
 
 	wf := workflow.New(cfg.Transitions)
