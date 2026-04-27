@@ -22,6 +22,8 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 		Name         string   `json:"name"`
 		Roles        []string `json:"roles"`
 		Driver       string   `json:"driver"`
+		Model        string   `json:"model,omitempty"`
+		ActiveStatus string   `json:"active_status,omitempty"`
 		AllowedPaths []string `json:"allowed_write_paths,omitempty"`
 	}
 	var out []agentSummary
@@ -30,6 +32,8 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 			Name:         ag.Name,
 			Roles:        ag.Roles,
 			Driver:       ag.Driver,
+			Model:        ag.Model,
+			ActiveStatus: ag.ActiveStatus,
 			AllowedPaths: ag.AllowedPaths,
 		})
 	}
