@@ -21,6 +21,8 @@ export const ACTIVE_STATUS_COLORS: Record<string, string> = {
   'in-development': '#4ade80',  // green
   'in-qa':          '#fbbf24',  // amber
   'in-progress':    '#4ade80',  // green
+  'clarifying':     '#60a5fa',  // blue
+  'planning':       '#a78bfa',  // violet
 }
 
 export const EDGE_COLORS: Record<string, string> = {
