@@ -240,6 +240,25 @@ onMounted(async () => {
   gap: var(--space-4);
   padding: var(--space-4) var(--space-6);
   align-items: flex-start;
+  /* Ensure horizontal scroll works on touch devices */
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .board-columns {
+    padding: var(--space-3);
+    gap: var(--space-3);
+  }
+  .board-column {
+    min-width: 240px;
+    max-width: 240px;
+  }
+  .filter-bar {
+    padding: var(--space-2) var(--space-3);
+  }
+  .board-header {
+    padding: var(--space-3) var(--space-3);
+  }
 }
 .board-column {
   display: flex;

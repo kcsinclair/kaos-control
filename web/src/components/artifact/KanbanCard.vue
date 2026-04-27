@@ -35,7 +35,8 @@ function priorityColor(p: string): string {
   <div
     class="kanban-card"
     tabindex="0"
-    :aria-label="artifact.title || artifact.slug"
+    role="button"
+    :aria-label="`Open artefact: ${artifact.title || artifact.slug}`"
     @click="open"
     @keydown="onKeydown"
   >
