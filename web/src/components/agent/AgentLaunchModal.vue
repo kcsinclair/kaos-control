@@ -31,10 +31,22 @@ const predecessorMap: Record<string, string> = {
   approved: 'in-qa',
 }
 
+// Maps agent name to the artifact type it expects as input.
+const agentInputTypeMap: Record<string, string> = {
+  'analyst-requirements': 'idea',
+  'analyst-planner': 'requirement',
+  'backend-developer': 'plan-backend',
+  'frontend-developer': 'plan-frontend',
+  'test-developer': 'plan-test',
+  qa: 'test',
+}
+
 const inputStatus = computed(() => {
   if (!props.agent.active_status) return undefined
   return predecessorMap[props.agent.active_status] ?? undefined
 })
+
+const inputType = computed(() => agentInputTypeMap[props.agent.name])
 
 const selectedArtifact = computed(
   () => artifacts.value.find((a) => a.path === selectedPath.value) ?? null,
@@ -43,7 +55,9 @@ const selectedArtifact = computed(
 async function fetchArtifacts() {
   loading.value = true
   try {
-    const filter = inputStatus.value ? { status: inputStatus.value } : {}
+    const filter: Record<string, string> = {}
+    if (inputStatus.value) filter.status = inputStatus.value
+    if (inputType.value) filter.type = inputType.value
     const res = await artifactsApi.listArtifacts(props.project, filter)
     artifacts.value = res.items ?? []
   } catch (e: unknown) {
