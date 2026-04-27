@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Product Owner Superuser Transitions"
 type: plan-backend
-status: draft
+status: approved
 lineage: innovation-maker
 parent: lifecycle/defects/product-owner-cannot-transition.md
 labels:
