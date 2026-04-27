@@ -3,7 +3,9 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useKanbanBoard } from '@/composables/useKanbanBoard'
 import { useArtifactsStore } from '@/stores/artifacts'
+import { useWebSocket } from '@/composables/useWebSocket'
 import KanbanCard from '@/components/artifact/KanbanCard.vue'
+import type { WsEvent } from '@/types/api'
 
 const route = useRoute()
 const project = route.params.project as string
@@ -86,6 +88,11 @@ function onDragEnd() {
   dragSourceIndex.value = null
   dragOverIndex.value = null
 }
+
+// Re-fetch artifacts when any artifact is indexed (status may have changed)
+useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
+  refresh()
+})
 
 onMounted(async () => {
   await Promise.all([
