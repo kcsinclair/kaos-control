@@ -58,7 +58,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	}
 
 	dbPath := filepath.Join(dbDir, entry.Name, "index.db")
-	idxOpts := []index.Option{}
+	idxOpts := []index.Option{index.WithIgnore(cfg.Ignore)}
 	if gitRepo != nil {
 		idxOpts = append(idxOpts, index.WithGit(gitRepo))
 	}
@@ -69,7 +69,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 
 	h := hub.New()
 
-	w, err := watcher.New(entry.Path, idx, h)
+	w, err := watcher.New(entry.Path, idx, h, cfg.Ignore...)
 	if err != nil {
 		slog.Warn("project: failed to create watcher", "name", entry.Name, "err", err)
 		w = nil
