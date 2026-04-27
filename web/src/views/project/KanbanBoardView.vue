@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useKanbanBoard } from '@/composables/useKanbanBoard'
+import { useArtifactsStore } from '@/stores/artifacts'
 import KanbanCard from '@/components/artifact/KanbanCard.vue'
 
 const route = useRoute()
 const project = route.params.project as string
+
+const store = useArtifactsStore()
 
 const {
   loading,
@@ -13,16 +16,77 @@ const {
   columns,
   cardFields,
   refresh,
+  applyFilters,
   ageOf,
 } = useKanbanBoard(project)
 
-onMounted(refresh)
+const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'releases']
+const statusOptions = ['', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa', 'in-progress', 'done', 'approved', 'blocked', 'rejected', 'abandoned']
+const typeOptions = ['', 'idea', 'requirement', 'plan-backend', 'plan-frontend', 'plan-test', 'test', 'prototype', 'defect']
+
+const selectedStage = ref('')
+const selectedStatus = ref('')
+const selectedLabel = ref('')
+const selectedType = ref('')
+const selectedPriority = ref('')
+
+function onFilterChange() {
+  applyFilters({
+    stage: selectedStage.value || undefined,
+    status: selectedStatus.value || undefined,
+    label: selectedLabel.value || undefined,
+    type: selectedType.value || undefined,
+    priority: selectedPriority.value || undefined,
+  })
+}
+
+function resetFilters() {
+  selectedStage.value = ''
+  selectedStatus.value = ''
+  selectedLabel.value = ''
+  selectedType.value = ''
+  selectedPriority.value = ''
+  onFilterChange()
+}
+
+onMounted(async () => {
+  await Promise.all([
+    refresh(),
+    store.fetchLabels(project),
+    store.fetchPriorities(project),
+  ])
+})
 </script>
 
 <template>
   <div class="board-view">
     <div class="board-header">
       <h2 class="board-title">Board</h2>
+    </div>
+
+    <!-- Filter bar -->
+    <div v-if="hasConfig" class="filter-bar">
+      <select v-model="selectedStage" @change="onFilterChange">
+        <option value="">All stages</option>
+        <option v-for="s in stageOptions.slice(1)" :key="s" :value="s">{{ s }}</option>
+      </select>
+      <select v-model="selectedStatus" @change="onFilterChange">
+        <option value="">All statuses</option>
+        <option v-for="s in statusOptions.slice(1)" :key="s" :value="s">{{ s }}</option>
+      </select>
+      <select v-model="selectedType" @change="onFilterChange">
+        <option value="">All types</option>
+        <option v-for="t in typeOptions.slice(1)" :key="t" :value="t">{{ t }}</option>
+      </select>
+      <select v-model="selectedLabel" @change="onFilterChange" v-if="store.labels.length">
+        <option value="">All labels</option>
+        <option v-for="l in store.labels" :key="l" :value="l">{{ l }}</option>
+      </select>
+      <select v-model="selectedPriority" @change="onFilterChange" v-if="store.priorities.length">
+        <option value="">All priorities</option>
+        <option v-for="p in store.priorities" :key="p" :value="p">{{ p }}</option>
+      </select>
+      <button class="btn-ghost" @click="resetFilters">Reset</button>
     </div>
 
     <div v-if="loading" class="state-msg">Loading…</div>
@@ -80,6 +144,34 @@ onMounted(refresh)
   margin: 0;
   color: var(--color-text);
 }
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.filter-bar select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-ghost:hover { background: var(--color-surface); color: var(--color-text); }
 .state-msg {
   padding: var(--space-8) var(--space-6);
   color: var(--color-text-muted);
