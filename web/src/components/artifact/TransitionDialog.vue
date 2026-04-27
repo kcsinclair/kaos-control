@@ -17,8 +17,8 @@ const emit = defineEmits<{
 const store = useArtifactsStore()
 
 const STATUSES = [
-  'draft', 'planning', 'in-progress', 'in-development',
-  'done', 'approved', 'blocked', 'rejected',
+  'draft', 'clarifying', 'planning', 'in-progress', 'in-development',
+  'in-qa', 'done', 'approved', 'blocked', 'rejected', 'abandoned',
 ].filter((s) => s !== props.currentStatus)
 
 const selectedStatus = ref('')
