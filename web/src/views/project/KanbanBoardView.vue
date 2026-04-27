@@ -17,6 +17,7 @@ const {
   cardFields,
   refresh,
   applyFilters,
+  reorderColumns,
   ageOf,
 } = useKanbanBoard(project)
 
@@ -47,6 +48,43 @@ function resetFilters() {
   selectedType.value = ''
   selectedPriority.value = ''
   onFilterChange()
+}
+
+// Drag-to-reorder state
+const dragSourceIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+function onDragStart(e: DragEvent, index: number) {
+  dragSourceIndex.value = index
+  e.dataTransfer!.effectAllowed = 'move'
+  e.dataTransfer!.setData('text/plain', String(index))
+}
+
+function onDragOver(e: DragEvent, index: number) {
+  e.preventDefault()
+  e.dataTransfer!.dropEffect = 'move'
+  dragOverIndex.value = index
+}
+
+function onDragEnter(_e: DragEvent, index: number) {
+  dragOverIndex.value = index
+}
+
+function onDragLeave(_e: DragEvent) {
+  // Only clear if leaving to outside any column header
+}
+
+function onDrop(_e: DragEvent, toIndex: number) {
+  if (dragSourceIndex.value !== null && dragSourceIndex.value !== toIndex) {
+    reorderColumns(dragSourceIndex.value, toIndex)
+  }
+  dragSourceIndex.value = null
+  dragOverIndex.value = null
+}
+
+function onDragEnd() {
+  dragSourceIndex.value = null
+  dragOverIndex.value = null
 }
 
 onMounted(async () => {
@@ -97,13 +135,23 @@ onMounted(async () => {
     <!-- Board -->
     <div v-else class="board-columns">
       <div
-        v-for="col in columns"
+        v-for="(col, colIndex) in columns"
         :key="col.name"
         class="board-column"
+        :class="{ 'board-column--drag-over': dragOverIndex === colIndex }"
         role="region"
         :aria-label="col.name"
       >
-        <div class="column-header">
+        <div
+          class="column-header"
+          draggable="true"
+          @dragstart="onDragStart($event, colIndex)"
+          @dragover="onDragOver($event, colIndex)"
+          @dragenter="onDragEnter($event, colIndex)"
+          @dragleave="onDragLeave($event)"
+          @drop="onDrop($event, colIndex)"
+          @dragend="onDragEnd"
+        >
           <span class="column-name">{{ col.name }}</span>
           <span class="column-count">{{ col.cards.length }}</span>
         </div>
@@ -197,6 +245,11 @@ onMounted(async () => {
   flex-shrink: 0;
   height: 100%;
   overflow: hidden;
+  transition: border-color 0.12s;
+}
+.board-column--drag-over {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent);
 }
 .column-header {
   display: flex;
@@ -205,6 +258,11 @@ onMounted(async () => {
   padding: var(--space-3) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+  cursor: grab;
+  user-select: none;
+}
+.column-header:active {
+  cursor: grabbing;
 }
 .column-name {
   font-size: var(--text-sm);
