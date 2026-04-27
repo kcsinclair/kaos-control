@@ -76,6 +76,8 @@ export interface AgentSummary {
   name: string
   roles: string[]
   driver: string
+  model?: string
+  active_status?: string
   allowed_write_paths?: string[]
 }
 
