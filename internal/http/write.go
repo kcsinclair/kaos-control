@@ -178,21 +178,34 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Always read the current file: needed for SHA check and to preserve created.
+	current, err := os.ReadFile(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "artifact not found"))
+		} else {
+			writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		}
+		return
+	}
+
 	// Optimistic concurrency: check SHA matches current file.
 	if req.ExpectedSHA != "" {
-		current, err := os.ReadFile(absPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				writeJSON(w, http.StatusNotFound, apiError("not_found", "artifact not found"))
-			} else {
-				writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
-			}
-			return
-		}
 		sum := sha256.Sum256(current)
 		if hex.EncodeToString(sum[:]) != req.ExpectedSHA {
 			writeJSON(w, http.StatusConflict, apiError("conflict", "artifact has been modified since last read"))
 			return
+		}
+	}
+
+	// Preserve the existing created value — it is immutable once set.
+	// Parse the on-disk frontmatter to extract it; ignore any created value
+	// the caller may have sent.
+	{
+		info, statErr := os.Stat(absPath)
+		if statErr == nil {
+			existing := artifact.Parse(current, relPath, info.ModTime())
+			req.Frontmatter.Created = existing.FM.Created
 		}
 	}
 
