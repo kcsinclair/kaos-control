@@ -1,7 +1,7 @@
 ---
 title: SPA routing integration tests fail because test server has no embedded frontend
 type: defect
-status: draft
+status: approved
 lineage: kanban-view
 parent: lifecycle/tests/kanban-view-7-test.md
 labels:
