@@ -206,6 +206,19 @@ type UserBinding struct {
 // RequiredPlans maps artifact type to a list of required plan types before advancing.
 type RequiredPlans map[string][]string
 
+// KanbanColumn is one column definition in the kanban board.
+type KanbanColumn struct {
+	Name     string   `yaml:"name"`
+	Statuses []string `yaml:"statuses"`
+}
+
+// KanbanConfig is the optional kanban board configuration.
+type KanbanConfig struct {
+	Columns       []KanbanColumn `yaml:"columns"`
+	Uncategorised *bool          `yaml:"uncategorised,omitempty"` // default true
+	CardFields    []string       `yaml:"card_fields,omitempty"`
+}
+
 // Project is the per-project configuration (lifecycle/config.yaml).
 type Project struct {
 	Stages        []Stage       `yaml:"stages"`
@@ -216,6 +229,7 @@ type Project struct {
 	Agents        []AgentConfig `yaml:"agents"`
 	RequiredPlans RequiredPlans `yaml:"required_plans"`
 	Ignore        []string      `yaml:"ignore"`
+	Kanban        *KanbanConfig `yaml:"kanban,omitempty"`
 }
 
 // Transition overrides one edge in the state machine.
