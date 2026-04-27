@@ -215,6 +215,7 @@ type Project struct {
 	Users         []UserBinding `yaml:"users"`
 	Agents        []AgentConfig `yaml:"agents"`
 	RequiredPlans RequiredPlans `yaml:"required_plans"`
+	Ignore        []string      `yaml:"ignore"`
 }
 
 // Transition overrides one edge in the state machine.
@@ -253,6 +254,7 @@ func defaultProject() Project {
 		},
 		Roles:         defaultRoles,
 		RequiredPlans: RequiredPlans{"requirement": {}},
+		Ignore:        []string{"README.md"},
 	}
 }
 
@@ -301,6 +303,11 @@ func validateProject(cfg *Project) error {
 		}
 		if a.Driver == "" {
 			return fmt.Errorf("project config: agent %q missing driver", a.Name)
+		}
+	}
+	for _, pat := range cfg.Ignore {
+		if _, err := filepath.Match(pat, ""); err != nil {
+			return fmt.Errorf("project config: invalid ignore pattern %q: %w", pat, err)
 		}
 	}
 	return nil
