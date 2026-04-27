@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/kaos-control/kaos-control/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -29,6 +30,23 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"raw": string(data)})
+}
+
+// handleGetKanbanConfig returns the parsed kanban section of lifecycle/config.yaml as JSON.
+// It reloads the config from disk on every request so that edits via the config editor
+// are reflected immediately without a server restart.
+func (s *Server) handleGetKanbanConfig(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	cfg, err := config.LoadProject(p.Entry.Path)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("config_error", err.Error()))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"kanban": cfg.Kanban})
 }
 
 // handleUpdateConfig validates and writes lifecycle/config.yaml.

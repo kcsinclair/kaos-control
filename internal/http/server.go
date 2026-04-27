@@ -159,6 +159,7 @@ func (s *Server) buildRouter() chi.Router {
 			// Project config
 			r.Get("/config", s.handleGetConfig)
 			r.Put("/config", s.handleUpdateConfig)
+			r.Get("/config/kanban", s.handleGetKanbanConfig)
 		})
 	})
 
