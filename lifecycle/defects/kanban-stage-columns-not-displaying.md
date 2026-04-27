@@ -11,7 +11,7 @@ labels:
     - vue
 ---
 
-# Kanban Stage Columns Not Displaying and Stages Field Shows Type Values
+# POSSIBLY REDUNDANT
 
 ## Reproduction Steps
 
