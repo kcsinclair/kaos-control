@@ -3,9 +3,9 @@ title: Kanban View
 type: requirement
 status: draft
 lineage: kanban-view
-parent: ideas/kanban-view.md
 created: "2026-04-27"
 priority: normal
+parent: ideas/kanban-view.md
 labels:
     - artefacts
     - workflow
@@ -125,5 +125,13 @@ A secondary aspect of the idea is renaming the UI label "Artifacts" to "Artefact
 ## Open Questions
 
 1. Should the `card_fields` config support computed/derived fields (e.g. `age` = days since created) or only raw frontmatter fields?
+
+> Yes, virtual fields will be good.
+
 2. The idea mentions renaming "artifacts" to "artefacts" — should this extend to the URL paths (e.g. `/p/:project/artefacts`) or only the display labels? Changing URL paths is a breaking change for bookmarks and API consumers.
+
+> Leave this unchanged for now, will deal with AU English changes later.
+
 3. Should the column order on the board be strictly as defined in `config.yaml`, or should users be able to reorder columns in the UI?
+
+> Default order is the config.yaml, users can reorder while viewing, but this will not persist on page refresh.
