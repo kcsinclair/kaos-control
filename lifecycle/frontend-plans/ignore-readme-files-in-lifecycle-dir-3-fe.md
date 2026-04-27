@@ -1,7 +1,7 @@
 ---
 title: "Frontend plan: no UI changes required for ignore-pattern support"
 type: plan-frontend
-status: in-development
+status: done
 lineage: ignore-readme-files-in-lifecycle-dir
 parent: lifecycle/defects/ignore-readme-files-in-lifecycle-dir.md
 ---
