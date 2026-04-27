@@ -349,6 +349,8 @@ onMounted(async () => {
 .badge[data-status="in-qa"]         { background: var(--badge-in-qa-bg);         color: var(--badge-in-qa-text); }
 .badge[data-status="blocked"]       { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
 .badge[data-status="rejected"]      { background: var(--badge-rejected-bg);      color: var(--badge-rejected-text); }
+.badge[data-status="clarifying"]   { background: var(--badge-clarifying-bg);    color: var(--badge-clarifying-text); }
+.badge[data-status="planning"]     { background: var(--badge-planning-bg);      color: var(--badge-planning-text); }
 .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
 .cell-date { white-space: nowrap; }
 .pagination {

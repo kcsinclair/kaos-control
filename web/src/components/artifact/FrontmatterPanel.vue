@@ -128,6 +128,8 @@ function fmt(v: string | undefined): string {
 .badge[data-status="approved"] { background: #dbeafe; color: #1e40af; }
 .badge[data-status="in-progress"] { background: #fef3c7; color: #92400e; }
 .badge[data-status="blocked"] { background: #fee2e2; color: #991b1b; }
+.badge[data-status="clarifying"] { background: var(--badge-clarifying-bg); color: var(--badge-clarifying-text); }
+.badge[data-status="planning"]   { background: var(--badge-planning-bg);   color: var(--badge-planning-text); }
 .tag {
   display: inline-block;
   background: var(--color-border);
