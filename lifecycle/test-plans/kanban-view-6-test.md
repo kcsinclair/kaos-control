@@ -1,7 +1,7 @@
 ---
 title: "Kanban View — Test Plan"
 type: plan-test
-status: draft
+status: in-development
 lineage: kanban-view
 parent: requirements/kanban-view-3.md
 ---
