@@ -15,7 +15,7 @@ labels:
 
 # Artifact Agent Run History
 
-relates-to: [[ideas/improved-agent-handling]] 
+relates-to: [[ideas/improved-agent-handling]]  
 relates-to: [[ideas/agent-completion-status-detail]]
 
 When viewing an artifact in the detail panel, a list of agent runs associated with that artifact should be displayed, showing each run's ID and the date it was executed. This information is already available in the existing database and does not require new data collection.
