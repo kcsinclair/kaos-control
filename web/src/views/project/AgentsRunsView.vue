@@ -5,6 +5,9 @@ import { useAgentsStore } from '@/stores/agents'
 import { useUiStore } from '@/stores/ui'
 import * as agentsApi from '@/api/agents'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
+import AgentPanelRow from '@/components/agent/AgentPanelRow.vue'
+import AgentLaunchModal from '@/components/agent/AgentLaunchModal.vue'
+import type { AgentSummary } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,6 +17,7 @@ const project = route.params.project as string
 
 const showRunDialog = ref(false)
 const expandedRun = ref<string | null>(null)
+const selectedAgent = ref<AgentSummary | null>(null)
 
 // Per-run log state. logVisible.get(id)===true means the log pane is shown
 // and logContent has the fetched text.
@@ -55,7 +59,10 @@ async function kill(runId: string) {
   }
 }
 
-onMounted(() => store.fetchRuns(project))
+onMounted(() => {
+  store.fetchRuns(project)
+  if (!store.agents.length) store.fetchAgents(project)
+})
 </script>
 
 <template>
@@ -64,6 +71,11 @@ onMounted(() => store.fetchRuns(project))
       <h2 class="runs-title">Agent Runs</h2>
       <button class="btn-primary" @click="showRunDialog = true">Run Agent</button>
     </div>
+
+    <AgentPanelRow
+      :agents="store.agents"
+      @select="selectedAgent = $event"
+    />
 
     <div v-if="store.loading" class="state-msg">Loading…</div>
     <div v-else-if="!store.runs.length" class="state-msg">No runs yet.</div>
@@ -154,6 +166,14 @@ onMounted(() => store.fetchRuns(project))
       :project="project"
       @started="showRunDialog = false"
       @cancel="showRunDialog = false"
+    />
+
+    <AgentLaunchModal
+      v-if="selectedAgent"
+      :agent="selectedAgent"
+      :project="project"
+      @started="selectedAgent = null; store.fetchRuns(project)"
+      @cancel="selectedAgent = null"
     />
   </div>
 </template>
