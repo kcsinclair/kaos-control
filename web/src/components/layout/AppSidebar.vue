@@ -36,13 +36,17 @@ useWebSocket(projectName(), 'artifact.indexed', (_e: WsEvent) => {
 
 interface NavItem {
   label: string
-  to: string
+  to?: string        // undefined for group headers
+  children?: NavItem[]
 }
 
 const navItems = (): NavItem[] => {
   const p = projectName()
   return [
-    { label: 'Artefacts', to: `/p/${p}/artifacts` },
+    { label: 'Artefacts', children: [
+      { label: 'List', to: `/p/${p}/artifacts` },
+      { label: 'Board', to: `/p/${p}/artifacts/board` },
+    ]},
     { label: 'Graph', to: `/p/${p}/graph` },
     { label: 'Agents', to: `/p/${p}/agents` },
     { label: 'Parse Errors', to: `/p/${p}/parse-errors` },
@@ -58,12 +62,30 @@ const navItems = (): NavItem[] => {
       <span class="project-name">{{ projectStore.current?.name ?? projectName() }}</span>
     </div>
     <ul class="nav-list" role="list">
-      <li v-for="item in navItems()" :key="item.to" class="nav-item">
+      <li v-for="item in navItems()" :key="item.label" class="nav-item">
+        <!-- Group header (no link) -->
+        <template v-if="item.children">
+          <span class="nav-group-label">{{ item.label }}</span>
+          <ul class="nav-children" role="list">
+            <li v-for="child in item.children" :key="child.to" class="nav-item">
+              <RouterLink
+                :to="child.to!"
+                class="nav-link nav-link--child"
+                :class="{ 'nav-link--active': route.path === child.to }"
+                :aria-current="route.path === child.to ? 'page' : undefined"
+              >
+                {{ child.label }}
+              </RouterLink>
+            </li>
+          </ul>
+        </template>
+        <!-- Regular nav link -->
         <RouterLink
-          :to="item.to"
+          v-else
+          :to="item.to!"
           class="nav-link"
-          :class="{ 'nav-link--active': route.path.startsWith(item.to) }"
-          :aria-current="route.path.startsWith(item.to) ? 'page' : undefined"
+          :class="{ 'nav-link--active': route.path.startsWith(item.to!) }"
+          :aria-current="route.path.startsWith(item.to!) ? 'page' : undefined"
         >
           {{ item.label }}
           <span
@@ -118,6 +140,20 @@ const navItems = (): NavItem[] => {
 .nav-item {
   margin-bottom: 2px;
 }
+.nav-group-label {
+  display: block;
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-sidebar-text-muted);
+}
+.nav-children {
+  list-style: none;
+  margin: 0 0 var(--space-1);
+  padding: 0;
+}
 .nav-link {
   display: flex;
   align-items: center;
@@ -128,6 +164,9 @@ const navItems = (): NavItem[] => {
   text-decoration: none;
   border-radius: var(--radius-md);
   transition: background 0.12s, color 0.12s;
+}
+.nav-link--child {
+  padding-left: calc(var(--space-3) + 12px);
 }
 .nav-link:hover {
   background: var(--color-sidebar-hover);
