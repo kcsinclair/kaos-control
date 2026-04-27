@@ -30,4 +30,4 @@ The QA agent panel displays no work items, even though multiple approved test ar
 
 ## Same behaviour for frontend
 
-requirements/kanban-view-3.md
+kanban-view-5-fe.md is approved but not showing when selecting frontend developer.
