@@ -41,6 +41,7 @@ export interface ArtifactFrontmatter {
   release?: string
   sprint?: string
   assignees?: ArtifactAssignee[]
+  created?: string
 }
 
 export interface ArtifactRow {
@@ -54,6 +55,7 @@ export interface ArtifactRow {
   title: string
   frontmatter: ArtifactFrontmatter
   mtime: string
+  created: string
 }
 
 export interface ArtifactDetail extends ArtifactRow {
