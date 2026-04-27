@@ -208,15 +208,15 @@ type RequiredPlans map[string][]string
 
 // KanbanColumn is one column definition in the kanban board.
 type KanbanColumn struct {
-	Name     string   `yaml:"name"`
-	Statuses []string `yaml:"statuses"`
+	Name     string   `yaml:"name"     json:"name"`
+	Statuses []string `yaml:"statuses" json:"statuses"`
 }
 
 // KanbanConfig is the optional kanban board configuration.
 type KanbanConfig struct {
-	Columns       []KanbanColumn `yaml:"columns"`
-	Uncategorised *bool          `yaml:"uncategorised,omitempty"` // default true
-	CardFields    []string       `yaml:"card_fields,omitempty"`
+	Columns       []KanbanColumn `yaml:"columns"                  json:"columns"`
+	Uncategorised *bool          `yaml:"uncategorised,omitempty"  json:"uncategorised,omitempty"` // default true
+	CardFields    []string       `yaml:"card_fields,omitempty"    json:"card_fields,omitempty"`
 }
 
 // Project is the per-project configuration (lifecycle/config.yaml).
