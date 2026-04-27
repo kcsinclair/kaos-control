@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Analyst Agent Active Status Transitions"
 type: plan-test
-status: draft
+status: in-development
 lineage: analyst-missing-in-progress-status
 parent: lifecycle/defects/analyst-missing-in-progress-status.md
 labels:
