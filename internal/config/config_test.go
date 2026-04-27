@@ -115,6 +115,99 @@ func TestLoadProjectIgnoreField(t *testing.T) {
 	})
 }
 
+// TestKanbanConfig verifies that the kanban section of lifecycle/config.yaml is
+// correctly parsed (or absent) by LoadProject.
+// Run with: go test ./internal/config/ -run TestKanban
+func TestKanbanConfig(t *testing.T) {
+	t.Run("full kanban config parses correctly", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `kanban:
+  columns:
+    - name: Backlog
+      statuses: [draft, clarifying]
+    - name: In Progress
+      statuses: [in-development, in-qa]
+    - name: Done
+      statuses: [done]
+  uncategorised: false
+  card_fields: [title, type, priority]
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if cfg.Kanban == nil {
+			t.Fatal("expected Kanban to be non-nil")
+		}
+		if len(cfg.Kanban.Columns) != 3 {
+			t.Fatalf("expected 3 columns, got %d", len(cfg.Kanban.Columns))
+		}
+		if cfg.Kanban.Columns[0].Name != "Backlog" {
+			t.Errorf("column[0].Name = %q, want %q", cfg.Kanban.Columns[0].Name, "Backlog")
+		}
+		if len(cfg.Kanban.Columns[0].Statuses) != 2 {
+			t.Errorf("column[0].Statuses len = %d, want 2", len(cfg.Kanban.Columns[0].Statuses))
+		}
+		if cfg.Kanban.Uncategorised == nil || *cfg.Kanban.Uncategorised != false {
+			t.Errorf("expected Uncategorised=false, got %v", cfg.Kanban.Uncategorised)
+		}
+		if len(cfg.Kanban.CardFields) != 3 {
+			t.Errorf("expected 3 card_fields, got %d", len(cfg.Kanban.CardFields))
+		}
+	})
+
+	t.Run("minimal kanban config — only columns, uncategorised defaults to true semantics", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `kanban:
+  columns:
+    - name: Backlog
+      statuses: [draft]
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if cfg.Kanban == nil {
+			t.Fatal("expected Kanban to be non-nil")
+		}
+		if len(cfg.Kanban.Columns) != 1 {
+			t.Fatalf("expected 1 column, got %d", len(cfg.Kanban.Columns))
+		}
+		// Uncategorised is nil when not specified; callers treat nil as true.
+		if cfg.Kanban.Uncategorised != nil {
+			t.Errorf("expected Uncategorised to be nil (default-true), got %v", *cfg.Kanban.Uncategorised)
+		}
+		if len(cfg.Kanban.CardFields) != 0 {
+			t.Errorf("expected empty card_fields, got %v", cfg.Kanban.CardFields)
+		}
+	})
+
+	t.Run("no kanban key leaves Kanban nil", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, "")
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if cfg.Kanban != nil {
+			t.Errorf("expected Kanban to be nil, got %+v", cfg.Kanban)
+		}
+	})
+
+	t.Run("empty columns list parses without error", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `kanban:
+  columns: []
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if cfg.Kanban == nil {
+			t.Fatal("expected Kanban to be non-nil")
+		}
+		if len(cfg.Kanban.Columns) != 0 {
+			t.Errorf("expected empty columns slice, got %v", cfg.Kanban.Columns)
+		}
+	})
+}
+
 // writeMinimalProjectConfig writes a lifecycle/config.yaml with a minimal valid
 // base configuration plus an optional extra YAML snippet (e.g. an ignore: line),
 // and returns the temp project root directory.
