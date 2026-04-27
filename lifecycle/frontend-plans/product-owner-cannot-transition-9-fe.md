@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Filter Transition Dialog by Allowed Targets"
 type: plan-frontend
-status: draft
+status: approved
 lineage: innovation-maker
 parent: lifecycle/defects/product-owner-cannot-transition.md
 labels:
