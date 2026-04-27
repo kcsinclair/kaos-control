@@ -31,6 +31,11 @@ const router = createRouter({
           component: () => import('@/views/project/ArtifactListView.vue'),
         },
         {
+          path: 'artifacts/board',
+          name: 'kanban-board',
+          component: () => import('@/views/project/KanbanBoardView.vue'),
+        },
+        {
           path: 'artifacts/:pathMatch(.*)+',
           name: 'artifact-editor',
           component: () => import('@/views/project/ArtifactEditorView.vue'),
