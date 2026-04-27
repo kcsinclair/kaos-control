@@ -313,6 +313,19 @@ func validateProject(cfg *Project) error {
 	return nil
 }
 
+// ShouldIgnore reports whether the file at path should be excluded from indexing.
+// It matches the base name of path against each glob pattern using filepath.Match.
+func ShouldIgnore(path string, patterns []string) bool {
+	base := filepath.Base(path)
+	for _, pat := range patterns {
+		matched, err := filepath.Match(pat, base)
+		if err == nil && matched {
+			return true
+		}
+	}
+	return false
+}
+
 // StageDir returns the filesystem directory for a named stage, or "" if not found.
 func (p *Project) StageDir(stageName string) string {
 	for _, s := range p.Stages {
