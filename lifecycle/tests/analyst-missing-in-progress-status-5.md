@@ -1,7 +1,7 @@
 ---
-title: "Tests: Analyst Agent Active Status Transitions"
+title: 'Tests: Analyst Agent Active Status Transitions'
 type: test
-status: draft
+status: approved
 lineage: analyst-missing-in-progress-status
 parent: lifecycle/test-plans/analyst-missing-in-progress-status-4-test.md
 ---
