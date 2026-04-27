@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Add Active Status to Analyst Agents"
 type: plan-backend
-status: draft
+status: in-development
 lineage: analyst-missing-in-progress-status
 parent: lifecycle/defects/analyst-missing-in-progress-status.md
 labels:
