@@ -1,7 +1,7 @@
 ---
 title: "Backend plan: configurable ignore patterns for lifecycle indexer"
 type: plan-backend
-status: done
+status: in-development
 lineage: ignore-readme-files-in-lifecycle-dir
 parent: lifecycle/defects/ignore-readme-files-in-lifecycle-dir.md
 ---
