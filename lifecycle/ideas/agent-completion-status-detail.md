@@ -12,7 +12,7 @@ labels:
     - artefacts
 ---
 
-# Richer Agent Completion Status
+relates-to: [[ideas/improved-agent-handling]]
 
 When an agent run finishes, the current status update is too sparse — it simply marks the run as done. The completion message should instead reflect what the agent actually accomplished: whether it produced new artifacts, updated existing ones, or (for the QA agent) ran tests and what the outcomes were.
 
