@@ -7,24 +7,7 @@ import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
 import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
-
-function formatShortDate(iso: string | undefined): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function formatFullDateTime(iso: string | undefined): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleString(undefined, {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    timeZoneName: 'short',
-  })
-}
+import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
 
 const route = useRoute()
 const router = useRouter()
