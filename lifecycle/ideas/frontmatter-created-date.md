@@ -1,7 +1,7 @@
 ---
 title: Frontmatter Created Date for Artifacts
 type: idea
-status: approved
+status: planning
 lineage: frontmatter-created-date
 priority: normal
 labels:
