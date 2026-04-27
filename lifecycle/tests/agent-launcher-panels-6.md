@@ -1,7 +1,7 @@
 ---
 title: 'Tests: Agent Launcher Panels API'
 type: test
-status: in-qa
+status: approved
 lineage: agent-launcher-panels
 parent: lifecycle/test-plans/agent-launcher-panels-5-test.md
 ---
