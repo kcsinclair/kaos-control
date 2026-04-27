@@ -27,3 +27,7 @@ The QA agent panel in the agent launcher should display all approved test artifa
 ## Actual Behaviour
 
 The QA agent panel displays no work items, even though multiple approved test artifacts exist and are ready. This issue is related to the `agent-launcher-panels` lineage.
+
+## Same behaviour for frontend
+
+requirements/kanban-view-3.md
