@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/artifact"
@@ -94,6 +95,9 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusConflict, apiError("conflict", "artifact already exists at "+relPath))
 		return
 	}
+
+	// Stamp created time; always set by the server and never overridden by the caller.
+	req.Frontmatter.Created = time.Now().Format(time.RFC3339)
 
 	// Marshal frontmatter to YAML.
 	content, err := buildMarkdown(req.Frontmatter, req.Body)
