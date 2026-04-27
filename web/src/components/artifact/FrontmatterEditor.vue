@@ -3,16 +3,16 @@ import { computed } from 'vue'
 import type { ArtifactFrontmatter } from '@/types/api'
 
 const STATUS_VOCAB = [
-  'draft',
+  'abandoned',
+  'approved',
+  'blocked',
   'clarifying',
-  'planning',
+  'done',
+  'draft',
   'in-development',
   'in-qa',
-  'approved',
+  'planning',
   'rejected',
-  'abandoned',
-  'done',
-  'blocked',
 ] as const
 
 const props = defineProps<{ modelValue: ArtifactFrontmatter }>()
@@ -73,6 +73,8 @@ const statusIsUnknown = computed(() => !STATUS_VOCAB.includes(props.modelValue.s
         >
           <option value="">— none —</option>
           <option value="normal">normal</option>
+          <option value="low">low</option>
+          <option value="medium">medium</option>
           <option value="high">high</option>
         </select>
       </label>
