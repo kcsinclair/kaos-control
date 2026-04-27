@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Agent Launcher Panels"
 type: plan-frontend
-status: draft
+status: in-development
 lineage: agent-launcher-panels
 parent: lifecycle/requirements/agent-launcher-panels-2.md
 ---
