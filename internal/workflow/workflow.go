@@ -57,9 +57,24 @@ func New(transitions []config.Transition) *Engine {
 	return &Engine{rules: rules}
 }
 
+// HasProductOwner reports whether the role list contains the product-owner role.
+// Product-owner is the project superuser and is exempt from transition rules and
+// plan-readiness gates so they can recover from data drift or smooth over edge cases.
+func HasProductOwner(roles []string) bool {
+	for _, r := range roles {
+		if r == "product-owner" {
+			return true
+		}
+	}
+	return false
+}
+
 // CanTransition reports whether a holder of any of the given roles may advance
 // an artifact whose current status is 'from' to status 'to'.
 func (e *Engine) CanTransition(from, to string, userRoles []string) bool {
+	if HasProductOwner(userRoles) {
+		return true
+	}
 	for _, r := range e.rules {
 		if r.to != to {
 			continue
@@ -83,6 +98,15 @@ func (e *Engine) CanTransition(from, to string, userRoles []string) bool {
 func (e *Engine) AllowedTargets(from string, userRoles []string) []string {
 	seen := map[string]bool{}
 	var out []string
+	if HasProductOwner(userRoles) {
+		for _, r := range e.rules {
+			if !seen[r.to] {
+				seen[r.to] = true
+				out = append(out, r.to)
+			}
+		}
+		return out
+	}
 	for _, r := range e.rules {
 		if r.from != "" && r.from != from {
 			continue

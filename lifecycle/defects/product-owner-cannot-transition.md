@@ -1,7 +1,7 @@
 ---
 title: Product Owner cannot transition artefact
 type: defect
-status: in-qa
+status: done
 lineage: innovation-maker
 priority: normal
 labels:
