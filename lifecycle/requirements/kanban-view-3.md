@@ -1,7 +1,7 @@
 ---
 title: Kanban View (revised)
 type: requirement
-status: approved
+status: planning
 lineage: kanban-view
 created: "2026-04-27"
 priority: normal
