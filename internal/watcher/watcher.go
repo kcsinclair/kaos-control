@@ -44,6 +44,8 @@ func New(projectRoot string, idx *index.Index, h *hub.Hub, ignore ...string) (*W
 }
 
 // Start begins watching the lifecycle/ tree and blocks until ctx is cancelled.
+// It does not return until all in-flight handleChange callbacks have completed,
+// ensuring it is safe to close the index immediately after Start returns.
 func (w *Watcher) Start(ctx context.Context) error {
 	if err := w.addDirRecursive(w.lifecycleDir); err != nil {
 		return err
@@ -52,6 +54,8 @@ func (w *Watcher) Start(ctx context.Context) error {
 	// Debounce: map from path to active timer.
 	timers := map[string]*time.Timer{}
 	var mu sync.Mutex
+	// wg tracks in-flight handleChange calls launched by time.AfterFunc.
+	var wg sync.WaitGroup
 
 	fire := func(path string) {
 		mu.Lock()
@@ -60,7 +64,9 @@ func (w *Watcher) Start(ctx context.Context) error {
 			t.Reset(150 * time.Millisecond)
 			return
 		}
+		wg.Add(1)
 		timers[path] = time.AfterFunc(150*time.Millisecond, func() {
+			defer wg.Done()
 			mu.Lock()
 			delete(timers, path)
 			mu.Unlock()
@@ -68,7 +74,23 @@ func (w *Watcher) Start(ctx context.Context) error {
 		})
 	}
 
-	defer w.fsw.Close()
+	// On exit: stop any pending timers, wait for in-flight handlers, then
+	// close the fsnotify watcher.  This guarantees the index is not touched
+	// after Start returns, so callers can safely close the DB immediately.
+	defer func() {
+		mu.Lock()
+		for path, t := range timers {
+			if t.Stop() {
+				// Timer hadn't fired yet; decrement the Add we pre-incremented.
+				wg.Done()
+			}
+			delete(timers, path)
+		}
+		mu.Unlock()
+		wg.Wait()
+		w.fsw.Close()
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():

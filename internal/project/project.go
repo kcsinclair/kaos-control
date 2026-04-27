@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"time"
 
 	"github.com/kaos-control/kaos-control/internal/agent"
 	"github.com/kaos-control/kaos-control/internal/config"
@@ -28,8 +29,12 @@ type Project struct {
 	Watcher        *watcher.Watcher
 	Workflow       *workflow.Engine
 	Locks          *lock.Manager
-	Agents         *agent.Manager   // nil if no agents configured
-	IdeaChatStore  *ideachat.Store  // per-project conversational idea-capture sessions
+	Agents         *agent.Manager  // nil if no agents configured
+	IdeaChatStore  *ideachat.Store // per-project conversational idea-capture sessions
+
+	// watcherDone is closed when the watcher goroutine exits.
+	// Close() waits on this before closing the index DB.
+	watcherDone <-chan struct{}
 }
 
 // OpenOptions configures optional parameters for Open.
@@ -106,11 +111,16 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 
 // StartWatcher launches the fsnotify watcher goroutine.
 // It returns immediately; the watcher runs until ctx is cancelled.
+// Close() will wait for the goroutine to fully exit before closing the index,
+// preventing "sql: database is closed" errors from in-flight debounce callbacks.
 func (p *Project) StartWatcher(ctx context.Context) {
 	if p.Watcher == nil {
 		return
 	}
+	done := make(chan struct{})
+	p.watcherDone = done
 	go func() {
+		defer close(done)
 		if err := p.Watcher.Start(ctx); err != nil {
 			slog.Error("watcher stopped with error", "project", p.Entry.Name, "err", err)
 		}
@@ -129,7 +139,16 @@ func (p *Project) StartSessionReaper(ctx context.Context) {
 }
 
 // Close releases resources held by the project.
+// It waits for the watcher goroutine to fully stop before closing the index
+// so that in-flight debounce callbacks cannot touch the DB after it is closed.
 func (p *Project) Close() error {
+	if p.watcherDone != nil {
+		select {
+		case <-p.watcherDone:
+		case <-time.After(5 * time.Second):
+			slog.Warn("project: timed out waiting for watcher to stop", "name", p.Entry.Name)
+		}
+	}
 	return p.Idx.Close()
 }
 
