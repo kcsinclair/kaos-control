@@ -1,9 +1,12 @@
 ---
 title: 'Test Plan: Frontmatter Editor Dropdowns'
 type: plan-test
-status: in-development
+status: done
 lineage: frontmatter-editor-dropdowns
 parent: requirements/frontmatter-editor-dropdowns-2.md
+assignees:
+  - role: product-owner
+    who: agent
 ---
 
 # Test Plan: Frontmatter Editor Dropdowns
@@ -84,3 +87,27 @@ Create a companion `test` artifact in `lifecycle/tests/` documenting what the te
 - Backend plan [[frontmatter-editor-dropdowns]] confirms the API already supports both fields — tests verify this assumption.
 - Frontend plan [[frontmatter-editor-dropdowns]] defines the UI behaviour; these integration tests cover the data layer beneath it.
 - Note: existing `tests/integration/priority_roundtrip_test.go` and `tests/integration/priority_patch_test.go` may already cover some priority scenarios. The test developer should review those files and avoid duplication, extending them if appropriate rather than creating entirely new files.
+
+## Open Questions
+
+### Q1 — Unknown priority value: expected API behaviour (BLOCKING)
+
+**Milestone 2, AC 4** states:
+
+> A test confirms that an unknown priority value (e.g. `critical`) can be written and read back without error.
+
+This directly contradicts the actual API implementation and existing passing tests:
+
+- `internal/http/write.go:30–32` defines `validPriorities = {high, medium, normal, low, ""}`.
+- `handleUpdateArtifact` (PUT, `write.go:166–169`) rejects any value not in that set with `400 bad_request`.
+- `handlePatchPriority` (PATCH, `write.go:390–393`) applies the same check.
+- The existing test `TestPutArtifactInvalidPriority` (`tests/integration/artifact_update_test.go`) asserts `urgent` returns 400.
+- The existing test `TestPriorityPatchInvalidValue` (`tests/integration/priority_patch_test.go`) asserts `critical` returns 400.
+
+**Clarification needed:** Which is the intended behaviour?
+
+**Option A** — The test plan is wrong. Priority IS validated; unknown values should return 400. The acceptance criterion should be updated to reflect this (i.e., replace AC 4 with a test that asserts 400 for `critical`). No code changes needed.
+
+**Option B** — The API should be changed so that unknown priority values are accepted and stored as-is (matching status behaviour). The `validPriorities` guard must be removed from both `handleUpdateArtifact` and `handlePatchPriority`, and the three existing tests that expect 400 must be updated.
+
+No test code has been written for this plan. Milestones 1, 3, and 4 can be implemented once this question is resolved (their acceptance criteria are consistent with the current codebase).
