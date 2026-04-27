@@ -1,5 +1,5 @@
 ---
-title: "Backend Plan: Agent Launcher Panels"
+title: 'Backend Plan: Agent Launcher Panels'
 type: plan-backend
 status: done
 lineage: agent-launcher-panels
@@ -61,3 +61,5 @@ The requirement (FR-6) states the frontend must be able to retrieve artifacts fi
 ## Open Questions
 
 1. The requirement's Open Question 2 asks whether the artifact list should also filter by `type`. The backend already supports `?type=` filtering, so the frontend can opt in without backend changes. No backend decision needed — this is a [[agent-launcher-panels]] frontend plan concern.
+
+> an approved artifact is ready for work.
