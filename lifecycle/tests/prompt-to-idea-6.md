@@ -1,7 +1,7 @@
 ---
 title: "Conversational Idea Capture – Integration Tests"
 type: test
-status: draft
+status: approved
 lineage: prompt-to-idea
 parent: lifecycle/test-plans/prompt-to-idea-5-test.md
 labels:
