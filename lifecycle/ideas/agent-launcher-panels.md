@@ -1,7 +1,7 @@
 ---
 title: Agent Launcher Panels on Agents Screen
 type: idea
-status: draft
+status: clarifying
 lineage: agent-launcher-panels
 created: "2026-04-27T15:25:56+10:00"
 priority: normal
