@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Agent Launcher Panels'
 type: plan-backend
-status: done
+status: in-development
 lineage: agent-launcher-panels
 parent: lifecycle/requirements/agent-launcher-panels-2.md
 ---
