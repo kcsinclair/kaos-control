@@ -1,7 +1,7 @@
 ---
 title: Agent Launcher Panels
 type: requirement
-status: draft
+status: planning
 lineage: agent-launcher-panels
 parent: lifecycle/ideas/agent-launcher-panels.md
 ---
