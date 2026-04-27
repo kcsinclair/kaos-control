@@ -1,7 +1,7 @@
 ---
 title: Configurable HTTP Port via YAML Config
 type: idea
-status: draft
+status: approved
 lineage: configurable-http-port
 priority: normal
 labels:
