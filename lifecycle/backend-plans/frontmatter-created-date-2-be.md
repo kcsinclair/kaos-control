@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Frontmatter Created Date"
 type: plan-backend
-status: in-development
+status: done
 lineage: frontmatter-created-date
 parent: ideas/frontmatter-created-date.md
 labels:
