@@ -113,6 +113,14 @@ agents:
 // It mirrors newTestEnv but uses agentLifecycleCfgYAML instead of the minimal config.
 func newAgentTestEnv(t *testing.T, seeds []seedArtifact) *testEnv {
 	t.Helper()
+	return newAgentTestEnvWithCfg(t, agentLifecycleCfgYAML, seeds)
+}
+
+// newAgentTestEnvWithCfg is like newAgentTestEnv but accepts an arbitrary
+// lifecycle/config.yaml string.  Use this when a test needs a custom agent
+// configuration (e.g. agents with specific model or driver values).
+func newAgentTestEnvWithCfg(t *testing.T, cfgYAML string, seeds []seedArtifact) *testEnv {
+	t.Helper()
 
 	root := t.TempDir()
 	dataDir := t.TempDir()
@@ -129,7 +137,7 @@ func newAgentTestEnv(t *testing.T, seeds []seedArtifact) *testEnv {
 
 	// Write lifecycle/config.yaml with agents configured.
 	cfgPath := filepath.Join(root, "lifecycle", "config.yaml")
-	if err := os.WriteFile(cfgPath, []byte(agentLifecycleCfgYAML), 0o644); err != nil {
+	if err := os.WriteFile(cfgPath, []byte(cfgYAML), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

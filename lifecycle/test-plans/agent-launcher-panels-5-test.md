@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Agent Launcher Panels"
 type: plan-test
-status: in-development
+status: done
 lineage: agent-launcher-panels
 parent: lifecycle/requirements/agent-launcher-panels-2.md
 ---
