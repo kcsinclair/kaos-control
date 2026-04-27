@@ -1,7 +1,7 @@
 ---
 title: Kanban View
 type: requirement
-status: approved
+status: abandoned
 lineage: kanban-view
 created: "2026-04-27"
 priority: normal
