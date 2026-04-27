@@ -1,7 +1,7 @@
 ---
 title: Table Pagination Controls
 type: idea
-status: draft
+status: clarifying
 lineage: table-pagination
 priority: normal
 labels:
