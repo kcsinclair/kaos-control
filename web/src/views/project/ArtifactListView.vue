@@ -102,7 +102,7 @@ onMounted(async () => {
 <template>
   <div class="list-view">
     <div class="list-header">
-      <h2 class="list-title">Artifacts</h2>
+      <h2 class="list-title">Artefacts</h2>
       <span class="list-count" v-if="!store.loading">{{ store.total }} total</span>
       <button class="btn-new-defect" @click="openBrainDump('defect')">
         <Bug :size="15" />

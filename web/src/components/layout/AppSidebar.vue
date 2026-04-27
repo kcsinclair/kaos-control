@@ -42,7 +42,7 @@ interface NavItem {
 const navItems = (): NavItem[] => {
   const p = projectName()
   return [
-    { label: 'Artifacts', to: `/p/${p}/artifacts` },
+    { label: 'Artefacts', to: `/p/${p}/artifacts` },
     { label: 'Graph', to: `/p/${p}/graph` },
     { label: 'Agents', to: `/p/${p}/agents` },
     { label: 'Parse Errors', to: `/p/${p}/parse-errors` },
