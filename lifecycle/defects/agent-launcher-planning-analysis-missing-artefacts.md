@@ -1,7 +1,7 @@
 ---
 title: Agent Launcher Panel Does Not Show Available Artefacts for Planning-Analysis
 type: defect
-status: draft
+status: in-development
 lineage: agent-launcher-planning-analysis-missing-artefacts
 created: "2026-04-27T20:05:16+10:00"
 priority: normal
