@@ -219,6 +219,11 @@ func (idx *Index) IndexFile(absPath string) error {
 	if !strings.HasPrefix(relPath, "lifecycle/") || !strings.HasSuffix(relPath, ".md") {
 		return fmt.Errorf("refusing to index non-artifact path: %s", relPath)
 	}
+	// Defence-in-depth: reject ignored files even when called directly from an
+	// HTTP handler, bypassing the Scan and watcher pre-filters.
+	if config.ShouldIgnore(absPath, idx.ignore) {
+		return fmt.Errorf("refusing to index ignored file: %s", relPath)
+	}
 
 	a := artifact.Parse(raw, relPath, info.ModTime())
 
