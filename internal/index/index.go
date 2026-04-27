@@ -74,6 +74,10 @@ func Open(dbPath, projectRoot string, stages []config.Stage, opts ...Option) (*I
 			return nil, err
 		}
 	}
+	// agent_runs is not part of the versioned schema so it must be ensured separately.
+	if err := idx.ensureAgentRunsTable(); err != nil {
+		return nil, fmt.Errorf("ensuring agent_runs table: %w", err)
+	}
 	// Always scan on startup: the index is a cache and files may have changed
 	// while the server was not running (watcher only covers live changes).
 	if err := idx.Scan(stages); err != nil {
@@ -955,12 +959,14 @@ func (idx *Index) checkSchema() (needRebuild bool, err error) {
 }
 
 func (idx *Index) dropAndRecreate() error {
+	// agent_runs is not a cache — it cannot be rebuilt from disk. Exclude it here
+	// so run history survives schema rebuilds. ensureAgentRunsTable creates it
+	// when it doesn't exist yet.
 	stmts := []string{
 		`DROP TABLE IF EXISTS schema_version`,
 		`DROP TABLE IF EXISTS artifacts`,
 		`DROP TABLE IF EXISTS links`,
 		`DROP TABLE IF EXISTS labels_index`,
-		`DROP TABLE IF EXISTS agent_runs`,
 		`DROP TABLE IF EXISTS lineage_locks`,
 		`DROP TABLE IF EXISTS parse_errors`,
 	}
@@ -970,6 +976,24 @@ func (idx *Index) dropAndRecreate() error {
 		}
 	}
 	return idx.createSchema()
+}
+
+// ensureAgentRunsTable creates the agent_runs table if it doesn't already exist.
+// It is called unconditionally on Open so the table survives schema rebuilds.
+func (idx *Index) ensureAgentRunsTable() error {
+	_, err := idx.db.Exec(`CREATE TABLE IF NOT EXISTS agent_runs (
+		run_id                   TEXT PRIMARY KEY,
+		agent_name               TEXT NOT NULL,
+		role                     TEXT NOT NULL,
+		target_path              TEXT,
+		started_at               INTEGER NOT NULL,
+		finished_at              INTEGER,
+		status                   TEXT NOT NULL,
+		exit_code                INTEGER,
+		stderr_tail              TEXT,
+		artifacts_produced_json  TEXT
+	)`)
+	return err
 }
 
 func (idx *Index) createSchema() error {
@@ -1025,18 +1049,6 @@ CREATE TABLE parse_errors (
     PRIMARY KEY (path, message)
 );
 
-CREATE TABLE agent_runs (
-    run_id                   TEXT PRIMARY KEY,
-    agent_name               TEXT NOT NULL,
-    role                     TEXT NOT NULL,
-    target_path              TEXT,
-    started_at               INTEGER NOT NULL,
-    finished_at              INTEGER,
-    status                   TEXT NOT NULL,
-    exit_code                INTEGER,
-    stderr_tail              TEXT,
-    artifacts_produced_json  TEXT
-);
 
 CREATE TABLE lineage_locks (
     lineage         TEXT PRIMARY KEY,
