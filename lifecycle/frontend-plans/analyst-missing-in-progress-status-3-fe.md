@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Display Analyst In-Progress Statuses"
 type: plan-frontend
-status: in-development
+status: done
 lineage: analyst-missing-in-progress-status
 parent: lifecycle/defects/analyst-missing-in-progress-status.md
 labels:
