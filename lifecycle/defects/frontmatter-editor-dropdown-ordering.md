@@ -1,7 +1,7 @@
 ---
 title: 'Frontmatter Editor: Incorrect Ordering of Priority and Status Dropdowns'
 type: defect
-status: in-development
+status: done
 lineage: frontmatter-editor-dropdown-ordering
 priority: normal
 labels:
