@@ -1,7 +1,7 @@
 ---
 title: QA Agent Launcher Panel Shows No Ready Work Despite Approved Tests
 type: defect
-status: in-development
+status: done
 lineage: qa-agent-launcher-no-ready-work
 created: "2026-04-27T20:27:28+10:00"
 priority: normal
