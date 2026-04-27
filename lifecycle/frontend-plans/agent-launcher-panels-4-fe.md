@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Agent Launcher Panels"
 type: plan-frontend
-status: done
+status: in-development
 lineage: agent-launcher-panels
 parent: lifecycle/requirements/agent-launcher-panels-2.md
 ---
@@ -137,3 +137,5 @@ Wire the new `AgentPanelRow` and `AgentLaunchModal` into the existing Agents scr
 ## Open Questions
 
 1. **Requirement Open Question 2 — Type filtering**: Should `AgentLaunchModal` also filter by artifact `type`? For example, `analyst-planner` would only list `requirement`-type artifacts. The backend supports `?type=` filtering. The current plan does **not** add type filtering because there is no explicit mapping from agent name to expected input type in the config. If type filtering is desired, a new `input_type` field on `AgentConfig` would be the cleanest approach — but that is outside the scope of this plan unless the product owner decides otherwise.
+
+> yes, only the artifacts type which match that agent type, e.g. analyst-requirements processes ideas, analyst-planning processes requirements, backend-developer does backend-plans, frontend-developer does frontend-plans, test-developer does test-plans, qa does tests
