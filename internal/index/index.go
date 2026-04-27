@@ -18,7 +18,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/config"
 )
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 // Index wraps the SQLite database for one project.
 type Index struct {
@@ -230,13 +230,24 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	// Parse the created timestamp from frontmatter if present.
+	var createdUnix int64
+	if a.FM.Created != "" {
+		if t, err := time.Parse(time.RFC3339, a.FM.Created); err == nil {
+			createdUnix = t.Unix()
+		}
+	}
+	if createdUnix == 0 && !a.CreatedAt.IsZero() {
+		createdUnix = a.CreatedAt.Unix()
+	}
+
 	_, err = tx.Exec(`
 		INSERT OR REPLACE INTO artifacts
-			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime, created)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.Path, a.Slug, a.FM.Lineage, a.Index, a.Stage,
 		a.FM.Type, a.FM.Status, a.FM.Title, a.FM.Priority,
-		string(fmJSON), a.SHA256[:], a.Mtime.Unix(),
+		string(fmJSON), a.SHA256[:], a.Mtime.Unix(), createdUnix,
 	)
 	if err != nil {
 		return fmt.Errorf("upserting artifact: %w", err)
@@ -311,16 +322,17 @@ func (f *Filter) withDefaults() Filter {
 
 // ArtifactRow is a lightweight summary row returned from list/graph queries.
 type ArtifactRow struct {
-	Path     string          `json:"path"`
-	Slug     string          `json:"slug"`
-	Lineage  string          `json:"lineage"`
-	Index    int             `json:"index"`
-	Stage    string          `json:"stage"`
-	Type     string          `json:"type"`
-	Status   string          `json:"status"`
-	Title    string          `json:"title"`
+	Path     string               `json:"path"`
+	Slug     string               `json:"slug"`
+	Lineage  string               `json:"lineage"`
+	Index    int                  `json:"index"`
+	Stage    string               `json:"stage"`
+	Type     string               `json:"type"`
+	Status   string               `json:"status"`
+	Title    string               `json:"title"`
 	FM       artifact.Frontmatter `json:"frontmatter"`
-	Mtime    time.Time       `json:"mtime"`
+	Mtime    time.Time            `json:"mtime"`
+	Created  time.Time            `json:"created"`
 }
 
 // List returns a filtered, paginated list of artifacts and the total matching count.
@@ -336,7 +348,7 @@ func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 
 	args = append(args, f.Limit, f.Offset)
 	rows, err := idx.db.Query(
-		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime
+		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
 		 FROM artifacts`+where+` ORDER BY lineage, idx, path LIMIT ? OFFSET ?`,
 		args...,
 	)
@@ -351,7 +363,7 @@ func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 // Get returns a single artifact by project-relative path, or nil if not found.
 func (idx *Index) Get(relPath string) (*ArtifactRow, error) {
 	rows, err := idx.db.Query(
-		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime
+		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
 		 FROM artifacts WHERE path = ?`, relPath,
 	)
 	if err != nil {
@@ -940,7 +952,8 @@ CREATE TABLE artifacts (
     priority          TEXT NOT NULL DEFAULT '',
     frontmatter_json  TEXT NOT NULL,
     body_sha256       BLOB NOT NULL,
-    mtime             INTEGER NOT NULL
+    mtime             INTEGER NOT NULL,
+    created           INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX idx_artifacts_lineage  ON artifacts(lineage);
 CREATE INDEX idx_artifacts_stage    ON artifacts(stage);
@@ -1037,13 +1050,17 @@ func scanRows(rows *sql.Rows) ([]*ArtifactRow, int, error) {
 		var r ArtifactRow
 		var fmJSON string
 		var mtimeUnix int64
+		var createdUnix int64
 		if err := rows.Scan(
 			&r.Path, &r.Slug, &r.Lineage, &r.Index, &r.Stage,
-			&r.Type, &r.Status, &r.Title, &fmJSON, &mtimeUnix,
+			&r.Type, &r.Status, &r.Title, &fmJSON, &mtimeUnix, &createdUnix,
 		); err != nil {
 			return nil, 0, err
 		}
 		r.Mtime = time.Unix(mtimeUnix, 0)
+		if createdUnix != 0 {
+			r.Created = time.Unix(createdUnix, 0)
+		}
 		_ = json.Unmarshal([]byte(fmJSON), &r.FM)
 		out = append(out, &r)
 	}

@@ -43,6 +43,11 @@ type Artifact struct {
 	Body        string      // raw markdown body (after frontmatter)
 	Links       []Link
 	Mtime       time.Time
+	// CreatedAt holds the artifact creation time for index storage.
+	// Set from FM.Created when present; otherwise backfilled by the indexer
+	// from git history or filesystem mtime. The on-disk file is never modified
+	// during backfill.
+	CreatedAt   time.Time
 	SHA256      [32]byte
 	Raw         []byte      // full file content; not stored in index
 	ParseErrs   []string    // non-fatal validation messages
