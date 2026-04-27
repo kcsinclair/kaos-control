@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -36,7 +35,7 @@ type ServerConfig struct {
 	TLSCert  string
 	TLSKey   string
 	TLSOn    bool
-	Frontend embed.FS
+	Frontend fs.FS
 	Auth     *auth.Store // nil when auth is not configured
 }
 
@@ -157,9 +156,9 @@ func (s *Server) buildRouter() chi.Router {
 			r.Get("/parse-errors", s.handleParseErrors)
 
 			// Project config
-			r.Get("/config", s.handleGetConfig)
-			r.Put("/config", s.handleUpdateConfig)
-			r.Get("/config/kanban", s.handleGetKanbanConfig)
+			r.With(requireAuth).Get("/config", s.handleGetConfig)
+			r.With(requireAuth).Put("/config", s.handleUpdateConfig)
+			r.With(requireAuth).Get("/config/kanban", s.handleGetKanbanConfig)
 		})
 	})
 
@@ -226,6 +225,10 @@ func (s *Server) handleListProjects(w http.ResponseWriter, r *http.Request) {
 // handleFrontend serves the embedded Vue SPA.
 // Static assets are served as-is; unknown paths fall back to index.html.
 func (s *Server) handleFrontend(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.Frontend == nil {
+		http.Error(w, "frontend unavailable", http.StatusInternalServerError)
+		return
+	}
 	dist, err := fs.Sub(s.cfg.Frontend, "dist")
 	if err != nil {
 		http.Error(w, "frontend unavailable", http.StatusInternalServerError)
