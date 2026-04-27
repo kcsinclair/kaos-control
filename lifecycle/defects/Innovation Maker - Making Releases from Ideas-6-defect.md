@@ -1,7 +1,7 @@
 ---
 title: 'Watcher tests flaky under full test-suite load: external-edit events not delivered within 2 s window'
 type: defect
-status: draft
+status: in-development
 lineage: innovation-maker
 parent: lifecycle/tests/Innovation Maker - Making Releases from Ideas-5-tests.md
 labels:
