@@ -1,7 +1,7 @@
 ---
 title: Integration Test Suite — kaos-control v1
 type: test
-status: approved
+status: in-qa
 lineage: innovation-maker
 parent: lifecycle/test-plans/Innovation Maker - Making Releases from Ideas-4-test.md
 ---
