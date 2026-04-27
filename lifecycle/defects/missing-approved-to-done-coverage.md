@@ -1,7 +1,7 @@
 ---
 title: No integration test covers approved → done transition
 type: defect
-status: draft
+status: approved
 lineage: innovation-maker
 parent: lifecycle/tests/Innovation Maker - Making Releases from Ideas-5-tests.md
 labels:
