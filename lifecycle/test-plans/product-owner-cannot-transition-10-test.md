@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Product Owner Transition Superuser & Allowed Targets"
 type: plan-test
-status: approved
+status: in-development
 lineage: innovation-maker
 parent: lifecycle/defects/product-owner-cannot-transition.md
 labels:
