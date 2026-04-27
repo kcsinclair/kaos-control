@@ -1,7 +1,7 @@
 ---
 title: Analyst Agent Does Not Set In-Progress Status During Execution
 type: defect
-status: draft
+status: done
 lineage: analyst-missing-in-progress-status
 priority: normal
 labels:
