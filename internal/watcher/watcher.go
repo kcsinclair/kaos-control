@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/kaos-control/kaos-control/internal/config"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
 )
@@ -22,10 +23,12 @@ type Watcher struct {
 	projectRoot  string
 	idx          *index.Index
 	hub          *hub.Hub
+	ignore       []string // glob patterns; base name matched via config.ShouldIgnore
 }
 
-// New creates a Watcher but does not start it.
-func New(projectRoot string, idx *index.Index, h *hub.Hub) (*Watcher, error) {
+// New creates a Watcher but does not start it. The optional ignore variadic
+// receives the project's ignore-pattern list (config.Project.Ignore).
+func New(projectRoot string, idx *index.Index, h *hub.Hub, ignore ...string) (*Watcher, error) {
 	fsw, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -36,6 +39,7 @@ func New(projectRoot string, idx *index.Index, h *hub.Hub) (*Watcher, error) {
 		projectRoot:  projectRoot,
 		idx:          idx,
 		hub:          h,
+		ignore:       ignore,
 	}, nil
 }
 
@@ -154,6 +158,9 @@ func (w *Watcher) shouldProcess(path string) bool {
 		if strings.HasPrefix(base, pfx) {
 			return false
 		}
+	}
+	if config.ShouldIgnore(path, w.ignore) {
+		return false
 	}
 	return true
 }
