@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Frontmatter Created Date"
 type: plan-test
-status: draft
+status: in-development
 lineage: frontmatter-created-date
 parent: ideas/frontmatter-created-date.md
 labels:
