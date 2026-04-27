@@ -1,7 +1,7 @@
 ---
 title: Kanban config API returns empty columns and card_fields due to missing JSON struct tags
 type: defect
-status: draft
+status: approved
 lineage: kanban-view
 parent: lifecycle/tests/kanban-view-7-test.md
 labels:
