@@ -35,6 +35,7 @@ agents:
     role: [analyst]
     driver: claude-code-cli
     model: opus
+    active_status: clarifying
     timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/requirements
@@ -82,6 +83,7 @@ agents:
     role: [analyst]
     driver: claude-code-cli
     model: opus
+    active_status: planning
     timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/backend-plans
