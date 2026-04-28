@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAgentsStore } from '@/stores/agents'
 import { useUiStore } from '@/stores/ui'
+import { usePagination } from '@/composables/usePagination'
 import * as agentsApi from '@/api/agents'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import AgentPanelRow from '@/components/agent/AgentPanelRow.vue'
 import AgentLaunchModal from '@/components/agent/AgentLaunchModal.vue'
+import TablePagination from '@/components/common/TablePagination.vue'
 import type { AgentSummary } from '@/types/api'
 
 const route = useRoute()
@@ -18,6 +20,10 @@ const project = route.params.project as string
 const showRunDialog = ref(false)
 const expandedRun = ref<string | null>(null)
 const selectedAgent = ref<AgentSummary | null>(null)
+
+const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination({ queryPrefix: 'runs' })
+
+const paginatedRuns = computed(() => store.runs.slice(sliceStart.value, sliceEnd.value))
 
 // Per-run log state. logVisible.get(id)===true means the log pane is shown
 // and logContent has the fetched text.
@@ -93,7 +99,7 @@ onMounted(() => {
         </tr>
       </thead>
       <tbody>
-        <template v-for="run in store.runs" :key="run.run_id">
+        <template v-for="run in paginatedRuns" :key="run.run_id">
           <tr class="run-row" @click="toggleExpand(run.run_id)">
             <td class="cell-mono">{{ run.run_id.slice(0, 8) }}…</td>
             <td>{{ run.agent_name }}</td>
@@ -160,6 +166,15 @@ onMounted(() => {
         </template>
       </tbody>
     </table>
+
+    <TablePagination
+      v-if="!store.loading && store.runs.length > 0"
+      :total-items="store.runs.length"
+      :current-page="currentPage"
+      :page-size="pageSize"
+      @update:current-page="setPage"
+      @update:page-size="setPageSize"
+    />
 
     <RunAgentDialog
       v-if="showRunDialog"
