@@ -1,7 +1,7 @@
 ---
 title: "PUT /artifacts accepts assignee with empty `who` field (no 400 returned)"
 type: defect
-status: approved
+status: draft
 lineage: frontmatter-role-assignment
 parent: lifecycle/tests/frontmatter-role-assignment-6-test.md
 labels: [defect]
