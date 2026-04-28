@@ -1069,6 +1069,10 @@ func (idx *Index) ensureAgentRunsTable() error {
 		stderr_tail              TEXT,
 		artifacts_produced_json  TEXT
 	)`)
+	if err != nil {
+		return err
+	}
+	_, err = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_target_path ON agent_runs(target_path)`)
 	return err
 }
 
