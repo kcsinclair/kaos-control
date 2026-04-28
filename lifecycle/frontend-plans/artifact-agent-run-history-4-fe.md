@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Artifact Agent Run History"
 type: plan-frontend
-status: draft
+status: approved
 lineage: artifact-agent-run-history
 parent: lifecycle/requirements/artifact-agent-run-history-2.md
 created: "2026-04-28"
