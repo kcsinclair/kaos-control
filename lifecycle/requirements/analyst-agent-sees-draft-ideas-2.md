@@ -66,3 +66,5 @@ The root cause is in `web/src/components/agent/AgentLaunchModal.vue` (lines 26-3
 ## Open Questions
 
 - Should the backend also enforce input status validation when an agent run is started via `POST /agents/runs`, as a defence-in-depth measure? (Deferred as a non-goal for this fix, but worth tracking.)
+
+> Not at this time.  Add to project plan for a future release.
