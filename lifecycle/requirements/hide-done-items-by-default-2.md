@@ -1,7 +1,7 @@
 ---
 title: Hide Done Items by Default
 type: requirement
-status: planning
+status: done
 lineage: hide-done-items-by-default
 created: "2026-04-28"
 parent: lifecycle/ideas/hide-done-items-by-default.md
