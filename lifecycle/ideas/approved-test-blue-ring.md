@@ -1,10 +1,10 @@
 ---
 title: Blue Ring Indicator for Approved Tests in 2D and 3D Maps
 type: idea
-status: draft
+status: approved
 lineage: approved-test-blue-ring
 created: "2026-04-28T13:18:09+10:00"
-priority: normal
+priority: medium
 labels:
     - frontend
     - feature
