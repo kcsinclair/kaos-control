@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Frontmatter Role-Based Assignment Control"
 type: plan-test
-status: draft
+status: approved
 lineage: frontmatter-role-assignment
 parent: lifecycle/requirements/frontmatter-role-assignment-2.md
 ---
