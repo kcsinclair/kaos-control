@@ -1,7 +1,7 @@
 ---
 title: Kanban Stage Columns Not Displaying and Stages Field Shows Type Values
 type: defect
-status: draft
+status: abandoned
 lineage: kanban-stage-columns-not-displaying
 created: "2026-04-28T08:25:28+10:00"
 priority: normal
