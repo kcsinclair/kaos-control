@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Collapsible Sidebar with Icon-Only Mode"
 type: plan-frontend
-status: draft
+status: approved
 lineage: collapsible-sidebar-icons
 parent: lifecycle/requirements/collapsible-sidebar-icons-2.md
 ---
