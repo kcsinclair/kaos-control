@@ -348,18 +348,22 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 
 // Filter holds list/graph query parameters.
 type Filter struct {
-	Stage    string
-	Status   string
-	Label    string
-	Lineage  string
-	Type     string
-	Priority string
-	Limit    int
-	Offset   int
+	Stage     string
+	Status    string
+	Label     string
+	Lineage   string
+	Type      string
+	Priority  string
+	Limit     int
+	Offset    int
+	Unlimited bool // when true, no LIMIT is applied (returns all matching rows)
 }
 
 func (f *Filter) withDefaults() Filter {
 	out := *f
+	if out.Unlimited {
+		return out
+	}
 	if out.Limit <= 0 {
 		out.Limit = 50
 	}
@@ -385,6 +389,7 @@ type ArtifactRow struct {
 }
 
 // List returns a filtered, paginated list of artifacts and the total matching count.
+// When f.Unlimited is true all matching rows are returned regardless of Limit/Offset.
 func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 	f = f.withDefaults()
 	where, args := buildWhere(f)
@@ -395,12 +400,16 @@ func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 		return nil, 0, err
 	}
 
-	args = append(args, f.Limit, f.Offset)
-	rows, err := idx.db.Query(
-		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
-		 FROM artifacts`+where+` ORDER BY lineage, idx, path LIMIT ? OFFSET ?`,
-		args...,
-	)
+	const sel = `SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
+		 FROM artifacts`
+	var rows *sql.Rows
+	var err error
+	if f.Unlimited {
+		rows, err = idx.db.Query(sel+where+` ORDER BY lineage, idx, path`, args...)
+	} else {
+		rows, err = idx.db.Query(sel+where+` ORDER BY lineage, idx, path LIMIT ? OFFSET ?`,
+			append(args, f.Limit, f.Offset)...)
+	}
 	if err != nil {
 		return nil, 0, err
 	}

@@ -32,7 +32,12 @@ func (s *Server) handleListArtifacts(w http.ResponseWriter, r *http.Request) {
 		Priority: r.URL.Query().Get("priority"),
 	}
 	if v := r.URL.Query().Get("limit"); v != "" {
-		f.Limit, _ = strconv.Atoi(v)
+		n, _ := strconv.Atoi(v)
+		if n <= 0 {
+			f.Unlimited = true
+		} else {
+			f.Limit = n
+		}
 	}
 	if v := r.URL.Query().Get("offset"); v != "" {
 		f.Offset, _ = strconv.Atoi(v)
