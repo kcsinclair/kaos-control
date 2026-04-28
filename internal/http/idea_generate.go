@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/kaos-control/kaos-control/internal/ideachat"
 )
@@ -39,6 +40,10 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Input == "" {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "input is required"))
+		return
+	}
+	if len(strings.Fields(req.Input)) < 5 {
+		writeJSON(w, http.StatusBadRequest, apiError("input_too_short", "Please provide at least 5 words describing your idea."))
 		return
 	}
 
