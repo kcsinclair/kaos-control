@@ -1,7 +1,7 @@
 ---
 title: Tech Writer Agent
 type: idea
-status: draft
+status: approved
 lineage: tech-writer-agent
 priority: medium
 labels:
