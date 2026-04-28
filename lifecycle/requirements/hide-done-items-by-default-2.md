@@ -3,8 +3,8 @@ title: Hide Done Items by Default
 type: requirement
 status: draft
 lineage: hide-done-items-by-default
-parent: lifecycle/ideas/hide-done-items-by-default.md
 created: "2026-04-28"
+parent: lifecycle/ideas/hide-done-items-by-default.md
 ---
 
 # Hide Done Items by Default
@@ -65,4 +65,9 @@ All artifact views currently display every artifact regardless of status, includ
 ## Open Questions
 
 1. **Toggle label** — should the label read "Show completed", "Show done", or something else? The idea suggests "Show done" but this requirement uses "Show completed" to encompass `rejected` and `abandoned` as well.
+
+> Show completed is great.
+
 2. **Graph edge handling** — when a hidden node is an intermediate ancestor in a lineage chain, should edges be re-routed to connect visible ancestors/descendants, or should disconnected subgraphs simply appear? (Recommend: remove node and its edges; accept potential disconnection.)
+
+> remove node and its edges.
