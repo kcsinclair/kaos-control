@@ -3,13 +3,13 @@ title: Frontmatter Role-Based Assignment Control
 type: requirement
 status: draft
 lineage: frontmatter-role-assignment
-parent: lifecycle/ideas/frontmatter-role-assignment.md
 created: "2026-04-28"
 priority: normal
+parent: lifecycle/ideas/frontmatter-role-assignment.md
 labels:
-  - feature
-  - frontend
-  - workflow
+    - feature
+    - frontend
+    - workflow
 ---
 
 # Frontmatter Role-Based Assignment Control
@@ -90,4 +90,9 @@ The role dropdown and who input must be keyboard-navigable and have appropriate 
 ## Open Questions
 
 1. Should the `who` field for human users accept free-text emails, or should it be restricted to emails present in the project's `users` list? (Free-text is more flexible for new team members; restricted is safer.)
+
+> Who is not required just the role, when a human logs in as product-owner they should look for work assisgned to that role.
+
 2. Should there be a visual distinction between agent-assigned and human-assigned rows (e.g. an icon or badge)?
+
+> Not required as the role could be human or agent depending on the team.
