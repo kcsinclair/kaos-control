@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAgentsStore } from '@/stores/agents'
 import { useUiStore } from '@/stores/ui'
 import { usePagination } from '@/composables/usePagination'
+import { useSortableTable } from '@/composables/useSortableTable'
 import * as agentsApi from '@/api/agents'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import AgentPanelRow from '@/components/agent/AgentPanelRow.vue'
 import AgentLaunchModal from '@/components/agent/AgentLaunchModal.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
-import type { AgentSummary } from '@/types/api'
+import SortHeader from '@/components/SortHeader.vue'
+import type { AgentSummary, AgentRunRow } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,7 +25,30 @@ const selectedAgent = ref<AgentSummary | null>(null)
 
 const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination({ queryPrefix: 'runs' })
 
-const paginatedRuns = computed(() => store.runs.slice(sliceStart.value, sliceEnd.value))
+function elapsedMs(row: AgentRunRow): number {
+  const start = new Date(row.started_at).getTime()
+  const end = row.finished_at ? new Date(row.finished_at).getTime() : Date.now()
+  return end - start
+}
+
+const runsRef = computed(() => store.runs)
+
+const { sortColumn, sortDirection, sortedRows: sortedRuns, toggleSort } = useSortableTable(
+  runsRef,
+  {
+    run_id:      { type: 'string' },
+    agent_name:  { type: 'string' },
+    target_path: { type: 'string' },
+    status:      { type: 'string' },
+    started_at:  { type: 'date' },
+    elapsed:     { type: 'number', getValue: (row) => elapsedMs(row as AgentRunRow) },
+  },
+)
+
+const paginatedRuns = computed(() => sortedRuns.value.slice(sliceStart.value, sliceEnd.value))
+
+// Reset to page 1 on sort change
+watch([sortColumn, sortDirection], () => setPage(1))
 
 // Per-run log state. logVisible.get(id)===true means the log pane is shown
 // and logContent has the fetched text.
@@ -89,12 +114,12 @@ onMounted(() => {
     <table v-else class="runs-table">
       <thead>
         <tr>
-          <th>Run ID</th>
-          <th>Agent</th>
-          <th>Target</th>
-          <th>Status</th>
-          <th>Started</th>
-          <th>Elapsed</th>
+          <SortHeader column="run_id"      :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">Run ID</SortHeader>
+          <SortHeader column="agent_name"  :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">Agent</SortHeader>
+          <SortHeader column="target_path" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">Target</SortHeader>
+          <SortHeader column="status"      :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">Status</SortHeader>
+          <SortHeader column="started_at"  :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">Started</SortHeader>
+          <SortHeader column="elapsed"     :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">Elapsed</SortHeader>
           <th></th>
         </tr>
       </thead>
