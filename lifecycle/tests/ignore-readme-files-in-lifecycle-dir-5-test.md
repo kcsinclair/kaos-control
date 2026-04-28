@@ -1,7 +1,7 @@
 ---
 title: "Tests: ignore patterns for lifecycle indexer"
 type: test
-status: in-qa
+status: done
 lineage: ignore-readme-files-in-lifecycle-dir
 parent: lifecycle/test-plans/ignore-readme-files-in-lifecycle-dir-4-test.md
 ---
