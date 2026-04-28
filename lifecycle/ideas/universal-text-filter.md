@@ -1,10 +1,10 @@
 ---
 title: Universal Text Filter Across All Views
 type: idea
-status: draft
+status: approved
 lineage: universal-text-filter
 created: "2026-04-28T09:29:36+10:00"
-priority: normal
+priority: high
 labels:
     - feature
     - frontend
