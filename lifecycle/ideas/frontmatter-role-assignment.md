@@ -1,7 +1,7 @@
 ---
 title: Frontmatter Editor Role-Based Assignment
 type: idea
-status: draft
+status: clarifying
 lineage: frontmatter-role-assignment
 created: "2026-04-28T10:27:09+10:00"
 priority: normal
