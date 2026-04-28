@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useKanbanBoard } from '@/composables/useKanbanBoard'
 import { useArtifactsStore } from '@/stores/artifacts'
@@ -17,11 +17,15 @@ const {
   hasConfig,
   columns,
   cardFields,
+  hideTerminal,
   refresh,
   applyFilters,
   reorderColumns,
   ageOf,
 } = useKanbanBoard(project)
+
+const showCompleted = ref(false)
+watch(showCompleted, v => { hideTerminal.value = !v }, { immediate: true })
 
 const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'releases']
 const statusOptions = ['', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa', 'in-progress', 'done', 'approved', 'blocked', 'rejected', 'abandoned']
@@ -107,6 +111,14 @@ onMounted(async () => {
   <div class="board-view">
     <div class="board-header">
       <h2 class="board-title">Board</h2>
+      <label class="toggle-label">
+        <input
+          type="checkbox"
+          class="toggle-input"
+          v-model="showCompleted"
+        />
+        <span class="toggle-text">Show completed</span>
+      </label>
     </div>
 
     <!-- Filter bar -->
@@ -198,6 +210,27 @@ onMounted(async () => {
   font-weight: 600;
   margin: 0;
   color: var(--color-text);
+}
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-input {
+  accent-color: var(--color-accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.toggle-input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.toggle-text {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 .filter-bar {
   display: flex;

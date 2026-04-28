@@ -2,6 +2,7 @@ import { ref, computed, reactive } from 'vue'
 import { api } from '@/api/client'
 import * as artifactsApi from '@/api/artifacts'
 import type { ArtifactRow, ArtifactFilter } from '@/types/api'
+import { TERMINAL_STATUSES } from '@/types/api'
 
 export interface KanbanColumnConfig {
   name: string
@@ -29,6 +30,9 @@ export function useKanbanBoard(project: string) {
   // Reactive filter state
   const filters = reactive<Partial<ArtifactFilter>>({})
 
+  // When true, terminal-status cards (done/rejected/abandoned) are excluded
+  const hideTerminal = ref(true)
+
   // Ordered column list — starts from config, can be reordered by drag
   const columnOrder = ref<KanbanColumnConfig[]>([])
 
@@ -47,6 +51,7 @@ export function useKanbanBoard(project: string) {
   // Apply client-side filters to an artifact list
   function applyClientFilters(items: ArtifactRow[]): ArtifactRow[] {
     return items.filter(a => {
+      if (hideTerminal.value && (TERMINAL_STATUSES as readonly string[]).includes(a.status)) return false
       if (filters.stage && a.stage !== filters.stage) return false
       if (filters.status && a.status !== filters.status) return false
       if (filters.type && a.type !== filters.type) return false
@@ -72,11 +77,16 @@ export function useKanbanBoard(project: string) {
       for (const s of col.statuses) coveredStatuses.add(s)
     }
 
-    const result: KanbanColumn[] = columnOrder.value.map(col => ({
-      name: col.name,
-      statuses: col.statuses,
-      cards: filtered.filter(a => col.statuses.includes(a.status)),
-    }))
+    const allTerminal = (statuses: string[]) =>
+      statuses.length > 0 && statuses.every(s => (TERMINAL_STATUSES as readonly string[]).includes(s))
+
+    const result: KanbanColumn[] = columnOrder.value
+      .map(col => ({
+        name: col.name,
+        statuses: col.statuses,
+        cards: filtered.filter(a => col.statuses.includes(a.status)),
+      }))
+      .filter(col => !(hideTerminal.value && allTerminal(col.statuses) && col.cards.length === 0))
 
     // Uncategorised column — default true when not explicitly set
     const showUncategorised = config.value.uncategorised !== false
@@ -151,6 +161,7 @@ export function useKanbanBoard(project: string) {
     columns,
     cardFields,
     filters,
+    hideTerminal,
     refresh,
     applyFilters,
     reorderColumns,
