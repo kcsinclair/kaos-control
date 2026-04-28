@@ -1,7 +1,7 @@
 ---
 title: Artifact Agent Run History
 type: requirement
-status: approved
+status: planning
 lineage: artifact-agent-run-history
 created: "2026-04-28"
 priority: normal
