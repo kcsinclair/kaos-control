@@ -3,9 +3,9 @@ title: Artifact Agent Run History
 type: requirement
 status: approved
 lineage: artifact-agent-run-history
-parent: lifecycle/ideas/artifact-agent-run-history.md
 created: "2026-04-28"
 priority: normal
+parent: lifecycle/ideas/artifact-agent-run-history.md
 labels:
     - agent
     - artefacts
@@ -113,4 +113,9 @@ The modal must trap focus while open and restore focus on close. Run status badg
 ## Open Questions
 
 - Should the run list also include runs that _produced_ the current artifact (i.e. where the artifact appears in `artifacts_produced_json`), or strictly only runs whose `target_path` matches? The idea specifies target-path matching; producing-run matching would require a more expensive query.
+
+> for now target_path
+
 - Should lineage-level matching be supported (show runs for _any_ artifact in the same lineage), or only exact file-path matching? Lineage matching would be more useful when an artifact has been superseded but the run history is still relevant.
+
+> for now target_path
