@@ -832,6 +832,27 @@ func (idx *Index) ListAgentRuns(status string, limit int) ([]*AgentRunRow, error
 	return out, rows.Err()
 }
 
+// ListAgentRunsByTargetPath returns all runs whose target_path matches the given path, newest first.
+func (idx *Index) ListAgentRunsByTargetPath(targetPath string) ([]*AgentRunRow, error) {
+	rows, err := idx.db.Query(
+		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
+		 FROM agent_runs WHERE target_path = ? ORDER BY started_at DESC`, targetPath,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]*AgentRunRow, 0)
+	for rows.Next() {
+		r, err := scanAgentRunRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
 // RecoverRunningRuns marks any runs still in status=running as failed (called on startup).
 func (idx *Index) RecoverRunningRuns() error {
 	_, err := idx.db.Exec(
