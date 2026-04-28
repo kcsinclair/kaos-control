@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Roles & Users API Endpoint"
 type: plan-backend
-status: approved
+status: in-development
 lineage: frontmatter-role-assignment
 parent: lifecycle/requirements/frontmatter-role-assignment-2.md
 ---
