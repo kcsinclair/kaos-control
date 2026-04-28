@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import { usePagination } from '@/composables/usePagination'
+import { useSortableTable } from '@/composables/useSortableTable'
 import TablePagination from '@/components/common/TablePagination.vue'
+import SortHeader from '@/components/SortHeader.vue'
 import type { ParseErrorRow } from '@/types/api'
 
 const route = useRoute()
@@ -15,7 +17,18 @@ const loadError = ref<string | null>(null)
 
 const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination({ queryPrefix: 'pe' })
 
-const paginatedErrors = computed(() => errors.value.slice(sliceStart.value, sliceEnd.value))
+const { sortColumn, sortDirection, sortedRows: sortedErrors, toggleSort } = useSortableTable(
+  errors,
+  {
+    path:    { type: 'string' },
+    message: { type: 'string' },
+  },
+)
+
+const paginatedErrors = computed(() => sortedErrors.value.slice(sliceStart.value, sliceEnd.value))
+
+// Reset to page 1 on sort change
+watch([sortColumn, sortDirection], () => setPage(1))
 
 async function load() {
   loading.value = true
@@ -53,8 +66,8 @@ onMounted(load)
     <table v-else class="errors-table" aria-label="Parse errors">
       <thead>
         <tr>
-          <th scope="col">File</th>
-          <th scope="col">Error</th>
+          <SortHeader column="path"    :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">File</SortHeader>
+          <SortHeader column="message" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">Error</SortHeader>
         </tr>
       </thead>
       <tbody>
