@@ -54,6 +54,12 @@ export const useAgentsStore = defineStore('agents', () => {
   // Per-run progress lines (live stdout), capped at 200 lines each.
   const progressLines = ref(new Map<string, string[]>())
 
+  // Per-artifact run list (for the artifact detail modal).
+  const artifactRuns = ref<AgentRunRow[]>([])
+  const artifactRunsPath = ref<string>('')
+  // Stores the last project used with fetchRunsByTargetPath so WS events can re-fetch.
+  let _lastArtifactProject = ''
+
   const activeRuns = computed(() => runs.value.filter((r) => r.status === 'running'))
 
   async function fetchRuns(project: string, status?: string, limit = 100): Promise<void> {
@@ -83,6 +89,12 @@ export const useAgentsStore = defineStore('agents', () => {
 
   async function killRun(project: string, runId: string): Promise<void> {
     await agentsApi.killRun(project, runId)
+  }
+
+  async function fetchRunsByTargetPath(project: string, targetPath: string): Promise<void> {
+    _lastArtifactProject = project
+    artifactRunsPath.value = targetPath
+    artifactRuns.value = await agentsApi.listRunsByTargetPath(project, targetPath)
   }
 
   function onWsEvent(type: string, payload: Record<string, unknown>): void {
@@ -122,6 +134,25 @@ export const useAgentsStore = defineStore('agents', () => {
         }
       }
     }
+
+    // Refresh per-artifact run list when a relevant event arrives.
+    if (
+      artifactRunsPath.value &&
+      (type === 'agent.started' || type === 'agent.finished' || type === 'agent.failed')
+    ) {
+      const eventTargetPath = (payload.target_path as string) ?? (payload.lineage as string) ?? ''
+      if (eventTargetPath === artifactRunsPath.value) {
+        // Find the project from any existing run (we don't store it; use the path itself
+        // as a cache key and rely on callers supplying project).
+        // We re-use the last project supplied to fetchRunsByTargetPath via a closure variable.
+        void _refreshArtifactRuns()
+      }
+    }
+  }
+
+  async function _refreshArtifactRuns(): Promise<void> {
+    if (!_lastArtifactProject || !artifactRunsPath.value) return
+    artifactRuns.value = await agentsApi.listRunsByTargetPath(_lastArtifactProject, artifactRunsPath.value)
   }
 
   return {
@@ -130,10 +161,13 @@ export const useAgentsStore = defineStore('agents', () => {
     loading,
     progressLines,
     activeRuns,
+    artifactRuns,
+    artifactRunsPath,
     fetchRuns,
     fetchAgents,
     startRun,
     killRun,
+    fetchRunsByTargetPath,
     onWsEvent,
   }
 })
