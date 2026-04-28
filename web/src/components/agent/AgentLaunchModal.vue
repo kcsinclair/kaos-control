@@ -55,11 +55,31 @@ const selectedArtifact = computed(
 async function fetchArtifacts() {
   loading.value = true
   try {
+    const results: ArtifactRow[] = []
+
+    // Fetch the primary input type artifacts (e.g., plan-backend for backend-developer).
     const filter: Record<string, string> = {}
     if (inputStatus.value) filter.status = inputStatus.value
     if (inputType.value) filter.type = inputType.value
     const res = await artifactsApi.listArtifacts(props.project, filter)
-    artifacts.value = res.items ?? []
+    results.push(...(res.items ?? []))
+
+    // For developer agents (plan-* input type), also include defects with
+    // status "approved" that are assigned to this agent's role. QA creates
+    // defects and assigns them to developer roles; those should appear here.
+    if (inputType.value?.startsWith('plan-')) {
+      const agentRoles = new Set(props.agent.roles)
+      const defectRes = await artifactsApi.listArtifacts(props.project, {
+        status: 'approved',
+        type: 'defect',
+      })
+      const assignedDefects = (defectRes.items ?? []).filter((a) =>
+        a.frontmatter.assignees?.some((assignee) => agentRoles.has(assignee.role)),
+      )
+      results.push(...assignedDefects)
+    }
+
+    artifacts.value = results
   } catch (e: unknown) {
     ui.error(e instanceof Error ? e.message : 'Failed to load artifacts')
   } finally {
