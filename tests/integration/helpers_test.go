@@ -43,7 +43,7 @@ type testEnv struct {
 // a testEnv ready for API calls. No frontend FS is provided; SPA routes will return 500.
 func newTestEnv(t *testing.T, seeds []seedArtifact) *testEnv {
 	t.Helper()
-	return newTestEnvFull(t, seeds, nil)
+	return newTestEnvFull(t, seeds, nil, defaultCfgYAML)
 }
 
 // newTestEnvWithFrontend is like newTestEnv but injects a frontend fs.FS so that the
@@ -51,29 +51,12 @@ func newTestEnv(t *testing.T, seeds []seedArtifact) *testEnv {
 // "dist/index.html" file (e.g. a testing/fstest.MapFS stub).
 func newTestEnvWithFrontend(t *testing.T, seeds []seedArtifact, frontendFS fs.FS) *testEnv {
 	t.Helper()
-	return newTestEnvFull(t, seeds, frontendFS)
+	return newTestEnvFull(t, seeds, frontendFS, defaultCfgYAML)
 }
 
-// newTestEnvFull is the shared implementation for newTestEnv and newTestEnvWithFrontend.
-func newTestEnvFull(t *testing.T, seeds []seedArtifact, frontendFS fs.FS) *testEnv {
-	t.Helper()
-
-	root := t.TempDir()
-	dataDir := t.TempDir()
-
-	// Create lifecycle directories.
-	stages := []string{
-		"ideas", "requirements", "backend-plans", "frontend-plans",
-		"test-plans", "tests", "prototypes", "releases", "sprints", "defects",
-	}
-	for _, s := range stages {
-		if err := os.MkdirAll(filepath.Join(root, "lifecycle", s), 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	// Write lifecycle/config.yaml with a minimal project config.
-	cfgYAML := `git:
+// defaultCfgYAML is the lifecycle/config.yaml used by newTestEnv.
+// Tests that need a different project config should use newTestEnvWithCfgYAML.
+const defaultCfgYAML = `git:
   default_branch: main
   branch_template: "ticket/{slug}"
 
@@ -111,6 +94,34 @@ required_plans:
   ticket: [plan-backend, plan-frontend, plan-test]
   epic: []
 `
+
+// newTestEnvWithCfgYAML is like newTestEnv but uses a custom lifecycle/config.yaml.
+// Auth store users (admin@test.local, dev@test.local, qa@test.local) are still created
+// so that env.login() works regardless of the project-level users configuration.
+func newTestEnvWithCfgYAML(t *testing.T, seeds []seedArtifact, cfgYAML string) *testEnv {
+	t.Helper()
+	return newTestEnvFull(t, seeds, nil, cfgYAML)
+}
+
+// newTestEnvFull is the shared implementation for newTestEnv and newTestEnvWithFrontend.
+func newTestEnvFull(t *testing.T, seeds []seedArtifact, frontendFS fs.FS, cfgYAML string) *testEnv {
+	t.Helper()
+
+	root := t.TempDir()
+	dataDir := t.TempDir()
+
+	// Create lifecycle directories.
+	stages := []string{
+		"ideas", "requirements", "backend-plans", "frontend-plans",
+		"test-plans", "tests", "prototypes", "releases", "sprints", "defects",
+	}
+	for _, s := range stages {
+		if err := os.MkdirAll(filepath.Join(root, "lifecycle", s), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Write lifecycle/config.yaml with the provided project config.
 	if err := os.WriteFile(filepath.Join(root, "lifecycle", "config.yaml"), []byte(cfgYAML), 0o644); err != nil {
 		t.Fatal(err)
 	}
