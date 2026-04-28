@@ -1,7 +1,7 @@
 ---
 title: Frontmatter Role-Based Assignment Control
 type: requirement
-status: planning
+status: done
 lineage: frontmatter-role-assignment
 created: "2026-04-28"
 priority: normal
