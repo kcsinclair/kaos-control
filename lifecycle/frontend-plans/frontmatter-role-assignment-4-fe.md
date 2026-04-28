@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Assignee Editing in Frontmatter Panel"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: frontmatter-role-assignment
 parent: lifecycle/requirements/frontmatter-role-assignment-2.md
 ---
