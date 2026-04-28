@@ -7,6 +7,8 @@ import { patchPriority } from '@/api/artifacts'
 import MarkdownPreview from './MarkdownPreview.vue'
 import TransitionDialog from './TransitionDialog.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
+import ArtifactRunHistory from './ArtifactRunHistory.vue'
+import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 import { PRIORITY_COLORS } from '@/components/graph/graphConstants'
 import type { GraphNode, ArtifactDetail, GraphEdge } from '@/types/api'
 
@@ -29,6 +31,7 @@ const showTransition = ref(false)
 const showRunAgent = ref(false)
 const priorityEditing = ref(false)
 const priorityError = ref<string | null>(null)
+const selectedRunId = ref<string | null>(null)
 
 const PRIORITY_OPTIONS = ['high', 'medium', 'normal', 'low']
 
@@ -206,6 +209,13 @@ const STATUS_TEXT: Record<string, string> = {
           <div v-else class="state-msg">No preview available.</div>
         </div>
 
+        <ArtifactRunHistory
+          v-if="node"
+          :project="project"
+          :target-path="node.id"
+          @select-run="selectedRunId = $event"
+        />
+
         <div class="modal-footer" v-if="inbound.length || outbound.length">
           <div v-if="outbound.length" class="edge-group">
             <div class="edge-group-label">Outbound</div>
@@ -242,6 +252,13 @@ const STATUS_TEXT: Record<string, string> = {
       :target-path="node.id"
       @started="onRunStarted"
       @cancel="showRunAgent = false"
+    />
+
+    <RunDetailModal
+      v-if="selectedRunId"
+      :project="project"
+      :run-id="selectedRunId"
+      @close="selectedRunId = null"
     />
   </Teleport>
 </template>
