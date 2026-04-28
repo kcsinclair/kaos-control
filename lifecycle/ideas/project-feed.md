@@ -3,7 +3,7 @@ title: Project Feed
 type: idea
 status: approved
 lineage: project-feed
-priority: normal
+priority: high
 labels:
     - feature
     - frontend
