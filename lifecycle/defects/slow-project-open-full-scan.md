@@ -1,7 +1,7 @@
 ---
 title: Project Open Takes ~44s Due to Unconditional Full File Scan
 type: defect
-status: approved
+status: draft
 lineage: slow-project-open-full-scan
 created: "2026-04-28T09:14:56+10:00"
 priority: normal

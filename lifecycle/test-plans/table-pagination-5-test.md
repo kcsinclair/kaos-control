@@ -1,7 +1,7 @@
 ---
 title: "Table Pagination — Test Plan"
 type: plan-test
-status: in-development
+status: done
 lineage: table-pagination
 parent: lifecycle/requirements/table-pagination-2.md
 ---

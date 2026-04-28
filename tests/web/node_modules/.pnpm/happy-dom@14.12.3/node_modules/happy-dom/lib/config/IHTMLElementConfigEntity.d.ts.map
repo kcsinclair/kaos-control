@@ -1,0 +1,1 @@
+{"version":3,"file":"IHTMLElementConfigEntity.d.ts","sourceRoot":"","sources":["../../src/config/IHTMLElementConfigEntity.ts"],"names":[],"mappings":"AAAA,OAAO,iCAAiC,MAAM,wCAAwC,CAAC;AAEvF,MAAM,CAAC,OAAO,WAAW,wBAAwB;IAChD,SAAS,EAAE,MAAM,CAAC;IAClB,SAAS,EAAE,MAAM,CAAC;IAClB,OAAO,EAAE,MAAM,CAAC;IAChB,YAAY,EAAE,iCAAiC,CAAC;CAChD"}
