@@ -576,6 +576,11 @@ func (m *Manager) ListRuns(status string, limit int) ([]*index.AgentRunRow, erro
 	return m.idx.ListAgentRuns(status, limit)
 }
 
+// ListRunsByTargetPath returns run records for a given target path, newest first.
+func (m *Manager) ListRunsByTargetPath(targetPath string) ([]*index.AgentRunRow, error) {
+	return m.idx.ListAgentRunsByTargetPath(targetPath)
+}
+
 func (m *Manager) getProc(runID string) Process {
 	m.mu.Lock()
 	defer m.mu.Unlock()
