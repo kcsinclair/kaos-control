@@ -736,24 +736,24 @@ func (idx *Index) GetAgentRun(runID string) (*AgentRunRow, error) {
 }
 
 // ListAgentRuns returns runs optionally filtered by status, newest first.
+// When limit <= 0 all matching runs are returned (no server-side truncation).
 func (idx *Index) ListAgentRuns(status string, limit int) ([]*AgentRunRow, error) {
-	if limit <= 0 {
-		limit = 50
-	}
+	const sel = `SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
+			 FROM agent_runs`
 	var rows *sql.Rows
 	var err error
-	if status != "" {
-		rows, err = idx.db.Query(
-			`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
-			 FROM agent_runs WHERE status = ? ORDER BY started_at DESC LIMIT ?`,
-			status, limit,
-		)
+	if limit > 0 {
+		if status != "" {
+			rows, err = idx.db.Query(sel+` WHERE status = ? ORDER BY started_at DESC LIMIT ?`, status, limit)
+		} else {
+			rows, err = idx.db.Query(sel+` ORDER BY started_at DESC LIMIT ?`, limit)
+		}
 	} else {
-		rows, err = idx.db.Query(
-			`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
-			 FROM agent_runs ORDER BY started_at DESC LIMIT ?`,
-			limit,
-		)
+		if status != "" {
+			rows, err = idx.db.Query(sel+` WHERE status = ? ORDER BY started_at DESC`, status)
+		} else {
+			rows, err = idx.db.Query(sel + ` ORDER BY started_at DESC`)
+		}
 	}
 	if err != nil {
 		return nil, err
