@@ -81,11 +81,20 @@ func (s *Server) handleStartAgentRun(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, map[string]any{"run_id": runID})
 }
 
-// handleListAgentRuns lists run records, filtered by optional ?status= query param.
+// handleListAgentRuns lists run records, filtered by optional ?status= and ?target_path= query params.
 func (s *Server) handleListAgentRuns(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
 	if p.Agents == nil {
 		writeJSON(w, http.StatusOK, map[string]any{"runs": []any{}})
+		return
+	}
+	if targetPath := r.URL.Query().Get("target_path"); targetPath != "" {
+		runs, err := p.Agents.ListRunsByTargetPath(targetPath)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"runs": runs})
 		return
 	}
 	status := r.URL.Query().Get("status")
