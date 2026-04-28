@@ -1,7 +1,7 @@
 ---
 title: "Agent Launcher Input Status Filtering — Frontend Plan"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: analyst-agent-sees-draft-ideas
 parent: lifecycle/requirements/analyst-agent-sees-draft-ideas-2.md
 ---
