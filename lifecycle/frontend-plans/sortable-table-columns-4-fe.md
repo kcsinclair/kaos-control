@@ -1,7 +1,7 @@
 ---
 title: "Sortable Table Columns — Frontend Plan"
 type: plan-frontend
-status: draft
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/requirements/sortable-table-columns-2.md
 ---
