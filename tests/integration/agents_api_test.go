@@ -4,8 +4,15 @@ package integration
 
 import (
 	"bytes"
+	"database/sql"
 	"net/http"
+	"path/filepath"
 	"testing"
+	"time"
+
+	_ "modernc.org/sqlite"
+
+	"github.com/kaos-control/kaos-control/internal/index"
 )
 
 // agentPanelCfgYAML is the lifecycle/config.yaml for agent-launcher-panels tests.
@@ -286,5 +293,185 @@ func TestStartAgentRun_BadRequest(t *testing.T) {
 	errObj, _ := data["error"].(map[string]any)
 	if code, _ := errObj["code"].(string); code != "bad_request" {
 		t.Errorf("expected error code %q, got %q", "bad_request", code)
+	}
+}
+
+// ── Milestone 1 — ListAgentRunsByTargetPath API ────────────────────────────
+
+// seedAgentRun inserts a single AgentRunRow directly into the index for test setup.
+func seedAgentRun(t *testing.T, env *testEnv, r *index.AgentRunRow) {
+	t.Helper()
+	if err := env.proj.Idx.InsertAgentRun(r); err != nil {
+		t.Fatalf("seeding agent run %q: %v", r.RunID, err)
+	}
+}
+
+// TestListAgentRunsByTargetPath_ReturnsMatchingRuns seeds 3 runs (2 for one path,
+// 1 for another) and asserts the endpoint returns exactly 2 for the queried path.
+func TestListAgentRunsByTargetPath_ReturnsMatchingRuns(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	const targetPath = "lifecycle/requirements/foo-2.md"
+	const otherPath = "lifecycle/ideas/bar.md"
+
+	base := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	seedAgentRun(t, env, &index.AgentRunRow{
+		RunID: "aaaa0001-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		Role: "analyst", TargetPath: targetPath, StartedAt: base, Status: "done",
+	})
+	seedAgentRun(t, env, &index.AgentRunRow{
+		RunID: "aaaa0002-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		Role: "analyst", TargetPath: targetPath, StartedAt: base.Add(time.Minute), Status: "failed",
+	})
+	seedAgentRun(t, env, &index.AgentRunRow{
+		RunID: "bbbb0001-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		Role: "analyst", TargetPath: otherPath, StartedAt: base, Status: "done",
+	})
+
+	resp := env.doRequest("GET", "/api/p/testproject/agents/runs?target_path="+targetPath, nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	runsRaw, _ := data["runs"].([]any)
+	if len(runsRaw) != 2 {
+		t.Fatalf("expected 2 runs for %q, got %d", targetPath, len(runsRaw))
+	}
+	for _, raw := range runsRaw {
+		run, _ := raw.(map[string]any)
+		if tp, _ := run["target_path"].(string); tp != targetPath {
+			t.Errorf("run has target_path %q, want %q", tp, targetPath)
+		}
+	}
+}
+
+// TestListAgentRunsByTargetPath_EmptyResult asserts that querying a path with no
+// matching runs returns HTTP 200 with {"runs": []}, not an error.
+func TestListAgentRunsByTargetPath_EmptyResult(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/agents/runs?target_path=lifecycle/nonexistent.md", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	runsRaw, ok := data["runs"]
+	if !ok {
+		t.Fatal("response missing 'runs' key")
+	}
+	// The value must be a JSON array (not null).
+	runs, isSlice := runsRaw.([]any)
+	if !isSlice {
+		t.Fatalf("'runs' should be an array, got %T (%v)", runsRaw, runsRaw)
+	}
+	if len(runs) != 0 {
+		t.Errorf("expected 0 runs, got %d", len(runs))
+	}
+}
+
+// TestListAgentRunsByTargetPath_NoParam_ReturnsAll verifies that omitting
+// target_path still returns all runs (existing behaviour preserved).
+func TestListAgentRunsByTargetPath_NoParam_ReturnsAll(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	base := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	paths := []string{
+		"lifecycle/requirements/foo-2.md",
+		"lifecycle/ideas/bar.md",
+		"lifecycle/backend-plans/baz-3-be.md",
+	}
+	for i, path := range paths {
+		seedAgentRun(t, env, &index.AgentRunRow{
+			RunID:     "dddd000" + string(rune('1'+i)) + "-0000-0000-0000-000000000000",
+			AgentName: "analyst-requirements", Role: "analyst",
+			TargetPath: path, StartedAt: base.Add(time.Duration(i) * time.Minute),
+			Status: "done",
+		})
+	}
+
+	resp := env.doRequest("GET", "/api/p/testproject/agents/runs", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	runsRaw, _ := data["runs"].([]any)
+	if len(runsRaw) < 3 {
+		t.Errorf("expected at least 3 runs without filter, got %d", len(runsRaw))
+	}
+}
+
+// TestListAgentRunsByTargetPath_OrderNewestFirst seeds 3 runs for the same target
+// path with distinct started_at timestamps and asserts returned order is DESC.
+func TestListAgentRunsByTargetPath_OrderNewestFirst(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	const targetPath = "lifecycle/requirements/order-2.md"
+	oldest := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	middle := oldest.Add(time.Hour)
+	newest := middle.Add(time.Hour)
+
+	seedAgentRun(t, env, &index.AgentRunRow{
+		RunID: "eeee0001-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		Role: "analyst", TargetPath: targetPath, StartedAt: oldest, Status: "done",
+	})
+	seedAgentRun(t, env, &index.AgentRunRow{
+		RunID: "eeee0002-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		Role: "analyst", TargetPath: targetPath, StartedAt: middle, Status: "done",
+	})
+	seedAgentRun(t, env, &index.AgentRunRow{
+		RunID: "eeee0003-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		Role: "analyst", TargetPath: targetPath, StartedAt: newest, Status: "done",
+	})
+
+	resp := env.doRequest("GET", "/api/p/testproject/agents/runs?target_path="+targetPath, nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	runsRaw, _ := data["runs"].([]any)
+	if len(runsRaw) != 3 {
+		t.Fatalf("expected 3 runs, got %d", len(runsRaw))
+	}
+
+	// Extract started_at values and verify they are in descending order.
+	times := make([]string, len(runsRaw))
+	for i, raw := range runsRaw {
+		run, _ := raw.(map[string]any)
+		times[i], _ = run["started_at"].(string)
+	}
+	for i := 1; i < len(times); i++ {
+		if times[i] >= times[i-1] {
+			t.Errorf("run at index %d (%q) is not older than index %d (%q) — want DESC",
+				i, times[i], i-1, times[i-1])
+		}
+	}
+}
+
+// ── Milestone 2 — SQLite index existence ─────────────────────────────────────
+
+// TestAgentRunsTargetPathIndexExists verifies that idx_agent_runs_target_path
+// is created automatically when the project index is initialised.
+func TestAgentRunsTargetPathIndexExists(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+
+	dbPath := filepath.Join(env.dataDir, "testproject", "index.db")
+	db, err := sql.Open("sqlite", dbPath+"?_journal=WAL&_busy_timeout=5000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var name string
+	err = db.QueryRow(
+		`SELECT name FROM sqlite_master WHERE type='index' AND name='idx_agent_runs_target_path'`,
+	).Scan(&name)
+	if err == sql.ErrNoRows {
+		t.Fatal("idx_agent_runs_target_path index not found in sqlite_master")
+	}
+	if err != nil {
+		t.Fatalf("querying sqlite_master: %v", err)
+	}
+	if name != "idx_agent_runs_target_path" {
+		t.Errorf("unexpected index name: %q", name)
 	}
 }

@@ -79,3 +79,74 @@ COLLECT:
 		t.Errorf("expected index status 'clarifying', got %q", row.Status)
 	}
 }
+
+// ── Milestone 3 — WebSocket events include target_path ────────────────────
+
+// TestAgentWSEvents_IncludeTargetPath verifies that both agent.started and
+// the terminal event (agent.finished or agent.failed) carry a target_path
+// field matching the run's target artifact path.
+func TestAgentWSEvents_IncludeTargetPath(t *testing.T) {
+	setupFakeClaude(t, 0) // exit 0 → agent.finished
+
+	const artifactPath = "lifecycle/ideas/ws-targetpath-test.md"
+	env := newAgentTestEnv(t, []seedArtifact{{
+		relPath: artifactPath,
+		content: makeArtifact("WS TargetPath Test", "idea", "draft", "ws-targetpath-test", "", "Idea body."),
+	}})
+
+	// Register a hub channel before triggering the run so no events are missed.
+	ch := make(chan []byte, 64)
+	env.proj.Hub.Register(ch)
+	defer env.proj.Hub.Unregister(ch)
+
+	env.login("admin@test.local", "admin-pass-123")
+	runID := startAgentRun(t, env, "analyst-requirements", artifactPath)
+
+	type wsEvent struct {
+		Type    string         `json:"type"`
+		Payload map[string]any `json:"payload"`
+	}
+
+	// Collect agent events until we have both a started and a terminal event,
+	// or until the timeout fires.
+	var startedPayload, terminalPayload map[string]any
+	terminalTypes := map[string]bool{"agent.finished": true, "agent.failed": true}
+	timeout := time.After(10 * time.Second)
+COLLECT:
+	for startedPayload == nil || terminalPayload == nil {
+		select {
+		case raw := <-ch:
+			var evt wsEvent
+			if err := json.Unmarshal(raw, &evt); err != nil {
+				continue
+			}
+			switch {
+			case evt.Type == "agent.started":
+				startedPayload = evt.Payload
+			case terminalTypes[evt.Type]:
+				terminalPayload = evt.Payload
+			}
+		case <-timeout:
+			break COLLECT
+		}
+	}
+
+	// agent.started must have target_path.
+	if startedPayload == nil {
+		t.Fatalf("never received agent.started event for run %s", runID)
+	}
+	if tp, _ := startedPayload["target_path"].(string); tp != artifactPath {
+		t.Errorf("agent.started target_path: got %q, want %q", tp, artifactPath)
+	}
+	if rid, _ := startedPayload["run_id"].(string); rid != runID {
+		t.Errorf("agent.started run_id: got %q, want %q", rid, runID)
+	}
+
+	// Terminal event (agent.finished or agent.failed) must also carry target_path.
+	if terminalPayload == nil {
+		t.Fatalf("never received agent.finished or agent.failed for run %s", runID)
+	}
+	if tp, _ := terminalPayload["target_path"].(string); tp != artifactPath {
+		t.Errorf("terminal event target_path: got %q, want %q", tp, artifactPath)
+	}
+}
