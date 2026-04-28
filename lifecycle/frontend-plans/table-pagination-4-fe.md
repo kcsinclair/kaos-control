@@ -1,7 +1,7 @@
 ---
 title: "Table Pagination — Frontend Plan"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: table-pagination
 parent: lifecycle/requirements/table-pagination-2.md
 ---
