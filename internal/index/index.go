@@ -149,36 +149,98 @@ func (idx *Index) Close() error {
 	return idx.db.Close()
 }
 
+// loadStoredMtimes returns a map of project-relative path → stored mtime (Unix seconds)
+// for all rows currently in the artifacts table. Used by Scan to skip unchanged files.
+func (idx *Index) loadStoredMtimes() (map[string]int64, error) {
+	rows, err := idx.db.Query(`SELECT path, mtime FROM artifacts`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	m := make(map[string]int64)
+	for rows.Next() {
+		var path string
+		var mtime int64
+		if err := rows.Scan(&path, &mtime); err != nil {
+			return nil, err
+		}
+		m[path] = mtime
+	}
+	return m, rows.Err()
+}
+
 // Scan walks the lifecycle/ directories and upserts every .md file it finds.
+// Files whose mtime (truncated to seconds) matches the value stored in the index
+// are skipped, avoiding redundant disk reads and markdown parses on startup.
 func (idx *Index) Scan(stages []config.Stage) error {
 	lifecycleRoot := filepath.Join(idx.projectRoot, "lifecycle")
-	count := 0
+	indexed := 0
+	skipped := 0
 	start := time.Now()
+
+	// Resolve the project root through symlinks once (handles macOS firmlinks).
+	resolvedRoot, err := filepath.EvalSymlinks(idx.projectRoot)
+	if err != nil {
+		resolvedRoot = filepath.Clean(idx.projectRoot)
+	}
+
+	// Bulk-load stored mtimes so we can skip unchanged files without per-file DB queries.
+	storedMtimes, err := idx.loadStoredMtimes()
+	if err != nil {
+		slog.Warn("could not load stored mtimes; will re-index all files", "err", err)
+		storedMtimes = map[string]int64{}
+	}
 
 	for _, stage := range stages {
 		dir := filepath.Join(lifecycleRoot, stage.Dir)
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			continue
 		}
-		err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
 				return err
 			}
 			if config.ShouldIgnore(path, idx.ignore) {
 				return nil
 			}
+			// d.Info() reuses the DirEntry's cached stat — no extra syscall.
+			info, statErr := d.Info()
+			if statErr != nil {
+				slog.Warn("stat error during scan", "path", path, "err", statErr)
+				return nil
+			}
+			// Compute the project-relative path using the already-resolved root
+			// so firmlink paths (e.g. /Users vs /System/Volumes/Data/Users) match
+			// what IndexFile stores.
+			resolvedFile, ferr := filepath.EvalSymlinks(path)
+			if ferr != nil {
+				resolvedFile = filepath.Clean(path)
+			}
+			relPath, rerr := filepath.Rel(resolvedRoot, resolvedFile)
+			if rerr == nil {
+				relPath = filepath.ToSlash(relPath)
+				if stored, ok := storedMtimes[relPath]; ok && stored == info.ModTime().Unix() {
+					skipped++
+					return nil
+				}
+			}
 			if err := idx.IndexFile(path); err != nil {
 				slog.Warn("index file error", "path", path, "err", err)
 			}
-			count++
+			indexed++
 			return nil
 		})
-		if err != nil {
-			return fmt.Errorf("walking stage %s: %w", stage.Name, err)
+		if walkErr != nil {
+			return fmt.Errorf("walking stage %s: %w", stage.Name, walkErr)
 		}
 	}
 
-	slog.Info("scan complete", "files", count, "duration", time.Since(start).Round(time.Millisecond).String())
+	slog.Info("scan complete",
+		"indexed", indexed,
+		"skipped", skipped,
+		"files", indexed+skipped,
+		"duration", time.Since(start).Round(time.Millisecond).String(),
+	)
 	return nil
 }
 
