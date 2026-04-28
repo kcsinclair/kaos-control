@@ -1,7 +1,7 @@
 ---
 title: Agent Launcher Panel Shows No Eligible Artifacts for Backend-Developer Despite Approved Artifacts Existing
 type: defect
-status: in-development
+status: done
 lineage: lineage-agent-launcher-no-backend-artifacts
 created: "2026-04-28T08:47:48+10:00"
 priority: normal

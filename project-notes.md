@@ -116,7 +116,7 @@ Later an agent could be automatically started when an artefact is approved.
 
 Right now, we need an claude-code-cli agent for analyst, lead-developer, backend-developer, frontend-developer, testing-developer, qa
 
-Later a backend-developer might right the code, and commit to GIT, which creates a pull-request, which is reviewed by the lead-developer and approved.
+Later a backend-developer might write the code, and commit to GIT, which creates a pull-request, which is reviewed by the lead-developer and approved.
 
 What changes do we need to the existing schema are needed.
 
@@ -131,6 +131,10 @@ allow different base directories for the different agents to work in.  allows ob
 # benefit of all this is
 
 Work where you want when you want, keep things moving, with Visual Studio Code and Obsidian, while your robot waits for work.
+
+# action buttons
+
+When viewing an artefact, standard quick action buttons, e.g. approve this, etc.
 
 # 3. Interactivity — the harder one
 
@@ -155,3 +159,31 @@ Real solutions are bigger pieces of work:
 3. MCP driver — already named in spec §7.2 as roadmap. The agent is itself an MCP server; tighter back-and-forth.
 
 For the immediate term, the lowest-effort improvement is to lean harder on the "agent writes questions into the artifact, human answers, agent re-runs" loop. Update the prompt templates so every agent has an explicit "If unsure, write to Open Questions and stop" instruction.
+
+
+# Marketing
+
+When flow is on its own you want to capture your ideas and get them down onto the pixels onto the screen so that you can work on them later at the flow idea is just flow. You just want to get them into the system so that you can work on them later later you’ve got time when you’re sitting somewhere that you can work through with an agent to flush them out and do whatever you need to do but to get the idea down is the critical thing so get the idea captured and then start working on it when you have time sitting on a train sitting on a bus whatever you’re doing you can just work it through the code that soul is a problem.
+
+You want to be able to dump everything when you can and then work through it while you are on the train.
+
+You may not want it to be a factory, endlessly coding and using up tokens.  You may want to spread out the work and develop progressively and affordably.
+
+## Flexible framework
+
+This is a fixable framework that lets you work with a developer bots but it could also be humans. It runs on your computer and can use local or cloud LLM to run agents.  The concept could also apply to other workflows, like writing, marketing, etc. It could also be marketing instead of being developer could be designed. Could be anything that you need to get done. You can use this framework and the workflow to get things done.
+
+Its about getting things done, its about idea capture and innovating rapidly.
+
+You don't have a dev team now, use bots, as you grow, add more people and keep using the same workflow.
+
+
+
+# Blog prompt
+
+I would like to write a blog about the work on kaos-control, I have a couple of files, project-notes.md and project-planning.md along with all the idea files and all the great work you have done.  Can you please think about a good angle for a blog article, I have been thinking its about my long history with software development and that I have software still in production after 20 years.  I have learnt how to get ideas from people and get them into running code.  This process encapsulates that and has the benefit of using humans or robots to get the work done.  I would like to introduce kaos-control in the blog, but maybe name to be finalised, and I will be including some screenshots.  The earlier idea I had before "Innovation Maker - Making Releases from Ideas.md" was how to organise my ideas about the kaos-core software and figure out which features to do first and which to wait on, and how to get coding agents working better for me.  That idea evolved into kaos-control.
+
+
+## additional thoughts.
+
+* having ideas isn't hard, staying on track, avoiding perfection and rabbit holes and making things work is.

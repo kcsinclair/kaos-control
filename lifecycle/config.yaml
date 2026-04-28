@@ -29,6 +29,26 @@ users:
   - email: keith@sinclair.org.au
     roles: [product-owner, analyst, reviewer, approver]
 
+kanban:
+  columns:
+    - name: Backlog
+      statuses: [draft]
+    - name: Approved-Ready
+      statuses: [approved]
+    - name: In-Progress
+      statuses: [in-progress, clarifying, planning, in-development, in-qa]
+    - name: Blocked
+      statuses: [blocked]
+    - name: Done
+      statuses: [done, abandoned, rejected]
+  uncategorised: true
+  card_fields:
+    - title
+    - type
+    - priority
+    - labels
+    - age            # virtual field
+
 agents:
   # ── Think phase ─────────────────────────────────────────────────────────────
   - name: analyst-requirements

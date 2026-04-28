@@ -1,7 +1,7 @@
 ---
 title: GET /api/p/:project/config/kanban missing requireAuth middleware — returns 200 unauthenticated
 type: defect
-status: in-development
+status: done
 lineage: kanban-view
 parent: lifecycle/tests/kanban-view-7-test.md
 labels:
