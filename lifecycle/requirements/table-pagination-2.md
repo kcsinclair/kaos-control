@@ -1,7 +1,7 @@
 ---
 title: Table Pagination Controls
 type: requirement
-status: draft
+status: planning
 lineage: table-pagination
 parent: lifecycle/ideas/table-pagination.md
 ---
