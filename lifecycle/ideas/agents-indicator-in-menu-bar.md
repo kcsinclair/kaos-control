@@ -1,7 +1,7 @@
 ---
 title: Move Running Agents Indicator to Menu Bar
 type: idea
-status: draft
+status: approved
 lineage: agents-indicator-in-menu-bar
 priority: normal
 labels:
