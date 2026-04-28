@@ -3,9 +3,9 @@ title: Sortable Table Columns
 type: requirement
 status: draft
 lineage: sortable-table-columns
-parent: ideas/sortable-table-columns.md
 created: "2026-04-27"
 priority: normal
+parent: ideas/sortable-table-columns.md
 labels:
     - enhancement
     - frontend
@@ -95,10 +95,12 @@ All data tables in the Innovation Maker UI currently display rows in a fixed ser
 
 1. Should enum sort orders for `status` and `priority` be defined in the frontend only, or derived from the project's `config.yaml` workflow definition?
 
-> you decide
+> sortable based on client side data, just go with the text for now.
 
 2. Are there columns in any table that should explicitly be **non-sortable** (e.g. an actions column)?
 
 > yes, look for the obvious ones which do not have data in them.
 
 3. When server-side pagination is in use (artifact list fetches pages from the API), client-side sorting can only sort the current page's data — should we defer sorting on paginated API tables until a `sort` query parameter is added to the backend, or fetch all rows client-side first?
+
+> We will use client side pagination initially, the number of items is relatively small.
