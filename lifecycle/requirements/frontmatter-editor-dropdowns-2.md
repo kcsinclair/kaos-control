@@ -1,7 +1,7 @@
 ---
 title: 'Frontmatter Editor: Priority Dropdown and Status Dropdown'
 type: requirement
-status: draft
+status: done
 lineage: frontmatter-editor-dropdowns
 parent: ideas/frontmatter-editor-dropdowns.md
 priority: normal
