@@ -1,7 +1,7 @@
 ---
 title: 'Generate endpoint returns 500 instead of 400 for short input when agent is not configured'
 type: defect
-status: in-development
+status: done
 lineage: prompt-to-idea
 parent: lifecycle/tests/prompt-to-idea-14.md
 labels:
