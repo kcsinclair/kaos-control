@@ -159,6 +159,9 @@ func (s *Server) buildRouter() chi.Router {
 			r.With(requireAuth).Get("/config", s.handleGetConfig)
 			r.With(requireAuth).Put("/config", s.handleUpdateConfig)
 			r.With(requireAuth).Get("/config/kanban", s.handleGetKanbanConfig)
+
+			// Roles and users
+			r.With(requireAuth).Get("/roles", s.handleGetRoles)
 		})
 	})
 
