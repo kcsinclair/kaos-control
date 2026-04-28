@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-04-28** — QA run for `frontmatter-role-assignment`: 7/8 tests PASS; 1 defect raised — `PUT /artifacts` accepts assignee with empty `who` field (returns 200 instead of 400). Defect: [`lifecycle/defects/frontmatter-role-assignment-7-defect.md`](../lifecycle/defects/frontmatter-role-assignment-7-defect.md), assigned to backend-developer.
+
 - **2026-04-24** — Initial commit: original idea captured.
 - **2026-04-24** — Requirements flow completed: Q&A rounds, detailed spec distilled, lifecycle directory structure established, `CLAUDE.md` created with commit conventions, first implementation-plan artifact (`plans/create-claude-md.md`) saved.
 - **2026-04-24** — Three development plans generated from the detailed requirements: backend (`…-2-be.md`), frontend (`…-3-fe.md`), test (`…-4-test.md`). Each phased into 6 milestones with cross-plan coordination noted.
