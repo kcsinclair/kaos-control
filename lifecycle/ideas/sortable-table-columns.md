@@ -1,7 +1,7 @@
 ---
 title: Sortable Table Columns
 type: idea
-status: clarifying
+status: done
 lineage: sortable-table-columns
 created: "2026-04-27T16:59:33+10:00"
 priority: normal
