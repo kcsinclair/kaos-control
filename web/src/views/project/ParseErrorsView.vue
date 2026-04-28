@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
+import { usePagination } from '@/composables/usePagination'
+import TablePagination from '@/components/common/TablePagination.vue'
 import type { ParseErrorRow } from '@/types/api'
 
 const route = useRoute()
@@ -10,6 +12,10 @@ const project = route.params.project as string
 const errors = ref<ParseErrorRow[]>([])
 const loading = ref(false)
 const loadError = ref<string | null>(null)
+
+const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination({ queryPrefix: 'pe' })
+
+const paginatedErrors = computed(() => errors.value.slice(sliceStart.value, sliceEnd.value))
 
 async function load() {
   loading.value = true
@@ -52,12 +58,21 @@ onMounted(load)
         </tr>
       </thead>
       <tbody>
-        <tr v-for="err in errors" :key="err.path" class="error-row">
+        <tr v-for="err in paginatedErrors" :key="err.path" class="error-row">
           <td class="cell-path">{{ err.path }}</td>
           <td class="cell-msg">{{ err.message }}</td>
         </tr>
       </tbody>
     </table>
+
+    <TablePagination
+      v-if="!loading && errors.length > 0"
+      :total-items="errors.length"
+      :current-page="currentPage"
+      :page-size="pageSize"
+      @update:current-page="setPage"
+      @update:page-size="setPageSize"
+    />
   </div>
 </template>
 
