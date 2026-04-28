@@ -4,8 +4,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { useArtifactsStore } from '@/stores/artifacts'
 import { useWebSocket } from '@/composables/useWebSocket'
 import { usePagination } from '@/composables/usePagination'
+import { useSortableTable } from '@/composables/useSortableTable'
 import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
+import SortHeader from '@/components/SortHeader.vue'
 import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
@@ -30,7 +32,19 @@ const visibleItems = computed(() =>
     : store.items.filter(r => !(TERMINAL_STATUSES as readonly string[]).includes(r.status))
 )
 
-const paginatedItems = computed(() => visibleItems.value.slice(sliceStart.value, sliceEnd.value))
+const { sortColumn, sortDirection, sortedRows, toggleSort, resetSort } = useSortableTable(
+  visibleItems,
+  {
+    title:   { type: 'string' },
+    stage:   { type: 'string' },
+    status:  { type: 'string' },
+    type:    { type: 'string' },
+    created: { type: 'date' },
+    mtime:   { type: 'date' },
+  },
+)
+
+const paginatedItems = computed(() => sortedRows.value.slice(sliceStart.value, sliceEnd.value))
 
 function openBrainDump(type: 'idea' | 'defect' = 'idea') {
   brainDumpType.value = type
@@ -61,6 +75,7 @@ const selectedType = ref(store.filter.type ?? '')
 const selectedPriority = ref(store.filter.priority ?? '')
 
 function applyFilters() {
+  resetSort()
   setPage(1)
   store.fetchList(project, {
     stage: selectedStage.value || undefined,
@@ -83,7 +98,14 @@ function resetFilters() {
 }
 
 // Reset to page 1 when showCompleted toggle changes
-watch(showCompleted, () => setPage(1))
+watch(showCompleted, () => { resetSort(); setPage(1) })
+
+// Reset to page 1 after sort change
+watch([sortColumn, sortDirection], () => setPage(1))
+
+function onToggleSort(col: string) {
+  toggleSort(col)
+}
 
 function openArtifact(path: string) {
   router.push(`/p/${project}/artifacts/${path}`)
@@ -165,12 +187,12 @@ onMounted(async () => {
       <table v-else class="artifact-table">
         <thead>
           <tr>
-            <th>Path</th>
-            <th>Stage</th>
-            <th>Status</th>
-            <th>Type</th>
-            <th>Created</th>
-            <th>Modified</th>
+            <SortHeader column="title" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Path</SortHeader>
+            <SortHeader column="stage" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Stage</SortHeader>
+            <SortHeader column="status" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Status</SortHeader>
+            <SortHeader column="type" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Type</SortHeader>
+            <SortHeader column="created" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Created</SortHeader>
+            <SortHeader column="mtime" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Modified</SortHeader>
           </tr>
         </thead>
         <tbody>
