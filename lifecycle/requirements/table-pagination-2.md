@@ -66,5 +66,13 @@ All tables in the application render their full dataset in a single scroll. As t
 ## Open Questions
 
 1. Should the default page size be configurable per-table, or is a single global default (25) sufficient?
+
+> Lets go with 25 as a default for now, if we need per table we can add it later.
+ 
 2. Are there plans to add server-side pagination to any API endpoints in the near future? If so, the component interface should account for async page fetches now.
+
+> Lets stick with client side pagination, the tables are not currently very large.
+
 3. Should the URL reflect the current page (e.g. `?page=3&size=25`) to support shareable deep links, or is session-only state acceptable?
+
+> shareable deep links are good.
