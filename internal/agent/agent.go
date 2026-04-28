@@ -430,7 +430,7 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 
 	m.hub.Broadcast(hub.Event{
 		Type:    "agent.started",
-		Payload: map[string]any{"run_id": runID, "agent": agentName, "lineage": lineage},
+		Payload: map[string]any{"run_id": runID, "agent": agentName, "lineage": lineage, "target_path": targetPath},
 	})
 
 	// Supervisor goroutine.
@@ -545,11 +545,12 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	m.hub.Broadcast(hub.Event{
 		Type: eventType,
 		Payload: map[string]any{
-			"run_id":    run.RunID,
-			"agent":     run.AgentName,
-			"lineage":   lineage,
-			"status":    status,
-			"artifacts": produced,
+			"run_id":      run.RunID,
+			"agent":       run.AgentName,
+			"lineage":     lineage,
+			"status":      status,
+			"artifacts":   produced,
+			"target_path": row.TargetPath,
 		},
 	})
 }
