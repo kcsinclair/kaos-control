@@ -1,13 +1,16 @@
 ---
 title: Agent Launcher Must Filter Input Artifacts by Approved Status
 type: requirement
-status: draft
+status: approved
 lineage: analyst-agent-sees-draft-ideas
 parent: defects/analyst-agent-sees-draft-ideas.md
 labels:
     - agent
     - workflow
     - frontend
+assignees:
+    - role: analyst
+      who: agent
 ---
 
 # Agent Launcher Must Filter Input Artifacts by Approved Status
