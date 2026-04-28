@@ -180,3 +180,6 @@ export interface WsEvent {
   type: WsEventType
   payload: Record<string, unknown>
 }
+
+export const TERMINAL_STATUSES = ['done', 'rejected', 'abandoned'] as const
+export type TerminalStatus = typeof TERMINAL_STATUSES[number]
