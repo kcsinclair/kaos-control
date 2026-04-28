@@ -9,7 +9,7 @@ function filterParams(f: ArtifactFilter): string {
   if (f.lineage)  p.set('lineage', f.lineage)
   if (f.type)     p.set('type', f.type)
   if (f.priority) p.set('priority', f.priority)
-  if (f.limit)    p.set('limit', String(f.limit))
+  if (f.limit !== undefined) p.set('limit', String(f.limit))
   if (f.offset)   p.set('offset', String(f.offset))
   const s = p.toString()
   return s ? '?' + s : ''

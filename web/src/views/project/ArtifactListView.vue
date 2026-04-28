@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArtifactsStore } from '@/stores/artifacts'
 import { useWebSocket } from '@/composables/useWebSocket'
+import { usePagination } from '@/composables/usePagination'
 import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
+import TablePagination from '@/components/common/TablePagination.vue'
 import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
@@ -20,11 +22,15 @@ const brainDumpType = ref<'idea' | 'defect'>('idea')
 const newIdeaButtonEl = ref<HTMLButtonElement | null>(null)
 const showCompleted = ref(false)
 
+const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination()
+
 const visibleItems = computed(() =>
   showCompleted.value
     ? store.items
     : store.items.filter(r => !(TERMINAL_STATUSES as readonly string[]).includes(r.status))
 )
+
+const paginatedItems = computed(() => visibleItems.value.slice(sliceStart.value, sliceEnd.value))
 
 function openBrainDump(type: 'idea' | 'defect' = 'idea') {
   brainDumpType.value = type
@@ -55,13 +61,15 @@ const selectedType = ref(store.filter.type ?? '')
 const selectedPriority = ref(store.filter.priority ?? '')
 
 function applyFilters() {
+  setPage(1)
   store.fetchList(project, {
     stage: selectedStage.value || undefined,
     status: selectedStatus.value || undefined,
     label: selectedLabel.value || undefined,
     type: selectedType.value || undefined,
     priority: selectedPriority.value || undefined,
-    offset: 0,
+    limit: 0,
+    offset: undefined,
   })
 }
 
@@ -74,19 +82,8 @@ function resetFilters() {
   applyFilters()
 }
 
-function prevPage() {
-  if (store.filter.offset! <= 0) return
-  store.fetchList(project, { offset: Math.max(0, (store.filter.offset ?? 0) - (store.filter.limit ?? 50)) })
-}
-
-function nextPage() {
-  const limit = store.filter.limit ?? 50
-  if ((store.filter.offset ?? 0) + limit >= store.total) return
-  store.fetchList(project, { offset: (store.filter.offset ?? 0) + limit })
-}
-
-const currentPage = () => Math.floor((store.filter.offset ?? 0) / (store.filter.limit ?? 50)) + 1
-const totalPages = () => Math.ceil(store.total / (store.filter.limit ?? 50))
+// Reset to page 1 when showCompleted toggle changes
+watch(showCompleted, () => setPage(1))
 
 function openArtifact(path: string) {
   router.push(`/p/${project}/artifacts/${path}`)
@@ -95,12 +92,12 @@ function openArtifact(path: string) {
 // Re-fetch when an artifact is indexed via WebSocket
 useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project)
+  store.fetchList(project, { limit: 0, offset: undefined })
 })
 
 onMounted(async () => {
   await Promise.all([
-    store.fetchList(project),
+    store.fetchList(project, { limit: 0, offset: undefined }),
     store.fetchLabels(project),
     store.fetchPriorities(project),
   ])
@@ -178,7 +175,7 @@ onMounted(async () => {
         </thead>
         <tbody>
           <tr
-            v-for="row in visibleItems"
+            v-for="row in paginatedItems"
             :key="row.path"
             class="artifact-row"
             @click="openArtifact(row.path)"
@@ -203,11 +200,14 @@ onMounted(async () => {
       </table>
     </div>
 
-    <div class="pagination" v-if="store.total > (store.filter.limit ?? 50)">
-      <button class="btn-ghost" :disabled="(store.filter.offset ?? 0) <= 0" @click="prevPage">← Prev</button>
-      <span class="page-info">Page {{ currentPage() }} of {{ totalPages() }}</span>
-      <button class="btn-ghost" :disabled="currentPage() >= totalPages()" @click="nextPage">Next →</button>
-    </div>
+    <TablePagination
+      v-if="!store.loading"
+      :total-items="visibleItems.length"
+      :current-page="currentPage"
+      :page-size="pageSize"
+      @update:current-page="setPage"
+      @update:page-size="setPageSize"
+    />
   </div>
 </template>
 
@@ -397,16 +397,4 @@ onMounted(async () => {
 .badge[data-status="planning"]     { background: var(--badge-planning-bg);      color: var(--badge-planning-text); }
 .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
 .cell-date { white-space: nowrap; }
-.pagination {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-6);
-  border-top: 1px solid var(--color-border);
-  justify-content: center;
-}
-.page-info {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
 </style>
