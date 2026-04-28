@@ -1,7 +1,7 @@
 ---
 title: Artifact Agent Run History
 type: requirement
-status: draft
+status: approved
 lineage: artifact-agent-run-history
 parent: lifecycle/ideas/artifact-agent-run-history.md
 created: "2026-04-28"
