@@ -1,7 +1,7 @@
 ---
 title: Hide Done Items by Default Across All Screens
 type: idea
-status: draft
+status: clarifying
 lineage: hide-done-items-by-default
 created: "2026-04-28T10:20:46+10:00"
 priority: normal
