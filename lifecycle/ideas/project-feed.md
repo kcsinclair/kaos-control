@@ -1,7 +1,7 @@
 ---
 title: Project Feed
 type: idea
-status: draft
+status: approved
 lineage: project-feed
 priority: normal
 labels:
