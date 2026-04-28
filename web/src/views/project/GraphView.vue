@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineAsyncComponent } from 'vue'
+import { ref, defineAsyncComponent, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGraphData } from '@/composables/useGraphData'
 import ForceGraph3D from '@/components/graph/ForceGraph3D.vue'
@@ -38,6 +38,12 @@ function closeModal() {
   selectedNode.value = null
   selectedLabelName.value = null
 }
+
+// Milestone 5: reset hideTerminal to true on every mount so navigating
+// away and returning always starts with terminal nodes hidden.
+onMounted(() => {
+  store.hideTerminal = true
+})
 </script>
 
 <template>
@@ -52,9 +58,11 @@ function closeModal() {
       :node-count="store.augmentedNodes.length"
       :total-count="store.rawNodes.length"
       :show-label-nodes="store.showLabelNodes"
+      :hide-terminal="store.hideTerminal"
       @toggle="store.toggleFilterValue"
       @reset="store.setFilter({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })"
       @toggle-label-nodes="store.toggleShowLabelNodes"
+      @toggle-hide-terminal="store.toggleHideTerminal"
     />
 
     <div class="graph-main">

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as graphApi from '@/api/graph'
 import type { GraphNode, GraphEdge, GraphFilter } from '@/types/api'
+import { TERMINAL_STATUSES } from '@/types/api'
 
 export const useGraphStore = defineStore('graph', () => {
   const rawNodes = ref<GraphNode[]>([])
@@ -12,6 +13,10 @@ export const useGraphStore = defineStore('graph', () => {
   const filter = ref<GraphFilter>({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })
 
   const showLabelNodes = ref(false)
+
+  // When true, nodes with terminal statuses are excluded (unless the user has
+  // explicitly filtered by status, in which case we honour their selection).
+  const hideTerminal = ref(true)
 
   const uniqueTypes = computed(() => [...new Set(rawNodes.value.map((n) => n.type))].sort())
   const uniqueStatuses = computed(() => [...new Set(rawNodes.value.map((n) => n.status))].sort())
@@ -25,7 +30,9 @@ export const useGraphStore = defineStore('graph', () => {
 
   const filteredNodes = computed(() => {
     const f = filter.value
+    const noStatusFilter = !(f.statuses?.length)
     return rawNodes.value.filter((n) => {
+      if (hideTerminal.value && noStatusFilter && (TERMINAL_STATUSES as readonly string[]).includes(n.status)) return false
       if (f.types?.length && !f.types.includes(n.type)) return false
       if (f.statuses?.length && !f.statuses.includes(n.status)) return false
       if (f.lineages?.length && !f.lineages.includes(n.lineage)) return false
@@ -104,6 +111,10 @@ export const useGraphStore = defineStore('graph', () => {
     showLabelNodes.value = !showLabelNodes.value
   }
 
+  function toggleHideTerminal(): void {
+    hideTerminal.value = !hideTerminal.value
+  }
+
   function updateNodePriority(nodeId: string, priority: string | null): void {
     const idx = rawNodes.value.findIndex((n) => n.id === nodeId)
     if (idx === -1) return
@@ -122,6 +133,7 @@ export const useGraphStore = defineStore('graph', () => {
     error,
     filter,
     showLabelNodes,
+    hideTerminal,
     uniqueTypes,
     uniqueStatuses,
     uniqueLineages,
@@ -137,6 +149,7 @@ export const useGraphStore = defineStore('graph', () => {
     setFilter,
     toggleFilterValue,
     toggleShowLabelNodes,
+    toggleHideTerminal,
     updateNodePriority,
   }
 })
