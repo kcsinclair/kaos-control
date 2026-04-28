@@ -1,10 +1,10 @@
 ---
 title: Include Created-By Authorship in Artifact Frontmatter
 type: idea
-status: draft
+status: approved
 lineage: frontmatter-created-by
 created: "2026-04-28T08:52:45+10:00"
-priority: normal
+priority: medium
 labels:
     - feature
     - artefacts
