@@ -2,7 +2,7 @@
 title: "Assisted ideas or defects"
 priority: normal
 type: idea
-status: draft
+status: done
 lineage: prompt-to-idea
 labels:
     - agent
