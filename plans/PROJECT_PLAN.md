@@ -10,6 +10,7 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-04-28** — Backend plan `analyst-agent-sees-draft-ideas-3-be.md` verified: all three milestones confirmed no-code (existing API fully supports `status=approved` and `type=` combined filtering; `frontmatter.assignees` present in list responses; no agent-run input validation added per plan). `go build ./...` + `go vet ./...` pass with zero code changes.
 - **2026-04-28** — QA run for `frontmatter-role-assignment`: 7/8 tests PASS; 1 defect raised — `PUT /artifacts` accepts assignee with empty `who` field (returns 200 instead of 400). Defect: [`lifecycle/defects/frontmatter-role-assignment-7-defect.md`](../lifecycle/defects/frontmatter-role-assignment-7-defect.md), assigned to backend-developer.
 
 - **2026-04-24** — Initial commit: original idea captured.
