@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArtifactsStore } from '@/stores/artifacts'
 import { useWebSocket } from '@/composables/useWebSocket'
@@ -7,6 +7,7 @@ import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
 import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
+import { TERMINAL_STATUSES } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
 
 const route = useRoute()
@@ -17,6 +18,13 @@ const ui = useUiStore()
 const showBrainDump = ref(false)
 const brainDumpType = ref<'idea' | 'defect'>('idea')
 const newIdeaButtonEl = ref<HTMLButtonElement | null>(null)
+const showCompleted = ref(false)
+
+const visibleItems = computed(() =>
+  showCompleted.value
+    ? store.items
+    : store.items.filter(r => !(TERMINAL_STATUSES as readonly string[]).includes(r.status))
+)
 
 function openBrainDump(type: 'idea' | 'defect' = 'idea') {
   brainDumpType.value = type
@@ -103,7 +111,15 @@ onMounted(async () => {
   <div class="list-view">
     <div class="list-header">
       <h2 class="list-title">Artefacts</h2>
-      <span class="list-count" v-if="!store.loading">{{ store.total }} total</span>
+      <span class="list-count" v-if="!store.loading">{{ visibleItems.length }} total</span>
+      <label class="toggle-label" v-if="!store.loading">
+        <input
+          type="checkbox"
+          class="toggle-input"
+          v-model="showCompleted"
+        />
+        <span class="toggle-text">Show completed</span>
+      </label>
       <button class="btn-new-defect" @click="openBrainDump('defect')">
         <Bug :size="15" />
         New Defect
@@ -148,7 +164,7 @@ onMounted(async () => {
 
     <div class="table-wrap">
       <div v-if="store.loading" class="state-msg">Loading…</div>
-      <div v-else-if="store.items.length === 0" class="state-msg">No artifacts found.</div>
+      <div v-else-if="visibleItems.length === 0" class="state-msg">No artifacts found.</div>
       <table v-else class="artifact-table">
         <thead>
           <tr>
@@ -162,7 +178,7 @@ onMounted(async () => {
         </thead>
         <tbody>
           <tr
-            v-for="row in store.items"
+            v-for="row in visibleItems"
             :key="row.path"
             class="artifact-row"
             @click="openArtifact(row.path)"
@@ -216,6 +232,27 @@ onMounted(async () => {
   color: var(--color-text);
 }
 .list-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-input {
+  accent-color: var(--color-accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.toggle-input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.toggle-text {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
