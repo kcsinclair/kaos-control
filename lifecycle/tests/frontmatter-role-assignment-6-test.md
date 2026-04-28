@@ -1,7 +1,7 @@
 ---
 title: "Tests: Frontmatter Role-Based Assignment"
 type: test
-status: draft
+status: approved
 lineage: frontmatter-role-assignment
 parent: lifecycle/test-plans/frontmatter-role-assignment-5-test.md
 ---
