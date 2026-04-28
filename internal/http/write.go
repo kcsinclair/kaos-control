@@ -180,10 +180,6 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		}
 		var invalid []string
 		for _, a := range req.Frontmatter.Assignees {
-			if a.Who == "" {
-				writeJSON(w, http.StatusBadRequest, apiError("bad_request", "assignee who must not be empty"))
-				return
-			}
 			if !validRoles[a.Role] {
 				invalid = append(invalid, a.Role)
 			}
