@@ -172,6 +172,30 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate assignee roles against the project's configured role list.
+	if len(req.Frontmatter.Assignees) > 0 {
+		validRoles := make(map[string]bool, len(p.Cfg.Roles))
+		for _, r := range p.Cfg.Roles {
+			validRoles[r] = true
+		}
+		var invalid []string
+		for _, a := range req.Frontmatter.Assignees {
+			if !validRoles[a.Role] {
+				invalid = append(invalid, a.Role)
+			}
+		}
+		if len(invalid) > 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"error": map[string]any{
+					"code":          "invalid_role",
+					"message":       "assignees contain unknown role(s): " + strings.Join(invalid, ", "),
+					"invalid_roles": invalid,
+				},
+			})
+			return
+		}
+	}
+
 	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
