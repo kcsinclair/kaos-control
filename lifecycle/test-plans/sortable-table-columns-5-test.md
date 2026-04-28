@@ -1,7 +1,7 @@
 ---
 title: "Sortable Table Columns — Test Plan"
 type: plan-test
-status: in-development
+status: done
 lineage: sortable-table-columns
 parent: lifecycle/requirements/sortable-table-columns-2.md
 ---
