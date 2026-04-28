@@ -1,7 +1,7 @@
 ---
 title: Requirements Analyst Agent Surfaces Draft Ideas in Agent Launcher Panel
 type: defect
-status: draft
+status: approved
 lineage: analyst-agent-sees-draft-ideas
 created: "2026-04-28T16:39:28+10:00"
 priority: normal
