@@ -1,7 +1,7 @@
 ---
 title: Single-Submit Idea Capture (Brain Dump Mode)
 type: requirement
-status: draft
+status: done
 lineage: prompt-to-idea
 parent: lifecycle/ideas/idea-capture-vs-interactive.md
 labels:
