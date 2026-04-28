@@ -1,7 +1,7 @@
 ---
 title: Artifact Agent Run History
 type: idea
-status: approved
+status: clarifying
 lineage: artifact-agent-run-history
 created: "2026-04-28T09:49:31+10:00"
 priority: normal
