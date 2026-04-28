@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { ArtifactFrontmatter } from '@/types/api'
+import { computed, onMounted } from 'vue'
+import type { ArtifactFrontmatter, ArtifactAssignee } from '@/types/api'
+import { useProjectConfigStore } from '@/stores/projectConfig'
+import AssigneeEditor from './AssigneeEditor.vue'
+
+const props = defineProps<{ modelValue: ArtifactFrontmatter; project: string }>()
+const emit = defineEmits<{ 'update:modelValue': [v: ArtifactFrontmatter] }>()
 
 const STATUS_VOCAB = [
   'abandoned',
@@ -15,8 +20,11 @@ const STATUS_VOCAB = [
   'rejected',
 ] as const
 
-const props = defineProps<{ modelValue: ArtifactFrontmatter }>()
-const emit = defineEmits<{ 'update:modelValue': [v: ArtifactFrontmatter] }>()
+const projectConfigStore = useProjectConfigStore()
+
+onMounted(() => {
+  projectConfigStore.fetchRoles(props.project)
+})
 
 function update<K extends keyof ArtifactFrontmatter>(field: K, value: ArtifactFrontmatter[K]) {
   emit('update:modelValue', { ...props.modelValue, [field]: value })
@@ -31,6 +39,25 @@ function formatList(arr: string[] | undefined): string {
 }
 
 const statusIsUnknown = computed(() => !STATUS_VOCAB.includes(props.modelValue.status as typeof STATUS_VOCAB[number]))
+
+function updateAssignees(assignees: ArtifactAssignee[]) {
+  update('assignees', assignees.length > 0 ? assignees : undefined)
+}
+
+// Validation: returns index of first invalid assignee row, or -1 if all valid.
+function firstInvalidAssigneeIndex(): number {
+  const assignees = props.modelValue.assignees ?? []
+  return assignees.findIndex((a) => !a.role.trim() || !a.who.trim())
+}
+
+// Expose validation so the parent editor view can call it before saving.
+defineExpose({ firstInvalidAssigneeIndex })
+
+const assigneeError = computed(() => {
+  const idx = firstInvalidAssigneeIndex()
+  if (idx === -1) return null
+  return `Assignee row ${idx + 1}: both role and who are required.`
+})
 </script>
 
 <template>
@@ -142,6 +169,17 @@ const statusIsUnknown = computed(() => !STATUS_VOCAB.includes(props.modelValue.s
         />
       </label>
 
+      <div class="fm-field">
+        <span class="fm-label">Assignees</span>
+        <AssigneeEditor
+          :model-value="modelValue.assignees ?? []"
+          :roles="projectConfigStore.roles"
+          :who-options="projectConfigStore.availableWhoOptions"
+          @update:model-value="updateAssignees"
+        />
+        <span v-if="assigneeError" class="fm-error">{{ assigneeError }}</span>
+      </div>
+
     </div>
   </aside>
 </template>
@@ -214,4 +252,9 @@ const statusIsUnknown = computed(() => !STATUS_VOCAB.includes(props.modelValue.s
   color: var(--color-text);
 }
 .mono { font-family: monospace; font-size: 12px; }
+.fm-error {
+  font-size: 11px;
+  color: #dc2626;
+  margin-top: 2px;
+}
 </style>

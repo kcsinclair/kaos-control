@@ -97,6 +97,13 @@ async function cancelEdit() {
 // ── save ─────────────────────────────────────────────────────────────────────
 async function save() {
   if (!artifact.value || !editFrontmatter.value) return
+  const invalidAssignee = (editFrontmatter.value.assignees ?? []).findIndex(
+    (a) => !a.role.trim() || !a.who.trim(),
+  )
+  if (invalidAssignee !== -1) {
+    ui.error(`Assignee row ${invalidAssignee + 1}: both role and who are required.`)
+    return
+  }
   saving.value = true
   try {
     markSaved()
@@ -216,6 +223,7 @@ onMounted(load)
       <FrontmatterEditor
         v-if="editFrontmatter"
         v-model="editFrontmatter"
+        :project="project"
       />
     </div>
   </div>
