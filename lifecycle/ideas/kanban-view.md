@@ -2,7 +2,7 @@
 title: "Kanban View"
 priority: normal
 type: idea
-status: clarifying
+status: done
 lineage: kanban-view
 labels:
     - artefacts
