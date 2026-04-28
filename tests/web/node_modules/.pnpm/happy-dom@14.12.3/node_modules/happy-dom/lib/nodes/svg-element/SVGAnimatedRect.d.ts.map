@@ -1,0 +1,1 @@
+{"version":3,"file":"SVGAnimatedRect.d.ts","sourceRoot":"","sources":["../../../src/nodes/svg-element/SVGAnimatedRect.ts"],"names":[],"mappings":"AAAA,OAAO,OAAO,MAAM,cAAc,CAAC;AAEnC;;;;GAIG;AACH,MAAM,CAAC,OAAO,OAAO,eAAe;IAC5B,OAAO,EAAE,OAAO,CAAiB;IACjC,OAAO,EAAE,OAAO,CAAiB;CACxC"}

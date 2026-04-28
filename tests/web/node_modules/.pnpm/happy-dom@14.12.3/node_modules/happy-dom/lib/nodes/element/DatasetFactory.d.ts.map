@@ -1,0 +1,1 @@
+{"version":3,"file":"DatasetFactory.d.ts","sourceRoot":"","sources":["../../../src/nodes/element/DatasetFactory.ts"],"names":[],"mappings":"AAAA,OAAO,OAAO,MAAM,cAAc,CAAC;AAInC,OAAO,QAAQ,MAAM,eAAe,CAAC;AAErC;;;;;GAKG;AACH,MAAM,CAAC,OAAO,OAAO,cAAc;IAClC;;OAEG;WACW,aAAa,CAAC,OAAO,EAAE,OAAO,GAAG,QAAQ;CAqEvD"}

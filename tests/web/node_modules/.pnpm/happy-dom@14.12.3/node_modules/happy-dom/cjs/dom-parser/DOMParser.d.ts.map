@@ -1,0 +1,1 @@
+{"version":3,"file":"DOMParser.d.ts","sourceRoot":"","sources":["../../src/dom-parser/DOMParser.ts"],"names":[],"mappings":"AAAA,OAAO,QAAQ,MAAM,+BAA+B,CAAC;AAKrD,OAAO,aAAa,MAAM,4BAA4B,CAAC;AAGvD;;;;;GAKG;AACH,MAAM,CAAC,OAAO,OAAO,SAAS;;IAG7B;;;;OAIG;gBACS,MAAM,EAAE,aAAa;IAIjC;;;;;;OAMG;IACI,eAAe,CAAC,MAAM,EAAE,MAAM,EAAE,QAAQ,EAAE,MAAM,GAAG,QAAQ;CAuFlE"}

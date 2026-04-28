@@ -1,0 +1,179 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+var _a, _b, _c, _d, _e, _f;
+Object.defineProperty(exports, "__esModule", { value: true });
+const PropertySymbol = __importStar(require("../PropertySymbol.cjs"));
+const AsyncTaskManager_js_1 = __importDefault(require("../async-task-manager/AsyncTaskManager.cjs"));
+const BrowserWindow_js_1 = __importDefault(require("../window/BrowserWindow.cjs"));
+const BrowserFrameURL_js_1 = __importDefault(require("./utilities/BrowserFrameURL.cjs"));
+const BrowserFrameScriptEvaluator_js_1 = __importDefault(require("./utilities/BrowserFrameScriptEvaluator.cjs"));
+const BrowserFrameNavigator_js_1 = __importDefault(require("./utilities/BrowserFrameNavigator.cjs"));
+const BrowserFrameExceptionObserver_js_1 = __importDefault(require("./utilities/BrowserFrameExceptionObserver.cjs"));
+const BrowserErrorCaptureEnum_js_1 = __importDefault(require("./enums/BrowserErrorCaptureEnum.cjs"));
+/**
+ * Browser frame.
+ */
+class BrowserFrame {
+    /**
+     * Constructor.
+     *
+     * @param page Page.
+     */
+    constructor(page) {
+        this.childFrames = [];
+        this.parentFrame = null;
+        this[_a] = new AsyncTaskManager_js_1.default();
+        this[_b] = null;
+        this[_c] = { navigation: [] };
+        this[_d] = null;
+        this[_e] = null;
+        this[_f] = false;
+        this.page = page;
+        this.window = new BrowserWindow_js_1.default(this);
+        // Attach process level error capturing.
+        if (page.context.browser.settings.errorCapture === BrowserErrorCaptureEnum_js_1.default.processLevel) {
+            this[PropertySymbol.exceptionObserver] = new BrowserFrameExceptionObserver_js_1.default();
+            this[PropertySymbol.exceptionObserver].observe(this);
+        }
+    }
+    /**
+     * Returns the content.
+     *
+     * @returns Content.
+     */
+    get content() {
+        return this.window.document.documentElement.outerHTML;
+    }
+    /**
+     * Sets the content.
+     *
+     * @param content Content.
+     */
+    set content(content) {
+        this.window.document[PropertySymbol.isFirstWrite] = true;
+        this.window.document[PropertySymbol.isFirstWriteAfterOpen] = false;
+        this.window.document.open();
+        this.window.document.write(content);
+    }
+    /**
+     * Returns the URL.
+     *
+     * @returns URL.
+     */
+    get url() {
+        return this.window.location.href;
+    }
+    /**
+     * Sets the content.
+     *
+     * @param url URL.
+     */
+    set url(url) {
+        this.window.location[PropertySymbol.setURL](this, BrowserFrameURL_js_1.default.getRelativeURL(this, url).href);
+    }
+    /**
+     * Returns document.
+     *
+     * @returns Document.
+     */
+    get document() {
+        return this.window?.document ?? null;
+    }
+    /**
+     * Returns a promise that is resolved when all resources has been loaded, fetch has completed, and all async tasks such as timers are complete.
+     */
+    async waitUntilComplete() {
+        await Promise.all([
+            this[PropertySymbol.asyncTaskManager].waitUntilComplete(),
+            ...this.childFrames.map((frame) => frame.waitUntilComplete())
+        ]);
+    }
+    /**
+     * Returns a promise that is resolved when the frame has navigated and the response HTML has been written to the document.
+     */
+    waitForNavigation() {
+        return new Promise((resolve) => this[PropertySymbol.listeners].navigation.push(resolve));
+    }
+    /**
+     * Aborts all ongoing operations.
+     */
+    abort() {
+        if (!this.childFrames.length) {
+            return this[PropertySymbol.asyncTaskManager].abort();
+        }
+        return new Promise((resolve, reject) => {
+            // Using Promise instead of async/await to prevent microtask
+            Promise.all(this.childFrames
+                .map((frame) => frame.abort())
+                .concat([this[PropertySymbol.asyncTaskManager].abort()]))
+                .then(() => resolve())
+                .catch(reject);
+        });
+    }
+    /**
+     * Evaluates code or a VM Script in the page's context.
+     *
+     * @param script Script.
+     * @returns Result.
+     */
+    evaluate(script) {
+        return BrowserFrameScriptEvaluator_js_1.default.evaluate(this, script);
+    }
+    /**
+     * Go to a page.
+     *
+     * @param url URL.
+     * @param [options] Options.
+     * @returns Response.
+     */
+    goto(url, options) {
+        return BrowserFrameNavigator_js_1.default.navigate({
+            windowClass: BrowserWindow_js_1.default,
+            frame: this,
+            url: url,
+            goToOptions: options
+        });
+    }
+    /**
+     * Reloads the current frame.
+     *
+     * @param [options] Options.
+     * @returns Response.
+     */
+    reload(options) {
+        return BrowserFrameNavigator_js_1.default.navigate({
+            windowClass: BrowserWindow_js_1.default,
+            frame: this,
+            url: this.url,
+            goToOptions: options
+        });
+    }
+}
+_a = PropertySymbol.asyncTaskManager, _b = PropertySymbol.exceptionObserver, _c = PropertySymbol.listeners, _d = PropertySymbol.openerFrame, _e = PropertySymbol.openerWindow, _f = PropertySymbol.popup;
+exports.default = BrowserFrame;
+//# sourceMappingURL=BrowserFrame.cjs.map
