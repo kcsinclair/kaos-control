@@ -1,7 +1,7 @@
 ---
 title: Lifecycle indexer does not ignore README.md files; no configurable ignore patterns in YAML config
 type: defect
-status: in-development
+status: done
 lineage: ignore-readme-files-in-lifecycle-dir
 priority: normal
 labels:
