@@ -1,7 +1,7 @@
 ---
 title: "Hide Done Items by Default — Test Plan"
 type: plan-test
-status: draft
+status: approved
 lineage: hide-done-items-by-default
 parent: lifecycle/requirements/hide-done-items-by-default-2.md
 ---
