@@ -34,6 +34,15 @@ export function killRun(project: string, runId: string) {
   )
 }
 
+export async function listRunsByTargetPath(project: string, targetPath: string): Promise<AgentRunRow[]> {
+  const q = new URLSearchParams()
+  q.set('target_path', targetPath)
+  const data = await api.get<{ runs: AgentRunRow[] }>(
+    `/p/${encodeURIComponent(project)}/agents/runs?${q.toString()}`,
+  )
+  return data.runs ?? []
+}
+
 export async function getRunLog(project: string, runId: string): Promise<string> {
   const res = await fetch(
     `/api/p/${encodeURIComponent(project)}/agents/runs/${encodeURIComponent(runId)}/log`,
