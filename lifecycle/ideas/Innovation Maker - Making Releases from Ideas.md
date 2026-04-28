@@ -1,16 +1,14 @@
 ---
 title: Innovation Maker — Making Releases from Ideas
-priority: normal
 type: idea
 status: done
 lineage: innovation-maker
+priority: normal
 labels:
     - artefacts
     - og
     - feature
 ---
-
-# Innovation Maker - Making Releases from Ideas
 
 File was high-level-requirements.md
 
