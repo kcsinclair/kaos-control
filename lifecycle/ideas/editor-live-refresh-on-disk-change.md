@@ -1,10 +1,10 @@
 ---
 title: Auto-Refresh Editor on Disk Change
 type: idea
-status: draft
+status: approved
 lineage: editor-live-refresh-on-disk-change
 created: "2026-04-27T16:24:28+10:00"
-priority: normal
+priority: high
 labels:
     - frontend
     - enhancement
