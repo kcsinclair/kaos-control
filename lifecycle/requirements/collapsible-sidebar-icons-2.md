@@ -1,10 +1,10 @@
 ---
-title: "Collapsible Sidebar with Icon-Only Mode"
+title: Collapsible Sidebar with Icon-Only Mode
 type: requirement
 status: draft
 lineage: collapsible-sidebar-icons
-parent: lifecycle/ideas/collapsible-sidebar-icons.md
 created: "2026-04-28"
+parent: lifecycle/ideas/collapsible-sidebar-icons.md
 labels:
     - frontend
     - feature
@@ -80,5 +80,13 @@ The left navigation sidebar in the project workspace is fixed at 220 px and alwa
 ## Open Questions
 
 1. Should the collapsed sidebar support a hover-to-temporarily-expand interaction (i.e., hovering the collapsed strip reveals the full sidebar as an overlay without toggling the persisted state)?
+
+> Yes.
+
 2. Should group children (List, Board under "Artefacts") be shown as a nested flyout in collapsed mode, or should they appear as individual icons in the strip?
+
+> Individual icons, only show clickable things.
+
 3. Is there a preferred icon for the project header area in collapsed mode (e.g., first-letter avatar), or should it simply be hidden?
+
+> Use the Favicon scaled to fit. web/dist/assets/favicon-32x32.png or 16x16
