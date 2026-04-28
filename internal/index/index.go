@@ -178,7 +178,7 @@ func (idx *Index) Scan(stages []config.Stage) error {
 		}
 	}
 
-	slog.Info("scan complete", "files", count, "duration", time.Since(start))
+	slog.Info("scan complete", "files", count, "duration", time.Since(start).Round(time.Millisecond).String())
 	return nil
 }
 
