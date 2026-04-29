@@ -178,6 +178,31 @@ func PatchFrontmatterField(raw []byte, key, value string) ([]byte, bool) {
 	return []byte("---" + replaced + s[fmEnd:]), true
 }
 
+// HasOpenQuestions reports whether the markdown body contains a non-empty
+// "## Open Questions" section. The heading text is matched case-sensitively.
+// The section is considered non-empty when at least one non-whitespace line
+// appears after the heading before the next "## " heading or end-of-file.
+func HasOpenQuestions(body string) bool {
+	lines := strings.Split(body, "\n")
+	inSection := false
+	for _, line := range lines {
+		if inSection {
+			if strings.HasPrefix(line, "## ") {
+				// Reached the next H2 heading — section ended with no content.
+				return false
+			}
+			if strings.TrimSpace(line) != "" {
+				return true
+			}
+		} else {
+			if line == "## Open Questions" {
+				inSection = true
+			}
+		}
+	}
+	return false
+}
+
 // RenderHTML renders markdown source to HTML using goldmark.
 func RenderHTML(src string) string {
 	var buf bytes.Buffer
