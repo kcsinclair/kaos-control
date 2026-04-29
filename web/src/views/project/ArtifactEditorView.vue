@@ -66,6 +66,21 @@ const editBody = ref('')
 const editFrontmatter = ref<ArtifactFrontmatter | null>(null)
 
 // ── lock ────────────────────────────────────────────────────────────────────
+const hasOpenQuestions = computed(() =>
+  !!artifact.value && /^## Open Questions/m.test(artifact.value.body),
+)
+
+function scrollToOpenQuestions() {
+  const preview = document.querySelector('.editor-content .md-preview')
+  if (!preview) return
+  for (const h of preview.querySelectorAll('h2')) {
+    if (h.textContent?.trim() === 'Open Questions') {
+      h.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+  }
+}
+
 const { acquired: lockAcquired, conflictLock, acquire: acquireLock, release: releaseLock } = useLock(
   project.value,
   computed(() => artifact.value?.lineage ?? '').value,
@@ -233,6 +248,10 @@ onMounted(() => {
     <div v-else-if="!editing" class="editor-body">
       <div class="editor-content">
         <h1 class="artifact-title">{{ artifact.title || artifact.slug }}</h1>
+        <div v-if="artifact.status === 'blocked' && hasOpenQuestions" class="open-questions-banner">
+          This artifact is blocked pending answers to open questions below.
+          <a href="#open-questions" class="oq-link" @click.prevent="scrollToOpenQuestions">Jump to questions ↓</a>
+        </div>
         <MarkdownPreview :html="artifact.body_html" :source="artifact.body" :project="project" />
       </div>
       <FrontmatterPanel :artifact="artifact" :project="project" :target-path="artifactPath" :edges="graphStore.rawEdges" />
@@ -382,6 +401,30 @@ onMounted(() => {
   font-weight: 700;
   margin: 0 0 var(--space-6);
   color: var(--color-text);
+}
+
+/* Blocked-on-questions banner */
+.open-questions-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+@media (prefers-color-scheme: dark) {
+  .open-questions-banner { background: #422006; color: #fcd34d; border-color: #92400e; }
+}
+.oq-link {
+  color: inherit;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 /* Edit mode: split pane */
