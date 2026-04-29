@@ -1,7 +1,7 @@
 ---
 title: Auto-Refresh Editor Content on External Disk Change
 type: requirement
-status: approved
+status: planning
 lineage: editor-live-refresh-on-disk-change
 parent: lifecycle/ideas/editor-live-refresh-on-disk-change.md
 created: "2026-04-29"
