@@ -10,6 +10,9 @@ labels:
     - frontend
     - artefacts
     - vue
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Artifact Editor Details Panel Missing Inbound/Outbound Relationship Info
