@@ -1224,6 +1224,117 @@ func buildWhere(f Filter) (clause string, args []any) {
 	return " WHERE " + strings.Join(conds, " AND "), args
 }
 
+// ----- event feed -----
+
+// EventRow is one row from the events table.
+type EventRow struct {
+	ID           int64   `json:"id"`
+	EventType    string  `json:"event_type"`
+	Timestamp    int64   `json:"timestamp"`
+	Actor        string  `json:"actor"`
+	ArtifactPath *string `json:"artifact_path,omitempty"`
+	RunID        *string `json:"run_id,omitempty"`
+	Summary      string  `json:"summary"`
+	PayloadJSON  *string `json:"payload_json,omitempty"`
+}
+
+// InsertEvent inserts e into the events table and sets e.ID from LastInsertId.
+func (idx *Index) InsertEvent(e *EventRow) error {
+	res, err := idx.db.Exec(
+		`INSERT INTO events (event_type, timestamp, actor, artifact_path, run_id, summary, payload_json)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		e.EventType, e.Timestamp, e.Actor, e.ArtifactPath, e.RunID, e.Summary, e.PayloadJSON,
+	)
+	if err != nil {
+		return err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	e.ID = id
+	return nil
+}
+
+// ListEvents returns events in reverse-chronological order.
+// beforeID > 0 applies cursor pagination (WHERE id < beforeID).
+// types non-empty filters to the given event types.
+// limit is capped at 200.
+func (idx *Index) ListEvents(limit int, beforeID int64, types []string) ([]*EventRow, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	var conds []string
+	var args []any
+
+	if beforeID > 0 {
+		conds = append(conds, "id < ?")
+		args = append(args, beforeID)
+	}
+	if len(types) > 0 {
+		placeholders := make([]string, len(types))
+		for i, t := range types {
+			placeholders[i] = "?"
+			args = append(args, t)
+		}
+		conds = append(conds, "event_type IN ("+strings.Join(placeholders, ",")+")")
+	}
+
+	q := `SELECT id, event_type, timestamp, actor, artifact_path, run_id, summary, payload_json FROM events`
+	if len(conds) > 0 {
+		q += " WHERE " + strings.Join(conds, " AND ")
+	}
+	q += " ORDER BY id DESC LIMIT ?"
+	args = append(args, limit)
+
+	rows, err := idx.db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []*EventRow
+	for rows.Next() {
+		var e EventRow
+		if err := rows.Scan(&e.ID, &e.EventType, &e.Timestamp, &e.Actor, &e.ArtifactPath, &e.RunID, &e.Summary, &e.PayloadJSON); err != nil {
+			return nil, err
+		}
+		out = append(out, &e)
+	}
+	return out, rows.Err()
+}
+
+// PruneEvents deletes events older than maxAgeDays days OR exceeding maxCount total
+// (keeping the newest), whichever removes more rows. Both deletions run in a transaction.
+func (idx *Index) PruneEvents(maxAgeDays int, maxCount int) error {
+	cutoff := time.Now().AddDate(0, 0, -maxAgeDays).Unix()
+
+	tx, err := idx.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Delete rows older than cutoff.
+	if _, err := tx.Exec(`DELETE FROM events WHERE timestamp < ?`, cutoff); err != nil {
+		return err
+	}
+
+	// Trim to maxCount most recent rows.
+	if _, err := tx.Exec(
+		`DELETE FROM events WHERE id NOT IN (SELECT id FROM events ORDER BY id DESC LIMIT ?)`,
+		maxCount,
+	); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func scanRows(rows *sql.Rows) ([]*ArtifactRow, int, error) {
 	var out []*ArtifactRow
 	for rows.Next() {
