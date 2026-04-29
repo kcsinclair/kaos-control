@@ -13,6 +13,9 @@ const feedStore = useFeedStore()
 
 const project = computed(() => route.params.project as string)
 
+// Track IDs of events prepended via WebSocket so FeedEntry can animate them
+const newEventIds = ref(new Set<number>())
+
 // Infinite scroll sentinel
 const sentinelRef = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
@@ -63,10 +66,14 @@ onUnmounted(() => {
   observer?.disconnect()
 })
 
-// Real-time feed events
+// Real-time feed events — prepend and briefly mark as new for animation
 useWebSocket(project.value, 'feed.new', (e: WsEvent) => {
   const event = e.payload as import('@/types/api').FeedEvent
   feedStore.prepend(event)
+  newEventIds.value.add(event.id)
+  setTimeout(() => {
+    newEventIds.value.delete(event.id)
+  }, 1200)
 })
 </script>
 
@@ -94,7 +101,11 @@ useWebSocket(project.value, 'feed.new', (e: WsEvent) => {
         tabindex="0"
         role="listitem"
       >
-        <FeedEntry :event="event" :project="project" />
+        <FeedEntry
+          :event="event"
+          :project="project"
+          :is-new="newEventIds.has(event.id)"
+        />
       </li>
     </ol>
 

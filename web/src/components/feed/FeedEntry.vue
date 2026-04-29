@@ -17,6 +17,7 @@ import type { Component } from 'vue'
 const props = defineProps<{
   event: FeedEvent
   project: string
+  isNew?: boolean
 }>()
 
 const router = useRouter()
@@ -59,8 +60,13 @@ const navigationTarget = computed(() => {
 </script>
 
 <template>
-  <router-link :to="navigationTarget" class="feed-entry-link">
-    <span class="feed-icon" :aria-label="event.event_type">
+  <router-link
+    :to="navigationTarget"
+    class="feed-entry-link"
+    :class="{ 'feed-entry--new': isNew }"
+    :aria-label="`${event.event_type}: ${event.summary}, ${relativeTime}, by ${event.actor}`"
+  >
+    <span class="feed-icon" aria-hidden="true">
       <component :is="iconForType(event.event_type)" :size="16" />
     </span>
     <time class="feed-time" :datetime="isoTimestamp">{{ relativeTime }}</time>
