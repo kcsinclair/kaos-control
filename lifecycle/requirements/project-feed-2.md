@@ -1,7 +1,7 @@
 ---
 title: Project Feed
 type: requirement
-status: approved
+status: planning
 lineage: project-feed
 parent: lifecycle/ideas/project-feed.md
 ---
