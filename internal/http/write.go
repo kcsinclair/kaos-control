@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/hub"
+	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/sandbox"
 	"gopkg.in/yaml.v3"
 )
@@ -142,6 +143,23 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 		Type:    "artifact.indexed",
 		Payload: map[string]string{"path": relPath, "action": "created"},
 	})
+
+	// Record feed event.
+	{
+		actor := ""
+		if u := userFromCtx(r.Context()); u != nil {
+			actor = u.Email
+		}
+		artifactPath := relPath
+		summary := fmt.Sprintf("Created %s %q", req.Frontmatter.Type, req.Frontmatter.Title)
+		_ = p.Idx.InsertEvent(&index.EventRow{
+			EventType:    "artifact_created",
+			Timestamp:    time.Now().Unix(),
+			Actor:        actor,
+			ArtifactPath: &artifactPath,
+			Summary:      summary,
+		})
+	}
 
 	row, _ := p.Idx.Get(relPath)
 	writeJSON(w, http.StatusCreated, map[string]any{"artifact": row, "path": relPath})

@@ -433,6 +433,19 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		Payload: map[string]any{"run_id": runID, "agent": agentName, "lineage": lineage, "target_path": targetPath},
 	})
 
+	// Record feed event.
+	{
+		runIDCopy := runID
+		summary := fmt.Sprintf("Agent %s started on %s", agentName, targetPath)
+		_ = m.idx.InsertEvent(&index.EventRow{
+			EventType: "agent_started",
+			Timestamp: time.Now().Unix(),
+			Actor:     agentName,
+			RunID:     &runIDCopy,
+			Summary:   summary,
+		})
+	}
+
 	// Supervisor goroutine.
 	go m.supervise(runCtx, cancel, run, runRow, lineage)
 
@@ -519,6 +532,17 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 					Type:    "git.committed",
 					Payload: map[string]any{"run_id": run.RunID, "files": files},
 				})
+
+				// Record feed event.
+				runIDCopy := run.RunID
+				summary := fmt.Sprintf("Agent %s committed %d file(s)", run.AgentName, len(files))
+				_ = m.idx.InsertEvent(&index.EventRow{
+					EventType: "git_committed",
+					Timestamp: time.Now().Unix(),
+					Actor:     run.AgentName,
+					RunID:     &runIDCopy,
+					Summary:   summary,
+				})
 			}
 		}
 	}
@@ -539,8 +563,10 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	_ = m.idx.UpdateAgentRun(row)
 
 	eventType := "agent.finished"
+	feedEventType := "agent_finished"
 	if status == "failed" || status == "killed" || status == "killed-timeout" {
 		eventType = "agent.failed"
+		feedEventType = "agent_failed"
 	}
 	m.hub.Broadcast(hub.Event{
 		Type: eventType,
@@ -553,6 +579,19 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 			"target_path": row.TargetPath,
 		},
 	})
+
+	// Record feed event.
+	{
+		runIDCopy := run.RunID
+		summary := fmt.Sprintf("Agent %s finished with status %s; produced %d artifact(s)", run.AgentName, status, len(produced))
+		_ = m.idx.InsertEvent(&index.EventRow{
+			EventType: feedEventType,
+			Timestamp: time.Now().Unix(),
+			Actor:     run.AgentName,
+			RunID:     &runIDCopy,
+			Summary:   summary,
+		})
+	}
 }
 
 // Kill sends SIGTERM to the running agent with the given run_id.

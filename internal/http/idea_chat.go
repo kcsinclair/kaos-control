@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/ideachat"
+	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/project"
 	"github.com/kaos-control/kaos-control/internal/sandbox"
 )
@@ -82,7 +84,11 @@ func (s *Server) handleIdeaConverse(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusConflict, apiError("no_proposal", "no proposal to accept in this session"))
 			return
 		}
-		relPath, err := writeIdeaArtifact(p, sess)
+		actor := ""
+		if u := userFromCtx(r.Context()); u != nil {
+			actor = u.Email
+		}
+		relPath, err := writeIdeaArtifact(p, sess, actor)
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, apiError("write_error", err.Error()))
 			return
@@ -138,7 +144,7 @@ func (s *Server) handleIdeaConverse(w http.ResponseWriter, r *http.Request) {
 // writeIdeaArtifact writes the proposed idea artifact to disk, updates the
 // index, and broadcasts the artifact.indexed event.
 // It returns the project-relative path of the written file.
-func writeIdeaArtifact(p *project.Project, sess *ideachat.Session) (string, error) {
+func writeIdeaArtifact(p *project.Project, sess *ideachat.Session, actor string) (string, error) {
 	slug := sess.ProposedSlug
 	if slug == "" {
 		return "", fmt.Errorf("session has no proposed slug")
@@ -180,6 +186,17 @@ func writeIdeaArtifact(p *project.Project, sess *ideachat.Session) (string, erro
 	p.Hub.Broadcast(hub.Event{
 		Type:    "artifact.indexed",
 		Payload: map[string]string{"path": relPath, "action": "created"},
+	})
+
+	// Record feed event.
+	artifactPath := relPath
+	summary := fmt.Sprintf("Created idea %q", fm.Title)
+	_ = p.Idx.InsertEvent(&index.EventRow{
+		EventType:    "artifact_created",
+		Timestamp:    time.Now().Unix(),
+		Actor:        actor,
+		ArtifactPath: &artifactPath,
+		Summary:      summary,
 	})
 
 	return relPath, nil

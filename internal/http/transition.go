@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/artifact"
@@ -133,6 +134,17 @@ func (s *Server) handleTransitionArtifact(w http.ResponseWriter, r *http.Request
 			"path": relPath, "action": "transitioned",
 			"from": row.Status, "to": req.To,
 		},
+	})
+
+	// Record feed event.
+	artifactPath := relPath
+	summary := fmt.Sprintf("%q transitioned from %s → %s", row.FM.Title, row.Status, req.To)
+	_ = p.Idx.InsertEvent(&index.EventRow{
+		EventType:    "status_transition",
+		Timestamp:    time.Now().Unix(),
+		Actor:        user.Email,
+		ArtifactPath: &artifactPath,
+		Summary:      summary,
 	})
 
 	result, _ := p.Idx.Get(relPath)

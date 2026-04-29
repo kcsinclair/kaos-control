@@ -141,10 +141,27 @@ func (w *Watcher) handleChange(absPath string) {
 		return
 	}
 
+	// Check if the path is new before indexing (for defect_raised detection).
+	existingRow, _ := w.idx.Get(relPath)
+	isNew := existingRow == nil
+
 	if err := w.idx.IndexFile(absPath); err != nil {
 		// File was deleted or unreadable — remove from index.
 		if removeErr := w.idx.DeletePath(relPath); removeErr != nil {
 			slog.Warn("watcher: delete from index failed", "path", relPath, "err", removeErr)
+		}
+	} else if isNew {
+		// Detect newly created defect artifacts.
+		if row, err := w.idx.Get(relPath); err == nil && row != nil && row.Type == "defect" {
+			artifactPath := relPath
+			summary := "Defect raised: " + row.FM.Title
+			_ = w.idx.InsertEvent(&index.EventRow{
+				EventType:    "defect_raised",
+				Timestamp:    time.Now().Unix(),
+				Actor:        "system",
+				ArtifactPath: &artifactPath,
+				Summary:      summary,
+			})
 		}
 	}
 
