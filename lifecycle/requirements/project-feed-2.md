@@ -1,7 +1,7 @@
 ---
 title: Project Feed
 type: requirement
-status: draft
+status: approved
 lineage: project-feed
 parent: lifecycle/ideas/project-feed.md
 ---
@@ -123,5 +123,13 @@ Each feed entry must contain:
 ## Open Questions
 
 - Should the feed show lock/unlock events (`lock.acquired`, `lock.released`)? They are noisy but may be useful for debugging contention. Recommend: omit for v1, add later if requested.
+
+> Omit for v1.
+
 - Should `file.changed` events (raw FS changes) be included, or only the higher-level `artifact.indexed` that follows? Recommend: only `artifact.indexed` to avoid duplicate/noisy entries.
+
+> Agreed, artifact.indexed works.
+
 - Is 30 days the right default retention, or should it be event-count-based (e.g. keep last 5 000 events)?
+
+> Lets go with a combination and add them to the config file, the condition would work, delete if older 30 days or more than 5000 events.
