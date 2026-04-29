@@ -1,7 +1,7 @@
 ---
 title: "Frontend: Show blocked-on-questions state and auto-assign feedback"
 type: plan-frontend
-status: in-development
+status: done
 lineage: artefact-status-blocked-on-questions
 parent: lifecycle/defects/artefact-status-blocked-on-questions.md
 ---
