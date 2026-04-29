@@ -17,6 +17,7 @@ import {
   Settings,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
+import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -88,22 +89,25 @@ const navItems = (): NavItem[] => {
     </div>
     <ul class="nav-list" role="list">
       <li v-for="item in navItems()" :key="item.label" class="nav-item">
-        <RouterLink
-          :to="item.to"
-          class="nav-link"
-          :class="{ 'nav-link--active': route.path.startsWith(item.to) }"
-          :aria-current="route.path.startsWith(item.to) ? 'page' : undefined"
-        >
-          <span class="nav-icon">
-            <component :is="item.icon" :size="18" />
-          </span>
-          <span class="nav-label">{{ item.label }}</span>
-          <span
-            v-if="item.label === 'Parse Errors' && parseErrorCount > 0"
-            class="badge"
-            :aria-label="`${parseErrorCount} parse errors`"
-          >{{ parseErrorCount }}</span>
-        </RouterLink>
+        <SidebarTooltip :label="item.label" :disabled="!uiStore.sidebarCollapsed">
+          <RouterLink
+            :to="item.to"
+            class="nav-link"
+            :class="{ 'nav-link--active': route.path.startsWith(item.to) }"
+            :aria-current="route.path.startsWith(item.to) ? 'page' : undefined"
+            :aria-label="uiStore.sidebarCollapsed ? item.label : undefined"
+          >
+            <span class="nav-icon tooltip-anchor">
+              <component :is="item.icon" :size="18" />
+            </span>
+            <span class="nav-label">{{ item.label }}</span>
+            <span
+              v-if="item.label === 'Parse Errors' && parseErrorCount > 0"
+              class="badge"
+              :aria-label="`${parseErrorCount} parse errors`"
+            >{{ parseErrorCount }}</span>
+          </RouterLink>
+        </SidebarTooltip>
       </li>
     </ul>
     <div class="sidebar-footer">
