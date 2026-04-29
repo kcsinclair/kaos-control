@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Auto-Refresh Editor Content on External Disk Change"
 type: plan-test
-status: in-development
+status: done
 lineage: editor-live-refresh-on-disk-change
 parent: lifecycle/requirements/editor-live-refresh-on-disk-change-2.md
 created: "2026-04-29"

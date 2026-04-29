@@ -15,6 +15,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { defineComponent, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { useExternalChange } from '@/composables/useExternalChange'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — the WsClient stub must be visible inside vi.mock() factory
@@ -80,7 +81,6 @@ function setupComposable(
   const wrapper = mount(
     defineComponent({
       setup() {
-        const { useExternalChange } = require('../../web/src/composables/useExternalChange')
         result = useExternalChange('testproject', artifactPath, options)
         return {}
       },
