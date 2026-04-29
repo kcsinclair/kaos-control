@@ -79,6 +79,7 @@ onUnmounted(() => { wsUnsub?.() })
   flex: 1;
   display: flex;
   overflow: hidden;
+  position: relative;
 }
 .workspace-main {
   flex: 1;

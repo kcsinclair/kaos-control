@@ -67,17 +67,44 @@ const navItems = (): NavItem[] => {
     { label: 'Config',       to: `/p/${p}/config`,          icon: Settings },
   ]
 }
+
+// Hover-to-expand overlay state (does NOT change persisted sidebarCollapsed)
+const hoverExpanded = ref(false)
+let hoverTimer: ReturnType<typeof setTimeout> | null = null
+
+function onSidebarMouseEnter() {
+  if (!uiStore.sidebarCollapsed) return
+  hoverTimer = setTimeout(() => {
+    hoverExpanded.value = true
+  }, 200)
+}
+
+function onSidebarMouseLeave() {
+  if (hoverTimer !== null) {
+    clearTimeout(hoverTimer)
+    hoverTimer = null
+  }
+  hoverExpanded.value = false
+}
+
+// Whether the sidebar visually appears expanded (either persisted or hover)
+const isVisuallyExpanded = () => !uiStore.sidebarCollapsed || hoverExpanded.value
 </script>
 
 <template>
   <nav
     class="app-sidebar"
-    :class="{ 'sidebar--collapsed': uiStore.sidebarCollapsed }"
+    :class="{
+      'sidebar--collapsed': uiStore.sidebarCollapsed && !hoverExpanded,
+      'sidebar--overlay': uiStore.sidebarCollapsed && hoverExpanded,
+    }"
     aria-label="Project navigation"
+    @mouseenter="onSidebarMouseEnter"
+    @mouseleave="onSidebarMouseLeave"
   >
     <div class="sidebar-project">
       <img
-        v-if="uiStore.sidebarCollapsed"
+        v-if="!isVisuallyExpanded()"
         :src="faviconSrc"
         alt="Project"
         class="sidebar-favicon"
@@ -89,25 +116,25 @@ const navItems = (): NavItem[] => {
     </div>
     <ul class="nav-list" role="list">
       <li v-for="item in navItems()" :key="item.label" class="nav-item">
-        <SidebarTooltip :label="item.label" :disabled="!uiStore.sidebarCollapsed">
+        <SidebarTooltip :label="item.label" :disabled="isVisuallyExpanded()">
           <RouterLink
             :to="item.to"
             class="nav-link"
             :class="{ 'nav-link--active': route.path.startsWith(item.to) }"
             :aria-current="route.path.startsWith(item.to) ? 'page' : undefined"
-            :aria-label="uiStore.sidebarCollapsed ? item.label : undefined"
+            :aria-label="!isVisuallyExpanded() ? item.label : undefined"
           >
             <span class="nav-icon tooltip-anchor">
               <component :is="item.icon" :size="18" />
               <span
-                v-if="item.label === 'Parse Errors' && parseErrorCount > 0 && uiStore.sidebarCollapsed"
+                v-if="item.label === 'Parse Errors' && parseErrorCount > 0 && !isVisuallyExpanded()"
                 class="badge-dot"
                 :aria-label="`${parseErrorCount} parse errors`"
               >{{ parseErrorCount > 9 ? parseErrorCount : '' }}</span>
             </span>
             <span class="nav-label">{{ item.label }}</span>
             <span
-              v-if="item.label === 'Parse Errors' && parseErrorCount > 0 && !uiStore.sidebarCollapsed"
+              v-if="item.label === 'Parse Errors' && parseErrorCount > 0 && isVisuallyExpanded()"
               class="badge"
               :aria-label="`${parseErrorCount} parse errors`"
             >{{ parseErrorCount }}</span>
@@ -142,6 +169,15 @@ const navItems = (): NavItem[] => {
 }
 .sidebar--collapsed {
   width: var(--sidebar-width-collapsed);
+}
+.sidebar--overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width-expanded);
+  z-index: 100;
+  box-shadow: var(--shadow-lg);
 }
 .sidebar-project {
   padding: var(--space-4) var(--space-4) var(--space-2);
