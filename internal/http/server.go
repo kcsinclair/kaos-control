@@ -148,6 +148,9 @@ func (s *Server) buildRouter() chi.Router {
 			// WebSocket
 			r.Get("/ws", s.handleWebSocket)
 
+			// Event feed
+			r.Get("/feed", s.handleGetFeed)
+
 			// Graph and discovery
 			r.Get("/graph", s.handleGraph)
 			r.Get("/labels", s.handleLabels)
