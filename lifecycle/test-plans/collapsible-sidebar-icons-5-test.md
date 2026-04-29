@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Collapsible Sidebar with Icon-Only Mode"
 type: plan-test
-status: approved
+status: in-development
 lineage: collapsible-sidebar-icons
 parent: lifecycle/requirements/collapsible-sidebar-icons-2.md
 ---
