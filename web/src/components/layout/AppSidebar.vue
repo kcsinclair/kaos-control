@@ -6,7 +6,17 @@ import { useUiStore } from '@/stores/ui'
 import { api } from '@/api/client'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import {
+  ChevronLeft,
+  ChevronRight,
+  List,
+  Columns3,
+  Network,
+  Bot,
+  AlertTriangle,
+  Settings,
+} from 'lucide-vue-next'
+import type { Component } from 'vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -39,21 +49,19 @@ useWebSocket(projectName(), 'artifact.indexed', (_e: WsEvent) => {
 
 interface NavItem {
   label: string
-  to?: string        // undefined for group headers
-  children?: NavItem[]
+  to: string
+  icon: Component
 }
 
 const navItems = (): NavItem[] => {
   const p = projectName()
   return [
-    { label: 'Artefacts', children: [
-      { label: 'List', to: `/p/${p}/artifacts` },
-      { label: 'Board', to: `/p/${p}/artifacts/board` },
-    ]},
-    { label: 'Graph', to: `/p/${p}/graph` },
-    { label: 'Agents', to: `/p/${p}/agents` },
-    { label: 'Parse Errors', to: `/p/${p}/parse-errors` },
-    { label: 'Config', to: `/p/${p}/config` },
+    { label: 'List',         to: `/p/${p}/artifacts`,       icon: List },
+    { label: 'Board',        to: `/p/${p}/artifacts/board`, icon: Columns3 },
+    { label: 'Graph',        to: `/p/${p}/graph`,           icon: Network },
+    { label: 'Agents',       to: `/p/${p}/agents`,          icon: Bot },
+    { label: 'Parse Errors', to: `/p/${p}/parse-errors`,    icon: AlertTriangle },
+    { label: 'Config',       to: `/p/${p}/config`,          icon: Settings },
   ]
 }
 </script>
@@ -70,31 +78,16 @@ const navItems = (): NavItem[] => {
     </div>
     <ul class="nav-list" role="list">
       <li v-for="item in navItems()" :key="item.label" class="nav-item">
-        <!-- Group header (no link) -->
-        <template v-if="item.children">
-          <span class="nav-group-label">{{ item.label }}</span>
-          <ul class="nav-children" role="list">
-            <li v-for="child in item.children" :key="child.to" class="nav-item">
-              <RouterLink
-                :to="child.to!"
-                class="nav-link nav-link--child"
-                :class="{ 'nav-link--active': route.path === child.to }"
-                :aria-current="route.path === child.to ? 'page' : undefined"
-              >
-                {{ child.label }}
-              </RouterLink>
-            </li>
-          </ul>
-        </template>
-        <!-- Regular nav link -->
         <RouterLink
-          v-else
-          :to="item.to!"
+          :to="item.to"
           class="nav-link"
-          :class="{ 'nav-link--active': route.path.startsWith(item.to!) }"
-          :aria-current="route.path.startsWith(item.to!) ? 'page' : undefined"
+          :class="{ 'nav-link--active': route.path.startsWith(item.to) }"
+          :aria-current="route.path.startsWith(item.to) ? 'page' : undefined"
         >
-          {{ item.label }}
+          <span class="nav-icon">
+            <component :is="item.icon" :size="18" />
+          </span>
+          <span class="nav-label">{{ item.label }}</span>
           <span
             v-if="item.label === 'Parse Errors' && parseErrorCount > 0"
             class="badge"
@@ -162,33 +155,31 @@ const navItems = (): NavItem[] => {
 .nav-item {
   margin-bottom: 2px;
 }
-.nav-group-label {
-  display: block;
-  padding: var(--space-2) var(--space-3) var(--space-1);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-sidebar-text-muted);
-}
-.nav-children {
-  list-style: none;
-  margin: 0 0 var(--space-1);
-  padding: 0;
-}
 .nav-link {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
   color: var(--color-sidebar-text-muted);
   text-decoration: none;
   border-radius: var(--radius-md);
   transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
 }
-.nav-link--child {
-  padding-left: calc(var(--space-3) + 12px);
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+.nav-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .nav-link:hover {
   background: var(--color-sidebar-hover);
