@@ -72,6 +72,9 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		return nil, fmt.Errorf("project %q: opening index: %w", entry.Name, err)
 	}
 
+	// Prune stale events on startup according to retention config.
+	_ = idx.PruneEvents(cfg.Feed.RetentionDays, cfg.Feed.MaxEvents)
+
 	h := hub.New()
 
 	w, err := watcher.New(entry.Path, idx, h, cfg.Ignore...)

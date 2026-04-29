@@ -219,6 +219,12 @@ type KanbanConfig struct {
 	CardFields    []string       `yaml:"card_fields,omitempty"    json:"card_fields,omitempty"`
 }
 
+// FeedConfig controls event feed retention.
+type FeedConfig struct {
+	RetentionDays int `yaml:"retention_days"`
+	MaxEvents     int `yaml:"max_events"`
+}
+
 // Project is the per-project configuration (lifecycle/config.yaml).
 type Project struct {
 	Stages        []Stage       `yaml:"stages"`
@@ -230,6 +236,7 @@ type Project struct {
 	RequiredPlans RequiredPlans `yaml:"required_plans"`
 	Ignore        []string      `yaml:"ignore"`
 	Kanban        *KanbanConfig `yaml:"kanban,omitempty"`
+	Feed          FeedConfig    `yaml:"feed"`
 }
 
 // Transition overrides one edge in the state machine.
@@ -323,6 +330,12 @@ func validateProject(cfg *Project) error {
 		if _, err := filepath.Match(pat, ""); err != nil {
 			return fmt.Errorf("project config: invalid ignore pattern %q: %w", pat, err)
 		}
+	}
+	if cfg.Feed.RetentionDays <= 0 {
+		cfg.Feed.RetentionDays = 30
+	}
+	if cfg.Feed.MaxEvents <= 0 {
+		cfg.Feed.MaxEvents = 5000
 	}
 	return nil
 }
