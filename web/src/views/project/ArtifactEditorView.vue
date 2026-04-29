@@ -72,9 +72,16 @@ const { acquired: lockAcquired, conflictLock, acquire: acquireLock, release: rel
 )
 
 // ── external change detection ────────────────────────────────────────────────
+async function autoRefresh() {
+  store.invalidate(artifactPath.value)
+  artifact.value = await store.fetchOne(project.value, artifactPath.value)
+  ui.info('File updated on disk')
+}
+
 const { hasExternalChange, markSaved, acknowledge } = useExternalChange(
   project.value,
   artifactPath.value,
+  { isDirty: () => editing.value, onAutoRefresh: autoRefresh },
 )
 
 // ── enter / exit edit mode ──────────────────────────────────────────────────
