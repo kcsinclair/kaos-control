@@ -89,6 +89,16 @@ function onSidebarMouseLeave() {
 
 // Whether the sidebar visually appears expanded (either persisted or hover)
 const isVisuallyExpanded = () => !uiStore.sidebarCollapsed || hoverExpanded.value
+
+// Track transition direction for sequenced animation delays
+const sidebarTransitionDir = ref<'expanding' | 'collapsing' | 'none'>('none')
+
+watch(
+  () => isVisuallyExpanded(),
+  (expanded) => {
+    sidebarTransitionDir.value = expanded ? 'expanding' : 'collapsing'
+  }
+)
 </script>
 
 <template>
@@ -97,6 +107,8 @@ const isVisuallyExpanded = () => !uiStore.sidebarCollapsed || hoverExpanded.valu
     :class="{
       'sidebar--collapsed': uiStore.sidebarCollapsed && !hoverExpanded,
       'sidebar--overlay': uiStore.sidebarCollapsed && hoverExpanded,
+      'sidebar--expanding': sidebarTransitionDir === 'expanding',
+      'sidebar--collapsing': sidebarTransitionDir === 'collapsing',
     }"
     aria-label="Project navigation"
     @mouseenter="onSidebarMouseEnter"
@@ -166,6 +178,33 @@ const isVisuallyExpanded = () => !uiStore.sidebarCollapsed || hoverExpanded.valu
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
+  transition: width 250ms ease;
+}
+/* Collapse: text fades first (0ms delay), then width shrinks (100ms delay) */
+.sidebar--collapsing {
+  transition: width 250ms ease 100ms;
+}
+.sidebar--collapsing .nav-label,
+.sidebar--collapsing .project-label,
+.sidebar--collapsing .project-name {
+  transition: opacity 100ms ease 0ms;
+  opacity: 0;
+}
+/* Expand: width grows first (0ms delay), then text fades in (250ms delay) */
+.sidebar--expanding {
+  transition: width 250ms ease 0ms;
+}
+.sidebar--expanding .nav-label,
+.sidebar--expanding .project-label,
+.sidebar--expanding .project-name {
+  transition: opacity 100ms ease 250ms;
+  opacity: 1;
+}
+/* Text elements default transition */
+.nav-label,
+.project-label,
+.project-name {
+  transition: opacity 100ms ease;
 }
 .sidebar--collapsed {
   width: var(--sidebar-width-collapsed);
