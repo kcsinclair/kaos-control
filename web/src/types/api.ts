@@ -165,6 +165,22 @@ export interface IdeaConverseResponse {
   artifact_path: string | null
 }
 
+export interface FeedEvent {
+  id: number
+  event_type: string
+  timestamp: number
+  actor: string
+  artifact_path?: string
+  run_id?: string
+  summary: string
+  payload_json?: string
+}
+
+export interface FeedResponse {
+  events: FeedEvent[]
+  next_cursor: number | null
+}
+
 export type WsEventType =
   | 'file.changed'
   | 'artifact.indexed'
@@ -175,6 +191,7 @@ export type WsEventType =
   | 'agent.progress'
   | 'agent.finished'
   | 'agent.failed'
+  | 'feed.new'
 
 export interface WsEvent {
   type: WsEventType
