@@ -25,6 +25,8 @@ export const ACTIVE_STATUS_COLORS: Record<string, string> = {
   'planning':       '#a78bfa',  // violet
 }
 
+export const APPROVED_TEST_RING_COLOR = '#2563eb'  // blue-600: approved test ring
+
 export const EDGE_COLORS: Record<string, string> = {
   parent:     '#94a3b8',
   depends_on: '#f97316',
