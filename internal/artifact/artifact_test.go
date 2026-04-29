@@ -48,6 +48,73 @@ func TestParse_CreatedFieldAbsent(t *testing.T) {
 	}
 }
 
+// ── HasOpenQuestions unit tests ───────────────────────────────────────────────
+
+// TestHasOpenQuestions_HeadingWithBulletList verifies that a "## Open
+// Questions" heading followed by a bullet list is detected as non-empty.
+func TestHasOpenQuestions_HeadingWithBulletList(t *testing.T) {
+	body := "## Open Questions\n\n- Q1\n- Q2\n"
+	if !artifact.HasOpenQuestions(body) {
+		t.Error("expected HasOpenQuestions to return true for heading with bullet list")
+	}
+}
+
+// TestHasOpenQuestions_HeadingWithParagraph verifies that a "## Open
+// Questions" heading followed by a prose paragraph is detected as non-empty.
+func TestHasOpenQuestions_HeadingWithParagraph(t *testing.T) {
+	body := "## Open Questions\n\nSome question here.\n"
+	if !artifact.HasOpenQuestions(body) {
+		t.Error("expected HasOpenQuestions to return true for heading with paragraph text")
+	}
+}
+
+// TestHasOpenQuestions_HeadingWithOnlyWhitespace verifies that a "## Open
+// Questions" heading whose section body contains only blank/whitespace lines
+// returns false (section is considered empty).
+func TestHasOpenQuestions_HeadingWithOnlyWhitespace(t *testing.T) {
+	body := "## Open Questions\n\n   \n\n"
+	if artifact.HasOpenQuestions(body) {
+		t.Error("expected HasOpenQuestions to return false for heading with only whitespace")
+	}
+}
+
+// TestHasOpenQuestions_NoHeading verifies that a body with no "## Open
+// Questions" heading returns false.
+func TestHasOpenQuestions_NoHeading(t *testing.T) {
+	body := "This is just a regular body.\n\nNo special headings here.\n"
+	if artifact.HasOpenQuestions(body) {
+		t.Error("expected HasOpenQuestions to return false when heading is absent")
+	}
+}
+
+// TestHasOpenQuestions_HeadingAtWrongLevel verifies that "### Open Questions"
+// (H3, not H2) does not match — the function requires exactly "## ".
+func TestHasOpenQuestions_HeadingAtWrongLevel(t *testing.T) {
+	body := "### Open Questions\n\n- Q1\n"
+	if artifact.HasOpenQuestions(body) {
+		t.Error("expected HasOpenQuestions to return false for H3 heading (must be H2)")
+	}
+}
+
+// TestHasOpenQuestions_HeadingMidDocument verifies that a "## Open Questions"
+// section appearing after other content in the document is still detected.
+func TestHasOpenQuestions_HeadingMidDocument(t *testing.T) {
+	body := "# Title\n\nSome intro text.\n\n## Background\n\nContext here.\n\n## Open Questions\n\n- Is this working?\n"
+	if !artifact.HasOpenQuestions(body) {
+		t.Error("expected HasOpenQuestions to return true when heading appears mid-document with content")
+	}
+}
+
+// TestHasOpenQuestions_HeadingFollowedImmediatelyByNextHeading verifies that
+// "## Open Questions" immediately followed by another "## " heading (with no
+// content lines in between) returns false.
+func TestHasOpenQuestions_HeadingFollowedImmediatelyByNextHeading(t *testing.T) {
+	body := "## Open Questions\n## Next Section\n"
+	if artifact.HasOpenQuestions(body) {
+		t.Error("expected HasOpenQuestions to return false when heading is immediately followed by next H2")
+	}
+}
+
 // TestParse_CreatedFieldRoundTrip verifies that marshalling the parsed Frontmatter
 // back to YAML and re-parsing it preserves the `created` value exactly.
 func TestParse_CreatedFieldRoundTrip(t *testing.T) {
