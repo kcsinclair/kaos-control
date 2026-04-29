@@ -136,16 +136,19 @@ func (s *Server) handleTransitionArtifact(w http.ResponseWriter, r *http.Request
 		},
 	})
 
-	// Record feed event.
+	// Record feed event and broadcast feed.new.
 	artifactPath := relPath
 	summary := fmt.Sprintf("%q transitioned from %s → %s", row.FM.Title, row.Status, req.To)
-	_ = p.Idx.InsertEvent(&index.EventRow{
+	feedEvent := &index.EventRow{
 		EventType:    "status_transition",
 		Timestamp:    time.Now().Unix(),
 		Actor:        user.Email,
 		ArtifactPath: &artifactPath,
 		Summary:      summary,
-	})
+	}
+	if err := p.Idx.InsertEvent(feedEvent); err == nil {
+		p.Hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+	}
 
 	result, _ := p.Idx.Get(relPath)
 	resp := map[string]any{"artifact": result}

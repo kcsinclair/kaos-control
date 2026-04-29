@@ -144,7 +144,7 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 		Payload: map[string]string{"path": relPath, "action": "created"},
 	})
 
-	// Record feed event.
+	// Record feed event and broadcast feed.new.
 	{
 		actor := ""
 		if u := userFromCtx(r.Context()); u != nil {
@@ -152,13 +152,16 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 		}
 		artifactPath := relPath
 		summary := fmt.Sprintf("Created %s %q", req.Frontmatter.Type, req.Frontmatter.Title)
-		_ = p.Idx.InsertEvent(&index.EventRow{
+		feedEvent := &index.EventRow{
 			EventType:    "artifact_created",
 			Timestamp:    time.Now().Unix(),
 			Actor:        actor,
 			ArtifactPath: &artifactPath,
 			Summary:      summary,
-		})
+		}
+		if err := p.Idx.InsertEvent(feedEvent); err == nil {
+			p.Hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+		}
 	}
 
 	row, _ := p.Idx.Get(relPath)

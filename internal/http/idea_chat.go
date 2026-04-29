@@ -188,16 +188,19 @@ func writeIdeaArtifact(p *project.Project, sess *ideachat.Session, actor string)
 		Payload: map[string]string{"path": relPath, "action": "created"},
 	})
 
-	// Record feed event.
+	// Record feed event and broadcast feed.new.
 	artifactPath := relPath
 	summary := fmt.Sprintf("Created idea %q", fm.Title)
-	_ = p.Idx.InsertEvent(&index.EventRow{
+	feedEvent := &index.EventRow{
 		EventType:    "artifact_created",
 		Timestamp:    time.Now().Unix(),
 		Actor:        actor,
 		ArtifactPath: &artifactPath,
 		Summary:      summary,
-	})
+	}
+	if err := p.Idx.InsertEvent(feedEvent); err == nil {
+		p.Hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+	}
 
 	return relPath, nil
 }

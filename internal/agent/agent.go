@@ -433,17 +433,20 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		Payload: map[string]any{"run_id": runID, "agent": agentName, "lineage": lineage, "target_path": targetPath},
 	})
 
-	// Record feed event.
+	// Record feed event and broadcast feed.new.
 	{
 		runIDCopy := runID
 		summary := fmt.Sprintf("Agent %s started on %s", agentName, targetPath)
-		_ = m.idx.InsertEvent(&index.EventRow{
+		feedEvent := &index.EventRow{
 			EventType: "agent_started",
 			Timestamp: time.Now().Unix(),
 			Actor:     agentName,
 			RunID:     &runIDCopy,
 			Summary:   summary,
-		})
+		}
+		if err := m.idx.InsertEvent(feedEvent); err == nil {
+			m.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+		}
 	}
 
 	// Supervisor goroutine.
@@ -533,16 +536,19 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 					Payload: map[string]any{"run_id": run.RunID, "files": files},
 				})
 
-				// Record feed event.
+				// Record feed event and broadcast feed.new.
 				runIDCopy := run.RunID
 				summary := fmt.Sprintf("Agent %s committed %d file(s)", run.AgentName, len(files))
-				_ = m.idx.InsertEvent(&index.EventRow{
+				feedEvent := &index.EventRow{
 					EventType: "git_committed",
 					Timestamp: time.Now().Unix(),
 					Actor:     run.AgentName,
 					RunID:     &runIDCopy,
 					Summary:   summary,
-				})
+				}
+				if err := m.idx.InsertEvent(feedEvent); err == nil {
+					m.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+				}
 			}
 		}
 	}
@@ -580,17 +586,20 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		},
 	})
 
-	// Record feed event.
+	// Record feed event and broadcast feed.new.
 	{
 		runIDCopy := run.RunID
 		summary := fmt.Sprintf("Agent %s finished with status %s; produced %d artifact(s)", run.AgentName, status, len(produced))
-		_ = m.idx.InsertEvent(&index.EventRow{
+		feedEvent := &index.EventRow{
 			EventType: feedEventType,
 			Timestamp: time.Now().Unix(),
 			Actor:     run.AgentName,
 			RunID:     &runIDCopy,
 			Summary:   summary,
-		})
+		}
+		if err := m.idx.InsertEvent(feedEvent); err == nil {
+			m.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+		}
 	}
 }
 

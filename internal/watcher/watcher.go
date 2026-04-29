@@ -155,13 +155,16 @@ func (w *Watcher) handleChange(absPath string) {
 		if row, err := w.idx.Get(relPath); err == nil && row != nil && row.Type == "defect" {
 			artifactPath := relPath
 			summary := "Defect raised: " + row.FM.Title
-			_ = w.idx.InsertEvent(&index.EventRow{
+			feedEvent := &index.EventRow{
 				EventType:    "defect_raised",
 				Timestamp:    time.Now().Unix(),
 				Actor:        "system",
 				ArtifactPath: &artifactPath,
 				Summary:      summary,
-			})
+			}
+			if err := w.idx.InsertEvent(feedEvent); err == nil {
+				w.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+			}
 		}
 	}
 
