@@ -119,6 +119,7 @@ async function save() {
     ui.error(`Assignee row ${invalidAssignee + 1}: both role and who are required.`)
     return
   }
+  const submittedStatus = editFrontmatter.value.status
   saving.value = true
   try {
     markSaved()
@@ -132,7 +133,11 @@ async function save() {
     artifact.value = await store.fetchOne(project.value, artifactPath.value)
     editing.value = false
     await releaseLock()
-    ui.success('Saved')
+    if (artifact.value?.status === 'blocked' && submittedStatus !== 'blocked') {
+      ui.info('Status changed to blocked — open questions require product-owner review.')
+    } else {
+      ui.success('Saved')
+    }
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Save failed'
     if (msg.includes('modified since last read') || msg.includes('conflict')) {
