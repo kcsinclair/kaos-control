@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import type { GraphNode, GraphEdge } from '@/types/api'
-import { NODE_COLORS, EDGE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS } from './graphConstants'
+import { NODE_COLORS, EDGE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS, APPROVED_TEST_RING_COLOR } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
@@ -62,11 +62,22 @@ function priorityRing(n: GraphNode): THREE.Mesh | null {
   return new THREE.Mesh(geo, mat)
 }
 
-// Build the Three.js object for a node: priority ring, active pulse ring, text sprite.
+// Build the Three.js object for a node: priority ring, approved-test ring, active pulse ring, text sprite.
 function buildNodeObject(n: GraphNode): THREE.Object3D {
   const group = new THREE.Group()
   const ring = priorityRing(n)
   if (ring) group.add(ring)
+  // Static blue ring for approved test artifacts
+  if (n.type === 'test' && n.status === 'approved') {
+    const sphereR = Math.cbrt(nodeVal(n)) * 4
+    // Use a larger radius when a priority ring is also present so both are visible
+    const hasPriority = !!(n.priority || n.status === 'done')
+    const torusR = hasPriority ? sphereR * 1.75 : sphereR * 1.45
+    const tubeR = sphereR * 0.18
+    const geo = new THREE.TorusGeometry(torusR, tubeR, 8, 20)
+    const mat = new THREE.MeshLambertMaterial({ color: APPROVED_TEST_RING_COLOR })
+    group.add(new THREE.Mesh(geo, mat))
+  }
   const activeColor = ACTIVE_STATUS_COLORS[n.status]
   if (activeColor) {
     const r = Math.cbrt(nodeVal(n)) * 4
