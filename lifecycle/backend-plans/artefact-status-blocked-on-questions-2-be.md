@@ -1,7 +1,7 @@
 ---
 title: "Backend: Auto-transition to blocked when Open Questions are added"
 type: plan-backend
-status: draft
+status: approved
 lineage: artefact-status-blocked-on-questions
 parent: lifecycle/defects/artefact-status-blocked-on-questions.md
 ---
