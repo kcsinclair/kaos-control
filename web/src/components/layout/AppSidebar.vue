@@ -23,7 +23,7 @@ const route = useRoute()
 const projectStore = useProjectStore()
 const uiStore = useUiStore()
 
-const faviconSrc = `${import.meta.env.BASE_URL}assets/favicon-32x32.png`
+const faviconSrc = `${import.meta.env.BASE_URL}favicon-32x32.png`
 
 const projectName = () => route.params.project as string
 const parseErrorCount = ref(0)
