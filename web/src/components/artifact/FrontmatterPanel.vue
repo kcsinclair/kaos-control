@@ -1,8 +1,17 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { ArtifactDetail } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
+import ArtifactRunHistory from './ArtifactRunHistory.vue'
+import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 
-defineProps<{ artifact: ArtifactDetail }>()
+defineProps<{
+  artifact: ArtifactDetail
+  project?: string
+  targetPath?: string
+}>()
+
+const selectedRunId = ref<string | null>(null)
 
 function fmt(v: string | undefined): string {
   if (!v) return '—'
@@ -86,6 +95,20 @@ function fmt(v: string | undefined): string {
         </dd>
       </div>
     </dl>
+
+    <ArtifactRunHistory
+      v-if="project && targetPath"
+      :project="project"
+      :target-path="targetPath"
+      @select-run="selectedRunId = $event"
+    />
+
+    <RunDetailModal
+      v-if="selectedRunId && project"
+      :project="project"
+      :run-id="selectedRunId"
+      @close="selectedRunId = null"
+    />
   </aside>
 </template>
 

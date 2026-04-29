@@ -209,7 +209,7 @@ onMounted(load)
         <h1 class="artifact-title">{{ artifact.title || artifact.slug }}</h1>
         <MarkdownPreview :html="artifact.body_html" :source="artifact.body" :project="project" />
       </div>
-      <FrontmatterPanel :artifact="artifact" />
+      <FrontmatterPanel :artifact="artifact" :project="project" :target-path="artifactPath" />
     </div>
 
     <!-- Edit mode: split pane -->
