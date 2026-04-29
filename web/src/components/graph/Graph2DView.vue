@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import type { GraphNode, GraphEdge } from '@/types/api'
-import { NODE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS } from './graphConstants'
+import { NODE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS, APPROVED_TEST_RING_COLOR } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
@@ -91,6 +91,14 @@ async function init() {
         },
       },
       {
+        // Approved test artifacts get a static blue ring (overrides priority ring)
+        selector: 'node[type="test"][status="approved"]',
+        style: {
+          'border-width': 4,
+          'border-color': APPROVED_TEST_RING_COLOR,
+        },
+      },
+      {
         // Label nodes: pill-shaped tag with centred text, auto-width to fit label
         selector: 'node[type="label"]',
         style: {
@@ -147,6 +155,8 @@ async function init() {
   pulseInterval = setInterval(() => {
     pulseTick = !pulseTick
     cy?.nodes().forEach((n: any) => {
+      // Approved test nodes keep their static blue ring — skip pulse override
+      if (n.data('type') === 'test' && n.data('status') === 'approved') return
       const color = ACTIVE_STATUS_COLORS[n.data('status')]
       if (color) {
         n.style({ 'border-color': color, 'border-width': pulseTick ? 6 : 2 })
