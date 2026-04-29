@@ -78,6 +78,10 @@ func Open(dbPath, projectRoot string, stages []config.Stage, opts ...Option) (*I
 	if err := idx.ensureAgentRunsTable(); err != nil {
 		return nil, fmt.Errorf("ensuring agent_runs table: %w", err)
 	}
+	// events is not part of the versioned schema so it survives schema rebuilds.
+	if err := idx.ensureEventsTable(); err != nil {
+		return nil, fmt.Errorf("ensuring events table: %w", err)
+	}
 	// Always scan on startup: the index is a cache and files may have changed
 	// while the server was not running (watcher only covers live changes).
 	if err := idx.Scan(stages); err != nil {
@@ -1094,6 +1098,29 @@ func (idx *Index) ensureAgentRunsTable() error {
 		return err
 	}
 	_, err = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_target_path ON agent_runs(target_path)`)
+	return err
+}
+
+// ensureEventsTable creates the events table and its indices if they don't already exist.
+// It is called unconditionally on Open so the table survives schema rebuilds.
+func (idx *Index) ensureEventsTable() error {
+	_, err := idx.db.Exec(`CREATE TABLE IF NOT EXISTS events (
+		id              INTEGER PRIMARY KEY AUTOINCREMENT,
+		event_type      TEXT NOT NULL,
+		timestamp       INTEGER NOT NULL,
+		actor           TEXT NOT NULL,
+		artifact_path   TEXT,
+		run_id          TEXT,
+		summary         TEXT NOT NULL,
+		payload_json    TEXT
+	)`)
+	if err != nil {
+		return err
+	}
+	if _, err := idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp DESC)`); err != nil {
+		return err
+	}
+	_, err = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type)`)
 	return err
 }
 
