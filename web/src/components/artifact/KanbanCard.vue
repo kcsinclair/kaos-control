@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { HelpCircle } from 'lucide-vue-next'
 import type { ArtifactRow } from '@/types/api'
 
 const props = defineProps<{
@@ -29,6 +31,16 @@ const priorityColour: Record<string, string> = {
 function priorityColor(p: string): string {
   return priorityColour[p.toLowerCase()] ?? '#a0aec0'
 }
+
+// When the backend auto-blocks an artifact due to open questions it always
+// appends { role: "product-owner", who: "agent" } to assignees.  This is a
+// reliable proxy for "blocked due to open questions" without needing the body.
+const isBlockedOnQuestions = computed(() =>
+  props.artifact.status === 'blocked' &&
+  (props.artifact.frontmatter?.assignees ?? []).some(
+    (a) => a.role === 'product-owner' && a.who === 'agent',
+  ),
+)
 </script>
 
 <template>
@@ -45,6 +57,13 @@ function priorityColor(p: string): string {
 
     <!-- Configurable fields -->
     <div class="card-fields">
+      <HelpCircle
+        v-if="isBlockedOnQuestions"
+        class="card-open-questions-icon"
+        :size="13"
+        title="Blocked pending answers to open questions"
+        aria-label="Open questions pending"
+      />
       <span
         v-if="cardFields.includes('type')"
         class="card-badge"
@@ -141,6 +160,10 @@ function priorityColor(p: string): string {
 .card-age {
   font-size: 10px;
   color: var(--color-text-muted);
+}
+.card-open-questions-icon {
+  color: #d97706;
+  flex-shrink: 0;
 }
 .card-lineage {
   font-size: 10px;
