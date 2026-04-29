@@ -22,6 +22,8 @@ const route = useRoute()
 const projectStore = useProjectStore()
 const uiStore = useUiStore()
 
+const faviconSrc = `${import.meta.env.BASE_URL}assets/favicon-32x32.png`
+
 const projectName = () => route.params.project as string
 const parseErrorCount = ref(0)
 
@@ -73,8 +75,16 @@ const navItems = (): NavItem[] => {
     aria-label="Project navigation"
   >
     <div class="sidebar-project">
-      <span class="project-label">Project</span>
-      <span class="project-name">{{ projectStore.current?.name ?? projectName() }}</span>
+      <img
+        v-if="uiStore.sidebarCollapsed"
+        :src="faviconSrc"
+        alt="Project"
+        class="sidebar-favicon"
+      />
+      <template v-else>
+        <span class="project-label">Project</span>
+        <span class="project-name">{{ projectStore.current?.name ?? projectName() }}</span>
+      </template>
     </div>
     <ul class="nav-list" role="list">
       <li v-for="item in navItems()" :key="item.label" class="nav-item">
@@ -127,6 +137,19 @@ const navItems = (): NavItem[] => {
 .sidebar-project {
   padding: var(--space-4) var(--space-4) var(--space-2);
   border-bottom: 1px solid var(--color-border-dark);
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.sidebar--collapsed .sidebar-project {
+  align-items: center;
+  padding: var(--space-3) 0;
+}
+.sidebar-favicon {
+  width: 24px;
+  height: 24px;
+  display: block;
 }
 .project-label {
   display: block;
@@ -180,6 +203,16 @@ const navItems = (): NavItem[] => {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.sidebar--collapsed .nav-list {
+  padding: 0 var(--space-1);
+}
+.sidebar--collapsed .nav-link {
+  justify-content: center;
+  padding: var(--space-2);
+}
+.sidebar--collapsed .nav-label {
+  display: none;
 }
 .nav-link:hover {
   background: var(--color-sidebar-hover);
