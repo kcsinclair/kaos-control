@@ -1,7 +1,7 @@
 ---
 title: "Hide Done Items by Default — Test Suite"
 type: test
-status: draft
+status: approved
 lineage: hide-done-items-by-default
 parent: lifecycle/test-plans/hide-done-items-by-default-5-test.md
 ---
