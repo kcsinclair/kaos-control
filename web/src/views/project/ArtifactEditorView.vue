@@ -15,12 +15,14 @@ import MarkdownEditor from '@/components/artifact/MarkdownEditor.vue'
 import LockBanner from '@/components/common/LockBanner.vue'
 import TransitionDialog from '@/components/artifact/TransitionDialog.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
+import { useGraphStore } from '@/stores/graph'
 import type { ArtifactDetail, ArtifactFrontmatter, WsEvent } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
 const store = useArtifactsStore()
 const ui = useUiStore()
+const graphStore = useGraphStore()
 
 const project = computed(() => route.params.project as string)
 const artifactPath = computed(() => {
@@ -150,7 +152,12 @@ useWebSocket(project.value, 'artifact.indexed', (e: WsEvent) => {
 })
 
 watch(artifactPath, load, { immediate: false })
-onMounted(load)
+onMounted(() => {
+  load()
+  if (graphStore.rawEdges.length === 0) {
+    graphStore.fetchGraph(project.value)
+  }
+})
 </script>
 
 <template>
@@ -209,7 +216,7 @@ onMounted(load)
         <h1 class="artifact-title">{{ artifact.title || artifact.slug }}</h1>
         <MarkdownPreview :html="artifact.body_html" :source="artifact.body" :project="project" />
       </div>
-      <FrontmatterPanel :artifact="artifact" :project="project" :target-path="artifactPath" />
+      <FrontmatterPanel :artifact="artifact" :project="project" :target-path="artifactPath" :edges="graphStore.rawEdges" />
     </div>
 
     <!-- Edit mode: split pane -->

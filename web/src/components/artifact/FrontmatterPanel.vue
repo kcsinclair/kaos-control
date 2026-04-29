@@ -1,15 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { ArtifactDetail } from '@/types/api'
+import { computed, ref } from 'vue'
+import type { ArtifactDetail, GraphEdge } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 
-defineProps<{
+const props = defineProps<{
   artifact: ArtifactDetail
   project?: string
   targetPath?: string
+  edges?: GraphEdge[]
 }>()
+
+const inbound = computed(() =>
+  (props.edges ?? []).filter((e) => e.target === props.artifact.path)
+)
+const outbound = computed(() =>
+  (props.edges ?? []).filter((e) => e.source === props.artifact.path)
+)
 
 const selectedRunId = ref<string | null>(null)
 
@@ -17,6 +25,7 @@ function fmt(v: string | undefined): string {
   if (!v) return '—'
   return v
 }
+
 </script>
 
 <template>
@@ -109,6 +118,24 @@ function fmt(v: string | undefined): string {
       :run-id="selectedRunId"
       @close="selectedRunId = null"
     />
+
+    <div v-if="outbound.length || inbound.length" class="rel-section">
+      <h3 class="fm-title">Relationships</h3>
+      <div v-if="outbound.length" class="rel-group">
+        <div class="rel-group-label">Outbound</div>
+        <div v-for="e in outbound" :key="e.target + e.kind" class="rel-item">
+          <span class="rel-kind">{{ e.kind }}</span>
+          <span class="rel-path">{{ e.target }}</span>
+        </div>
+      </div>
+      <div v-if="inbound.length" class="rel-group">
+        <div class="rel-group-label">Inbound</div>
+        <div v-for="e in inbound" :key="e.source + e.kind" class="rel-item">
+          <span class="rel-kind">{{ e.kind }}</span>
+          <span class="rel-path">{{ e.source }}</span>
+        </div>
+      </div>
+    </div>
   </aside>
 </template>
 
@@ -180,4 +207,41 @@ function fmt(v: string | undefined): string {
 .assignee { display: flex; gap: var(--space-2); align-items: baseline; }
 .assignee-role { font-size: 11px; color: var(--color-text-muted); }
 .date-tip { cursor: default; }
+.rel-section {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4);
+}
+.rel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--space-3);
+}
+.rel-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+.rel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-1) 0;
+}
+.rel-kind {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rel-path {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--color-text);
+  word-break: break-all;
+}
 </style>
