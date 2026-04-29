@@ -1,7 +1,7 @@
 ---
 title: Lineage Status Checker
 type: requirement
-status: draft
+status: blocked
 lineage: status-checker-button
 parent: lifecycle/ideas/status-checker-button.md
 ---
