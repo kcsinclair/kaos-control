@@ -99,10 +99,15 @@ const navItems = (): NavItem[] => {
           >
             <span class="nav-icon tooltip-anchor">
               <component :is="item.icon" :size="18" />
+              <span
+                v-if="item.label === 'Parse Errors' && parseErrorCount > 0 && uiStore.sidebarCollapsed"
+                class="badge-dot"
+                :aria-label="`${parseErrorCount} parse errors`"
+              >{{ parseErrorCount > 9 ? parseErrorCount : '' }}</span>
             </span>
             <span class="nav-label">{{ item.label }}</span>
             <span
-              v-if="item.label === 'Parse Errors' && parseErrorCount > 0"
+              v-if="item.label === 'Parse Errors' && parseErrorCount > 0 && !uiStore.sidebarCollapsed"
               class="badge"
               :aria-label="`${parseErrorCount} parse errors`"
             >{{ parseErrorCount }}</span>
@@ -202,6 +207,24 @@ const navItems = (): NavItem[] => {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
+  position: relative;
+}
+.badge-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 10px;
+  height: 10px;
+  padding: 0 2px;
+  border-radius: var(--radius-full);
+  background: var(--color-error);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .nav-label {
   flex: 1;
