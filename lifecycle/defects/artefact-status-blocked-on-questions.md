@@ -1,7 +1,7 @@
 ---
 title: Artefact Status Should Be 'blocked' (Not 'draft') When Questions Are Added
 type: defect
-status: approved
+status: planning
 lineage: artefact-status-blocked-on-questions
 created: "2026-04-29T15:53:54+10:00"
 priority: normal
