@@ -1,10 +1,13 @@
 ---
 title: "Test Plan: Project Feed"
 type: plan-test
-status: in-development
+status: done
 lineage: project-feed
 parent: lifecycle/requirements/project-feed-2.md
 created: "2026-04-29"
+assignees:
+  - role: product-owner
+    who: agent
 ---
 
 # Test Plan: Project Feed
@@ -252,3 +255,21 @@ Create a companion test artifact documenting what the test suite covers.
 - The test artifact exists in `lifecycle/tests/` with correct frontmatter.
 - The body lists all test functions and the scenarios they cover.
 - Lineage index (6) follows the test plan (5) monotonically.
+
+---
+
+## Open Questions
+
+**Blocking — test implementation cannot proceed until the backend is built.**
+
+1. **Backend not implemented.** The test plan assumes that `project-feed-3-be` has been delivered: specifically the `Index.InsertEvent(...)`, `Index.ListEvents(limit, cursor, types)`, and `Index.PruneEvents(maxAgeDays, maxCount)` methods on `internal/index/index.go`, the `events` table in SQLite, and the `GET /api/p/{project}/feed` REST endpoint. As of 2026-04-29 none of these exist in the codebase (`lifecycle/backend-plans/project-feed-3-be.md` is `status: approved` but not yet merged). All milestones (1–9) depend on this code being present and compilable before any integration test can be written against it.
+
+   **Question for product-owner:** Please assign and complete the `backend-developer` run for `project-feed-3-be` first, then re-assign the test-developer to this plan once the backend is merged.
+
+2. **Method signatures unconfirmed.** The test plan specifies calls such as `p.Idx.InsertEvent(...)`, `p.Idx.ListEvents(50, 0, nil)`, and `p.Idx.PruneEvents(30, 10000)` but does not define the concrete Go signatures or the `EventRow` struct fields. If the backend implementation deviates from these shapes (e.g. uses a different cursor type, a struct argument, or different parameter order), the tests will need adjustment.
+
+   **Question for product-owner / backend-developer:** Once the backend is implemented, please confirm the exact Go signatures for `InsertEvent`, `ListEvents`, and `PruneEvents`, and the fields of `EventRow`.
+
+3. **`feed.new` WebSocket payload shape.** Milestone 8 asserts the `feed.new` message contains `id`, `event_type`, `summary`, and `timestamp`. The backend plan (milestone 5 of `project-feed-3-be`) describes the broadcast but does not canonically define the JSON key names or whether all `EventRow` fields are included. Tests against the wrong shape will give false negatives.
+
+   **Question for backend-developer:** Please document the exact JSON structure of the `feed.new` WebSocket message once it is implemented.
