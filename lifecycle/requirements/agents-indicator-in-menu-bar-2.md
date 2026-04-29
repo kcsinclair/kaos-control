@@ -1,7 +1,7 @@
 ---
 title: Move Running Agents Indicator to Menu Bar
 type: requirement
-status: approved
+status: planning
 lineage: agents-indicator-in-menu-bar
 parent: lifecycle/ideas/agents-indicator-in-menu-bar.md
 labels:
