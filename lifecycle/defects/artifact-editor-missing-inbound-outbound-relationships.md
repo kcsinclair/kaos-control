@@ -1,7 +1,7 @@
 ---
 title: Artifact Editor Details Panel Missing Inbound/Outbound Relationship Info
 type: defect
-status: draft
+status: approved
 lineage: artifact-editor-missing-inbound-outbound-relationships
 created: "2026-04-29T15:35:47+10:00"
 priority: normal
