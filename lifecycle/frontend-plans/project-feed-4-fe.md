@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Project Feed"
 type: plan-frontend
-status: draft
+status: approved
 lineage: project-feed
 parent: lifecycle/requirements/project-feed-2.md
 created: "2026-04-29"
