@@ -1,7 +1,7 @@
 ---
 title: "Tests: Artifact Agent Run History"
 type: test
-status: approved
+status: in-qa
 lineage: artifact-agent-run-history
 parent: lifecycle/test-plans/artifact-agent-run-history-5-test.md
 created: "2026-04-28"
