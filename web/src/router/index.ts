@@ -51,6 +51,11 @@ const router = createRouter({
           component: () => import('@/views/project/AgentsRunsView.vue'),
         },
         {
+          path: 'feed',
+          name: 'feed',
+          component: () => import('@/views/project/ProjectFeedView.vue'),
+        },
+        {
           path: 'parse-errors',
           name: 'parse-errors',
           component: () => import('@/views/project/ParseErrorsView.vue'),

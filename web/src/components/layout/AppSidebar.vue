@@ -13,6 +13,7 @@ import {
   Columns3,
   Network,
   Bot,
+  Activity,
   AlertTriangle,
   Settings,
 } from 'lucide-vue-next'
@@ -63,6 +64,7 @@ const navItems = (): NavItem[] => {
     { label: 'Board',        to: `/p/${p}/artifacts/board`, icon: Columns3 },
     { label: 'Graph',        to: `/p/${p}/graph`,           icon: Network },
     { label: 'Agents',       to: `/p/${p}/agents`,          icon: Bot },
+    { label: 'Feed',         to: `/p/${p}/feed`,            icon: Activity },
     { label: 'Parse Errors', to: `/p/${p}/parse-errors`,    icon: AlertTriangle },
     { label: 'Config',       to: `/p/${p}/config`,          icon: Settings },
   ]
