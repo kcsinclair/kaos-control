@@ -3,20 +3,45 @@ import { getProjectWs } from '@/api/ws'
 
 // Grace period after our own save during which fsnotify-triggered file.changed events are ignored.
 const SAVE_GRACE_MS = 3_000
+const AUTO_REFRESH_DEBOUNCE_MS = 300
 
-export function useExternalChange(project: string, artifactPath: string) {
+interface ExternalChangeOptions {
+  isDirty?: () => boolean
+  onAutoRefresh?: () => void
+}
+
+export function useExternalChange(
+  project: string,
+  artifactPath: string,
+  options?: ExternalChangeOptions,
+) {
   const hasExternalChange = ref(false)
   let lastSaveMs = 0
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined
 
   const ws = getProjectWs(project)
   const unsub = ws.onType('file.changed', (e) => {
     const path = e.payload?.path as string | undefined
     if (path !== artifactPath) return
     if (Date.now() - lastSaveMs < SAVE_GRACE_MS) return
-    hasExternalChange.value = true
+
+    if (options?.isDirty?.() === false && options?.onAutoRefresh) {
+      // Auto-refresh path: debounce to coalesce rapid successive events
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        options.onAutoRefresh!()
+      }, AUTO_REFRESH_DEBOUNCE_MS)
+    } else {
+      // Conflict banner path (dirty or no auto-refresh callback)
+      clearTimeout(debounceTimer)
+      hasExternalChange.value = true
+    }
   })
 
-  onUnmounted(unsub)
+  onUnmounted(() => {
+    unsub()
+    clearTimeout(debounceTimer)
+  })
 
   function markSaved(): void {
     lastSaveMs = Date.now()
