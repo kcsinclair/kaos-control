@@ -1,7 +1,7 @@
 ---
 title: Auto-Refresh Editor on Disk Change
 type: idea
-status: approved
+status: clarifying
 lineage: editor-live-refresh-on-disk-change
 created: "2026-04-27T16:24:28+10:00"
 priority: high
