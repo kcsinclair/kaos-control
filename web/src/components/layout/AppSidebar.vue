@@ -2,12 +2,15 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
+import { useUiStore } from '@/stores/ui'
 import { api } from '@/api/client'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const route = useRoute()
 const projectStore = useProjectStore()
+const uiStore = useUiStore()
 
 const projectName = () => route.params.project as string
 const parseErrorCount = ref(0)
@@ -56,7 +59,11 @@ const navItems = (): NavItem[] => {
 </script>
 
 <template>
-  <nav class="app-sidebar" aria-label="Project navigation">
+  <nav
+    class="app-sidebar"
+    :class="{ 'sidebar--collapsed': uiStore.sidebarCollapsed }"
+    aria-label="Project navigation"
+  >
     <div class="sidebar-project">
       <span class="project-label">Project</span>
       <span class="project-name">{{ projectStore.current?.name ?? projectName() }}</span>
@@ -96,18 +103,33 @@ const navItems = (): NavItem[] => {
         </RouterLink>
       </li>
     </ul>
+    <div class="sidebar-footer">
+      <button
+        class="sidebar-toggle"
+        :aria-label="uiStore.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+        :aria-expanded="!uiStore.sidebarCollapsed"
+        @click="uiStore.toggleSidebar()"
+      >
+        <ChevronRight v-if="uiStore.sidebarCollapsed" :size="16" />
+        <ChevronLeft v-else :size="16" />
+      </button>
+    </div>
   </nav>
 </template>
 
 <style scoped>
 .app-sidebar {
-  width: 220px;
+  width: var(--sidebar-width-expanded);
   flex-shrink: 0;
   background: var(--color-sidebar);
   border-right: 1px solid var(--color-border-dark);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar--collapsed {
+  width: var(--sidebar-width-collapsed);
 }
 .sidebar-project {
   padding: var(--space-4) var(--space-4) var(--space-2);
@@ -193,5 +215,31 @@ const navItems = (): NavItem[] => {
 }
 .nav-link--active .badge {
   background: rgba(255,255,255,0.25);
+}
+.sidebar-footer {
+  padding: var(--space-2);
+  border-top: 1px solid var(--color-border-dark);
+  display: flex;
+  justify-content: flex-end;
+}
+.sidebar--collapsed .sidebar-footer {
+  justify-content: center;
+}
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-sidebar-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.sidebar-toggle:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-sidebar-text);
 }
 </style>

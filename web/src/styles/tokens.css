@@ -16,6 +16,10 @@
   --color-warning: #d97706;
   --color-success: #16a34a;
 
+  /* Sidebar widths */
+  --sidebar-width-expanded: 220px;
+  --sidebar-width-collapsed: 48px;
+
   /* Sidebar (always dark) */
   --color-sidebar: #1e293b;
   --color-sidebar-text: #e2e8f0;
