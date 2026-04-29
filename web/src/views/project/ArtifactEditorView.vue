@@ -72,9 +72,15 @@ const { acquired: lockAcquired, conflictLock, acquire: acquireLock, release: rel
 )
 
 // ── external change detection ────────────────────────────────────────────────
+// Track when auto-refresh last completed so the artifact.indexed listener
+// can skip a redundant fetch for the same change event.
+const AUTO_REFRESH_GRACE_MS = 2_000
+let lastAutoRefreshMs = 0
+
 async function autoRefresh() {
   store.invalidate(artifactPath.value)
   artifact.value = await store.fetchOne(project.value, artifactPath.value)
+  lastAutoRefreshMs = Date.now()
   ui.info('File updated on disk')
 }
 
@@ -152,10 +158,11 @@ async function reloadFromDisk() {
 
 // ── WS: re-index by agent or external tool ───────────────────────────────────
 useWebSocket(project.value, 'artifact.indexed', (e: WsEvent) => {
-  if (e.payload?.path === artifactPath.value && !editing.value) {
-    store.invalidate(artifactPath.value)
-    load()
-  }
+  if (e.payload?.path !== artifactPath.value || editing.value) return
+  // Skip if auto-refresh already handled this change (file.changed + re-fetch)
+  if (Date.now() - lastAutoRefreshMs < AUTO_REFRESH_GRACE_MS) return
+  store.invalidate(artifactPath.value)
+  load()
 })
 
 watch(artifactPath, load, { immediate: false })
