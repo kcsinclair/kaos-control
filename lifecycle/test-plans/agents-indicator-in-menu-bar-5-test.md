@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Move Running Agents Indicator to Menu Bar"
 type: plan-test
-status: in-development
+status: done
 lineage: agents-indicator-in-menu-bar
 parent: lifecycle/requirements/agents-indicator-in-menu-bar-2.md
 ---
