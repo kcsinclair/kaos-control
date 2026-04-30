@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Move Running Agents Indicator to Menu Bar"
 type: plan-backend
-status: approved
+status: in-development
 lineage: agents-indicator-in-menu-bar
 parent: lifecycle/requirements/agents-indicator-in-menu-bar-2.md
 ---
