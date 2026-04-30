@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Move Running Agents Indicator to Menu Bar"
 type: plan-frontend
-status: draft
+status: approved
 lineage: agents-indicator-in-menu-bar
 parent: lifecycle/requirements/agents-indicator-in-menu-bar-2.md
 ---
