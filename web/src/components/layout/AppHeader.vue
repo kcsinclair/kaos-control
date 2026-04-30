@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { useThemeStore } from '@/stores/theme'
+import { useAgentsStore } from '@/stores/agents'
 import { ApiError } from '@/api/client'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const ui = useUiStore()
 const theme = useThemeStore()
+const agentsStore = useAgentsStore()
+
+const project = computed(() => route.params.project as string | undefined)
+const activeCount = computed(() => agentsStore.activeRuns.length)
 
 async function handleLogout() {
   try {
@@ -28,6 +35,15 @@ async function handleLogout() {
       <RouterLink to="/projects" class="brand-link">kaos-control</RouterLink>
     </div>
     <div class="header-actions">
+      <RouterLink
+        v-if="project && activeCount > 0"
+        :to="`/p/${project}/agents`"
+        class="header-run-indicator"
+        :aria-label="`${activeCount} running agent${activeCount === 1 ? '' : 's'} — click to view`"
+      >
+        <span class="run-dot" />
+        {{ activeCount }}<span class="run-label"> running agent{{ activeCount === 1 ? '' : 's' }}</span>
+      </RouterLink>
       <span v-if="auth.me" class="header-user">{{ auth.me.display_name }}</span>
       <button
         class="btn-icon"
@@ -115,5 +131,45 @@ async function handleLogout() {
   color: #fff;
   border-color: var(--color-sidebar-text);
   background: rgba(255,255,255,0.08);
+}
+.header-run-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-dark);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-sidebar-text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.header-run-indicator:hover {
+  color: #fff;
+  border-color: var(--color-sidebar-text);
+  background: rgba(255,255,255,0.08);
+}
+.run-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .run-dot {
+    animation: none;
+  }
+}
+@media (max-width: 768px) {
+  .run-label {
+    display: none;
+  }
 }
 </style>
