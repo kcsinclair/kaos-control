@@ -7,7 +7,6 @@ import { useAgentsStore } from '@/stores/agents'
 import { getProjectWs } from '@/api/ws'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
-import RunStatusChip from '@/components/agent/RunStatusChip.vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -63,7 +62,6 @@ onUnmounted(() => { wsUnsub?.() })
         <RouterView />
       </main>
     </div>
-    <RunStatusChip :project="getProject()" />
   </div>
 </template>
 
