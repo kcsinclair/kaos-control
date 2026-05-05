@@ -1,7 +1,7 @@
 ---
-title: "Test plan: auto-transition artifacts to blocked on open questions"
+title: 'Test plan: auto-transition artifacts to blocked on open questions'
 type: plan-test
-status: draft
+status: approved
 lineage: agent-questions-trigger-blocked-status
 parent: lifecycle/requirements/agent-questions-trigger-blocked-status-2.md
 ---
