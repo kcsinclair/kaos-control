@@ -177,6 +177,10 @@ async function reloadFromDisk() {
 }
 
 // ── WS: re-index by agent or external tool ───────────────────────────────────
+// Reactive chain: load() fetches the full artifact including body; hasOpenQuestions
+// is a computed that reads artifact.value.body, so it recomputes automatically once
+// load() resolves — the blocked banner appears/disappears atomically with the status
+// badge without any manual refresh.
 useWebSocket(project.value, 'artifact.indexed', (e: WsEvent) => {
   if (e.payload?.path !== artifactPath.value || editing.value) return
   // Skip if auto-refresh already handled this change (file.changed + re-fetch)
