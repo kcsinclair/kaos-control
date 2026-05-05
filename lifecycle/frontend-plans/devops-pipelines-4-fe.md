@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: DevOps Pipeline Management'
 type: plan-frontend
-status: in-development
+status: done
 lineage: devops-pipelines
 parent: lifecycle/requirements/devops-pipelines-2.md
 ---
