@@ -1,7 +1,7 @@
 ---
 title: ParseErrorsView.sort.test.ts fails to collect — vi.mock factory references top-level variable before initialization
 type: defect
-status: draft
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-6-test.md
 labels: [defect]
