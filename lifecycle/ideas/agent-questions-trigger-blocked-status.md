@@ -1,7 +1,7 @@
 ---
 title: Agent Questions Trigger Blocked Status
 type: idea
-status: approved
+status: clarifying
 lineage: agent-questions-trigger-blocked-status
 created: "2026-04-27T16:34:31+10:00"
 priority: high
