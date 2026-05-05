@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Management
 type: requirement
-status: approved
+status: planning
 lineage: devops-pipelines
 priority: high
 parent: lifecycle/ideas/devops-pipelines.md
