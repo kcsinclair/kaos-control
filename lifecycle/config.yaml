@@ -11,6 +11,7 @@ roles:
   - qa
   - reviewer
   - approver
+  - devops
 
 stages:
   - {name: ideas,          dir: ideas}
