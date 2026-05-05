@@ -34,6 +34,9 @@ var defaultRules = []rule{
 	{from: "", to: "blocked", roles: []string{"analyst", "backend-developer", "frontend-developer", "test-developer", "qa"}},
 	// Unblock: product-owner (and analyst, who can also re-scope) sends it back to draft after answering.
 	{from: "blocked", to: "draft", roles: []string{"product-owner", "analyst"}},
+	// System actor: machine-initiated block/unblock transitions (auto-block on open questions).
+	{from: "", to: "blocked", roles: []string{"system"}},
+	{from: "blocked", to: "draft", roles: []string{"system"}},
 }
 
 // New builds an Engine, overlaying project-level overrides on the default matrix.

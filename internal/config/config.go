@@ -263,7 +263,7 @@ var defaultStages = []Stage{
 var defaultRoles = []string{
 	"product-owner", "analyst",
 	"backend-developer", "frontend-developer", "test-developer",
-	"qa", "reviewer", "approver", "devops",
+	"qa", "reviewer", "approver", "devops", "system",
 }
 
 func defaultProject() Project {
