@@ -5,6 +5,7 @@ import type { StepState } from '@/stores/devops'
 const props = defineProps<{
   step: StepState
   index: number
+  outputOpen?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -36,7 +37,7 @@ const durationLabel = computed((): string | null => {
       v-if="props.step.output.length > 0"
       class="btn-toggle-output"
       @click="emit('toggle-output')"
-    >output</button>
+    >{{ props.outputOpen ? '▲ hide' : '▼ output' }}</button>
   </div>
 </template>
 

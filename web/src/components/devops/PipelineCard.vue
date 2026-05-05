@@ -91,6 +91,7 @@ async function handleCancel() {
         <StepProgress
           :step="step"
           :index="i"
+          :output-open="outputOpen.has(i)"
           @toggle-output="toggleOutput(i)"
         />
         <StepOutput
