@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Lineage Status Checker API'
 type: plan-backend
-status: approved
+status: in-development
 lineage: status-checker-button
 parent: lifecycle/requirements/status-checker-button-2.md
 ---
