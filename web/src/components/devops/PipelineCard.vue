@@ -1,22 +1,88 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import type { Pipeline } from '@/api/devops'
+import { useDevOpsStore } from '@/stores/devops'
+import { useUiStore } from '@/stores/ui'
+import { ApiError } from '@/api/client'
 
 const props = defineProps<{
   pipeline: Pipeline
+  project: string
 }>()
+
+const devops = useDevOpsStore()
+const ui = useUiStore()
+
+const running = ref(false)
+const cancelling = ref(false)
+
+const activeRun = computed(() => devops.activeRuns.get(props.pipeline.slug))
+const isActive = computed(() => {
+  const run = activeRun.value
+  return run != null && run.overallStatus === 'running'
+})
+
+async function handleRun() {
+  running.value = true
+  try {
+    await devops.runPipeline(props.project, props.pipeline.slug)
+  } catch (e: unknown) {
+    if (e instanceof ApiError && e.status === 409) {
+      ui.error('Pipeline is already running.')
+    } else if (e instanceof ApiError && e.status === 403) {
+      ui.error('You do not have permission to run this pipeline.')
+    } else {
+      ui.error(e instanceof Error ? e.message : 'Failed to start pipeline.')
+    }
+  } finally {
+    running.value = false
+  }
+}
+
+async function handleCancel() {
+  cancelling.value = true
+  try {
+    await devops.cancelPipeline(props.project, props.pipeline.slug)
+  } catch (e: unknown) {
+    ui.error(e instanceof Error ? e.message : 'Failed to cancel pipeline.')
+  } finally {
+    cancelling.value = false
+  }
+}
 </script>
 
 <template>
-  <div class="pipeline-card">
+  <div
+    class="pipeline-card"
+    :class="{
+      'pipeline-card--running': isActive,
+      'pipeline-card--passed': activeRun?.overallStatus === 'passed',
+      'pipeline-card--failed': activeRun?.overallStatus === 'failed',
+    }"
+  >
     <div class="card-header">
       <span class="pipeline-name">{{ props.pipeline.name }}</span>
       <span class="type-badge">{{ props.pipeline.type }}</span>
     </div>
     <div class="card-meta">
       <span class="step-count">{{ props.pipeline.steps.length }} step{{ props.pipeline.steps.length !== 1 ? 's' : '' }}</span>
+      <span v-if="activeRun?.overallStatus === 'passed'" class="run-status run-status--passed">Passed</span>
+      <span v-else-if="activeRun?.overallStatus === 'failed'" class="run-status run-status--failed">Failed</span>
+      <span v-else-if="activeRun?.overallStatus === 'cancelled'" class="run-status run-status--cancelled">Cancelled</span>
     </div>
     <div class="card-actions">
-      <button class="btn-run" disabled>Run</button>
+      <button
+        v-if="!isActive"
+        class="btn-run"
+        :disabled="running"
+        @click="handleRun"
+      >{{ running ? 'Starting…' : 'Run' }}</button>
+      <button
+        v-else
+        class="btn-cancel"
+        :disabled="cancelling"
+        @click="handleCancel"
+      >{{ cancelling ? 'Cancelling…' : 'Cancel' }}</button>
     </div>
   </div>
 </template>
@@ -30,6 +96,16 @@ const props = defineProps<{
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  transition: border-color 0.2s;
+}
+.pipeline-card--running {
+  border-color: var(--color-accent);
+}
+.pipeline-card--passed {
+  border-color: var(--color-success, #22c55e);
+}
+.pipeline-card--failed {
+  border-color: var(--color-error);
 }
 .card-header {
   display: flex;
@@ -58,11 +134,30 @@ const props = defineProps<{
   flex-shrink: 0;
 }
 .card-meta {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 .step-count {
   font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.run-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
+}
+.run-status--passed {
+  background: var(--badge-done-bg);
+  color: var(--badge-done-text);
+}
+.run-status--failed {
+  background: var(--badge-blocked-bg);
+  color: var(--badge-blocked-text);
+}
+.run-status--cancelled {
+  background: var(--color-border);
   color: var(--color-text-muted);
 }
 .card-actions {
@@ -84,4 +179,21 @@ const props = defineProps<{
   cursor: not-allowed;
 }
 .btn-run:not(:disabled):hover { opacity: 0.88; }
+.btn-cancel {
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-cancel:not(:disabled):hover {
+  background: var(--badge-blocked-bg);
+}
 </style>

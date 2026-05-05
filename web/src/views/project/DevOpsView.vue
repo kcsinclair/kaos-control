@@ -59,6 +59,7 @@ onMounted(() => {
                 v-for="pipeline in devops.pipelinesByType[type]"
                 :key="pipeline.slug"
                 :pipeline="pipeline"
+                :project="project"
               />
             </div>
           </div>
