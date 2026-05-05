@@ -170,6 +170,10 @@ func (s *Server) buildRouter() chi.Router {
 			// Roles and users
 			r.With(requireAuth).Get("/roles", s.handleGetRoles)
 
+			// Lineage status checker
+			r.With(requireAuth).Get("/status-check", s.handleStatusCheck)
+			r.With(requireAuth).Post("/status-check/advance", s.handleStatusCheckAdvance)
+
 			// DevOps pipelines
 			r.Get("/devops/pipelines", s.handleListPipelines)
 			r.Post("/devops/pipelines/{slug}/run", s.handleRunPipeline)
