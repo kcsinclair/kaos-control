@@ -781,6 +781,28 @@ func (idx *Index) InboundLinks(dstPath string) ([]string, error) {
 	return srcs, rows.Err()
 }
 
+// ListByLineage returns all artifacts for the given lineage slug.
+// When slug is empty, all artifacts across every lineage are returned.
+// Results are ordered by lineage, index, then path — matching the List ordering.
+func (idx *Index) ListByLineage(slug string) ([]*ArtifactRow, error) {
+	rows, _, err := idx.List(Filter{Lineage: slug, Unlimited: true})
+	return rows, err
+}
+
+// ListAllGroupedByLineage returns all artifacts grouped by their lineage slug.
+// It is equivalent to calling ListByLineage("") and partitioning the result.
+func (idx *Index) ListAllGroupedByLineage() (map[string][]*ArtifactRow, error) {
+	all, err := idx.ListByLineage("")
+	if err != nil {
+		return nil, err
+	}
+	grouped := make(map[string][]*ArtifactRow, len(all))
+	for _, r := range all {
+		grouped[r.Lineage] = append(grouped[r.Lineage], r)
+	}
+	return grouped, nil
+}
+
 // ----- agent runs -----
 
 // ErrLocked is returned when a lineage lock is already held.
