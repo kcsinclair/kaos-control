@@ -121,8 +121,17 @@ The Product Owner currently has no way to define, trigger, or monitor build/depl
 
 1. Should completed run logs be persisted to disk (e.g. `lifecycle/devops/.runs/`) for post-mortem review, or is ephemeral in-memory state sufficient for v1?
 
-> Run logs should be stored in ~/.kaos-control/devops/kaos-control
+> Yes, the run logs should be stored in ~/.kaos-control/devops/<project name> e.g. ~/.kaos-control/devops/kaos-control
+> It should also be possible to view the pipeline logs while they are running.
 
 2. Should pipeline definitions support a `timeout` field per step or per pipeline to prevent hung commands?
-4. Is there a need for a "cancel" action to abort a running pipeline mid-execution?
-5. Should the DevOps page be visible (read-only) to all roles, or hidden entirely from non-product-owner users?
+
+> Yes, per step with the default being 60 seconds, if not explicitly stated in the config use the default.
+
+3. Is there a need for a "cancel" action to abort a running pipeline mid-execution?
+
+> Yes, this is a good idea.
+
+4. Should the DevOps page be visible (read-only) to all roles, or hidden entirely from non-product-owner users?
+
+> We should add a new role called devops.  This page should only be visible to the product-owner and devops roles.
