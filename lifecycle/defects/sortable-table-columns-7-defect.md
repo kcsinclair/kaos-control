@@ -1,7 +1,7 @@
 ---
 title: useSortableTable columns API mismatch — sort not applied for any type
 type: defect
-status: draft
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-6-test.md
 labels: [defect]
