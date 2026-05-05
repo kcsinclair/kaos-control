@@ -109,72 +109,20 @@ func (s *Server) handleTransitionArtifact(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// Patch status in the file (frontmatter only; body is untouched).
-	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+	if err := applyTransition(p, row, relPath, req.To, user.Email, req.Comment); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("transition_error", err.Error()))
 		return
 	}
-	raw, err := os.ReadFile(absPath)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
-		return
-	}
-	patched, ok := patchFrontmatterField(raw, "status", req.To)
-	if !ok {
-		writeJSON(w, http.StatusInternalServerError, apiError("patch_error", "status field not found in frontmatter"))
-		return
-	}
-	if err := os.WriteFile(absPath, patched, 0o644); err != nil {
-		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
-		return
-	}
-	_ = p.Idx.IndexFile(absPath)
-
-	changedPaths := []string{relPath}
 
 	// Rejection: write a child artifact with the reviewer's feedback.
 	var rejectionPath string
 	if req.To == "rejected" && req.Comment != "" {
-		rejectionPath, err = writeRejectionArtifact(p, row, relPath, req.Comment)
-		if err != nil {
+		var rerr error
+		rejectionPath, rerr = writeRejectionArtifact(p, row, relPath, req.Comment)
+		if rerr != nil {
 			// Non-fatal: transition is committed even if the child artifact fails.
-			_ = err
-		} else {
-			changedPaths = append(changedPaths, rejectionPath)
+			_ = rerr
 		}
-	}
-
-	// Git commit covering the status change (and rejection child if created).
-	if p.Git != nil {
-		authorName, authorEmail := p.Git.ResolveIdentity()
-		msg := fmt.Sprintf("transition(%s): %s → %s", row.FM.Lineage, row.Status, req.To)
-		if req.Comment != "" {
-			msg += "\n\n" + req.Comment
-		}
-		_, _ = p.Git.AddAndCommit(changedPaths, msg, authorName, authorEmail)
-	}
-
-	p.Hub.Broadcast(hub.Event{
-		Type: "artifact.indexed",
-		Payload: map[string]any{
-			"path": relPath, "action": "transitioned",
-			"from": row.Status, "to": req.To,
-		},
-	})
-
-	// Record feed event and broadcast feed.new.
-	artifactPath := relPath
-	summary := fmt.Sprintf("%q transitioned from %s → %s", row.FM.Title, row.Status, req.To)
-	feedEvent := &index.EventRow{
-		EventType:    "status_transition",
-		Timestamp:    time.Now().Unix(),
-		Actor:        user.Email,
-		ArtifactPath: &artifactPath,
-		Summary:      summary,
-	}
-	if err := p.Idx.InsertEvent(feedEvent); err == nil {
-		p.Hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
 	}
 
 	result, _ := p.Idx.Get(relPath)
@@ -183,6 +131,67 @@ func (s *Server) handleTransitionArtifact(w http.ResponseWriter, r *http.Request
 		resp["rejection_artifact"] = rejectionPath
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// applyTransition writes the new status to disk, re-indexes, commits to git,
+// broadcasts the artifact.indexed WebSocket event, and records a feed entry.
+// It is the shared core used by both handleTransitionArtifact and the batch
+// advance endpoint in status_check.go.
+//
+// row must reflect the artifact's state *before* the transition.
+// actor is the user email (for feed events); comment is optional.
+func applyTransition(p *project.Project, row *index.ArtifactRow, relPath, toStatus, actor, comment string) error {
+	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
+	if err != nil {
+		return fmt.Errorf("invalid path: %w", err)
+	}
+	raw, err := os.ReadFile(absPath)
+	if err != nil {
+		return fmt.Errorf("read file: %w", err)
+	}
+	patched, ok := patchFrontmatterField(raw, "status", toStatus)
+	if !ok {
+		return fmt.Errorf("status field not found in frontmatter of %s", relPath)
+	}
+	if err := os.WriteFile(absPath, patched, 0o644); err != nil {
+		return fmt.Errorf("write file: %w", err)
+	}
+	_ = p.Idx.IndexFile(absPath)
+
+	// Git commit.
+	if p.Git != nil {
+		authorName, authorEmail := p.Git.ResolveIdentity()
+		msg := fmt.Sprintf("transition(%s): %s → %s", row.FM.Lineage, row.Status, toStatus)
+		if comment != "" {
+			msg += "\n\n" + comment
+		}
+		_, _ = p.Git.AddAndCommit([]string{relPath}, msg, authorName, authorEmail)
+	}
+
+	// WebSocket broadcast.
+	p.Hub.Broadcast(hub.Event{
+		Type: "artifact.indexed",
+		Payload: map[string]any{
+			"path": relPath, "action": "transitioned",
+			"from": row.Status, "to": toStatus,
+		},
+	})
+
+	// Feed event.
+	artifactPath := relPath
+	summary := fmt.Sprintf("%q transitioned from %s → %s", row.FM.Title, row.Status, toStatus)
+	feedEvent := &index.EventRow{
+		EventType:    "status_transition",
+		Timestamp:    time.Now().Unix(),
+		Actor:        actor,
+		ArtifactPath: &artifactPath,
+		Summary:      summary,
+	}
+	if err := p.Idx.InsertEvent(feedEvent); err == nil {
+		p.Hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+	}
+
+	return nil
 }
 
 // writeRejectionArtifact creates a <slug>-<N>-rejection.md child in the same
