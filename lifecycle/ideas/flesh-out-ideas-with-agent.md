@@ -1,16 +1,19 @@
 ---
-title: "Flesh Out Ideas with Agent"
-priority: normal
+title: Flesh Out Ideas with Agent
 type: idea
 status: draft
 lineage: flesh-out-ideas-with-agent
+priority: low
 labels:
     - agent
     - workflow
     - process
     - feature
 ---
+
 # flesh out ideas with agent
+
+**this idea needs to be verified, may not be required now**
 
 relates-to: [[ideas/prompt-to-idea]]
 
