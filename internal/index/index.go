@@ -2,6 +2,7 @@
 package index
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -327,7 +328,31 @@ func (idx *Index) IndexFile(absPath string) error {
 		}
 	}
 
-	return idx.Upsert(a)
+	// SHA-256 guard (Milestone 4): if the stored hash matches the incoming
+	// content, the file has not meaningfully changed — skip Upsert and
+	// applyOpenQuestionTransition to prevent circular re-index loops caused
+	// by atomicWrite inside applyOpenQuestionTransition triggering the watcher.
+	var storedHash []byte
+	if err := idx.db.QueryRow(
+		`SELECT body_sha256 FROM artifacts WHERE path = ?`, relPath,
+	).Scan(&storedHash); err == nil {
+		if bytes.Equal(storedHash, a.SHA256[:]) {
+			return nil
+		}
+	}
+
+	if err := idx.Upsert(a); err != nil {
+		return err
+	}
+
+	// Auto-transition on open questions (Milestone 3): fires on every
+	// successful Upsert, covering watcher events, API writes, and startup scan.
+	if idx.hub != nil && idx.wf != nil {
+		if err := idx.applyOpenQuestionTransition(a, absPath); err != nil {
+			slog.Warn("auto-transition failed", "path", absPath, "err", err)
+		}
+	}
+	return nil
 }
 
 // DeletePath removes an artifact and its links by project-relative path.
