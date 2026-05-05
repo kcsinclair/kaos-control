@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Management
 type: requirement
-status: draft
+status: blocked
 lineage: devops-pipelines
 parent: lifecycle/ideas/devops-pipelines.md
 labels:
