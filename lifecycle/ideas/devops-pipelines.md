@@ -15,7 +15,7 @@ labels:
 
 # DevOps Pipeline Management
 
-[[agent-task-scheduler]]
+Relates to: [[agent-task-scheduler]]
 
 Introduce a `devops/` directory under `lifecycle/` to hold YAML pipeline definitions. Each YAML file declares a pipeline type (`build`, `deploy`, or `release`), a human-readable name, and an ordered list of steps — each step carrying a name, description, and shell command to execute. The pipeline type vocabulary is open for extension so future pipeline categories (e.g. `migrate`, `rollback`) can be added without schema changes.
 
