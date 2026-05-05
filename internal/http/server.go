@@ -93,6 +93,10 @@ func (s *Server) buildRouter() chi.Router {
 					s.handleGetArtifactHistory(w, r)
 					return
 				}
+				if strings.HasSuffix(param, "/allowed-targets") {
+					s.handleAllowedTargets(w, r)
+					return
+				}
 				s.handleGetArtifact(w, r)
 			})
 			r.Put("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {

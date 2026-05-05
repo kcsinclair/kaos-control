@@ -18,6 +18,33 @@ import (
 	"github.com/kaos-control/kaos-control/internal/workflow"
 )
 
+// handleAllowedTargets handles GET /api/p/:project/artifacts/*path/allowed-targets
+func (s *Server) handleAllowedTargets(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	user := userFromCtx(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
+		return
+	}
+
+	rawParam := chi.URLParam(r, "*")
+	relPath := strings.TrimSuffix(rawParam, "/allowed-targets")
+
+	row, err := p.Idx.Get(relPath)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+	if row == nil {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "artifact not found"))
+		return
+	}
+
+	userRoles := p.Cfg.RolesFor(user.Email)
+	targets := p.Workflow.AllowedTargets(row.Status, userRoles)
+	writeJSON(w, http.StatusOK, map[string]any{"targets": targets})
+}
+
 // handleTransitionArtifact handles POST /api/p/:project/artifacts/*path/transition
 func (s *Server) handleTransitionArtifact(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
