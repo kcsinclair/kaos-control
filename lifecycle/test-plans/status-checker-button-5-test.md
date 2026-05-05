@@ -1,7 +1,7 @@
 ---
-title: "Test Plan: Lineage Status Checker"
+title: 'Test Plan: Lineage Status Checker'
 type: plan-test
-status: draft
+status: approved
 lineage: status-checker-button
 parent: lifecycle/requirements/status-checker-button-2.md
 ---
