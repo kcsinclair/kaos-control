@@ -15,6 +15,8 @@ labels:
 
 # DevOps Pipeline Management
 
+[[agent-task-scheduler]]
+
 Introduce a `devops/` directory under `lifecycle/` to hold YAML pipeline definitions. Each YAML file declares a pipeline type (`build`, `deploy`, or `release`), a human-readable name, and an ordered list of steps — each step carrying a name, description, and shell command to execute. The pipeline type vocabulary is open for extension so future pipeline categories (e.g. `migrate`, `rollback`) can be added without schema changes.
 
 Add a new **DevOps** section to the left navigation menu. The DevOps page discovers all YAML files in `lifecycle/devops/` and renders them grouped by type into three kanban-style columns — Build, Deploy, Release. Each pipeline appears as a card with a launch button; clicking it executes the steps in order, streaming output back to the UI in real time via WebSocket so the Product Owner can monitor progress.
