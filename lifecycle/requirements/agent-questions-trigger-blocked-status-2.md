@@ -85,10 +85,10 @@ The building blocks already exist independently -- `artifact.HasOpenQuestions()`
 
 ## Open Questions
 
-- Should the auto-unblock target status be `draft` unconditionally, or should the system remember and restore the pre-block status? The current workflow matrix only defines `blocked -> draft`, so restoring a prior status would require schema/matrix changes. Defaulting to `draft` is simpler and consistent with the existing rules.
+1. Should the auto-unblock target status be `draft` unconditionally, or should the system remember and restore the pre-block status? The current workflow matrix only defines `blocked -> draft`, so restoring a prior status would require schema/matrix changes. Defaulting to `draft` is simpler and consistent with the existing rules.
 
 > auto-unblock should transition to draft.  It is expected that the product-owner would edit, answer questions, and set the artefact to approved, then run the next step.
 
-- Should the auto-block logic also set or preserve the `assignees` field (e.g. ensure `product-owner` is assigned)? Currently agents set this themselves when writing questions, but if a human manually adds a `## Open Questions` section, no assignee would be set automatically.
+2. Should the auto-block logic also set or preserve the `assignees` field (e.g. ensure `product-owner` is assigned)? Currently agents set this themselves when writing questions, but if a human manually adds a `## Open Questions` section, no assignee would be set automatically.
 
 > auto-block for questions should assign to product-owner.
