@@ -10,6 +10,7 @@ import (
 
 	"github.com/kaos-control/kaos-control/internal/agent"
 	"github.com/kaos-control/kaos-control/internal/config"
+	"github.com/kaos-control/kaos-control/internal/devops"
 	kgit "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/ideachat"
@@ -31,6 +32,8 @@ type Project struct {
 	Locks          *lock.Manager
 	Agents         *agent.Manager  // nil if no agents configured
 	IdeaChatStore  *ideachat.Store // per-project conversational idea-capture sessions
+	DevopsRunner   *devops.Runner  // manages active pipeline runs
+	DevopsLogs     *devops.LogStore // persists run logs to ~/.kaos-control/devops/<project>/
 
 	// watcherDone is closed when the watcher goroutine exits.
 	// Close() waits on this before closing the index DB.
@@ -98,6 +101,12 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, entry.Path, runsLogDir)
 	}
 
+	logStore := devops.NewLogStore(dbDir)
+	devopsRunner := devops.NewRunner()
+	devopsRunner.SetEventHook(func(runID, eventType string, payload any) {
+		logStore.WriteEvent(entry.Name, runID, eventType, payload)
+	})
+
 	return &Project{
 		Entry:         entry,
 		Cfg:           cfg,
@@ -109,6 +118,8 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		Locks:         locks,
 		Agents:        agentMgr,
 		IdeaChatStore: ideachat.NewStore(),
+		DevopsRunner:  devopsRunner,
+		DevopsLogs:    logStore,
 	}, nil
 }
 
