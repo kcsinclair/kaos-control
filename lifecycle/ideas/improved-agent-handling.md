@@ -1,9 +1,9 @@
 ---
-title: "Improved Agent Handling"
-priority: medium
+title: Improved Agent Handling
 type: idea
 status: draft
 lineage: improved-agent-handling
+priority: medium
 labels:
     - agent
     - workflow
