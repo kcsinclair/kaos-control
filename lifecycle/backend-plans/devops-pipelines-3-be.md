@@ -1,7 +1,7 @@
 ---
-title: "Backend Plan: DevOps Pipeline Management"
+title: 'Backend Plan: DevOps Pipeline Management'
 type: plan-backend
-status: draft
+status: approved
 lineage: devops-pipelines
 parent: lifecycle/requirements/devops-pipelines-2.md
 ---
