@@ -1,7 +1,7 @@
 ---
 title: Lineage Status Checker
 type: requirement
-status: blocked
+status: approved
 lineage: status-checker-button
 parent: lifecycle/ideas/status-checker-button.md
 assignees:
