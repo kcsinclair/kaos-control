@@ -181,12 +181,21 @@ async function reloadFromDisk() {
 // is a computed that reads artifact.value.body, so it recomputes automatically once
 // load() resolves — the blocked banner appears/disappears atomically with the status
 // badge without any manual refresh.
-useWebSocket(project.value, 'artifact.indexed', (e: WsEvent) => {
+useWebSocket(project.value, 'artifact.indexed', async (e: WsEvent) => {
   if (e.payload?.path !== artifactPath.value || editing.value) return
   // Skip if auto-refresh already handled this change (file.changed + re-fetch)
   if (Date.now() - lastAutoRefreshMs < AUTO_REFRESH_GRACE_MS) return
+  const prevStatus = artifact.value?.status
   store.invalidate(artifactPath.value)
-  load()
+  await load()
+  const newStatus = artifact.value?.status
+  if (newStatus !== prevStatus) {
+    if (newStatus === 'blocked') {
+      ui.info('Status changed to blocked — open questions detected.')
+    } else if (prevStatus === 'blocked') {
+      ui.info('Blocked status cleared — open questions resolved.')
+    }
+  }
 })
 
 watch(artifactPath, load, { immediate: false })
