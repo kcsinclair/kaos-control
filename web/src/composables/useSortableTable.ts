@@ -9,7 +9,11 @@ export interface SortColumnDef {
   getValue?: (row: Record<string, unknown>) => unknown
 }
 
-export type SortColumnMap = Record<string, SortColumnDef>
+export type SortColumnMap = Record<string, SortColumnDef | SortType>
+
+function normalizeDef(def: SortColumnDef | SortType): SortColumnDef {
+  return typeof def === 'string' ? { type: def } : def
+}
 
 export function useSortableTable<T extends Record<string, unknown>>(
   rows: Ref<T[]>,
@@ -44,8 +48,9 @@ export function useSortableTable<T extends Record<string, unknown>>(
   }
 
   function extractValue(row: T, column: string): unknown {
-    const def = columns[column]
-    if (!def) return undefined
+    const raw = columns[column]
+    if (!raw) return undefined
+    const def = normalizeDef(raw)
     if (def.getValue) return def.getValue(row as Record<string, unknown>)
     return (row as Record<string, unknown>)[column]
   }
@@ -85,8 +90,9 @@ export function useSortableTable<T extends Record<string, unknown>>(
 
     if (!col || !dir) return rows.value
 
-    const def = columns[col]
-    if (!def) return rows.value
+    const raw = columns[col]
+    if (!raw) return rows.value
+    const def = normalizeDef(raw)
 
     return [...rows.value].sort((a, b) => {
       const aVal = extractValue(a, col)
