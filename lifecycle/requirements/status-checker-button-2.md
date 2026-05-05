@@ -4,6 +4,9 @@ type: requirement
 status: blocked
 lineage: status-checker-button
 parent: lifecycle/ideas/status-checker-button.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 ## Problem
@@ -94,5 +97,13 @@ Artifact statuses in a lineage can drift out of sync with actual progress. A par
 ## Open Questions
 
 1. Should the checker consider the `parent:` frontmatter field to build the lineage tree, or should it rely solely on `lineage:` slug grouping combined with stage ordering? The former respects explicit parentage; the latter is simpler but may miss non-linear lineage structures.
+
+> Lets go with lineage for now.
+
 2. When a stale artifact could advance through multiple statuses in one step (e.g. `draft` → `planning` skipping `clarifying`), should the checker suggest the furthest valid status or advance one step at a time?
+
+> furthest valid status
+
 3. Should the results panel persist (e.g. as a sidebar or modal) or appear as a transient notification/toast?
+
+> The results panel should persist.
