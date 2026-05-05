@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Lineage Status Checker'
 type: plan-test
-status: approved
+status: in-development
 lineage: status-checker-button
 parent: lifecycle/requirements/status-checker-button-2.md
 ---
