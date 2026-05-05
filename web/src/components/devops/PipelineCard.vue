@@ -4,6 +4,8 @@ import type { Pipeline } from '@/api/devops'
 import { useDevOpsStore } from '@/stores/devops'
 import { useUiStore } from '@/stores/ui'
 import { ApiError } from '@/api/client'
+import StepProgress from '@/components/devops/StepProgress.vue'
+import StepOutput from '@/components/devops/StepOutput.vue'
 
 const props = defineProps<{
   pipeline: Pipeline
@@ -15,15 +17,26 @@ const ui = useUiStore()
 
 const running = ref(false)
 const cancelling = ref(false)
+// Track which step indices have their output pane open
+const outputOpen = ref(new Set<number>())
 
 const activeRun = computed(() => devops.activeRuns.get(props.pipeline.slug))
-const isActive = computed(() => {
-  const run = activeRun.value
-  return run != null && run.overallStatus === 'running'
-})
+const isActive = computed(() => activeRun.value?.overallStatus === 'running')
+const showSteps = computed(() => activeRun.value != null)
+
+function toggleOutput(index: number) {
+  if (outputOpen.value.has(index)) {
+    outputOpen.value.delete(index)
+  } else {
+    outputOpen.value.add(index)
+  }
+  // Trigger reactivity by reassigning
+  outputOpen.value = new Set(outputOpen.value)
+}
 
 async function handleRun() {
   running.value = true
+  outputOpen.value = new Set()
   try {
     await devops.runPipeline(props.project, props.pipeline.slug)
   } catch (e: unknown) {
@@ -69,7 +82,25 @@ async function handleCancel() {
       <span v-if="activeRun?.overallStatus === 'passed'" class="run-status run-status--passed">Passed</span>
       <span v-else-if="activeRun?.overallStatus === 'failed'" class="run-status run-status--failed">Failed</span>
       <span v-else-if="activeRun?.overallStatus === 'cancelled'" class="run-status run-status--cancelled">Cancelled</span>
+      <span v-else-if="isActive" class="run-status run-status--running">Running</span>
     </div>
+
+    <!-- Step list shown when a run is active or completed -->
+    <div v-if="showSteps && activeRun" class="step-list">
+      <template v-for="(step, i) in activeRun.steps" :key="i">
+        <StepProgress
+          :step="step"
+          :index="i"
+          @toggle-output="toggleOutput(i)"
+        />
+        <StepOutput
+          v-if="outputOpen.has(i)"
+          :lines="step.output"
+          :failed="step.status === 'failed'"
+        />
+      </template>
+    </div>
+
     <div class="card-actions">
       <button
         v-if="!isActive"
@@ -102,7 +133,7 @@ async function handleCancel() {
   border-color: var(--color-accent);
 }
 .pipeline-card--passed {
-  border-color: var(--color-success, #22c55e);
+  border-color: #22c55e;
 }
 .pipeline-card--failed {
   border-color: var(--color-error);
@@ -148,6 +179,10 @@ async function handleCancel() {
   padding: 1px 6px;
   border-radius: 99px;
 }
+.run-status--running {
+  background: var(--badge-approved-bg);
+  color: var(--badge-approved-text);
+}
 .run-status--passed {
   background: var(--badge-done-bg);
   color: var(--badge-done-text);
@@ -159,6 +194,13 @@ async function handleCancel() {
 .run-status--cancelled {
   background: var(--color-border);
   color: var(--color-text-muted);
+}
+.step-list {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .card-actions {
   display: flex;

@@ -3,6 +3,8 @@ import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useDevOpsStore } from '@/stores/devops'
+import { useWebSocket } from '@/composables/useWebSocket'
+import type { WsEvent } from '@/types/api'
 import PipelineCard from '@/components/devops/PipelineCard.vue'
 
 const route = useRoute()
@@ -29,6 +31,22 @@ onMounted(() => {
   if (hasAccess.value) {
     devops.fetchPipelines(project)
   }
+})
+
+useWebSocket(project, 'pipeline.run.started', (e: WsEvent) => {
+  devops.handleRunStarted(e.payload)
+})
+useWebSocket(project, 'pipeline.step.started', (e: WsEvent) => {
+  devops.handleStepStarted(e.payload)
+})
+useWebSocket(project, 'pipeline.step.output', (e: WsEvent) => {
+  devops.handleStepOutput(e.payload)
+})
+useWebSocket(project, 'pipeline.step.completed', (e: WsEvent) => {
+  devops.handleStepCompleted(e.payload)
+})
+useWebSocket(project, 'pipeline.run.completed', (e: WsEvent) => {
+  devops.handleRunCompleted(e.payload)
 })
 </script>
 

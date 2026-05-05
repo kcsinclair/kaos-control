@@ -192,6 +192,11 @@ export type WsEventType =
   | 'agent.finished'
   | 'agent.failed'
   | 'feed.new'
+  | 'pipeline.run.started'
+  | 'pipeline.step.started'
+  | 'pipeline.step.output'
+  | 'pipeline.step.completed'
+  | 'pipeline.run.completed'
 
 export interface WsEvent {
   type: WsEventType
