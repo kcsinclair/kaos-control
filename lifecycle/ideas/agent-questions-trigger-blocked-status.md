@@ -4,7 +4,7 @@ type: idea
 status: approved
 lineage: agent-questions-trigger-blocked-status
 created: "2026-04-27T16:34:31+10:00"
-priority: normal
+priority: high
 labels:
     - agent
     - workflow
