@@ -17,7 +17,15 @@ import (
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/config"
 	"github.com/kaos-control/kaos-control/internal/git"
+	"github.com/kaos-control/kaos-control/internal/hub"
 )
+
+// Transitioner checks whether a workflow transition is permitted.
+// It is satisfied by *workflow.Engine; the interface breaks the otherwise-circular
+// index → workflow → index import chain.
+type Transitioner interface {
+	CanTransition(from, to string, userRoles []string) bool
+}
 
 const schemaVersion = 3
 
@@ -25,8 +33,10 @@ const schemaVersion = 3
 type Index struct {
 	db          *sql.DB
 	projectRoot string
-	git         *git.Repo // optional; used for created-date backfill during scan
-	ignore      []string  // glob patterns for files to skip during scan and indexing
+	git         *git.Repo    // optional; used for created-date backfill during scan
+	ignore      []string     // glob patterns for files to skip during scan and indexing
+	hub         *hub.Hub     // optional; used to broadcast auto-transition events
+	wf          Transitioner // optional; used to validate auto-transitions
 }
 
 // Option configures an Index at construction time.
@@ -42,6 +52,16 @@ func WithGit(repo *git.Repo) Option {
 // that should be silently skipped during Scan and IndexFile.
 func WithIgnore(patterns []string) Option {
 	return func(idx *Index) { idx.ignore = patterns }
+}
+
+// WithHub supplies the WebSocket hub used to broadcast auto-transition events.
+func WithHub(h *hub.Hub) Option {
+	return func(idx *Index) { idx.hub = h }
+}
+
+// WithWorkflow supplies the workflow engine used to validate auto-transitions.
+func WithWorkflow(wf Transitioner) Option {
+	return func(idx *Index) { idx.wf = wf }
 }
 
 // Open opens (or creates) the SQLite index at dbPath for the given project root.
