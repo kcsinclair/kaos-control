@@ -4,7 +4,7 @@ type: idea
 status: approved
 lineage: artifact-breadcrumb-remove-broken-links
 created: "2026-05-06T07:46:40+10:00"
-priority: normal
+priority: medium
 labels:
     - frontend
     - artefacts
