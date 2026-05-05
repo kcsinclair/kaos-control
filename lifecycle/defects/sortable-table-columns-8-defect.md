@@ -1,7 +1,7 @@
 ---
 title: Sort tests for ArtifactListView and AgentsRunsView crash on mount — useRoute mock missing query
 type: defect
-status: draft
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-6-test.md
 labels: [defect]
