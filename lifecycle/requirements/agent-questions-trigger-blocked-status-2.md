@@ -1,7 +1,7 @@
 ---
 title: Auto-transition artifacts to blocked when open questions are detected
 type: requirement
-status: blocked
+status: approved
 lineage: agent-questions-trigger-blocked-status
 created: "2026-05-05T00:00:00+10:00"
 priority: high
