@@ -258,26 +258,6 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Auto-block when the body contains a populated ## Open Questions section.
-	autoBlocked := false
-	if artifact.HasOpenQuestions(req.Body) {
-		autoBlocked = true
-		req.Frontmatter.Status = "blocked"
-		hasProductOwner := false
-		for _, a := range req.Frontmatter.Assignees {
-			if a.Role == "product-owner" && a.Who == "agent" {
-				hasProductOwner = true
-				break
-			}
-		}
-		if !hasProductOwner {
-			req.Frontmatter.Assignees = append(req.Frontmatter.Assignees, artifact.Assignee{
-				Role: "product-owner",
-				Who:  "agent",
-			})
-		}
-	}
-
 	content, err := buildMarkdown(req.Frontmatter, req.Body)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("marshal_error", err.Error()))
@@ -300,15 +280,9 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		_, _ = p.Git.AddAndCommit([]string{relPath}, msg, authorName, authorEmail)
 	}
 
-	var broadcastPayload any
-	if autoBlocked {
-		broadcastPayload = map[string]any{"path": relPath, "action": "updated", "blocked_reason": "open-questions"}
-	} else {
-		broadcastPayload = map[string]string{"path": relPath, "action": "updated"}
-	}
 	p.Hub.Broadcast(hub.Event{
 		Type:    "artifact.indexed",
-		Payload: broadcastPayload,
+		Payload: map[string]string{"path": relPath, "action": "updated"},
 	})
 
 	row, _ := p.Idx.Get(relPath)
