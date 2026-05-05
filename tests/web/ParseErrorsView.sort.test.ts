@@ -25,12 +25,14 @@ import type { ParseErrorRow } from '../../web/src/types/api'
 // Module mocks
 // ---------------------------------------------------------------------------
 
-const mockErrors: ParseErrorRow[] = []
+// vi.mock factories are hoisted to the top of the file by Vitest at transform
+// time — before any top-level `const` declarations run. Using vi.hoisted()
+// ensures the mock function is created inside the hoist boundary so it is
+// available when the factory executes.
+const mockApiGet = vi.hoisted(() => vi.fn().mockResolvedValue({ errors: [] }))
 
 vi.mock('@/api/client', () => ({
-  api: {
-    get: vi.fn().mockResolvedValue({ errors: mockErrors }),
-  },
+  api: { get: mockApiGet },
 }))
 
 vi.mock('vue-router', async (importActual) => {
@@ -69,9 +71,8 @@ function mountView() {
   })
 }
 
-async function injectErrors(errors: ParseErrorRow[]) {
-  const { api } = await import('@/api/client')
-  vi.mocked(api.get).mockResolvedValue({ errors })
+function injectErrors(errors: ParseErrorRow[]) {
+  mockApiGet.mockResolvedValue({ errors })
 }
 
 async function clickSortHeader(wrapper: ReturnType<typeof mountView>, label: string) {
@@ -113,7 +114,7 @@ afterEach(() => {
 
 describe('ParseErrorsView — File column sort', () => {
   it('clicking File header sorts errors alphabetically by path (ascending)', async () => {
-    await injectErrors(makeErrors())
+    injectErrors(makeErrors())
     const wrapper = mountView()
     await flushPromises()
 
@@ -127,7 +128,7 @@ describe('ParseErrorsView — File column sort', () => {
   })
 
   it('clicking File header again sorts descending', async () => {
-    await injectErrors(makeErrors())
+    injectErrors(makeErrors())
     const wrapper = mountView()
     await flushPromises()
 
@@ -141,7 +142,7 @@ describe('ParseErrorsView — File column sort', () => {
 
   it('clicking File header a third time resets to original order', async () => {
     const fixtures = makeErrors()
-    await injectErrors(fixtures)
+    injectErrors(fixtures)
     const wrapper = mountView()
     await flushPromises()
 
@@ -162,7 +163,7 @@ describe('ParseErrorsView — File column sort', () => {
 
 describe('ParseErrorsView — Error column sort', () => {
   it('clicking Error header sorts errors alphabetically by message (ascending)', async () => {
-    await injectErrors(makeErrors())
+    injectErrors(makeErrors())
     const wrapper = mountView()
     await flushPromises()
 
@@ -181,7 +182,7 @@ describe('ParseErrorsView — Error column sort', () => {
   })
 
   it('clicking Error header again sorts descending', async () => {
-    await injectErrors(makeErrors())
+    injectErrors(makeErrors())
     const wrapper = mountView()
     await flushPromises()
 
@@ -200,7 +201,7 @@ describe('ParseErrorsView — Error column sort', () => {
 
 describe('ParseErrorsView — three-state toggle cycle', () => {
   it('goes through asc → desc → unsorted on the same column', async () => {
-    await injectErrors(makeErrors())
+    injectErrors(makeErrors())
     const wrapper = mountView()
     await flushPromises()
 
@@ -225,7 +226,7 @@ describe('ParseErrorsView — three-state toggle cycle', () => {
 
 describe('ParseErrorsView — sort indicators', () => {
   it('shows ascending indicator after first click', async () => {
-    await injectErrors(makeErrors())
+    injectErrors(makeErrors())
     const wrapper = mountView()
     await flushPromises()
 
@@ -236,7 +237,7 @@ describe('ParseErrorsView — sort indicators', () => {
   })
 
   it('shows descending indicator after second click', async () => {
-    await injectErrors(makeErrors())
+    injectErrors(makeErrors())
     const wrapper = mountView()
     await flushPromises()
 
@@ -249,7 +250,7 @@ describe('ParseErrorsView — sort indicators', () => {
   })
 
   it('only one column has an active indicator at a time', async () => {
-    await injectErrors(makeErrors())
+    injectErrors(makeErrors())
     const wrapper = mountView()
     await flushPromises()
 
@@ -271,8 +272,7 @@ describe('ParseErrorsView — sort indicators', () => {
 
 describe('ParseErrorsView — reload after sort', () => {
   it('Reload button re-fetches data and the sort state is preserved or reset', async () => {
-    const { api } = await import('@/api/client')
-    vi.mocked(api.get).mockResolvedValue({ errors: makeErrors() })
+    mockApiGet.mockResolvedValue({ errors: makeErrors() })
 
     const wrapper = mountView()
     await flushPromises()
