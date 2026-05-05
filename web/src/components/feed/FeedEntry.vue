@@ -39,6 +39,11 @@ const isoTimestamp = computed(() =>
   new Date(props.event.timestamp * 1000).toISOString(),
 )
 
+// Display "System" for server-initiated transitions (actor === "system")
+const displayActor = computed(() =>
+  props.event.actor === 'system' ? 'System' : props.event.actor,
+)
+
 const relativeTime = computed(() => {
   const now = Date.now()
   const diff = Math.floor((now - props.event.timestamp * 1000) / 1000)
@@ -64,14 +69,14 @@ const navigationTarget = computed(() => {
     :to="navigationTarget"
     class="feed-entry-link"
     :class="{ 'feed-entry--new': isNew }"
-    :aria-label="`${event.event_type}: ${event.summary}, ${relativeTime}, by ${event.actor}`"
+    :aria-label="`${event.event_type}: ${event.summary}, ${relativeTime}, by ${displayActor}`"
   >
     <span class="feed-icon" aria-hidden="true">
       <component :is="iconForType(event.event_type)" :size="16" />
     </span>
     <time class="feed-time" :datetime="isoTimestamp">{{ relativeTime }}</time>
     <span class="feed-summary">{{ event.summary }}</span>
-    <span class="feed-actor">{{ event.actor }}</span>
+    <span class="feed-actor">{{ displayActor }}</span>
   </router-link>
 </template>
 
