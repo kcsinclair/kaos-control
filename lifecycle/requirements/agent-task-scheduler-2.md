@@ -1,7 +1,7 @@
 ---
 title: Agent and Task Scheduler
 type: requirement
-status: draft
+status: blocked
 lineage: agent-task-scheduler
 parent: lifecycle/ideas/agent-task-scheduler.md
 created: "2026-05-05T00:00:00+10:00"
