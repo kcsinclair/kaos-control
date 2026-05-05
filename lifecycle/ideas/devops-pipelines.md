@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Management
 type: idea
-status: draft
+status: approved
 lineage: devops-pipelines
 created: "2026-05-05T19:42:31+10:00"
 priority: normal
