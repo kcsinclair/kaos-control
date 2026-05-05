@@ -1,7 +1,7 @@
 ---
 title: Test Artifact Management and Test Runner
 type: requirement
-status: draft
+status: blocked
 lineage: test-artifact-management
 parent: lifecycle/ideas/test-artifact-management.md
 labels:
