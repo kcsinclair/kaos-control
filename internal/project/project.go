@@ -65,8 +65,17 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		slog.Info("project: not a git repo, write operations will not commit", "name", entry.Name)
 	}
 
+	// Create hub and workflow engine before opening the index so the startup
+	// Scan can auto-transition any artifacts with stale status.
+	h := hub.New()
+	wf := workflow.New(cfg.Transitions)
+
 	dbPath := filepath.Join(dbDir, entry.Name, "index.db")
-	idxOpts := []index.Option{index.WithIgnore(cfg.Ignore)}
+	idxOpts := []index.Option{
+		index.WithIgnore(cfg.Ignore),
+		index.WithHub(h),
+		index.WithWorkflow(wf),
+	}
 	if gitRepo != nil {
 		idxOpts = append(idxOpts, index.WithGit(gitRepo))
 	}
@@ -78,15 +87,11 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	// Prune stale events on startup according to retention config.
 	_ = idx.PruneEvents(cfg.Feed.RetentionDays, cfg.Feed.MaxEvents)
 
-	h := hub.New()
-
 	w, err := watcher.New(entry.Path, idx, h, cfg.Ignore...)
 	if err != nil {
 		slog.Warn("project: failed to create watcher", "name", entry.Name, "err", err)
 		w = nil
 	}
-
-	wf := workflow.New(cfg.Transitions)
 
 	locks := lock.New(idx, h)
 
