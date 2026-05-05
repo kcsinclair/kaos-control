@@ -169,6 +169,9 @@ func (s *Server) buildRouter() chi.Router {
 
 			// Roles and users
 			r.With(requireAuth).Get("/roles", s.handleGetRoles)
+
+			// DevOps pipelines
+			r.Get("/devops/pipelines", s.handleListPipelines)
 		})
 	})
 
