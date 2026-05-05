@@ -1,7 +1,7 @@
 ---
 title: "TestRequiredPlansGateBlocks uses product-owner user — gate bypass prevents expected 409"
 type: defect
-status: draft
+status: approved
 lineage: innovation-maker
 parent: lifecycle/tests/Innovation Maker - Making Releases from Ideas-5-tests.md
 labels:
