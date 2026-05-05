@@ -3,6 +3,7 @@ title: Test Artifact Management and Test Runner
 type: requirement
 status: blocked
 lineage: test-artifact-management
+priority: high
 parent: lifecycle/ideas/test-artifact-management.md
 labels:
     - feature
@@ -11,6 +12,9 @@ labels:
     - backend
     - qa
     - agent
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Test Artifact Management and Test Runner
