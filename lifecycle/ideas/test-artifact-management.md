@@ -1,7 +1,7 @@
 ---
 title: Test Artifact Management and Test Runner
 type: idea
-status: draft
+status: approved
 lineage: test-artifact-management
 created: "2026-05-05T18:38:51+10:00"
 priority: normal
