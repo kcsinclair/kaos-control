@@ -1,7 +1,7 @@
 ---
-title: "Frontend plan: auto-transition artifacts to blocked on open questions"
+title: 'Frontend plan: auto-transition artifacts to blocked on open questions'
 type: plan-frontend
-status: draft
+status: approved
 lineage: agent-questions-trigger-blocked-status
 parent: lifecycle/requirements/agent-questions-trigger-blocked-status-2.md
 ---
