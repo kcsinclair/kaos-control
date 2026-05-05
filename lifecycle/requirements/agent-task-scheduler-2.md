@@ -3,14 +3,17 @@ title: Agent and Task Scheduler
 type: requirement
 status: blocked
 lineage: agent-task-scheduler
-parent: lifecycle/ideas/agent-task-scheduler.md
 created: "2026-05-05T00:00:00+10:00"
-priority: normal
+priority: high
+parent: lifecycle/ideas/agent-task-scheduler.md
 labels:
     - feature
     - agent
     - backend
     - workflow
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 ## Problem
