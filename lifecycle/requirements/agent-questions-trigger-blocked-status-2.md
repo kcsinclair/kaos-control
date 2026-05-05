@@ -3,14 +3,17 @@ title: Auto-transition artifacts to blocked when open questions are detected
 type: requirement
 status: blocked
 lineage: agent-questions-trigger-blocked-status
-parent: lifecycle/ideas/agent-questions-trigger-blocked-status.md
 created: "2026-05-05T00:00:00+10:00"
 priority: high
+parent: lifecycle/ideas/agent-questions-trigger-blocked-status.md
 labels:
     - agent
     - workflow
     - artefacts
     - process
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 ## Problem
@@ -83,4 +86,9 @@ The building blocks already exist independently -- `artifact.HasOpenQuestions()`
 ## Open Questions
 
 - Should the auto-unblock target status be `draft` unconditionally, or should the system remember and restore the pre-block status? The current workflow matrix only defines `blocked -> draft`, so restoring a prior status would require schema/matrix changes. Defaulting to `draft` is simpler and consistent with the existing rules.
+
+> auto-unblock should transition to draft.  It is expected that the product-owner would edit, answer questions, and set the artefact to approved, then run the next step.
+
 - Should the auto-block logic also set or preserve the `assignees` field (e.g. ensure `product-owner` is assigned)? Currently agents set this themselves when writing questions, but if a human manually adds a `## Open Questions` section, no assignee would be set automatically.
+
+> auto-block for questions should assign to product-owner.
