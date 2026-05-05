@@ -35,6 +35,9 @@ function priorityColor(p: string): string {
 // When the backend auto-blocks an artifact due to open questions it always
 // appends { role: "product-owner", who: "agent" } to assignees.  This is a
 // reliable proxy for "blocked due to open questions" without needing the body.
+// The kanban board receives live ArtifactRow updates via artifact.indexed
+// WebSocket events, so the icon appears/disappears automatically when the
+// indexer changes the artifact's status and assignees after an auto-block.
 const isBlockedOnQuestions = computed(() =>
   props.artifact.status === 'blocked' &&
   (props.artifact.frontmatter?.assignees ?? []).some(

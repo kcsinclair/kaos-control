@@ -2,6 +2,9 @@ import { ref, onUnmounted } from 'vue'
 import { getProjectWs } from '@/api/ws'
 
 // Grace period after our own save during which fsnotify-triggered file.changed events are ignored.
+// This correctly distinguishes user-initiated saves from server-side auto-block rewrites:
+// the 3 s window closes long before the backend indexer triggers file.changed, so an
+// auto-block while the user is editing will show the conflict banner as expected.
 const SAVE_GRACE_MS = 3_000
 const AUTO_REFRESH_DEBOUNCE_MS = 300
 
