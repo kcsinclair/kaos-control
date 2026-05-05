@@ -83,7 +83,7 @@ The building blocks already exist independently -- `artifact.HasOpenQuestions()`
 - [ ] Unit tests cover: auto-block, auto-unblock, idempotent no-op, disallowed transition, and circular-trigger prevention.
 - [ ] Integration test confirms end-to-end: write a file with questions -> observe `blocked` status in API response. See [[agent-questions-trigger-blocked-status]].
 
-## Open Questions
+## Questions
 
 1. Should the auto-unblock target status be `draft` unconditionally, or should the system remember and restore the pre-block status? The current workflow matrix only defines `blocked -> draft`, so restoring a prior status would require schema/matrix changes. Defaulting to `draft` is simpler and consistent with the existing rules.
 
