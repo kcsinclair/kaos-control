@@ -4,8 +4,11 @@ import type { Pipeline } from '@/api/devops'
 import { useDevOpsStore } from '@/stores/devops'
 import { useUiStore } from '@/stores/ui'
 import { ApiError } from '@/api/client'
+import type { RunHistoryEntry } from '@/stores/devops'
 import StepProgress from '@/components/devops/StepProgress.vue'
 import StepOutput from '@/components/devops/StepOutput.vue'
+import RunHistory from '@/components/devops/RunHistory.vue'
+import LogViewer from '@/components/devops/LogViewer.vue'
 
 const props = defineProps<{
   pipeline: Pipeline
@@ -19,6 +22,7 @@ const running = ref(false)
 const cancelling = ref(false)
 // Track which step indices have their output pane open
 const outputOpen = ref(new Set<number>())
+const viewingLog = ref<RunHistoryEntry | null>(null)
 
 const activeRun = computed(() => devops.activeRuns.get(props.pipeline.slug))
 const isActive = computed(() => activeRun.value?.overallStatus === 'running')
@@ -102,6 +106,11 @@ async function handleCancel() {
       </template>
     </div>
 
+    <RunHistory
+      :pipeline-slug="props.pipeline.slug"
+      @view-log="viewingLog = $event"
+    />
+
     <div class="card-actions">
       <button
         v-if="!isActive"
@@ -117,6 +126,17 @@ async function handleCancel() {
       >{{ cancelling ? 'Cancelling…' : 'Cancel' }}</button>
     </div>
   </div>
+
+  <!-- Log viewer modal, rendered outside the card via Teleport -->
+  <Teleport to="body">
+    <LogViewer
+      v-if="viewingLog"
+      :project="props.project"
+      :run-id="viewingLog.runId"
+      :pipeline-name="props.pipeline.name"
+      @close="viewingLog = null"
+    />
+  </Teleport>
 </template>
 
 <style scoped>

@@ -20,6 +20,15 @@ export interface ActiveRun {
   overallStatus: 'running' | 'passed' | 'failed' | 'cancelled'
 }
 
+export interface RunHistoryEntry {
+  runId: string
+  pipelineSlug: string
+  pipelineName: string
+  startedAt: number
+  completedAt?: number
+  overallStatus: ActiveRun['overallStatus']
+}
+
 export const useDevOpsStore = defineStore('devops', () => {
   const pipelines = ref<Pipeline[]>([])
   const loading = ref(false)
@@ -27,6 +36,9 @@ export const useDevOpsStore = defineStore('devops', () => {
 
   // slug → ActiveRun
   const activeRuns = ref(new Map<string, ActiveRun>())
+
+  // Ordered list of run history (most recent last), capped at 50
+  const runHistory = ref<RunHistoryEntry[]>([])
 
   const pipelinesByType = computed((): Record<string, Pipeline[]> => {
     const grouped: Record<string, Pipeline[]> = {}
@@ -36,6 +48,10 @@ export const useDevOpsStore = defineStore('devops', () => {
     }
     return grouped
   })
+
+  function historyForPipeline(slug: string): RunHistoryEntry[] {
+    return runHistory.value.filter((e) => e.pipelineSlug === slug)
+  }
 
   async function fetchPipelines(project: string): Promise<void> {
     loading.value = true
@@ -73,6 +89,10 @@ export const useDevOpsStore = defineStore('devops', () => {
     }
   }
 
+  async function fetchRunLog(project: string, runId: string): Promise<string> {
+    return devopsApi.getRunLog(project, runId)
+  }
+
   // WebSocket event handlers
 
   function handleRunStarted(payload: Record<string, unknown>): void {
@@ -89,6 +109,15 @@ export const useDevOpsStore = defineStore('devops', () => {
         output: [],
       })),
     })
+    // Track in history
+    runHistory.value.push({
+      runId,
+      pipelineSlug: slug,
+      pipelineName: pipeline?.name ?? slug,
+      startedAt: Date.now(),
+      overallStatus: 'running',
+    })
+    if (runHistory.value.length > 50) runHistory.value.shift()
   }
 
   function handleStepStarted(payload: Record<string, unknown>): void {
@@ -135,7 +164,14 @@ export const useDevOpsStore = defineStore('devops', () => {
     if (!slug) return
     const run = activeRuns.value.get(slug)
     if (!run) return
-    run.overallStatus = status ?? 'passed'
+    const finalStatus = status ?? 'passed'
+    run.overallStatus = finalStatus
+    // Update history entry
+    const entry = runHistory.value.findLast((e) => e.runId === run.runId)
+    if (entry) {
+      entry.overallStatus = finalStatus
+      entry.completedAt = Date.now()
+    }
   }
 
   return {
@@ -143,10 +179,13 @@ export const useDevOpsStore = defineStore('devops', () => {
     loading,
     loadError,
     activeRuns,
+    runHistory,
     pipelinesByType,
+    historyForPipeline,
     fetchPipelines,
     runPipeline,
     cancelPipeline,
+    fetchRunLog,
     handleRunStarted,
     handleStepStarted,
     handleStepOutput,
