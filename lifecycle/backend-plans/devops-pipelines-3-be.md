@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: DevOps Pipeline Management'
 type: plan-backend
-status: in-development
+status: done
 lineage: devops-pipelines
 parent: lifecycle/requirements/devops-pipelines-2.md
 ---
