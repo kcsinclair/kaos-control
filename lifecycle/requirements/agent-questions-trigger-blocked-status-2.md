@@ -1,7 +1,7 @@
 ---
 title: Auto-transition artifacts to blocked when open questions are detected
 type: requirement
-status: draft
+status: blocked
 lineage: agent-questions-trigger-blocked-status
 parent: lifecycle/ideas/agent-questions-trigger-blocked-status.md
 created: "2026-05-05T00:00:00+10:00"
