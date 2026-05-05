@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
+import { useAuthStore } from '@/stores/auth'
 import { api } from '@/api/client'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
@@ -16,6 +17,7 @@ import {
   Activity,
   AlertTriangle,
   Settings,
+  Layers,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
@@ -23,6 +25,7 @@ import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
 const route = useRoute()
 const projectStore = useProjectStore()
 const uiStore = useUiStore()
+const authStore = useAuthStore()
 
 const faviconSrc = `${import.meta.env.BASE_URL}favicon-32x32.png`
 
@@ -55,11 +58,14 @@ interface NavItem {
   label: string
   to: string
   icon: Component
+  roles?: string[]
 }
 
-const navItems = (): NavItem[] => {
+const navItems = computed((): NavItem[] => {
   const p = projectName()
-  return [
+  const roles = authStore.rolesForProject(p)
+  const hasDevOpsAccess = roles.includes('product-owner') || roles.includes('devops')
+  const items: NavItem[] = [
     { label: 'List',         to: `/p/${p}/artifacts`,       icon: List },
     { label: 'Board',        to: `/p/${p}/artifacts/board`, icon: Columns3 },
     { label: 'Graph',        to: `/p/${p}/graph`,           icon: Network },
@@ -68,7 +74,11 @@ const navItems = (): NavItem[] => {
     { label: 'Parse Errors', to: `/p/${p}/parse-errors`,    icon: AlertTriangle },
     { label: 'Config',       to: `/p/${p}/config`,          icon: Settings },
   ]
-}
+  if (hasDevOpsAccess) {
+    items.push({ label: 'DevOps', to: `/p/${p}/devops`, icon: Layers })
+  }
+  return items
+})
 
 // Hover-to-expand overlay state (does NOT change persisted sidebarCollapsed)
 const hoverExpanded = ref(false)
@@ -129,7 +139,7 @@ watch(
       </template>
     </div>
     <ul class="nav-list" role="list">
-      <li v-for="item in navItems()" :key="item.label" class="nav-item">
+      <li v-for="item in navItems" :key="item.label" class="nav-item">
         <SidebarTooltip :label="item.label" :disabled="isVisuallyExpanded()">
           <RouterLink
             :to="item.to"

@@ -65,6 +65,12 @@ const router = createRouter({
           name: 'config',
           component: () => import('@/views/project/ProjectConfigView.vue'),
         },
+        {
+          path: 'devops',
+          name: 'devops',
+          component: () => import('@/views/project/DevOpsView.vue'),
+          meta: { roles: ['product-owner', 'devops'] },
+        },
       ],
     },
   ],
