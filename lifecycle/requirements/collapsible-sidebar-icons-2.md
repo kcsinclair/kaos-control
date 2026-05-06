@@ -1,7 +1,7 @@
 ---
 title: Collapsible Sidebar with Icon-Only Mode
 type: requirement
-status: planning
+status: blocked
 lineage: collapsible-sidebar-icons
 created: "2026-04-28"
 parent: lifecycle/ideas/collapsible-sidebar-icons.md
@@ -10,6 +10,9 @@ labels:
     - feature
     - usability
     - vue
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Collapsible Sidebar with Icon-Only Mode
