@@ -1,7 +1,7 @@
 ---
 title: "Unscheduled release incorrectly included in roadmap timeline edges"
 type: defect
-status: approved
+status: in-development
 lineage: releases-and-roadmaps
 parent: lifecycle/tests/releases-and-roadmaps-6-test.md
 labels: [defect]
