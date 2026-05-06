@@ -1,7 +1,7 @@
 ---
 title: Ollama Agent Support
 type: requirement
-status: blocked
+status: approved
 lineage: ollama-agent-support
 priority: high
 parent: lifecycle/ideas/ollama-agent-support.md
@@ -115,8 +115,16 @@ The agent runner currently only supports a single driver (`claude-code-cli`). Us
 - [ ] Existing `claude-code-cli` agents continue to function without regression.
 - [ ] [[ollama-agent-support]] lineage artifacts link correctly.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the Ollama driver support system prompts separately from user prompts, or is a single combined prompt sufficient for v1?
+
+> They should be seperated.
+
 2. Should instance registration live in app-level config (`~/.kaos-control/config.yaml`) rather than project config, allowing shared instances across projects?
+
+> Yes, app level config is a good idea.
+
 3. Is there a need to support Ollama's `/api/generate` endpoint (raw completion) in addition to `/api/chat` (chat completion), or is chat-only acceptable?
+
+> Both should be supported.
