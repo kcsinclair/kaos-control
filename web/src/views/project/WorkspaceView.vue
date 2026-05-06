@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { useLocksStore } from '@/stores/locks'
 import { useAgentsStore } from '@/stores/agents'
+import { useSchedulerStore } from '@/stores/scheduler'
 import { getProjectWs } from '@/api/ws'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
@@ -12,9 +13,11 @@ const route = useRoute()
 const projectStore = useProjectStore()
 const locksStore = useLocksStore()
 const agentsStore = useAgentsStore()
+const schedulerStore = useSchedulerStore()
 
-const AGENT_EVENTS = new Set(['agent.started', 'agent.progress', 'agent.finished', 'agent.failed'])
-const LOCK_EVENTS  = new Set(['lock.acquired', 'lock.released'])
+const AGENT_EVENTS     = new Set(['agent.started', 'agent.progress', 'agent.finished', 'agent.failed'])
+const LOCK_EVENTS      = new Set(['lock.acquired', 'lock.released'])
+const SCHEDULER_EVENTS = new Set(['scheduler.job.started', 'scheduler.job.completed'])
 
 let wsUnsub: (() => void) | null = null
 
@@ -34,6 +37,8 @@ function subscribeWs(project: string) {
       agentsStore.onWsEvent(e.type, e.payload as Record<string, unknown>)
     } else if (LOCK_EVENTS.has(e.type)) {
       locksStore.applyEvent(e.type, e.payload as Record<string, unknown>)
+    } else if (SCHEDULER_EVENTS.has(e.type)) {
+      schedulerStore.onWsEvent(e.type, e.payload as Record<string, unknown>)
     }
   })
 }
