@@ -1,9 +1,12 @@
 ---
 title: 'Backend Plan: Agent Launcher Panels'
 type: plan-backend
-status: done
+status: blocked
 lineage: agent-launcher-panels
 parent: lifecycle/requirements/agent-launcher-panels-2.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 ## Overview
