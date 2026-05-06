@@ -1,7 +1,7 @@
 ---
 title: "Universal Text Filter — Backend Plan"
 type: plan-backend
-status: in-development
+status: done
 lineage: universal-text-filter
 parent: lifecycle/requirements/universal-text-filter-2.md
 ---
