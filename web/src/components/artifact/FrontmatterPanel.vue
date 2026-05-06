@@ -4,12 +4,18 @@ import type { ArtifactDetail, GraphEdge } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
+import StatusDropdown from './StatusDropdown.vue'
 
 const props = defineProps<{
   artifact: ArtifactDetail
   project?: string
   targetPath?: string
   edges?: GraphEdge[]
+}>()
+
+const emit = defineEmits<{
+  transitioned: [newStatus: string]
+  error: [message: string]
 }>()
 
 const inbound = computed(() =>
@@ -38,7 +44,17 @@ function fmt(v: string | undefined): string {
       </div>
       <div class="fm-row">
         <dt>Status</dt>
-        <dd><span class="badge" :data-status="artifact.status">{{ fmt(artifact.status) }}</span></dd>
+        <dd>
+          <StatusDropdown
+            v-if="project && targetPath"
+            :project="project"
+            :path="targetPath"
+            :status="artifact.status"
+            @transitioned="emit('transitioned', $event)"
+            @error="emit('error', $event)"
+          />
+          <span v-else class="badge" :data-status="artifact.status">{{ fmt(artifact.status) }}</span>
+        </dd>
       </div>
       <div class="fm-row">
         <dt>Stage</dt>

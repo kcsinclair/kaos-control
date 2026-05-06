@@ -267,7 +267,14 @@ onMounted(() => {
         </div>
         <MarkdownPreview :html="artifact.body_html" :source="artifact.body" :project="project" />
       </div>
-      <FrontmatterPanel :artifact="artifact" :project="project" :target-path="artifactPath" :edges="graphStore.rawEdges" />
+      <FrontmatterPanel
+        :artifact="artifact"
+        :project="project"
+        :target-path="artifactPath"
+        :edges="graphStore.rawEdges"
+        @transitioned="(s) => { if (artifact) artifact = { ...artifact, status: s }; store.invalidate(artifactPath) }"
+        @error="(msg) => ui.error(msg)"
+      />
     </div>
 
     <!-- Edit mode: split pane -->
