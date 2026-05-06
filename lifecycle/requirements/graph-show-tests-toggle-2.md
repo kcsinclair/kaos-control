@@ -3,7 +3,7 @@ title: 'Graph: Show Tests Toggle'
 type: requirement
 status: done
 lineage: graph-show-tests-toggle
-created: "2026-05-06"
+created: "2026-05-06T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/graph-show-tests-toggle.md
 labels:

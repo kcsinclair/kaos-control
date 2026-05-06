@@ -3,7 +3,7 @@ title: Inline Status Transition Dropdown on Artefact View
 type: requirement
 status: planning
 lineage: artefact-inline-status-change
-created: "2026-05-06"
+created: "2026-05-06T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/artefact-inline-status-change.md
 labels:
