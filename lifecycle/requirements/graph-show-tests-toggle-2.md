@@ -1,7 +1,7 @@
 ---
 title: 'Graph: Show Tests Toggle'
 type: requirement
-status: draft
+status: planning
 lineage: graph-show-tests-toggle
 created: "2026-05-06"
 priority: normal
