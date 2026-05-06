@@ -1,10 +1,10 @@
 ---
 title: Ollama Agent Support
 type: idea
-status: draft
+status: approved
 lineage: ollama-agent-support
 created: "2026-05-06T12:00:56+10:00"
-priority: normal
+priority: high
 labels:
     - feature
     - agent
