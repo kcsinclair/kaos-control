@@ -1,15 +1,18 @@
 ---
 title: Blue Ring Indicator for Approved Test Artifacts
 type: requirement
-status: planning
+status: blocked
 lineage: approved-test-blue-ring
-parent: lifecycle/ideas/approved-test-blue-ring.md
 created: "2026-04-28"
 priority: medium
+parent: lifecycle/ideas/approved-test-blue-ring.md
 labels:
-  - frontend
-  - feature
-  - vue
+    - frontend
+    - feature
+    - vue
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Blue Ring Indicator for Approved Test Artifacts
