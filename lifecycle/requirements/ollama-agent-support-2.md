@@ -1,7 +1,7 @@
 ---
 title: Ollama Agent Support
 type: requirement
-status: approved
+status: planning
 lineage: ollama-agent-support
 priority: high
 parent: lifecycle/ideas/ollama-agent-support.md
