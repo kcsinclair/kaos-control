@@ -28,6 +28,13 @@ import (
 	"github.com/kaos-control/kaos-control/internal/lock"
 )
 
+// WorkflowEngine is the subset of workflow.Engine used by the agent Manager.
+// The interface avoids an import cycle: agent → workflow → (none), but
+// workflow → index → (none) while index → workflow would be circular.
+type WorkflowEngine interface {
+	CanTransition(from, to string, userRoles []string, artifactType string) bool
+}
+
 // ErrBusy is returned when the global semaphore is full.
 var ErrBusy = errors.New("max_concurrent_agents limit reached")
 
@@ -50,6 +57,10 @@ type Run struct {
 	ActiveStatus  string // status to set on target when run starts (empty = no change)
 	DoneOnSuccess bool   // if true, set target status to "done" on successful completion
 	TimeoutMinutes int   // 0 = driver default
+	// RelatedTestPath is set when the target artifact is a test artifact.
+	// It is passed to the agent prompt via the {related_test} placeholder so
+	// the agent can reference the test in defect frontmatter (related_to field).
+	RelatedTestPath string
 	// Ollama-specific fields (only used when Driver == "ollama").
 	OllamaInstanceName string // resolved from AgentConfig.OllamaInstanceName
 	OllamaEndpoint     string // "chat" or "generate"
@@ -252,6 +263,7 @@ type Manager struct {
 	git     *kgit.Repo
 	hub     *hub.Hub
 	locks   *lock.Manager
+	wf      WorkflowEngine // may be nil; used for type-aware transition validation
 	root    string
 	logsDir string // per-run log files go in <logsDir>/<run_id>.log
 }
@@ -259,6 +271,7 @@ type Manager struct {
 // New creates an agent Manager. maxConcurrent caps parallel runs across the project.
 // logsDir is where per-run .log files are written; empty disables log files.
 // ollamaInstances is the app-level list of registered Ollama servers.
+// wf is the optional workflow engine used for type-aware transition validation.
 func New(
 	agents []config.AgentConfig,
 	maxConcurrent int,
@@ -266,6 +279,7 @@ func New(
 	git *kgit.Repo,
 	h *hub.Hub,
 	locks *lock.Manager,
+	wf WorkflowEngine,
 	root string,
 	logsDir string,
 	ollamaInstances []config.OllamaInstance,
@@ -285,12 +299,17 @@ func New(
 		git:     git,
 		hub:     h,
 		locks:   locks,
+		wf:      wf,
 		root:    root,
 		logsDir: logsDir,
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
 	if err := idx.RecoverRunningRuns(); err != nil {
 		slog.Warn("agent manager: error recovering running runs", "err", err)
+	}
+	// Crash recovery: reset orphaned test artifacts left in-qa from a prior crash.
+	if err := m.recoverOrphanedTests(); err != nil {
+		slog.Warn("agent manager: error recovering orphaned test artifacts", "err", err)
 	}
 	return m
 }
@@ -334,14 +353,25 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	if !ok {
 		return "", fmt.Errorf("agent %q has no prompt template for role %q", agentName, role)
 	}
-	prompt := strings.NewReplacer("{target_path}", targetPath).Replace(promptTpl)
+	prompt := strings.NewReplacer(
+		"{target_path}", targetPath,
+		"{related_test}", targetPath, // populated for test artifacts; harmless for others
+	).Replace(promptTpl)
 
 	// Determine lineage and previous status from the target artifact (if present in index).
 	lineage := targetPath
 	prevStatus := ""
+	var targetArtifactType string
 	if row, err := m.idx.Get(targetPath); err == nil && row != nil {
 		lineage = row.FM.Lineage
 		prevStatus = row.Status
+		targetArtifactType = row.Type
+
+		// Milestone 4: concurrent run guard for test artifacts.
+		// If the test is already in-qa, reject immediately before acquiring any resources.
+		if row.Type == "test" && row.Status == "in-qa" {
+			return "", fmt.Errorf("test artifact is already in-qa; another QA run may be active")
+		}
 	}
 
 	// Check lineage lock.
@@ -371,6 +401,12 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		identity.Email = agentName + "@kaos-control.local"
 	}
 
+	// For test artifacts, set RelatedTestPath so the agent prompt can reference it.
+	relatedTestPath := ""
+	if targetArtifactType == "test" {
+		relatedTestPath = targetPath
+	}
+
 	run := Run{
 		RunID:              runID,
 		AgentName:          agentName,
@@ -385,6 +421,7 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		ActiveStatus:       ag.ActiveStatus,
 		DoneOnSuccess:      ag.DoneOnSuccess,
 		TimeoutMinutes:     ag.TimeoutMinutes,
+		RelatedTestPath:    relatedTestPath,
 		OllamaInstanceName: ag.OllamaInstanceName,
 		OllamaEndpoint:     ag.OllamaEndpoint,
 	}
@@ -413,6 +450,20 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 
 	// If configured, mark the target artifact as active before launching.
 	if ag.ActiveStatus != "" && targetPath != "" {
+		// For test artifacts transitioning to in-qa, validate via the workflow
+		// engine rather than bypassing it with the raw setArtifactStatus call.
+		if targetArtifactType == "test" && ag.ActiveStatus == "in-qa" {
+			if m.wf != nil && !m.wf.CanTransition(prevStatus, "in-qa", ag.Roles, "test") {
+				_ = m.locks.Release(lineage)
+				<-m.sem
+				finishedAt := time.Now()
+				runRow.Status = "failed"
+				runRow.FinishedAt = &finishedAt
+				_ = m.idx.UpdateAgentRun(runRow)
+				return "", fmt.Errorf("workflow: transition %q → in-qa not permitted for test artifact %q (current status: %q)", prevStatus, targetPath, prevStatus)
+			}
+		}
+
 		if err := m.setArtifactStatus(targetPath, ag.ActiveStatus); err != nil {
 			slog.Warn("agent: setting active status", "target", targetPath, "status", ag.ActiveStatus, "err", err)
 		} else if m.git != nil {
@@ -523,9 +574,25 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 
 	// If configured and successful, mark the target artifact done before committing
 	// so the status change is bundled into the agent's commit automatically.
-	if status == "done" && run.DoneOnSuccess && run.TargetPath != "" {
-		if err := m.setArtifactStatus(run.TargetPath, "done"); err != nil {
-			slog.Warn("agent: setting done status", "target", run.TargetPath, "err", err)
+	if status == "done" && run.TargetPath != "" {
+		// For test artifacts, successful completion transitions back to approved (system role).
+		// For all other artifacts, use the DoneOnSuccess flag as before.
+		targetRow, _ := m.idx.Get(run.TargetPath)
+		isTestArtifact := targetRow != nil && targetRow.Type == "test"
+
+		if isTestArtifact {
+			// Post-run: test artifact successfully completed QA → reset to approved.
+			if err := m.setArtifactStatus(run.TargetPath, "approved"); err != nil {
+				slog.Warn("agent: resetting test artifact to approved after successful QA run",
+					"target", run.TargetPath, "err", err)
+			} else {
+				slog.Info("agent: test artifact reset to approved after successful QA run",
+					"target", run.TargetPath, "run_id", run.RunID)
+			}
+		} else if run.DoneOnSuccess {
+			if err := m.setArtifactStatus(run.TargetPath, "done"); err != nil {
+				slog.Warn("agent: setting done status", "target", run.TargetPath, "err", err)
+			}
 		}
 	}
 
@@ -653,6 +720,51 @@ func (m *Manager) getProc(runID string) Process {
 	defer m.mu.Unlock()
 	if ar, ok := m.active[runID]; ok {
 		return ar.proc
+	}
+	return nil
+}
+
+// recoverOrphanedTests is called at startup to reset test artifacts that were
+// left in in-qa status by a previous crash (i.e. there is no active agent run
+// for them). Each recovered artifact is patched back to approved and committed.
+func (m *Manager) recoverOrphanedTests() error {
+	rows, _, err := m.idx.List(index.Filter{Type: "test", Status: "in-qa", Unlimited: true})
+	if err != nil {
+		return fmt.Errorf("listing in-qa test artifacts: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+
+	// Fetch running agent runs to distinguish orphans from legitimately active ones.
+	activeRuns, err := m.idx.ListAgentRuns("running", 500)
+	if err != nil {
+		return fmt.Errorf("listing active agent runs: %w", err)
+	}
+	activeTargets := make(map[string]bool, len(activeRuns))
+	for _, r := range activeRuns {
+		activeTargets[r.TargetPath] = true
+	}
+
+	for _, row := range rows {
+		if activeTargets[row.Path] {
+			// Legitimate in-qa with an active run — leave it alone.
+			continue
+		}
+
+		slog.Warn("agent: orphaned test artifact found in in-qa; resetting to approved",
+			"path", row.Path, "lineage", row.Lineage)
+
+		if err := m.setArtifactStatus(row.Path, "approved"); err != nil {
+			slog.Warn("agent: failed to reset orphaned test artifact", "path", row.Path, "err", err)
+			continue
+		}
+
+		if m.git != nil {
+			authorName, authorEmail := m.git.ResolveIdentity()
+			msg := fmt.Sprintf("recover(%s): in-qa → approved [orphan recovery]", row.FM.Lineage)
+			_, _ = m.git.AddAndCommit([]string{row.Path}, msg, authorName, authorEmail)
+		}
 	}
 	return nil
 }

@@ -116,7 +116,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	var agentMgr *agent.Manager
 	if len(cfg.Agents) > 0 {
 		runsLogDir := filepath.Join(dbDir, entry.Name, "runs")
-		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, entry.Path, runsLogDir, opts.OllamaInstances)
+		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, wf, entry.Path, runsLogDir, opts.OllamaInstances)
 	}
 
 	// Determine the base directory for devops run logs.
