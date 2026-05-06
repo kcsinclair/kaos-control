@@ -1,7 +1,7 @@
 ---
-title: "Universal Text Filter — Frontend Plan"
+title: Universal Text Filter — Frontend Plan
 type: plan-frontend
-status: draft
+status: approved
 lineage: universal-text-filter
 parent: lifecycle/requirements/universal-text-filter-2.md
 ---
