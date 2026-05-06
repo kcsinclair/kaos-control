@@ -1,7 +1,7 @@
 ---
 title: "Graph: Show Tests Toggle — Test Plan"
 type: plan-test
-status: in-development
+status: done
 lineage: graph-show-tests-toggle
 parent: lifecycle/requirements/graph-show-tests-toggle-2.md
 ---
