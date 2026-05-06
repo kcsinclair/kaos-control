@@ -1,7 +1,7 @@
 ---
 title: Table Pagination Controls
 type: requirement
-status: blocked
+status: done
 lineage: table-pagination
 parent: lifecycle/ideas/table-pagination.md
 assignees:
@@ -66,7 +66,7 @@ All tables in the application render their full dataset in a single scroll. As t
 - [ ] `pnpm exec vue-tsc --noEmit` and `pnpm build` pass with no errors
 - [ ] No regressions in existing table functionality (data still displays correctly, row clicks still work)
 
-## Open Questions
+## Resolved Questions
 
 1. Should the default page size be configurable per-table, or is a single global default (25) sufficient?
 
