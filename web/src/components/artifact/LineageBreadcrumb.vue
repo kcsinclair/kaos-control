@@ -25,9 +25,6 @@ const segments = computed(() => {
   return result
 })
 
-function toArtifact(path: string) {
-  router.push(`/p/${props.project}/artifacts/${path}`)
-}
 </script>
 
 <template>

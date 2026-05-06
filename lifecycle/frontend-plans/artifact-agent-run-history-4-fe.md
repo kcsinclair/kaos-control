@@ -4,7 +4,7 @@ type: plan-frontend
 status: done
 lineage: artifact-agent-run-history
 parent: lifecycle/requirements/artifact-agent-run-history-2.md
-created: "2026-04-28"
+created: "2026-04-28T00:00:00+10:00"
 ---
 
 # Frontend Plan: Artifact Agent Run History

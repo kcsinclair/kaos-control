@@ -4,7 +4,7 @@ type: plan-frontend
 status: done
 lineage: approved-test-blue-ring
 parent: lifecycle/requirements/approved-test-blue-ring-2.md
-created: "2026-04-28"
+created: "2026-04-28T00:00:00+10:00"
 ---
 
 # Frontend Plan — Blue Ring Indicator for Approved Test Artifacts
