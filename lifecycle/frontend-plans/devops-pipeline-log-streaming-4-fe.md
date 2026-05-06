@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Pipeline Log Streaming Split-Pane View"
 type: plan-frontend
-status: in-development
+status: done
 lineage: devops-pipeline-log-streaming
 parent: lifecycle/requirements/devops-pipeline-log-streaming-2.md
 ---
