@@ -1,7 +1,7 @@
 ---
 title: Inline Status Change on Artefact View
 type: idea
-status: planning
+status: done
 lineage: artefact-inline-status-change
 created: "2026-05-06T17:42:43+10:00"
 priority: normal
