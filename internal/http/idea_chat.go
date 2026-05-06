@@ -166,6 +166,7 @@ func writeIdeaArtifact(p *project.Project, sess *ideachat.Session, actor string)
 	fm.Type = "idea"
 	fm.Status = "draft"
 	fm.Lineage = slug
+	fm.Created = time.Now().Format(time.RFC3339)
 
 	content, err := buildMarkdown(fm, sess.ProposedBody)
 	if err != nil {
