@@ -227,7 +227,7 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 	// If the name changed, propagate the rename to all assigned artifacts.
 	renamed := 0
 	if oldName != rel.Name && p.Git != nil {
-		n, propErr := release.PropagateRename(p.Entry.Path, oldName, rel.Name, p.Idx, p.Git)
+		n, propErr := release.PropagateRename(p.Entry.Path, oldName, rel.Name, p.Idx, p.Git, p.Hub)
 		if propErr != nil {
 			// Log but do not fail the request; the DB update succeeded.
 			_ = propErr
@@ -290,10 +290,10 @@ func (s *Server) handleDeleteRelease(w http.ResponseWriter, r *http.Request) {
 
 		// Propagate the rename from current.Name → target.Name on disk.
 		if p.Git != nil {
-			_, _ = release.PropagateRename(p.Entry.Path, current.Name, target.Name, p.Idx, p.Git)
+			_, _ = release.PropagateRename(p.Entry.Path, current.Name, target.Name, p.Idx, p.Git, p.Hub)
 		} else {
 			// No git: update files in place without a commit.
-			_ = rewriteReleaseField(p.Entry.Path, current.Name, target.Name, p.Idx)
+			_ = rewriteReleaseField(p.Entry.Path, current.Name, target.Name, p.Idx, p.Hub)
 		}
 	}
 
@@ -474,7 +474,9 @@ func isDuplicateError(err error) bool {
 // rewriteReleaseField updates the release frontmatter field on all artifact
 // files assigned to oldName, writing them to disk and re-indexing.
 // Used when git is unavailable (no commit is created).
-func rewriteReleaseField(projectRoot, oldName, newName string, idx *index.Index) error {
+// h may be nil; when non-nil an "artifact.indexed" hub event is broadcast for
+// each successfully re-indexed artifact.
+func rewriteReleaseField(projectRoot, oldName, newName string, idx *index.Index, h *hub.Hub) error {
 	rows, _, err := idx.List(index.Filter{Release: oldName, Unlimited: true})
 	if err != nil {
 		return err
@@ -490,7 +492,15 @@ func rewriteReleaseField(projectRoot, oldName, newName string, idx *index.Index)
 			continue
 		}
 		_ = os.WriteFile(absPath, patched, 0o644)
-		_ = idx.IndexFile(absPath)
+		if err := idx.IndexFile(absPath); err != nil {
+			continue
+		}
+		if h != nil {
+			h.Broadcast(hub.Event{
+				Type:    "artifact.indexed",
+				Payload: map[string]string{"path": row.Path, "action": "updated"},
+			})
+		}
 	}
 	return nil
 }

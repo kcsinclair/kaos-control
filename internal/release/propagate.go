@@ -6,6 +6,7 @@ import (
 
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/git"
+	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
 )
 
@@ -13,8 +14,11 @@ import (
 // currently assigned to oldName, writes the changes to disk, creates a single
 // git commit, and re-indexes all changed paths.
 //
+// h may be nil; when non-nil an "artifact.indexed" hub event is broadcast for
+// each successfully re-indexed artifact so WebSocket clients observe the rename.
+//
 // It returns the count of artifact files that were updated.
-func PropagateRename(projectRoot, oldName, newName string, idx *index.Index, repo *git.Repo) (int, error) {
+func PropagateRename(projectRoot, oldName, newName string, idx *index.Index, repo *git.Repo, h *hub.Hub) (int, error) {
 	// Find all artifacts assigned to oldName.
 	rows, _, err := idx.List(index.Filter{Release: oldName, Unlimited: true})
 	if err != nil {
@@ -52,10 +56,18 @@ func PropagateRename(projectRoot, oldName, newName string, idx *index.Index, rep
 		return 0, err
 	}
 
-	// Re-index all changed paths.
+	// Re-index all changed paths and broadcast artifact.indexed for each.
 	for _, relPath := range changed {
 		absPath := filepath.Join(projectRoot, relPath)
-		_ = idx.IndexFile(absPath)
+		if err := idx.IndexFile(absPath); err != nil {
+			continue
+		}
+		if h != nil {
+			h.Broadcast(hub.Event{
+				Type:    "artifact.indexed",
+				Payload: map[string]string{"path": relPath, "action": "updated"},
+			})
+		}
 	}
 
 	return len(changed), nil
