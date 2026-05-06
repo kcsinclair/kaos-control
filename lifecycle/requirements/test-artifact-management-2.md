@@ -1,7 +1,7 @@
 ---
 title: Test Artifact Management and Test Runner
 type: requirement
-status: blocked
+status: approved
 lineage: test-artifact-management
 priority: high
 parent: lifecycle/ideas/test-artifact-management.md
@@ -108,8 +108,16 @@ Test artifacts (`type: test`) are a special class of lifecycle artifact that are
 - [ ] Toggle state persists within the session (Pinia store).
 - [ ] [[test-artifact-management]] lineage artifacts link correctly in the graph view.
 
-## Open Questions
+## Resolved Questions
 
 - Should the Testing board support filtering by lineage/label, or is status grouping sufficient for v1?
+
+> Including other filters is a good idea. please include lineage, label, priority and status.
+
 - Should there be a "Run All Approved" convenience button that selects all approved tests without manual multi-select?
+
+> Yes please.
+
 - What should happen if the user navigates away mid-batch: cancel remaining runs, or continue in background?
+
+> A scheduler is being planned agent-task-scheduler, the testing system should use that feature so jobs are happening in the background.
