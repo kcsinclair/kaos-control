@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Test Artifact Status Lifecycle"
 type: plan-backend
-status: in-development
+status: done
 lineage: test-artifact-status-lifecycle
 parent: requirements/test-artifact-status-lifecycle-2.md
 ---
