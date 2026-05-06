@@ -19,6 +19,7 @@ import {
   Settings,
   Layers,
   CalendarClock,
+  CalendarRange,
   Server,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
@@ -71,6 +72,7 @@ const navItems = computed((): NavItem[] => {
     { label: 'List',         to: `/p/${p}/artifacts`,       icon: List },
     { label: 'Board',        to: `/p/${p}/artifacts/board`, icon: Columns3 },
     { label: 'Graph',        to: `/p/${p}/graph`,           icon: Network },
+    { label: 'Roadmap',      to: `/p/${p}/roadmap`,         icon: CalendarRange },
     { label: 'Agents',       to: `/p/${p}/agents`,          icon: Bot },
     { label: 'Scheduler',    to: `/p/${p}/scheduler`,       icon: CalendarClock },
     { label: 'Feed',         to: `/p/${p}/feed`,            icon: Activity },
