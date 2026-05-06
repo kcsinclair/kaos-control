@@ -187,6 +187,7 @@ onUnmounted(() => {
 
 <style scoped>
 .graph-2d {
+  position: relative;
   width: 100%;
   height: 100%;
   background: #0f172a;

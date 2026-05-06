@@ -159,7 +159,7 @@ onMounted(() => {
   position: absolute;
   top: var(--space-3);
   right: var(--space-3);
-  z-index: 10;
+  z-index: 100;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -190,7 +190,7 @@ onMounted(() => {
   position: absolute;
   top: var(--space-3);
   left: var(--space-3);
-  z-index: 20;
+  z-index: 200;
   width: 380px;
   max-height: calc(100% - var(--space-6));
   overflow: hidden;
