@@ -1,7 +1,7 @@
 ---
 title: Releases and Roadmaps
 type: requirement
-status: draft
+status: approved
 lineage: releases-and-roadmaps
 created: "2026-05-06T00:00:00+10:00"
 parent: ideas/releases-and-roadmaps.md
