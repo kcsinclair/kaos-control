@@ -52,4 +52,19 @@ plans/              Project plan + per-change implementation plans
 
 ## Licence
 
-Not yet decided. See [lifecycle/requirements/Innovation Maker - Making Releases from Ideas-1.md](lifecycle/requirements/Innovation Maker - Making Releases from Ideas-1.md) §17 (Open Questions).
+**[GNU AGPLv3](LICENSE)** — copyleft with a network-use clause. If you run a
+modified version of kaos-control as a network service, you must publish your
+modifications under the same licence.
+
+The reasoning behind this choice (and the alternatives considered) is
+documented in [licensing-decision.md](licensing-decision.md).
+
+Commercial licences for organisations that cannot accept AGPL terms may be
+available on request — open an issue to start the conversation.
+
+## Contributing
+
+Contributions are welcome. The project uses the
+[Developer Certificate of Origin](https://developercertificate.org/) — sign
+off on every commit with `git commit -s`. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the full workflow.

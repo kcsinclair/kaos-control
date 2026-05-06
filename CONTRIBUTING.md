@@ -1,0 +1,95 @@
+# Contributing to kaos-control
+
+Thanks for taking an interest. This project is **AGPLv3** licensed — see
+[LICENSE](LICENSE) and [licensing-decision.md](licensing-decision.md) for the
+reasoning.
+
+## Developer Certificate of Origin (DCO)
+
+Every commit must be **signed off** to certify that you wrote the patch (or
+otherwise have the right to submit it under the project's licence). This is
+the same lightweight sign-off used by the Linux kernel and many other large
+projects — no contributor licence agreement (CLA) to print, sign, and post.
+
+Sign off your commits with the `-s` flag:
+
+```sh
+git commit -s -m "feat(graph): add priority filter to 2D view"
+```
+
+This appends a line like the following to your commit message:
+
+```
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+By signing off, you are certifying the four points of the
+[Developer Certificate of Origin](https://developercertificate.org/) — in
+plain English: *"I wrote this, or I have the right to contribute it, and I
+understand it will be redistributed under the project's licence."*
+
+If you forget to sign off, amend the most recent commit with:
+
+```sh
+git commit --amend --signoff
+```
+
+For older commits, you can rebase and sign off in bulk:
+
+```sh
+git rebase --signoff main
+```
+
+Pull requests with unsigned commits will be asked to add the sign-off before
+they can be merged.
+
+## How to contribute
+
+1. **Open an issue first** for anything non-trivial. The maintainer is happy
+   to discuss approach and direction before you write code — saves rework.
+   Small fixes (typos, obvious bugs) can go straight to a PR.
+2. **Fork the repo** and create a feature branch from `main`.
+3. **Make focused commits** — one logical change per commit, present-tense
+   commit subjects (`add foo`, not `added foo`), with the DCO sign-off line.
+4. **Run the tests** — `make test-unit` for backend, `pnpm --dir tests/web
+   test` for frontend.
+5. **Run the linter** — `make lint`. Both `go vet` and `staticcheck` should
+   pass clean.
+6. **Open a pull request** against `main`. Describe what changed and why; if
+   the change relates to a lifecycle artifact (`lifecycle/...`), reference
+   it in the PR description.
+
+## Coding conventions
+
+- **Backend (Go)**: standard `go fmt` + `staticcheck` clean. Package layout
+  follows the existing `internal/<area>/` pattern.
+- **Frontend (Vue/TS)**: existing `tsconfig` strict settings; component-level
+  unit tests live in `tests/web/` (Vitest + happy-dom).
+- **Commit messages**: see existing `git log` for style. Common prefixes:
+  `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `build:`, `agent(<name>):`.
+- **Lifecycle artifacts**: if you're adding a feature that needs a plan or
+  test, write the plan/test artifact under `lifecycle/` and link it from the
+  PR. The project's own development uses the same lifecycle it enforces.
+
+## What you are agreeing to by contributing
+
+- Your contribution will be distributed under the project's **AGPLv3**
+  licence.
+- You retain copyright in your contribution; there is no copyright
+  assignment.
+- The maintainer may also offer the project under a separate commercial
+  licence to organisations that cannot accept AGPL terms. Because there is
+  no copyright assignment, *your* contribution can only be relicensed with
+  your permission — but the maintainer's *original* code (and any code
+  contributed under a future explicit relicensing agreement) may be offered
+  under both licences.
+
+If any of that gives you pause, please raise it on the PR or in an issue
+before merging — better to discuss than to land code under terms a
+contributor doesn't understand.
+
+## Reporting a security issue
+
+Please **do not** file public issues for security vulnerabilities. Email the
+maintainer directly (see the repository contact / git log) so a fix can be
+prepared before disclosure.
