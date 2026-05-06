@@ -25,3 +25,9 @@ registerWidget(
   defineAsyncComponent(() => import('./widgets/VelocityChartWidget.vue')),
   { slot: 'chart', order: 1 },
 )
+
+registerWidget(
+  'activity-feed',
+  defineAsyncComponent(() => import('./widgets/ActivityFeedWidget.vue')),
+  { slot: 'panel', order: 0 },
+)
