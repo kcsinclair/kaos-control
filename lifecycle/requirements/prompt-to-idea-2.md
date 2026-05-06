@@ -1,7 +1,7 @@
 ---
 title: Conversational Idea Capture Agent
 type: requirement
-status: blocked
+status: draft
 lineage: prompt-to-idea
 parent: lifecycle/ideas/prompt-to-idea.md
 labels:
@@ -122,7 +122,7 @@ The agent produces valid frontmatter with at minimum:
 - [ ] Conversation sessions are cleaned up after 30 minutes of inactivity.
 - [ ] Related lineage: [[prompt-to-idea]]
 
-## Open Questions
+## Resolved Questions
 
 1. **Streaming responses**: Should the agent stream its replies token-by-token to the UI (via WebSocket or SSE), or is a request/response pattern sufficient for v1?
 
