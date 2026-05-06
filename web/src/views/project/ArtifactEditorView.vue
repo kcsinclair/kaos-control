@@ -13,7 +13,6 @@ import FrontmatterEditor from '@/components/artifact/FrontmatterEditor.vue'
 import MarkdownPreview from '@/components/artifact/MarkdownPreview.vue'
 import MarkdownEditor from '@/components/artifact/MarkdownEditor.vue'
 import LockBanner from '@/components/common/LockBanner.vue'
-import TransitionDialog from '@/components/artifact/TransitionDialog.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import { useGraphStore } from '@/stores/graph'
 import type { ArtifactDetail, ArtifactFrontmatter, WsEvent } from '@/types/api'
@@ -50,14 +49,7 @@ async function load() {
 }
 
 // ── toolbar dialogs ──────────────────────────────────────────────────────────
-const showTransition = ref(false)
 const showRunAgent = ref(false)
-
-function onTransitioned(newStatus: string) {
-  showTransition.value = false
-  if (artifact.value) artifact.value = { ...artifact.value, status: newStatus }
-  store.invalidate(artifactPath.value)
-}
 
 // ── edit mode state ─────────────────────────────────────────────────────────
 const editing = ref(false)
@@ -223,7 +215,6 @@ onMounted(() => {
 
       <div class="topbar-actions" v-if="artifact && !loading">
         <template v-if="!editing">
-          <button class="btn-ghost" @click="showTransition = true">Change Status</button>
           <button class="btn-ghost" @click="showRunAgent = true">Run Agent</button>
           <button
             class="btn-primary"
@@ -292,15 +283,6 @@ onMounted(() => {
       />
     </div>
   </div>
-
-  <TransitionDialog
-    v-if="showTransition && artifact"
-    :project="project"
-    :path="artifactPath"
-    :current-status="artifact.status"
-    @transitioned="onTransitioned"
-    @cancel="showTransition = false"
-  />
 
   <RunAgentDialog
     v-if="showRunAgent && artifact"
