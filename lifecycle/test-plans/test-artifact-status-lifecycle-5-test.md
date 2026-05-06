@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Test Artifact Status Lifecycle"
 type: plan-test
-status: approved
+status: in-development
 lineage: test-artifact-status-lifecycle
 parent: requirements/test-artifact-status-lifecycle-2.md
 ---
