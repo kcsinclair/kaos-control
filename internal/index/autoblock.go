@@ -83,7 +83,9 @@ func (idx *Index) autoBlock(a *artifact.Artifact, absPath string) error {
 		Type: "artifact.indexed",
 		Payload: map[string]any{
 			"path":           a.Path,
-			"action":         "updated",
+			"action":         "transitioned",
+			"from":           oldStatus,
+			"to":             "blocked",
 			"blocked_reason": "open_questions_detected",
 		},
 	})
@@ -128,8 +130,13 @@ func (idx *Index) autoUnblock(a *artifact.Artifact, absPath string) error {
 	_ = idx.InsertEvent(event)
 
 	idx.hub.Broadcast(hub.Event{
-		Type:    "artifact.indexed",
-		Payload: map[string]string{"path": a.Path, "action": "updated"},
+		Type: "artifact.indexed",
+		Payload: map[string]any{
+			"path":   a.Path,
+			"action": "transitioned",
+			"from":   "blocked",
+			"to":     "draft",
+		},
 	})
 	idx.hub.Broadcast(hub.Event{Type: "feed.new", Payload: event})
 
