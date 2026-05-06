@@ -241,9 +241,9 @@ type activeRun struct {
 
 // Manager runs agents with lineage locking and a global concurrency semaphore.
 type Manager struct {
-	agents []config.AgentConfig
-	driver Driver
-	sem    chan struct{}
+	agents  []config.AgentConfig
+	drivers map[string]Driver
+	sem     chan struct{}
 
 	mu     sync.Mutex
 	active map[string]*activeRun
@@ -258,6 +258,7 @@ type Manager struct {
 
 // New creates an agent Manager. maxConcurrent caps parallel runs across the project.
 // logsDir is where per-run .log files are written; empty disables log files.
+// ollamaInstances is the app-level list of registered Ollama servers.
 func New(
 	agents []config.AgentConfig,
 	maxConcurrent int,
@@ -267,13 +268,17 @@ func New(
 	locks *lock.Manager,
 	root string,
 	logsDir string,
+	ollamaInstances []config.OllamaInstance,
 ) *Manager {
 	if maxConcurrent <= 0 {
 		maxConcurrent = 4
 	}
 	m := &Manager{
-		agents:  agents,
-		driver:  &ClaudeCodeDriver{},
+		agents: agents,
+		drivers: map[string]Driver{
+			"claude-code-cli": &ClaudeCodeDriver{},
+			"ollama":          &OllamaDriver{Instances: ollamaInstances},
+		},
 		sem:     make(chan struct{}, maxConcurrent),
 		active:  make(map[string]*activeRun),
 		idx:     idx,
@@ -346,6 +351,12 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		return "", fmt.Errorf("lineage %q is locked by %s (%s): %w", lineage, existing.Holder, existing.Kind, lock.ErrLocked)
 	}
 
+	// Fail fast: look up driver before acquiring any resources.
+	drv, drvOK := m.drivers[ag.Driver]
+	if !drvOK {
+		return "", fmt.Errorf("unknown driver %q for agent %q", ag.Driver, agentName)
+	}
+
 	// Try semaphore (non-blocking).
 	select {
 	case m.sem <- struct{}{}:
@@ -361,18 +372,21 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	}
 
 	run := Run{
-		RunID:         runID,
-		AgentName:     agentName,
-		Role:          role,
-		Model:         ag.Model,
-		PromptText:    prompt,
-		ProjectRoot:   m.root,
-		AllowedPaths:  ag.AllowedPaths,
-		GitIdentity:   identity,
-		LogPath:       m.LogPath(runID),
-		TargetPath:    targetPath,
-		ActiveStatus:  ag.ActiveStatus,
-		DoneOnSuccess: ag.DoneOnSuccess,
+		RunID:              runID,
+		AgentName:          agentName,
+		Role:               role,
+		Model:              ag.Model,
+		PromptText:         prompt,
+		ProjectRoot:        m.root,
+		AllowedPaths:       ag.AllowedPaths,
+		GitIdentity:        identity,
+		LogPath:            m.LogPath(runID),
+		TargetPath:         targetPath,
+		ActiveStatus:       ag.ActiveStatus,
+		DoneOnSuccess:      ag.DoneOnSuccess,
+		TimeoutMinutes:     ag.TimeoutMinutes,
+		OllamaInstanceName: ag.OllamaInstanceName,
+		OllamaEndpoint:     ag.OllamaEndpoint,
 	}
 
 	// Acquire lineage lock.
@@ -416,7 +430,7 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	} else {
 		runCtx, cancel = context.WithCancel(context.Background())
 	}
-	proc, err := m.driver.Start(runCtx, run)
+	proc, err := drv.Start(runCtx, run)
 	if err != nil {
 		cancel()
 		_ = m.locks.Release(lineage)

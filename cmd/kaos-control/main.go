@@ -55,6 +55,7 @@ func run() error {
 		MaxConcurrentAgents:        appCfg.Limits.MaxConcurrentAgents,
 		MaxConcurrentSchedulerJobs: appCfg.Limits.MaxConcurrentSchedulerJobs,
 		SchedulerRunRetentionDays:  appCfg.Limits.SchedulerRunRetentionDays,
+		OllamaInstances:            appCfg.OllamaInstances,
 	}
 	for _, e := range entries {
 		slog.Info("opening project", "name", e.Name, "path", e.Path)
