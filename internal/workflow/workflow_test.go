@@ -56,9 +56,9 @@ func TestWorkflowPredecessors(t *testing.T) {
 		to   string
 		role string
 	}{
-		// draft → clarifying: analyst (active_status for analyst-requirements agent)
+		// draft → clarifying: analyst (active_status for requirements-analyst agent)
 		{"draft", "clarifying", "analyst"},
-		// clarifying → planning: analyst (active_status for analyst-planner agent)
+		// clarifying → planning: analyst (active_status for planning-analyst agent)
 		{"clarifying", "planning", "analyst"},
 		// planning → in-development: approver (gates the move to development)
 		{"planning", "in-development", "approver"},
