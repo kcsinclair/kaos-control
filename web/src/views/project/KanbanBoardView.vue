@@ -5,6 +5,8 @@ import { useKanbanBoard } from '@/composables/useKanbanBoard'
 import { useArtifactsStore } from '@/stores/artifacts'
 import { useWebSocket } from '@/composables/useWebSocket'
 import KanbanCard from '@/components/artifact/KanbanCard.vue'
+import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
+import { ShieldCheck } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 
 const route = useRoute()
@@ -26,6 +28,7 @@ const {
 
 const showCompleted = ref(false)
 watch(showCompleted, v => { hideTerminal.value = !v }, { immediate: true })
+const showStatusPanel = ref(false)
 
 const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'releases']
 const statusOptions = ['', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa', 'in-progress', 'done', 'approved', 'blocked', 'rejected', 'abandoned']
@@ -119,6 +122,14 @@ onMounted(async () => {
         />
         <span class="toggle-text">Show completed</span>
       </label>
+      <button class="btn-check-status" @click="showStatusPanel = !showStatusPanel">
+        <ShieldCheck :size="15" />
+        Check statuses
+      </button>
+    </div>
+
+    <div v-if="showStatusPanel" class="status-panel-wrap">
+      <StatusCheckPanel :project="project" @close="showStatusPanel = false" />
     </div>
 
     <!-- Filter bar -->
@@ -192,6 +203,7 @@ onMounted(async () => {
 
 <style scoped>
 .board-view {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -199,7 +211,7 @@ onMounted(async () => {
 }
 .board-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--color-border);
@@ -354,5 +366,34 @@ onMounted(async () => {
   color: var(--color-text-muted);
   text-align: center;
   padding: var(--space-4) 0;
+}
+.btn-check-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-check-status:hover { background: var(--color-surface); color: var(--color-text); }
+.btn-check-status:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.status-panel-wrap {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 50;
+  width: 380px;
+  max-height: calc(100% - var(--space-6));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
 }
 </style>
