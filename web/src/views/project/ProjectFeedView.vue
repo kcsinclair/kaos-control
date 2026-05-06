@@ -6,12 +6,24 @@ import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
 import FeedEntry from '@/components/feed/FeedEntry.vue'
 import FeedFilterBar from '@/components/feed/FeedFilterBar.vue'
+import TextFilter from '@/components/TextFilter.vue'
 
 const route = useRoute()
 const router = useRouter()
 const feedStore = useFeedStore()
 
 const project = computed(() => route.params.project as string)
+
+const searchText = ref('')
+
+const visibleEvents = computed(() => {
+  const q = searchText.value.trim().toLowerCase()
+  if (!q) return feedStore.events
+  return feedStore.events.filter(e =>
+    (e.summary?.toLowerCase().includes(q)) ||
+    (e.artifact_path?.toLowerCase().includes(q))
+  )
+})
 
 // Track IDs of events prepended via WebSocket so FeedEntry can animate them
 const newEventIds = ref(new Set<number>())
@@ -81,21 +93,24 @@ useWebSocket(project.value, 'feed.new', (e: WsEvent) => {
   <div class="feed-view">
     <header class="feed-header">
       <h2 class="feed-title">Activity Feed</h2>
-      <FeedFilterBar
-        :active-types="feedStore.activeTypes"
-        @toggle="feedStore.setFilter"
-      />
+      <div class="feed-filter-row">
+        <TextFilter v-model="searchText" />
+        <FeedFilterBar
+          :active-types="feedStore.activeTypes"
+          @toggle="feedStore.setFilter"
+        />
+      </div>
     </header>
 
     <ol
-      v-if="feedStore.events.length > 0"
+      v-if="visibleEvents.length > 0"
       ref="feedListRef"
       class="feed-list"
       role="list"
       @keydown="handleKeydown"
     >
       <li
-        v-for="event in feedStore.events"
+        v-for="event in visibleEvents"
         :key="event.id"
         class="feed-entry-item"
         tabindex="0"
@@ -110,7 +125,7 @@ useWebSocket(project.value, 'feed.new', (e: WsEvent) => {
     </ol>
 
     <div
-      v-if="feedStore.events.length === 0 && !feedStore.loading"
+      v-if="visibleEvents.length === 0 && !feedStore.loading"
       class="feed-empty"
     >
       No activity yet
@@ -150,6 +165,12 @@ useWebSocket(project.value, 'feed.new', (e: WsEvent) => {
   font-weight: 600;
   margin: 0 0 var(--space-3) 0;
   color: var(--color-text);
+}
+.feed-filter-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 .feed-list {
