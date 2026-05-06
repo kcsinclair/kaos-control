@@ -1,10 +1,13 @@
 ---
 title: Hide Done Items by Default
 type: requirement
-status: done
+status: draft
 lineage: hide-done-items-by-default
-created: "2026-04-28"
+created: "2026-04-28T00:00:00+10:00"
 parent: lifecycle/ideas/hide-done-items-by-default.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Hide Done Items by Default
@@ -62,7 +65,7 @@ All artifact views currently display every artifact regardless of status, includ
 - [ ] The toggle is keyboard-accessible and has a visible focus indicator.
 - [ ] No backend API changes are required; filtering is client-side only.
 
-## Open Questions
+## Resolved Questions
 
 1. **Toggle label** — should the label read "Show completed", "Show done", or something else? The idea suggests "Show done" but this requirement uses "Show completed" to encompass `rejected` and `abandoned` as well.
 
