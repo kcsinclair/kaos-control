@@ -1,7 +1,7 @@
 ---
 title: Agent and Task Scheduler
 type: requirement
-status: blocked
+status: draft
 lineage: agent-task-scheduler
 created: "2026-05-05T00:00:00+10:00"
 priority: high
@@ -12,7 +12,7 @@ labels:
     - backend
     - workflow
 assignees:
-    - role: product-owner
+    - role: analyst
       who: agent
 ---
 
@@ -106,9 +106,20 @@ Agent runs (e.g. nightly QA, periodic analysis) and maintenance scripts currentl
 - [ ] Shell script paths are rejected if they escape the project sandbox.
 - [ ] Unauthenticated API requests to scheduler endpoints return 401.
 
-## Open Questions
+## Resolved Questions
 
 - Should job definitions be editable only via UI/API (runtime-only), only via config files (declarative-only), or both with a merge strategy? If both, which takes precedence on conflict?
+
+> Job definitions should be in the database for persistance, using the UI/API and later CLI tools to manage.
+
 - What is the desired log retention policy — time-based, count-based, or size-based? Should old logs be prunable from the UI?
+
+> Lets go with time based for now, 90 days is the default, make that a configuration option.
+
 - Should the scheduler support job priorities beyond FIFO ordering?
+
+> Yes, jobs should have priorities so they can jump the queue, use 1-10 for priority where 1 is the lowest and 10 is the highest.  By default jobs should be created with priority 5.
+
 - Is there a need for job-level notifications (e.g. on failure, send a message) in v1, or is log + WebSocket event sufficient?
+
+> Log and websocket for now.  Ensure the logs contain keywords which are easily searched for.  A future enhancement should generate an event which can be sent using syslog or mqtt to another system.
