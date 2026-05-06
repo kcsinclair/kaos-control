@@ -12,6 +12,8 @@ export const useGraphStore = defineStore('graph', () => {
 
   const filter = ref<GraphFilter>({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })
 
+  const searchText = ref('')
+
   const showLabelNodes = ref(false)
 
   // When true, nodes with terminal statuses are excluded (unless the user has
@@ -51,6 +53,17 @@ export const useGraphStore = defineStore('graph', () => {
   const filteredEdges = computed(() => {
     const nodeSet = new Set(filteredNodes.value.map((n) => n.id))
     return rawEdges.value.filter((e) => nodeSet.has(e.source) && nodeSet.has(e.target))
+  })
+
+  // Set of node IDs matching the current searchText (empty set = no active search)
+  const matchedNodeIds = computed<Set<string>>(() => {
+    const q = searchText.value.trim().toLowerCase()
+    if (!q) return new Set()
+    return new Set(
+      filteredNodes.value
+        .filter((n) => [n.title, n.lineage, n.type, n.status].join(' ').toLowerCase().includes(q))
+        .map((n) => n.id)
+    )
   })
 
   // Synthetic label nodes derived from filtered artifacts
@@ -142,6 +155,8 @@ export const useGraphStore = defineStore('graph', () => {
     loading,
     error,
     filter,
+    searchText,
+    matchedNodeIds,
     showLabelNodes,
     hideTerminal,
     hideTests,

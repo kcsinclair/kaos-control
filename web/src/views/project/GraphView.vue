@@ -63,11 +63,13 @@ onMounted(() => {
       :show-label-nodes="store.showLabelNodes"
       :hide-terminal="store.hideTerminal"
       :hide-tests="store.hideTests"
+      :search-text="store.searchText"
       @toggle="store.toggleFilterValue"
       @reset="store.setFilter({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })"
       @toggle-label-nodes="store.toggleShowLabelNodes"
       @toggle-hide-terminal="store.toggleHideTerminal"
       @toggle-hide-tests="store.toggleHideTests"
+      @update:search-text="store.searchText = $event"
     />
 
     <div class="graph-main">
@@ -102,6 +104,7 @@ onMounted(() => {
           v-if="view === '3d'"
           :nodes="store.augmentedNodes"
           :edges="store.augmentedEdges"
+          :matched-node-ids="store.matchedNodeIds"
           @node-click="onNodeClick"
         />
         <Graph2DView
@@ -109,6 +112,7 @@ onMounted(() => {
           :nodes="store.augmentedNodes"
           :edges="store.augmentedEdges"
           :on-node-click="onNodeClick"
+          :matched-node-ids="store.matchedNodeIds"
         />
       </template>
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import type { GraphNode, GraphEdge } from '@/types/api'
 import { NODE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS, APPROVED_TEST_RING_COLOR } from './graphConstants'
 
@@ -7,6 +7,7 @@ const props = defineProps<{
   nodes: GraphNode[]
   edges: GraphEdge[]
   onNodeClick: (node: GraphNode) => void
+  matchedNodeIds?: Set<string>
 }>()
 
 const container = ref<HTMLDivElement | null>(null)
@@ -165,14 +166,46 @@ async function init() {
   }, 700)
 }
 
+function applySearchHighlight() {
+  if (!cy) return
+  const matched = props.matchedNodeIds
+  if (!matched || matched.size === 0) {
+    // Restore full opacity for all elements
+    cy.nodes().style({ opacity: 1, 'border-width': undefined, 'border-color': undefined })
+    cy.edges().style({ opacity: 1 })
+    return
+  }
+  cy.nodes().forEach((n: any) => {
+    const id: string = n.data('id')
+    if (matched.has(id)) {
+      n.style({ opacity: 1, 'border-width': 4, 'border-color': '#facc15' })
+    } else {
+      n.style({ opacity: 0.15 })
+    }
+  })
+  cy.edges().forEach((e: any) => {
+    const srcMatched = matched.has(e.data('source'))
+    const tgtMatched = matched.has(e.data('target'))
+    e.style({ opacity: srcMatched || tgtMatched ? 1 : 0.1 })
+  })
+  // Fit viewport to matched nodes
+  const matchedEles = cy.nodes().filter((n: any) => matched.has(n.data('id')))
+  if (matchedEles.length > 0) {
+    cy.fit(matchedEles, 80)
+  }
+}
+
 function update() {
   if (!cy) return
   cy.elements().remove()
   cy.add(buildElements())
   cy.layout({ name: 'fcose', quality: 'proof', randomize: false, animate: false } as any).run()
+  nextTick(applySearchHighlight)
 }
 
 watch(() => [props.nodes, props.edges], update, { deep: false })
+
+watch(() => props.matchedNodeIds, applySearchHighlight)
 
 onMounted(init)
 onUnmounted(() => {

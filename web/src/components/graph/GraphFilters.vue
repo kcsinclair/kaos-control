@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GraphFilter } from '@/types/api'
+import TextFilter from '@/components/TextFilter.vue'
 
 const props = defineProps<{
   filter: GraphFilter
@@ -13,6 +14,7 @@ const props = defineProps<{
   showLabelNodes: boolean
   hideTerminal: boolean
   hideTests: boolean
+  searchText: string
 }>()
 
 const emit = defineEmits<{
@@ -21,6 +23,7 @@ const emit = defineEmits<{
   toggleLabelNodes: []
   toggleHideTerminal: []
   toggleHideTests: []
+  'update:searchText': [value: string]
 }>()
 
 const isActive = (key: keyof GraphFilter, value: string) =>
@@ -43,6 +46,13 @@ const hasFilters = () =>
     <div class="filter-count">
       {{ nodeCount }} / {{ totalCount }} nodes
     </div>
+
+    <TextFilter
+      :model-value="searchText"
+      placeholder="Search nodes…"
+      class="graph-text-filter"
+      @update:model-value="emit('update:searchText', $event)"
+    />
 
     <div class="filter-group">
       <label class="toggle-label">
@@ -225,5 +235,15 @@ const hasFilters = () =>
 .toggle-text {
   font-size: 11px;
   color: var(--color-text-muted);
+}
+.graph-text-filter {
+  width: 100%;
+}
+.graph-text-filter :deep(.text-filter__body) {
+  width: 100%;
+}
+.graph-text-filter :deep(.text-filter__input) {
+  min-width: 0;
+  flex: 1;
 }
 </style>

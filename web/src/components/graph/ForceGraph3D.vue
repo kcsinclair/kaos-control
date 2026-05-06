@@ -8,6 +8,7 @@ import { NODE_COLORS, EDGE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS, APPROV
 const props = defineProps<{
   nodes: GraphNode[]
   edges: GraphEdge[]
+  matchedNodeIds?: Set<string>
 }>()
 
 const emit = defineEmits<{
@@ -17,6 +18,11 @@ const emit = defineEmits<{
 const container = ref<HTMLElement>()
 
 function nodeColor(n: GraphNode): string {
+  const matched = props.matchedNodeIds
+  if (matched && matched.size > 0 && !matched.has(n.id)) {
+    // Dim unmatched nodes to ~0.15 opacity by blending towards the background (#0f172a)
+    return '#1e2535'
+  }
   return NODE_COLORS[n.type] ?? '#6b7280'
 }
 
@@ -88,6 +94,14 @@ function buildNodeObject(n: GraphNode): THREE.Object3D {
     group.add(mesh)
   }
   if (n.type === 'label') group.add(textSprite(n.title || n.slug))
+  // Highlight ring for text-filter matches
+  const matched = props.matchedNodeIds
+  if (matched && matched.size > 0 && matched.has(n.id)) {
+    const r = Math.cbrt(nodeVal(n)) * 4
+    const geo = new THREE.TorusGeometry(r * 2.1, r * 0.2, 8, 24)
+    const mat = new THREE.MeshLambertMaterial({ color: '#facc15', transparent: true, opacity: 0.85 })
+    group.add(new THREE.Mesh(geo, mat))
+  }
   return group
 }
 
@@ -158,6 +172,21 @@ watch(
   () => [props.nodes, props.edges],
   () => graph?.graphData(buildGraphData()),
   { deep: false },
+)
+
+// Animate camera to centroid of matched nodes when text filter changes
+watch(
+  () => props.matchedNodeIds,
+  (matched) => {
+    if (!graph || !matched || matched.size === 0) return
+    const data = graph.graphData() as { nodes: Array<GraphNode & { x?: number; y?: number; z?: number }> }
+    const hits = data.nodes.filter((n) => matched.has(n.id))
+    if (hits.length === 0) return
+    const cx = hits.reduce((s, n) => s + (n.x ?? 0), 0) / hits.length
+    const cy = hits.reduce((s, n) => s + (n.y ?? 0), 0) / hits.length
+    const cz = hits.reduce((s, n) => s + (n.z ?? 0), 0) / hits.length
+    graph.cameraPosition({ x: cx, y: cy, z: cz + 200 }, { x: cx, y: cy, z: cz }, 600)
+  },
 )
 </script>
 
