@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Pipeline Log Streaming Endpoint Enhancements"
 type: plan-backend
-status: approved
+status: in-development
 lineage: devops-pipeline-log-streaming
 parent: lifecycle/requirements/devops-pipeline-log-streaming-2.md
 ---
