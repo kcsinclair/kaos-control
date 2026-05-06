@@ -1,7 +1,7 @@
 ---
 title: "Agent & Task Scheduler — Frontend Plan"
 type: plan-frontend
-status: in-development
+status: done
 lineage: agent-task-scheduler
 parent: lifecycle/requirements/agent-task-scheduler-2.md
 created: "2026-05-06T00:00:00+10:00"
