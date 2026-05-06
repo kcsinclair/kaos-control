@@ -1,7 +1,7 @@
 ---
 title: "Fix Incorrect Created Date Format — Test Plan"
 type: plan-test
-status: in-development
+status: done
 lineage: artifacts-incorrect-created-date-format
 parent: lifecycle/defects/artifacts-incorrect-created-date-format.md
 ---
