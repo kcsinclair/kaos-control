@@ -1,7 +1,7 @@
 ---
 title: Sortable Table Columns
 type: requirement
-status: draft
+status: done
 lineage: sortable-table-columns
 created: "2026-04-27T00:00:00+10:00"
 priority: normal
