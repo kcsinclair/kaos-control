@@ -3,6 +3,7 @@ import { api } from '@/api/client'
 import * as artifactsApi from '@/api/artifacts'
 import type { ArtifactRow, ArtifactFilter } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
+import { parseArtifactDate } from '@/composables/useFormatDate'
 
 export interface KanbanColumnConfig {
   name: string
@@ -36,9 +37,11 @@ export function useKanbanBoard(project: string) {
   // Ordered column list — starts from config, can be reordered by drag
   const columnOrder = ref<KanbanColumnConfig[]>([])
 
-  // Compute age string from ISO date string
+  // Compute age string from an artifact date string (plain or RFC3339)
   function computeAge(created: string): string {
-    const days = Math.floor((Date.now() - Date.parse(created)) / 86400000)
+    const d = parseArtifactDate(created)
+    if (!d) return '?'
+    const days = Math.floor((Date.now() - d.getTime()) / 86400000)
     return `${days}d`
   }
 
