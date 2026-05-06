@@ -1,7 +1,7 @@
 ---
 title: Single-Submit Idea Capture (Brain Dump Mode)
 type: requirement
-status: done
+status: blocked
 lineage: prompt-to-idea
 parent: lifecycle/ideas/idea-capture-vs-interactive.md
 labels:
@@ -9,6 +9,9 @@ labels:
     - workflow
     - usability
     - enhancement
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Single-Submit Idea Capture (Brain Dump Mode)

@@ -1,15 +1,18 @@
 ---
 title: 'Frontmatter Editor: Priority Dropdown and Status Dropdown'
 type: requirement
-status: done
+status: blocked
 lineage: frontmatter-editor-dropdowns
-parent: ideas/frontmatter-editor-dropdowns.md
 priority: normal
+parent: ideas/frontmatter-editor-dropdowns.md
 labels:
     - enhancement
     - frontend
     - usability
     - vue
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Frontmatter Editor: Priority Dropdown and Status Dropdown

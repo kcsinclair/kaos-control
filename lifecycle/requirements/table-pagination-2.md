@@ -1,9 +1,12 @@
 ---
 title: Table Pagination Controls
 type: requirement
-status: done
+status: blocked
 lineage: table-pagination
 parent: lifecycle/ideas/table-pagination.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Table Pagination Controls

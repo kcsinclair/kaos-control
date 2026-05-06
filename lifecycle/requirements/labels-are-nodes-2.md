@@ -1,12 +1,15 @@
 ---
 title: Labels as Graph Nodes with Priority Visualisation
 type: requirement
-status: done
+status: blocked
 lineage: labels-are-nodes
 parent: ideas/labels-are-nodes.md
 labels:
     - enhancement
     - frontend
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Labels as Graph Nodes with Priority Visualisation
