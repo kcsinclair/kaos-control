@@ -1,7 +1,7 @@
 ---
 title: "Fix Status Check Frontend Type Mismatches"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: status-checker-button-no-status-update
 parent: lifecycle/defects/status-checker-button-no-status-update.md
 ---
