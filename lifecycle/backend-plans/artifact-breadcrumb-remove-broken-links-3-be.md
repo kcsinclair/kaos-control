@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Remove Non-Functional Hyperlinks from Artifact Breadcrumb"
 type: plan-backend
-status: in-development
+status: done
 lineage: artifact-breadcrumb-remove-broken-links
 parent: lifecycle/requirements/artifact-breadcrumb-remove-broken-links-2.md
 created: "2026-05-06T00:00:00+10:00"
@@ -29,5 +29,5 @@ Verify that no API route, handler, or index query needs to change for the fronte
 
 ### Acceptance Criteria
 
-- [ ] Confirmed: no Go source files require modification.
-- [ ] The frontend plan ([[artifact-breadcrumb-remove-broken-links]]-4-fe) and test plan ([[artifact-breadcrumb-remove-broken-links]]-5-test) do not depend on any backend changes.
+- [x] Confirmed: no Go source files require modification.
+- [x] The frontend plan ([[artifact-breadcrumb-remove-broken-links]]-4-fe) and test plan ([[artifact-breadcrumb-remove-broken-links]]-5-test) do not depend on any backend changes.
