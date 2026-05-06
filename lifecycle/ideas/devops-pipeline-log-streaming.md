@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Log Streaming View
 type: idea
-status: clarifying
+status: done
 lineage: devops-pipeline-log-streaming
 created: "2026-05-06T15:19:10+10:00"
 priority: normal
