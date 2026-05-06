@@ -56,9 +56,6 @@ plans/              Project plan + per-change implementation plans
 modified version of kaos-control as a network service, you must publish your
 modifications under the same licence.
 
-The reasoning behind this choice (and the alternatives considered) is
-documented in [licensing-decision.md](licensing-decision.md).
-
 Commercial licences for organisations that cannot accept AGPL terms may be
 available on request — open an issue to start the conversation.
 
