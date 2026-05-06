@@ -1,7 +1,7 @@
 ---
 title: "GET /allowed-targets returns 404 — endpoint not implemented"
 type: defect
-status: in-development
+status: done
 lineage: innovation-maker
 parent: lifecycle/tests/product-owner-cannot-transition-11-test.md
 labels:
