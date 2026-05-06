@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Remove Non-Functional Hyperlinks from Artifact Breadcrumb'
 type: plan-test
-status: in-development
+status: done
 lineage: artifact-breadcrumb-remove-broken-links
 created: "2026-05-06T00:00:00+10:00"
 parent: lifecycle/requirements/artifact-breadcrumb-remove-broken-links-2.md
