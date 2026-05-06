@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Log Streaming View
 type: requirement
-status: planning
+status: done
 lineage: devops-pipeline-log-streaming
 created: "2026-05-06T00:00:00+10:00"
 priority: normal
