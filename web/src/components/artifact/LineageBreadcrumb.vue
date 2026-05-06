@@ -33,14 +33,13 @@ const segments = computed(() => {
       artifacts
     </button>
     <span class="sep">/</span>
-    <template v-for="(seg, i) in segments" :key="seg.path">
-      <button
-        v-if="i < segments.length - 1"
-        class="crumb-link"
-        @click="toArtifact(seg.path)"
-      >{{ seg.label }}</button>
+    <template v-for="seg in segments" :key="seg.path">
+      <span
+        v-if="seg.role === 'intermediate'"
+        class="crumb-intermediate"
+      >{{ seg.label }}</span>
       <span v-else class="crumb-current">{{ seg.label }}</span>
-      <span v-if="i < segments.length - 1" class="sep">/</span>
+      <span v-if="seg.role === 'intermediate'" class="sep">/</span>
     </template>
   </nav>
 </template>
