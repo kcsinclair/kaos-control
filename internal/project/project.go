@@ -49,6 +49,13 @@ type OpenOptions struct {
 	MaxConcurrentSchedulerJobs int
 	SchedulerRunRetentionDays  int
 	OllamaInstances            []config.OllamaInstance // app-level Ollama servers for OllamaDriver
+
+	// DevopsLogDir is the base directory for pipeline run logs.
+	// Logs are stored at DevopsLogDir/<project-name>/<run_id>.log.
+	// If empty, defaults to filepath.Dir(dbDir), placing logs at
+	// <appHome>/devops/<project> (e.g. ~/.kaos-control/devops/<project> when
+	// dbDir = ~/.kaos-control/data).
+	DevopsLogDir string
 }
 
 // Open loads the project config, opens the SQLite index, scans the lifecycle tree,
@@ -112,7 +119,15 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, entry.Path, runsLogDir, opts.OllamaInstances)
 	}
 
-	logStore := devops.NewLogStore(dbDir)
+	// Determine the base directory for devops run logs.
+	// Default to the parent of dbDir so that, with the standard layout where
+	// dbDir = ~/.kaos-control/data, logs land at ~/.kaos-control/devops/<project>
+	// as specified in the backend plan.
+	devopsLogDir := opts.DevopsLogDir
+	if devopsLogDir == "" {
+		devopsLogDir = filepath.Dir(dbDir)
+	}
+	logStore := devops.NewLogStore(devopsLogDir)
 	devopsRunner := devops.NewRunner()
 	devopsRunner.SetEventHook(func(runID, eventType string, payload any) {
 		logStore.WriteEvent(entry.Name, runID, eventType, payload)
