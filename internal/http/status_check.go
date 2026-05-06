@@ -110,10 +110,11 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 	userRoles := p.Cfg.RolesFor(user.Email)
 
 	type advanceResult struct {
-		Path      string `json:"path"`
-		Outcome   string `json:"outcome"`
-		NewStatus string `json:"new_status,omitempty"`
-		Reason    string `json:"reason,omitempty"`
+		Path       string `json:"path"`
+		Outcome    string `json:"outcome"`
+		Ok         bool   `json:"ok"`
+		AdvancedTo string `json:"advanced_to,omitempty"`
+		Reason     string `json:"reason,omitempty"`
 	}
 
 	results := make([]advanceResult, 0, len(req.Paths))
@@ -190,9 +191,10 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 		}
 
 		results = append(results, advanceResult{
-			Path:      relPath,
-			Outcome:   "advanced",
-			NewStatus: suggested,
+			Path:       relPath,
+			Outcome:    "advanced",
+			Ok:         true,
+			AdvancedTo: suggested,
 		})
 	}
 
