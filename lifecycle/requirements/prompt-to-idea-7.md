@@ -1,7 +1,7 @@
 ---
 title: Single-Submit Idea Capture (Brain Dump Mode)
 type: requirement
-status: blocked
+status: done
 lineage: prompt-to-idea
 parent: lifecycle/ideas/idea-capture-vs-interactive.md
 labels:
@@ -116,7 +116,7 @@ The generated artifact must contain valid frontmatter:
 - [ ] The `idea-capture` agent config in `lifecycle/config.yaml` includes the new `idea-generate` prompt template.
 - [ ] Related lineage: [[prompt-to-idea]]
 
-## Open Questions
+## Resolved Questions
 
 1. **Discard the chat panel entirely?** Should `IdeaChatPanel` be removed from the codebase now, or retained as the future UI for [[flesh-out-ideas-with-agent]]? The current recommendation is to retain it but disconnect it from the "New Idea" button.
 
