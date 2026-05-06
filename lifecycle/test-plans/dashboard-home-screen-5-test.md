@@ -1,9 +1,12 @@
 ---
-title: "Dashboard Home Screen — Test Plan"
+title: Dashboard Home Screen — Test Plan
 type: plan-test
-status: in-development
+status: blocked
 lineage: dashboard-home-screen
 parent: lifecycle/requirements/dashboard-home-screen-2.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Dashboard Home Screen — Test Plan
@@ -108,3 +111,56 @@ This plan covers integration tests for the dashboard backend endpoints and end-t
 
 - [[dashboard-home-screen-3-be]] — Backend endpoints under test.
 - [[dashboard-home-screen-4-fe]] — Frontend components under test.
+
+## Open Questions
+
+Milestones 1-3 (Go backend integration tests) have been implemented in
+`tests/integration/dashboard_stats_test.go`, `dashboard_distribution_test.go`,
+and `dashboard_velocity_test.go`. The questions below block Milestones 4-7.
+
+### Q1 - Milestone 6: Server-side redirect assumption is incorrect
+
+The plan states: "Test: `GET /p/:project` responds with 302 redirect to
+`/p/:project/dashboard`."
+
+The server catch-all (`r.Get("/*", s.handleFrontend)`) serves the Vue SPA's
+`index.html` with HTTP 200 for all frontend routes. The dashboard redirect
+is client-side via Vue Router; no 302 is ever emitted by the Go server.
+
+Pick one:
+a) Remove the assertion; test instead that `GET /p/:project` returns 200.
+b) Add an explicit server-side redirect in `handleFrontend` and update the test.
+c) Move the test to a browser-based E2E suite (Playwright/Cypress).
+
+### Q2 - Milestone 6: HTML content assertions against a SPA shell
+
+"Dashboard page HTML includes all expected widget containers" and "sidebar HTML
+has Dashboard as the first navigation item" assume server-rendered HTML. The
+server only returns an empty `<div id="app"></div>`; widgets and nav are
+injected by JavaScript at runtime.
+
+Pick one:
+a) Drop these assertions; cover widget registration at the unit level (Milestone 4).
+b) Use Playwright to test the rendered DOM in a real browser.
+
+### Q3 - Milestones 4, 5, 7: Vitest is not installed
+
+The frontend spec files (`widgetRegistry.spec.ts`, `DashboardView.spec.ts`,
+`performance.spec.ts`) require Vitest and `@vue/test-utils`. Neither appears in
+`web/package.json` and there is no `vitest.config.ts`. The write scope for this
+agent is `tests/**` and `lifecycle/tests/` - modifying `web/package.json`,
+`web/vite.config.ts`, or writing files under `web/src/` is out of scope.
+
+Decision needed: Should a separate task install Vitest and configure the
+frontend test harness before a subsequent agent implements Milestones 4, 5, 7?
+
+### Q4 - Milestone 5: Viewport layout testing in jsdom
+
+The criterion "at viewport >= 1024 px, grid has two columns" tests a CSS
+`@media` rule. jsdom does not evaluate CSS media queries.
+
+Pick one:
+a) Replace the CSS breakpoint with a JS reactive breakpoint (`useWindowSize`)
+   so tests can set `window.innerWidth` in jsdom.
+b) Use Playwright where real CSS is applied.
+c) Drop the column-count assertion; test only DOM slot structure.
