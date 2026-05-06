@@ -1,7 +1,7 @@
 ---
 title: Test Artifact Management and Test Runner
 type: requirement
-status: planning
+status: done
 lineage: test-artifact-management
 priority: high
 parent: lifecycle/ideas/test-artifact-management.md
