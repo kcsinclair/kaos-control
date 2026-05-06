@@ -1,7 +1,7 @@
 ---
 title: Rename Analyst Agents to Phase-First Convention
 type: requirement
-status: approved
+status: planning
 lineage: rename-analyst-agents
 created: "2026-05-06"
 priority: high
