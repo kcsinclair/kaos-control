@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: Lineage Status Checker UI'
 type: plan-frontend
-status: in-development
+status: done
 lineage: status-checker-button
 parent: lifecycle/requirements/status-checker-button-2.md
 ---
