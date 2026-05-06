@@ -4,7 +4,7 @@ type: idea
 status: draft
 lineage: test-artifact-status-lifecycle
 created: "2026-04-28T10:02:27+10:00"
-priority: normal
+priority: low
 labels:
     - test
     - testing
