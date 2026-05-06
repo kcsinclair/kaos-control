@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Frontmatter Editor Dropdowns'
 type: plan-test
-status: blocked
+status: approved
 lineage: frontmatter-editor-dropdowns
 parent: requirements/frontmatter-editor-dropdowns-2.md
 assignees:
@@ -88,7 +88,7 @@ Create a companion `test` artifact in `lifecycle/tests/` documenting what the te
 - Frontend plan [[frontmatter-editor-dropdowns]] defines the UI behaviour; these integration tests cover the data layer beneath it.
 - Note: existing `tests/integration/priority_roundtrip_test.go` and `tests/integration/priority_patch_test.go` may already cover some priority scenarios. The test developer should review those files and avoid duplication, extending them if appropriate rather than creating entirely new files.
 
-## Open Questions
+## Resolved Questions
 
 ### Q1 — Unknown priority value: expected API behaviour (BLOCKING)
 
