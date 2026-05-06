@@ -41,8 +41,8 @@ vi.mock('vue-router', async (importActual) => {
   const actual = await importActual<typeof import('vue-router')>()
   return {
     ...actual,
-    useRoute:  vi.fn(() => ({ params: { project: 'testproject' } })),
-    useRouter: vi.fn(() => ({ push: vi.fn() })),
+    useRoute:  vi.fn(() => ({ params: { project: 'testproject' }, query: {} })),
+    useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn() })),
   }
 })
 

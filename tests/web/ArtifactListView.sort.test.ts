@@ -45,8 +45,8 @@ vi.mock('vue-router', async (importActual) => {
   const actual = await importActual<typeof import('vue-router')>()
   return {
     ...actual,
-    useRoute:  vi.fn(() => ({ params: { project: 'testproject' } })),
-    useRouter: vi.fn(() => ({ push: vi.fn() })),
+    useRoute:  vi.fn(() => ({ params: { project: 'testproject' }, query: {} })),
+    useRouter: vi.fn(() => ({ push: vi.fn(), replace: vi.fn() })),
   }
 })
 
@@ -383,8 +383,8 @@ describe('ArtifactListView — keyboard activation of sort headers', () => {
     const pathHeader = headers.find(th => th.text().includes('Path'))
     expect(pathHeader).toBeDefined()
 
-    const focusable = pathHeader!.find('[tabindex="0"]') ?? pathHeader!
-    await focusable.trigger('keydown', { key: 'Enter' })
+    // tabindex="0" is on the <th> itself (SortHeader renders it on the root element)
+    await pathHeader!.trigger('keydown', { key: 'Enter' })
 
     const ascHeaders = wrapper.findAll('[aria-sort="ascending"]')
     expect(ascHeaders.length).toBe(1)
@@ -402,8 +402,8 @@ describe('ArtifactListView — keyboard activation of sort headers', () => {
     const pathHeader = headers.find(th => th.text().includes('Path'))
     expect(pathHeader).toBeDefined()
 
-    const focusable = pathHeader!.find('[tabindex="0"]') ?? pathHeader!
-    await focusable.trigger('keydown', { key: ' ' })
+    // tabindex="0" is on the <th> itself (SortHeader renders it on the root element)
+    await pathHeader!.trigger('keydown', { key: ' ' })
 
     const ascHeaders = wrapper.findAll('[aria-sort="ascending"]')
     expect(ascHeaders.length).toBe(1)
