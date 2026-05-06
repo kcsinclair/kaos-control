@@ -1,7 +1,7 @@
 ---
 title: Test Artifact Status Lifecycle
 type: requirement
-status: blocked
+status: draft
 lineage: test-artifact-status-lifecycle
 parent: ideas/test-artifact-status-lifecycle.md
 labels:
@@ -89,8 +89,16 @@ All changes should use existing frontmatter fields and the existing SQLite index
 - [ ] Existing non-test artifact workflows (e.g., `in-qa → approved` by QA role for requirements) are unaffected
 - [ ] The [[test-artifact-status-lifecycle]] lineage test artifacts cycle through `approved → in-qa → approved` correctly in integration tests
 
-## Open Questions
+## Resolved Questions
 
 1. Should the `in-qa` → `approved` post-run transition happen even if the agent run fails (non-zero exit)? The idea says "once defect-raising is complete" — but a crashed agent may not have finished raising defects. Should a failed run leave the test in `in-qa` for manual triage, or always reset to `approved`?
+
+> A failed run should remain in in-qa.
+
 2. Should there be a configurable option (in `lifecycle/config.yaml`) to control the post-run reset behaviour per project, or is the always-reset-to-approved behaviour sufficient for v1?
+
+> always reset to approved.
+
 3. The idea mentions the cycle ensures tests are "never left in a terminal or ambiguous state." Should we add a UI warning or notification when a test has been in `in-qa` for longer than the agent timeout, as an early indicator of a stuck run?
+
+> If something has been in-qa for over 60 minutes, generate a UI warning.
