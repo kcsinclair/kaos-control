@@ -395,6 +395,12 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 	if a.FM.Created != "" {
 		if t, err := time.Parse(time.RFC3339, a.FM.Created); err == nil {
 			createdUnix = t.Unix()
+		} else if t, err := time.Parse("2006-01-02", a.FM.Created); err == nil {
+			// Plain date (no timezone): treat as midnight in the server's local timezone.
+			localMidnight := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Now().Location())
+			createdUnix = localMidnight.Unix()
+			slog.Warn("artifact has plain-date created field; normalising to RFC3339 for index",
+				"path", a.Path, "created", a.FM.Created)
 		}
 	}
 	if createdUnix == 0 && !a.CreatedAt.IsZero() {
