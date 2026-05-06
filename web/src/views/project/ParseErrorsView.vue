@@ -66,8 +66,8 @@ onMounted(load)
     <table v-else class="errors-table" aria-label="Parse errors">
       <thead>
         <tr>
-          <SortHeader column="path"    :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">File</SortHeader>
-          <SortHeader column="message" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort">Error</SortHeader>
+          <SortHeader label="File"  column="path"    :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
+          <SortHeader label="Error" column="message" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
         </tr>
       </thead>
       <tbody>

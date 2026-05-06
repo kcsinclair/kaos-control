@@ -4,6 +4,8 @@ import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-vue-next'
 import type { SortDirection } from '@/composables/useSortableTable'
 
 const props = defineProps<{
+  /** Display text for the column header */
+  label: string
   /** Column key this header controls */
   column: string
   /** Currently active sort column (from composable) */
@@ -44,15 +46,13 @@ function handleKeydown(event: KeyboardEvent) {
     @keydown="handleKeydown"
   >
     <span class="sort-th__inner">
-      <slot />
+      {{ label }}
       <ArrowUp v-if="isActive && sortDirection === 'asc'" :size="12" class="sort-icon sort-icon--active" />
       <ArrowDown v-else-if="isActive && sortDirection === 'desc'" :size="12" class="sort-icon sort-icon--active" />
       <ArrowUpDown v-else :size="12" class="sort-icon sort-icon--inactive" />
     </span>
   </th>
-  <th v-else>
-    <slot />
-  </th>
+  <th v-else>{{ label }}</th>
 </template>
 
 <style scoped>

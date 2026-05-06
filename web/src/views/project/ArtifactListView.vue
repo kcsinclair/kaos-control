@@ -187,12 +187,12 @@ onMounted(async () => {
       <table v-else class="artifact-table">
         <thead>
           <tr>
-            <SortHeader column="title" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Path</SortHeader>
-            <SortHeader column="stage" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Stage</SortHeader>
-            <SortHeader column="status" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Status</SortHeader>
-            <SortHeader column="type" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Type</SortHeader>
-            <SortHeader column="created" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Created</SortHeader>
-            <SortHeader column="mtime" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort">Modified</SortHeader>
+            <SortHeader label="Path" column="title" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
+            <SortHeader label="Stage" column="stage" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
+            <SortHeader label="Status" column="status" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
+            <SortHeader label="Type" column="type" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
+            <SortHeader label="Created" column="created" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
+            <SortHeader label="Modified" column="mtime" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
           </tr>
         </thead>
         <tbody>
