@@ -79,6 +79,14 @@ useWebSocket(project.value, 'agent.failed', (e) => {
   if (tp === artifactPath.value) runTestRunning.value = false
 })
 
+// ── stale in-qa warning ──────────────────────────────────────────────────────
+const isStale = ref(false)
+
+useWebSocket(project.value, 'test.stale', (e) => {
+  const path = e.payload?.path as string | undefined
+  if (path === artifactPath.value) isStale.value = true
+})
+
 // ── edit mode state ─────────────────────────────────────────────────────────
 const editing = ref(false)
 const saving = ref(false)
@@ -217,8 +225,13 @@ useWebSocket(project.value, 'artifact.indexed', async (e: WsEvent) => {
     } else if (newStatus === 'in-qa') {
       ui.info('QA run started — artifact is now in-qa')
     } else if (prevStatus === 'in-qa' && newStatus === 'approved') {
+      isStale.value = false
       ui.success('QA run completed — artifact returned to approved')
     }
+  }
+  // Clear stale warning whenever artifact leaves in-qa
+  if (prevStatus === 'in-qa' && newStatus !== 'in-qa') {
+    isStale.value = false
   }
 })
 
@@ -273,6 +286,11 @@ onMounted(() => {
 
     <!-- Lock banner (locked by someone else) -->
     <LockBanner v-if="conflictLock" :lock="conflictLock" />
+
+    <!-- Stale in-qa warning banner -->
+    <div v-if="isStale && !editing" class="stale-qa-banner">
+      This test has been in-qa for over 60 minutes — the QA run may be stuck.
+    </div>
 
     <!-- External change banner -->
     <div v-if="hasExternalChange" class="external-change-banner">
@@ -403,6 +421,20 @@ onMounted(() => {
 .shortcut-hint {
   font-size: 11px;
   color: var(--color-text-muted);
+}
+.stale-qa-banner {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-6);
+  background: #fffbeb;
+  color: #92400e;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border-bottom: 1px solid #fcd34d;
+  flex-shrink: 0;
+}
+@media (prefers-color-scheme: dark) {
+  .stale-qa-banner { background: #422006; color: #fcd34d; border-color: #92400e; }
 }
 .external-change-banner {
   display: flex;

@@ -1,10 +1,11 @@
 import { ref, computed, reactive } from 'vue'
 import { api } from '@/api/client'
 import * as artifactsApi from '@/api/artifacts'
-import type { ArtifactRow, ArtifactFilter } from '@/types/api'
+import type { ArtifactRow, ArtifactFilter, WsEvent } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
 import { parseArtifactDate } from '@/composables/useFormatDate'
 import { useUiStore } from '@/stores/ui'
+import { useWebSocket } from '@/composables/useWebSocket'
 
 export interface KanbanColumnConfig {
   name: string
@@ -29,6 +30,27 @@ export function useKanbanBoard(project: string) {
   const hasConfig = ref(false)
   const config = ref<KanbanConfig | null>(null)
   const allArtifacts = ref<ArtifactRow[]>([])
+
+  // Tracks paths of test artifacts flagged stale by the backend test.stale event
+  const staleArtifactPaths = ref<Set<string>>(new Set())
+
+  useWebSocket(project, 'test.stale', (e: WsEvent) => {
+    const path = e.payload?.path as string | undefined
+    if (path) {
+      staleArtifactPaths.value = new Set([...staleArtifactPaths.value, path])
+    }
+  })
+
+  // Clear stale flag when the artifact transitions out of in-qa
+  useWebSocket(project, 'artifact.indexed', (e: WsEvent) => {
+    const path = e.payload?.path as string | undefined
+    const status = e.payload?.status as string | undefined
+    if (path && status !== 'in-qa' && staleArtifactPaths.value.has(path)) {
+      const next = new Set(staleArtifactPaths.value)
+      next.delete(path)
+      staleArtifactPaths.value = next
+    }
+  })
 
   // Reactive filter state
   const filters = reactive<Partial<ArtifactFilter>>({})
@@ -189,5 +211,6 @@ export function useKanbanBoard(project: string) {
     applyFilters,
     reorderColumns,
     ageOf,
+    staleArtifactPaths,
   }
 }

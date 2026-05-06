@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { HelpCircle } from 'lucide-vue-next'
+import { HelpCircle, AlertTriangle } from 'lucide-vue-next'
 import type { ArtifactRow } from '@/types/api'
 
 const props = defineProps<{
@@ -9,6 +9,7 @@ const props = defineProps<{
   cardFields: string[]
   age: string
   project: string
+  isStale?: boolean
 }>()
 
 const router = useRouter()
@@ -49,6 +50,7 @@ const isBlockedOnQuestions = computed(() =>
 <template>
   <div
     class="kanban-card"
+    :class="{ 'kanban-card--stale': isStale }"
     tabindex="0"
     role="button"
     :aria-label="`Open artefact: ${artifact.title || artifact.slug}`"
@@ -66,6 +68,13 @@ const isBlockedOnQuestions = computed(() =>
         :size="13"
         title="Blocked pending answers to open questions"
         aria-label="Open questions pending"
+      />
+      <AlertTriangle
+        v-if="isStale"
+        class="card-stale-icon"
+        :size="13"
+        title="QA run may be stuck — in-qa for over 60 minutes"
+        aria-label="Stale QA run"
       />
       <span
         v-if="cardFields.includes('type')"
@@ -167,6 +176,16 @@ const isBlockedOnQuestions = computed(() =>
 .card-open-questions-icon {
   color: #d97706;
   flex-shrink: 0;
+}
+.card-stale-icon {
+  color: #d97706;
+  flex-shrink: 0;
+}
+.kanban-card--stale {
+  border-color: #f59e0b;
+}
+.kanban-card--stale:hover {
+  border-color: #d97706;
 }
 .card-lineage {
   font-size: 10px;

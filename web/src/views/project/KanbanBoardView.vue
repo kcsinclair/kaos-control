@@ -32,6 +32,7 @@ const {
   applyFilters,
   reorderColumns,
   ageOf,
+  staleArtifactPaths,
 } = useKanbanBoard(project)
 
 const showCompleted = ref(false)
@@ -248,6 +249,7 @@ onMounted(async () => {
             :card-fields="cardFields"
             :age="ageOf(card)"
             :project="project"
+            :is-stale="staleArtifactPaths.has(card.path)"
           />
         </div>
       </div>
