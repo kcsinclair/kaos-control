@@ -1,7 +1,7 @@
 ---
 title: Blue Ring Indicator for Approved Test Artifacts
 type: requirement
-status: draft
+status: done
 lineage: approved-test-blue-ring
 created: "2026-04-28T00:00:00+10:00"
 priority: medium
