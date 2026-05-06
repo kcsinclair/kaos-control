@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: Agent Launcher Panels'
 type: plan-frontend
-status: blocked
+status: draft
 lineage: agent-launcher-panels
 parent: lifecycle/requirements/agent-launcher-panels-2.md
 assignees:
@@ -137,7 +137,7 @@ Wire the new `AgentPanelRow` and `AgentLaunchModal` into the existing Agents scr
 - [ ] NFR-2 satisfied: no extra API calls on page load beyond the existing `GET /agents`.
 - [ ] `pnpm exec vue-tsc --noEmit` and `pnpm build` pass.
 
-## Open Questions
+## Resolved Questions
 
 1. **Requirement Open Question 2 — Type filtering**: Should `AgentLaunchModal` also filter by artifact `type`? For example, `planning-analyst` would only list `requirement`-type artifacts. The backend supports `?type=` filtering. The current plan does **not** add type filtering because there is no explicit mapping from agent name to expected input type in the config. If type filtering is desired, a new `input_type` field on `AgentConfig` would be the cleanest approach — but that is outside the scope of this plan unless the product owner decides otherwise.
 
