@@ -8,8 +8,9 @@ import { useSortableTable } from '@/composables/useSortableTable'
 import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
+import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
 import { useUiStore } from '@/stores/ui'
-import { MessageSquarePlus, Bug } from 'lucide-vue-next'
+import { MessageSquarePlus, Bug, ShieldCheck } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
@@ -23,6 +24,7 @@ const showBrainDump = ref(false)
 const brainDumpType = ref<'idea' | 'defect'>('idea')
 const newIdeaButtonEl = ref<HTMLButtonElement | null>(null)
 const showCompleted = ref(false)
+const showStatusPanel = ref(false)
 
 const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination()
 
@@ -139,6 +141,10 @@ onMounted(async () => {
         />
         <span class="toggle-text">Show completed</span>
       </label>
+      <button class="btn-check-status" @click="showStatusPanel = !showStatusPanel">
+        <ShieldCheck :size="15" />
+        Check statuses
+      </button>
       <button class="btn-new-defect" @click="openBrainDump('defect')">
         <Bug :size="15" />
         New Defect
@@ -156,6 +162,10 @@ onMounted(async () => {
       @close="onBrainDumpClose"
       @created="onBrainDumpCreated"
     />
+
+    <div v-if="showStatusPanel" class="status-panel-wrap">
+      <StatusCheckPanel :project="project" @close="showStatusPanel = false" />
+    </div>
 
     <div class="filter-bar">
       <select v-model="selectedStage" @change="applyFilters">
@@ -235,6 +245,7 @@ onMounted(async () => {
 
 <style scoped>
 .list-view {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -419,4 +430,32 @@ onMounted(async () => {
 .badge[data-status="planning"]     { background: var(--badge-planning-bg);      color: var(--badge-planning-text); }
 .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
 .cell-date { white-space: nowrap; }
+.btn-check-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-check-status:hover { background: var(--color-surface); color: var(--color-text); }
+.btn-check-status:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.status-panel-wrap {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 50;
+  width: 380px;
+  max-height: calc(100% - var(--space-6));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+}
 </style>
