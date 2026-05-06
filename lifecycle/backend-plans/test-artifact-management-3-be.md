@@ -1,7 +1,7 @@
 ---
 title: "Test Artifact Management — Backend Plan"
 type: plan-backend
-status: in-development
+status: done
 lineage: test-artifact-management
 parent: lifecycle/requirements/test-artifact-management-2.md
 assignees:
