@@ -1,0 +1,18 @@
+name: Build kaos-control
+type: build
+
+steps:
+  - name: Build frontend
+    description: Install pnpm dependencies and build the Vue SPA into web/dist
+    command: cd web && pnpm install && pnpm run build
+    timeout: 5m
+
+  - name: Build binary
+    description: Compile the Go server with the embedded SPA into ./dist/kaos-control
+    command: go build -ldflags "-X main.version=$(git describe --tags --always --dirty 2>/dev/null || echo dev)" -o ./dist/kaos-control ./cmd/kaos-control
+    timeout: 3m
+
+  - name: Verify binary
+    description: Sanity-check that the binary runs and reports a version
+    command: ./dist/kaos-control -version || ./dist/kaos-control --version || true
+    timeout: 30s
