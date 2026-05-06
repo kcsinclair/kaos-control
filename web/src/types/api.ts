@@ -120,6 +120,7 @@ export interface ArtifactFilter {
   lineage?: string
   type?: string
   priority?: string
+  release?: string
   q?: string
   limit?: number
   offset?: number
@@ -219,6 +220,9 @@ export type WsEventType =
   | 'pipeline.run.completed'
   | 'scheduler.job.started'
   | 'scheduler.job.completed'
+  | 'release.created'
+  | 'release.updated'
+  | 'release.deleted'
 
 export interface ScheduleSpec {
   type: 'cron' | 'interval' | 'once'
