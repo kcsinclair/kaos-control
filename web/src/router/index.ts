@@ -91,6 +91,11 @@ const router = createRouter({
           component: () => import('@/views/project/OllamaSettingsView.vue'),
         },
         {
+          path: 'testing',
+          name: 'testing',
+          component: () => import('@/views/project/TestingBoardView.vue'),
+        },
+        {
           path: 'devops',
           name: 'devops',
           component: () => import('@/views/project/DevOpsView.vue'),
