@@ -10,7 +10,7 @@ The new model splits the workflow into three phases:
 - **Verify**: `qa` runs integration tests and files defects in the new `lifecycle/defects/` stage, assigning each defect to whichever developer role caused it.
 
 This plan implements that model end-to-end: config, code defaults, workflow transitions, a new `defect` artifact type, and the spec. Decisions approved up front:
-- Analyst is implemented as **two agents sharing `role: [analyst]`** — `analyst-requirements` and `analyst-planner` — for focused prompts and safer path scoping.
+- Analyst is implemented as **two agents sharing `role: [analyst]`** — `requirements-analyst` and `planning-analyst` — for focused prompts and safer path scoping.
 - Analyst can self-submit (draft→clarifying, clarifying→planning).
 - Tickets are gated: all three plans must be approved before entering `in-development`.
 - The spec file is updated in the same commit to prevent drift.
@@ -32,8 +32,8 @@ This plan implements that model end-to-end: config, code defaults, workflow tran
 
 | Agent | role | writes to |
 |---|---|---|
-| `analyst-requirements` | analyst | `lifecycle/requirements/` |
-| `analyst-planner` | analyst | `lifecycle/backend-plans/`, `lifecycle/frontend-plans/`, `lifecycle/test-plans/` |
+| `requirements-analyst` | analyst | `lifecycle/requirements/` |
+| `planning-analyst` | analyst | `lifecycle/backend-plans/`, `lifecycle/frontend-plans/`, `lifecycle/test-plans/` |
 | `backend-developer` | backend-developer | `internal/`, `cmd/` |
 | `frontend-developer` | frontend-developer | `web/src/` |
 | `test-developer` | test-developer | `tests/` (repo root), `lifecycle/tests/` |
@@ -115,7 +115,7 @@ Targeted edits:
 - §5.2 Scope of access: noted developer agents now write to multiple code paths.
 - §6.2 Transition matrix: updated to match `workflow.go` defaults.
 - §6.3 Plan branches: changed default to require all three plans.
-- §7.1 Agent example: replaced `claude-planner` example with `analyst-planner` + `backend-developer`.
+- §7.1 Agent example: replaced `claude-planner` example with `planning-analyst` + `backend-developer`.
 - §7.3 Trigger-model wording: example phrase updated.
 - §13.3 Project-level config example: roles list, users binding, required_plans aligned.
 
@@ -127,9 +127,9 @@ Created at repo root so `test-developer`'s `allowed_write_paths` (`tests`, `life
 
 All use `{target_path}` substitution and reference CLAUDE.md for lineage conventions.
 
-**analyst-requirements** — idea → requirement, with clarifying Q&A if needed. Frontmatter: `type: ticket, status: draft, parent: <idea path>`. Sections: Problem, Goals/Non-goals, Requirements, Acceptance Criteria, Open Questions.
+**requirements-analyst** — idea → requirement, with clarifying Q&A if needed. Frontmatter: `type: ticket, status: draft, parent: <idea path>`. Sections: Problem, Goals/Non-goals, Requirements, Acceptance Criteria, Open Questions.
 
-**analyst-planner** — requirement → three plan artifacts. Each plan has `type: plan-{backend|frontend|test}`, linked via shared lineage. Body structured as ordered milestones with acceptance criteria per milestone.
+**planning-analyst** — requirement → three plan artifacts. Each plan has `type: plan-{backend|frontend|test}`, linked via shared lineage. Body structured as ordered milestones with acceptance criteria per milestone.
 
 **backend-developer** — backend plan → Go code in `internal/` + `cmd/`. Runs `go build ./...` and `go vet ./...` per milestone before commit.
 
@@ -147,7 +147,7 @@ All use `{target_path}` substitution and reference CLAUDE.md for lineage convent
 4. **Transition matrix**: pick a `draft` artifact, log in as a user with role `analyst` (bind via `users:` in config), verify the Change Status dropdown shows `clarifying`. Log in as `reviewer` only → dropdown does not show `clarifying` for draft.
 5. **Gate enforcement**: create a ticket in `planning` without any plans → attempt `planning→in-development` → server rejects with `missing_plans`. Add approved backend/frontend/test plans → transition succeeds.
 6. **Defect type**: create a file in `lifecycle/defects/` with `type: defect` in frontmatter → watcher indexes it → appears in artifact list under the new `defects` stage filter.
-7. **Agent invocation**: open the Run Agent dialog from an idea → `analyst-requirements` listed and invokable.
+7. **Agent invocation**: open the Run Agent dialog from an idea → `requirements-analyst` listed and invokable.
 
 ## Out of scope (explicit non-goals)
 

@@ -22,7 +22,7 @@ This change ships all four together because they're tightly coupled (driver invo
 - Populate it from the agent config in `Manager.StartRun` (around line 280).
 - In `ClaudeCodeDriver.Start` ([agent.go:97](internal/agent/agent.go#L97)), append `--model <name>` to args when `run.Model != ""`. Claude Code accepts the aliases `opus`, `sonnet`, `haiku`.
 - Set sensible defaults in [lifecycle/config.yaml](lifecycle/config.yaml):
-  - `analyst-requirements`, `analyst-planner`: `model: opus` (deeper reasoning for plans/requirements)
+  - `requirements-analyst`, `planning-analyst`: `model: opus` (deeper reasoning for plans/requirements)
   - `backend-developer`, `frontend-developer`, `test-developer`, `qa`: `model: sonnet` (faster execution)
 
 ### 2. Per-agent timeout — `timeout_minutes`, default 0 = disabled
@@ -103,11 +103,11 @@ This change ships all four together because they're tightly coupled (driver invo
 
 1. **Build**: `go build ./...` and `go vet ./...` clean.
 2. **Frontend**: `pnpm exec vue-tsc --noEmit` clean; `pnpm build` succeeds.
-3. **Model wiring**: start the server, run `analyst-requirements` against an idea, check the run's process args (visible in stderr_tail or log file) include `--model opus`.
+3. **Model wiring**: start the server, run `requirements-analyst` against an idea, check the run's process args (visible in stderr_tail or log file) include `--model opus`.
 4. **No timeout**: configure `timeout_minutes: 0`, start a long-running agent, confirm the supervisor never auto-kills (run continues until the subprocess exits naturally or the user clicks Kill).
 5. **Timeout fires**: configure `timeout_minutes: 1`, start an agent likely to take >1 min, confirm status flips to `killed-timeout` (not `killed`) in the UI and the chip is amber.
 6. **User-kill**: start a run, click Kill in the UI, confirm status becomes `killed` (not `killed-timeout`).
-7. **Block flow**: hand the analyst-requirements agent a deliberately vague idea (e.g. just a title with no body). Expect: agent appends `## Open Questions` to the idea, sets `status: blocked`, assigns `product-owner`. Run finishes `done` (the agent stopped cleanly, not failed). The blocked artifact appears in the artifact list with the new status. As `product-owner`, transition `blocked → draft` and re-run the agent — confirm the transition is allowed.
+7. **Block flow**: hand the requirements-analyst agent a deliberately vague idea (e.g. just a title with no body). Expect: agent appends `## Open Questions` to the idea, sets `status: blocked`, assigns `product-owner`. Run finishes `done` (the agent stopped cleanly, not failed). The blocked artifact appears in the artifact list with the new status. As `product-owner`, transition `blocked → draft` and re-run the agent — confirm the transition is allowed.
 8. **Live progress**: during a run, expand the row in AgentsRunsView, confirm assistant text + tool-use lines stream in (not just final output). 
 9. **Log file**: `cat ~/.kaos-control/data/kaos-control/runs/<run-id>.log` shows full stdout+stderr. Click "View log" in the UI and the same content renders.
 
