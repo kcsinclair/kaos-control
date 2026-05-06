@@ -1,7 +1,7 @@
 ---
 title: Move Running Agents Indicator to Menu Bar
 type: requirement
-status: blocked
+status: draft
 lineage: agents-indicator-in-menu-bar
 parent: lifecycle/ideas/agents-indicator-in-menu-bar.md
 labels:
@@ -74,7 +74,7 @@ The running-agents indicator (`RunStatusChip.vue`) is currently rendered as a fi
 - [ ] The indicator looks correct in both light and dark themes.
 - [ ] At viewport width 768px the indicator remains visible and usable.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the indicator show a brief transition animation (e.g. fade in/out) when the first agent starts or the last agent stops, or should it appear/disappear instantly?
 2. Is there a desired maximum width or truncation behaviour if the agent count reaches double digits (e.g. "12 running agents")?
