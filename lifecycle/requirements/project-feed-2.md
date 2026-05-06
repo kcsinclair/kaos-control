@@ -1,9 +1,12 @@
 ---
 title: Project Feed
 type: requirement
-status: planning
+status: blocked
 lineage: project-feed
 parent: lifecycle/ideas/project-feed.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 ## Problem
