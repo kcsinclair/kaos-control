@@ -1,7 +1,7 @@
 ---
 title: "Fix Status Check API Response Shape"
 type: plan-backend
-status: draft
+status: in-development
 lineage: status-checker-button-no-status-update
 parent: lifecycle/defects/status-checker-button-no-status-update.md
 ---
