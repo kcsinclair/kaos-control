@@ -1,13 +1,13 @@
 ---
-title: "Test Plan: Project Feed"
+title: 'Test Plan: Project Feed'
 type: plan-test
-status: done
+status: draft
 lineage: project-feed
+created: "2026-04-29T00:00:00+10:00"
 parent: lifecycle/requirements/project-feed-2.md
-created: "2026-04-29"
 assignees:
-  - role: product-owner
-    who: agent
+    - role: product-owner
+      who: agent
 ---
 
 # Test Plan: Project Feed
@@ -258,7 +258,7 @@ Create a companion test artifact documenting what the test suite covers.
 
 ---
 
-## Open Questions
+## Resolved Questions
 
 **Blocking — test implementation cannot proceed until the backend is built.**
 
@@ -273,3 +273,5 @@ Create a companion test artifact documenting what the test suite covers.
 3. **`feed.new` WebSocket payload shape.** Milestone 8 asserts the `feed.new` message contains `id`, `event_type`, `summary`, and `timestamp`. The backend plan (milestone 5 of `project-feed-3-be`) describes the broadcast but does not canonically define the JSON key names or whether all `EventRow` fields are included. Tests against the wrong shape will give false negatives.
 
    **Question for backend-developer:** Please document the exact JSON structure of the `feed.new` WebSocket message once it is implemented.
+
+> Backend development completed.
