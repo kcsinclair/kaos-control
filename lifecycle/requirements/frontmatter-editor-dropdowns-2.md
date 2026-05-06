@@ -1,7 +1,7 @@
 ---
 title: 'Frontmatter Editor: Priority Dropdown and Status Dropdown'
 type: requirement
-status: blocked
+status: done
 lineage: frontmatter-editor-dropdowns
 priority: normal
 parent: ideas/frontmatter-editor-dropdowns.md
@@ -94,7 +94,7 @@ The implementation must use native `<select>` HTML elements. Do not introduce a 
 - [ ] Existing fields (title, type, lineage, labels, release, sprint, depends_on, blocks) are unchanged and still function.
 - [ ] The component passes TypeScript type-checking (`pnpm vue-tsc --noEmit`).
 
-## Open Questions
-
+## Resolved Questions
+> questions answered in dev plans.
 - Should the priority vocabulary be extended beyond `normal` and `high`? (e.g. `low`, `critical`.) The current codebase only uses `normal` and `high`; the spec does not define the priority vocabulary. Confirm with product owner.
 - Should the status dropdown disable options that are invalid transitions from the current status (e.g. cannot jump from `draft` to `done`)? This would couple the editor to workflow rules and is likely a separate feature, but worth confirming scope.
