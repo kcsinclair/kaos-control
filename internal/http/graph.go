@@ -20,6 +20,7 @@ func (s *Server) handleGraph(w http.ResponseWriter, r *http.Request) {
 		Label:   r.URL.Query().Get("label"),
 		Lineage: r.URL.Query().Get("lineage"),
 		Type:    r.URL.Query().Get("type"),
+		Release: r.URL.Query().Get("release"),
 	}
 
 	data, err := p.Idx.Graph(f)
