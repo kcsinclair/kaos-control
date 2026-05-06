@@ -111,3 +111,5 @@ This directly contradicts the actual API implementation and existing passing tes
 **Option B** — The API should be changed so that unknown priority values are accepted and stored as-is (matching status behaviour). The `validPriorities` guard must be removed from both `handleUpdateArtifact` and `handlePatchPriority`, and the three existing tests that expect 400 must be updated.
 
 No test code has been written for this plan. Milestones 1, 3, and 4 can be implemented once this question is resolved (their acceptance criteria are consistent with the current codebase).
+
+> Option B
