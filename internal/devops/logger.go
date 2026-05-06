@@ -2,6 +2,7 @@ package devops
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -117,6 +118,53 @@ func (ls *LogStore) ListRuns(projectName string) ([]RunSummary, error) {
 		}
 	}
 	return summaries, nil
+}
+
+// ReadLogNDJSON returns the run log reformatted as NDJSON suitable for the
+// frontend split-pane viewer.  Each output line is a flat JSON object with a
+// "type" field (the pipeline event name) merged with the payload fields.
+// Internal log-store fields (time, event_type) are not forwarded.
+func (ls *LogStore) ReadLogNDJSON(projectName, runID string) ([]byte, error) {
+	path := ls.logPath(projectName, runID)
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("devops: reading log %s: %w", runID, err)
+	}
+	defer f.Close()
+
+	var buf bytes.Buffer
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+
+		var entry logEntry
+		if err := json.Unmarshal(line, &entry); err != nil {
+			continue
+		}
+
+		// Start building the output object from the payload fields.
+		// The payload was stored as a struct; when read back via `any` it is a
+		// map[string]any.  We copy those fields then inject the "type" key.
+		out := make(map[string]any)
+		if payload, ok := entry.Payload.(map[string]any); ok {
+			for k, v := range payload {
+				out[k] = v
+			}
+		}
+		out["type"] = entry.EventType
+
+		data, err := json.Marshal(out)
+		if err != nil {
+			continue
+		}
+		buf.Write(data)
+		buf.WriteByte('\n')
+	}
+
+	return buf.Bytes(), nil
 }
 
 // summariseLog reads the first and last relevant log entries to build a RunSummary.
