@@ -69,3 +69,9 @@ export function patchPriority(project: string, path: string, priority: string | 
     { priority },
   )
 }
+
+export function getAllowedTargets(project: string, path: string) {
+  return api.get<{ targets: string[] }>(
+    `/p/${encodeURIComponent(project)}/artifacts/${path}/allowed-targets`,
+  )
+}
