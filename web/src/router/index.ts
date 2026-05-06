@@ -76,6 +76,11 @@ const router = createRouter({
           component: () => import('@/views/project/ProjectConfigView.vue'),
         },
         {
+          path: 'settings/ollama',
+          name: 'ollama-settings',
+          component: () => import('@/views/project/OllamaSettingsView.vue'),
+        },
+        {
           path: 'devops',
           name: 'devops',
           component: () => import('@/views/project/DevOpsView.vue'),

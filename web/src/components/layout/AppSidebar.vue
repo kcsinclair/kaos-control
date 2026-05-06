@@ -19,6 +19,7 @@ import {
   Settings,
   Layers,
   CalendarClock,
+  Server,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
@@ -75,6 +76,7 @@ const navItems = computed((): NavItem[] => {
     { label: 'Feed',         to: `/p/${p}/feed`,            icon: Activity },
     { label: 'Parse Errors', to: `/p/${p}/parse-errors`,    icon: AlertTriangle },
     { label: 'Config',       to: `/p/${p}/config`,          icon: Settings },
+    { label: 'Ollama',       to: `/p/${p}/settings/ollama`, icon: Server },
   ]
   if (hasDevOpsAccess) {
     items.push({ label: 'DevOps', to: `/p/${p}/devops`, icon: Layers })
