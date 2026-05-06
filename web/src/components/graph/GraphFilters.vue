@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { GraphFilter } from '@/types/api'
 import TextFilter from '@/components/TextFilter.vue'
 
@@ -26,6 +27,14 @@ const emit = defineEmits<{
   'update:searchText': [value: string]
 }>()
 
+const textFilterRef = ref<{ focus: () => void } | null>(null)
+
+function focus() {
+  textFilterRef.value?.focus()
+}
+
+defineExpose({ focus })
+
 const isActive = (key: keyof GraphFilter, value: string) =>
   (props.filter[key] ?? []).includes(value)
 
@@ -48,6 +57,7 @@ const hasFilters = () =>
     </div>
 
     <TextFilter
+      ref="textFilterRef"
       :model-value="searchText"
       placeholder="Search nodes…"
       class="graph-text-filter"

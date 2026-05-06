@@ -10,6 +10,7 @@ import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
 import TextFilter from '@/components/TextFilter.vue'
+import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug, ShieldCheck } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
@@ -26,6 +27,9 @@ const brainDumpType = ref<'idea' | 'defect'>('idea')
 const newIdeaButtonEl = ref<HTMLButtonElement | null>(null)
 const showCompleted = ref(false)
 const showStatusPanel = ref(false)
+
+const textFilterRef = ref<{ focus: () => void } | null>(null)
+useTextFilterShortcut(textFilterRef)
 
 const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination()
 
@@ -198,7 +202,7 @@ onMounted(async () => {
     </div>
 
     <div class="filter-bar">
-      <TextFilter :model-value="searchText" @update:model-value="onSearchText" />
+      <TextFilter ref="textFilterRef" :model-value="searchText" @update:model-value="onSearchText" />
       <select v-model="selectedStage" @change="applyFilters">
         <option value="">All stages</option>
         <option v-for="s in stageOptions.slice(1)" :key="s" :value="s">{{ s }}</option>

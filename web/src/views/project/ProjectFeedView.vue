@@ -7,6 +7,7 @@ import type { WsEvent } from '@/types/api'
 import FeedEntry from '@/components/feed/FeedEntry.vue'
 import FeedFilterBar from '@/components/feed/FeedFilterBar.vue'
 import TextFilter from '@/components/TextFilter.vue'
+import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +16,8 @@ const feedStore = useFeedStore()
 const project = computed(() => route.params.project as string)
 
 const searchText = ref('')
+const textFilterRef = ref<{ focus: () => void } | null>(null)
+useTextFilterShortcut(textFilterRef)
 
 const visibleEvents = computed(() => {
   const q = searchText.value.trim().toLowerCase()
@@ -94,7 +97,7 @@ useWebSocket(project.value, 'feed.new', (e: WsEvent) => {
     <header class="feed-header">
       <h2 class="feed-title">Activity Feed</h2>
       <div class="feed-filter-row">
-        <TextFilter v-model="searchText" />
+        <TextFilter ref="textFilterRef" v-model="searchText" />
         <FeedFilterBar
           :active-types="feedStore.activeTypes"
           @toggle="feedStore.setFilter"

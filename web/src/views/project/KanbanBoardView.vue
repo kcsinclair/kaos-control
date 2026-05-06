@@ -7,6 +7,7 @@ import { useWebSocket } from '@/composables/useWebSocket'
 import KanbanCard from '@/components/artifact/KanbanCard.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
 import TextFilter from '@/components/TextFilter.vue'
+import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 import { ShieldCheck } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 
@@ -31,6 +32,9 @@ const {
 const showCompleted = ref(false)
 watch(showCompleted, v => { hideTerminal.value = !v }, { immediate: true })
 const showStatusPanel = ref(false)
+
+const textFilterRef = ref<{ focus: () => void } | null>(null)
+useTextFilterShortcut(textFilterRef)
 
 const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'releases']
 const statusOptions = ['', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa', 'in-progress', 'done', 'approved', 'blocked', 'rejected', 'abandoned']
@@ -137,7 +141,7 @@ onMounted(async () => {
 
     <!-- Filter bar -->
     <div v-if="hasConfig" class="filter-bar">
-      <TextFilter v-model="searchText" />
+      <TextFilter ref="textFilterRef" v-model="searchText" />
       <select v-model="selectedStage" @change="onFilterChange">
         <option value="">All stages</option>
         <option v-for="s in stageOptions.slice(1)" :key="s" :value="s">{{ s }}</option>

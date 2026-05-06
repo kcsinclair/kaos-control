@@ -8,6 +8,7 @@ import GraphLegend from '@/components/graph/GraphLegend.vue'
 import LabelModal from '@/components/graph/LabelModal.vue'
 import ArtifactModal from '@/components/artifact/ArtifactModal.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
+import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 import type { GraphNode } from '@/types/api'
 
 // Lazy-load Cytoscape 2D so it doesn't increase the 3D chunk
@@ -24,6 +25,9 @@ const selectedNode = ref<GraphNode | null>(null)
 const selectedLabelName = ref<string | null>(null)
 const view = ref<'3d' | '2d'>('3d')
 const showStatusPanel = ref(false)
+
+const graphFiltersRef = ref<{ focus: () => void } | null>(null)
+useTextFilterShortcut(graphFiltersRef)
 
 function onNodeClick(node: GraphNode) {
   if (node.type === 'label') {
@@ -52,6 +56,7 @@ onMounted(() => {
 <template>
   <div class="graph-view">
     <GraphFilters
+      ref="graphFiltersRef"
       :filter="store.filter"
       :unique-types="store.uniqueTypes"
       :unique-statuses="store.uniqueStatuses"
