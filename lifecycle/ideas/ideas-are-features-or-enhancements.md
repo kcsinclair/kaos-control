@@ -1,7 +1,7 @@
 ---
 title: Ideas are Features or Enhancements
 type: idea
-status: draft
+status: approved
 lineage: ideas-are-features-or-enhancements
 priority: normal
 labels:
