@@ -1,7 +1,7 @@
 ---
 title: Lineage Status Checker
 type: requirement
-status: blocked
+status: draft
 lineage: status-checker-button
 parent: lifecycle/ideas/status-checker-button.md
 assignees:
@@ -94,7 +94,7 @@ Artifact statuses in a lineage can drift out of sync with actual progress. A par
 - [ ] WebSocket `artifact.indexed` events fire for each status change made by the checker.
 - [ ] Project-wide check completes within 500 ms for 1 000 indexed artifacts.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the checker consider the `parent:` frontmatter field to build the lineage tree, or should it rely solely on `lineage:` slug grouping combined with stage ordering? The former respects explicit parentage; the latter is simpler but may miss non-linear lineage structures.
 
