@@ -1,9 +1,9 @@
 ---
 title: Blue Ring Indicator for Approved Test Artifacts
 type: requirement
-status: blocked
+status: draft
 lineage: approved-test-blue-ring
-created: "2026-04-28"
+created: "2026-04-28T00:00:00+10:00"
 priority: medium
 parent: lifecycle/ideas/approved-test-blue-ring.md
 labels:
@@ -81,7 +81,7 @@ The `approved` status is absent from both maps, so approved test nodes receive n
 
 Related artifacts: [[approved-test-blue-ring]]
 
-## Open Questions
+## Resolved Questions
 
 - **OQ-1**: Should the ring also appear on `done` test nodes (which were presumably approved before transitioning to done), or strictly only on `status === 'approved'`? Current spec says `approved` only.
 - **OQ-2**: If a future requirement extends this pattern to other types (e.g. approved requirements), should the colour constant be named generically (e.g. `APPROVED_RING_COLOR`) now to avoid a rename later? Current recommendation: name it `APPROVED_TEST_RING_COLOR` and rename if/when scope broadens.
