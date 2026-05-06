@@ -45,7 +45,9 @@ type Project struct {
 
 // OpenOptions configures optional parameters for Open.
 type OpenOptions struct {
-	MaxConcurrentAgents int
+	MaxConcurrentAgents        int
+	MaxConcurrentSchedulerJobs int
+	SchedulerRunRetentionDays  int
 }
 
 // Open loads the project config, opens the SQLite index, scans the lifecycle tree,
@@ -115,19 +117,42 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		logStore.WriteEvent(entry.Name, runID, eventType, payload)
 	})
 
+	// Scheduler store is always created so the HTTP API can serve job CRUD
+	// even when no scheduler goroutine is running.
+	schedulerStore := scheduler.NewStore(idx.DB())
+
+	// Prune old scheduler runs according to retention config.
+	retentionDays := opts.SchedulerRunRetentionDays
+	if retentionDays <= 0 {
+		retentionDays = 90
+	}
+	if err := schedulerStore.PruneOldRuns(retentionDays); err != nil {
+		slog.Warn("project: pruning old scheduler runs", "name", entry.Name, "err", err)
+	}
+
+	// Build the scheduler engine.
+	maxSchedulerWorkers := opts.MaxConcurrentSchedulerJobs
+	if maxSchedulerWorkers <= 0 {
+		maxSchedulerWorkers = 2
+	}
+	schedulerLogDir := filepath.Join(dbDir, entry.Name, "scheduler-runs")
+	sched := scheduler.New(schedulerStore, agentMgr, h, entry.Path, schedulerLogDir, maxSchedulerWorkers)
+
 	return &Project{
-		Entry:         entry,
-		Cfg:           cfg,
-		Idx:           idx,
-		Git:           gitRepo,
-		Hub:           h,
-		Watcher:       w,
-		Workflow:      wf,
-		Locks:         locks,
-		Agents:        agentMgr,
-		IdeaChatStore: ideachat.NewStore(),
-		DevopsRunner:  devopsRunner,
-		DevopsLogs:    logStore,
+		Entry:          entry,
+		Cfg:            cfg,
+		Idx:            idx,
+		Git:            gitRepo,
+		Hub:            h,
+		Watcher:        w,
+		Workflow:       wf,
+		Locks:          locks,
+		Agents:         agentMgr,
+		IdeaChatStore:  ideachat.NewStore(),
+		DevopsRunner:   devopsRunner,
+		DevopsLogs:     logStore,
+		Scheduler:      sched,
+		SchedulerStore: schedulerStore,
 	}, nil
 }
 
@@ -160,10 +185,23 @@ func (p *Project) StartSessionReaper(ctx context.Context) {
 	p.IdeaChatStore.StartReaper(ctx)
 }
 
+// StartScheduler launches the scheduler goroutines. It is a no-op if the
+// scheduler was not created during Open.
+func (p *Project) StartScheduler(ctx context.Context) {
+	if p.Scheduler == nil {
+		return
+	}
+	p.Scheduler.Start(ctx)
+}
+
 // Close releases resources held by the project.
 // It waits for the watcher goroutine to fully stop before closing the index
 // so that in-flight debounce callbacks cannot touch the DB after it is closed.
 func (p *Project) Close() error {
+	// Stop the scheduler first so its goroutines can no longer touch the DB.
+	if p.Scheduler != nil {
+		p.Scheduler.Stop()
+	}
 	if p.watcherDone != nil {
 		select {
 		case <-p.watcherDone:

@@ -51,7 +51,11 @@ func run() error {
 
 	// Open each project (loads config + opens/scans SQLite index).
 	projects := make(map[string]*project.Project, len(entries))
-	opts := project.OpenOptions{MaxConcurrentAgents: appCfg.Limits.MaxConcurrentAgents}
+	opts := project.OpenOptions{
+		MaxConcurrentAgents:        appCfg.Limits.MaxConcurrentAgents,
+		MaxConcurrentSchedulerJobs: appCfg.Limits.MaxConcurrentSchedulerJobs,
+		SchedulerRunRetentionDays:  appCfg.Limits.SchedulerRunRetentionDays,
+	}
 	for _, e := range entries {
 		slog.Info("opening project", "name", e.Name, "path", e.Path)
 		p, err := project.Open(e, appCfg.DataDir, opts)
@@ -63,12 +67,13 @@ func run() error {
 		projects[e.Name] = p
 	}
 
-	// Start file watchers, lock reapers, and session reapers
-	// (non-blocking; each runs until ctx is cancelled).
+	// Start file watchers, lock reapers, session reapers, and the scheduler
+	// (non-blocking; each runs until ctx is cancelled or the project is closed).
 	for _, p := range projects {
 		p.StartWatcher(ctx)
 		p.StartLockReaper(ctx)
 		p.StartSessionReaper(ctx)
+		p.StartScheduler(ctx)
 	}
 
 	// Open the auth database (accounts + sessions, shared across projects).
