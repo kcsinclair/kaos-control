@@ -1,7 +1,7 @@
 ---
 title: Agent and Task Scheduler
 type: requirement
-status: in-development
+status: done
 lineage: agent-task-scheduler
 created: "2026-05-05T00:00:00+10:00"
 priority: high
