@@ -1,7 +1,7 @@
 ---
 title: "Ollama Agent Support — Test Plan"
 type: plan-test
-status: approved
+status: in-development
 lineage: ollama-agent-support
 parent: lifecycle/requirements/ollama-agent-support-2.md
 ---
