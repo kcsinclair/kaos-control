@@ -14,15 +14,15 @@ import (
 // transitionerFunc is a function-backed Transitioner implementation used in
 // unit tests to avoid importing the workflow package (which imports index,
 // creating a circular dependency).
-type transitionerFunc func(from, to string, roles []string) bool
+type transitionerFunc func(from, to string, roles []string, artifactType string) bool
 
-func (f transitionerFunc) CanTransition(from, to string, roles []string) bool {
-	return f(from, to, roles)
+func (f transitionerFunc) CanTransition(from, to string, roles []string, artifactType string) bool {
+	return f(from, to, roles, artifactType)
 }
 
 // allowSystemBlockUnblock allows the same transitions as the real workflow
 // engine for the "system" actor: any → blocked and blocked → draft.
-var allowSystemBlockUnblock = transitionerFunc(func(from, to string, roles []string) bool {
+var allowSystemBlockUnblock = transitionerFunc(func(from, to string, roles []string, _ string) bool {
 	for _, r := range roles {
 		if r != "system" {
 			continue
@@ -39,7 +39,7 @@ var allowSystemBlockUnblock = transitionerFunc(func(from, to string, roles []str
 
 // rejectAll is a Transitioner that rejects every transition. Used to test
 // that applyOpenQuestionTransition handles workflow rejection gracefully.
-var rejectAll = transitionerFunc(func(_, _ string, _ []string) bool { return false })
+var rejectAll = transitionerFunc(func(_, _ string, _ []string, _ string) bool { return false })
 
 // openAutoBlockIndex creates a fresh temp-directory SQLite index with a hub
 // and workflow transitioner wired up. No stages are registered, so Open's

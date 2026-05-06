@@ -45,6 +45,7 @@ type ChildInfo struct {
 type Result struct {
 	Path            string      `json:"path"`
 	Lineage         string      `json:"lineage"`
+	Type            string      `json:"type"`
 	CurrentStatus   string      `json:"current_status"`
 	SuggestedStatus string      `json:"suggested_status"`
 	Reason          string      `json:"reason"`
@@ -137,6 +138,7 @@ func Check(artifacts []*index.ArtifactRow) []Result {
 		results = append(results, Result{
 			Path:            a.Path,
 			Lineage:         a.Lineage,
+			Type:            a.Type,
 			CurrentStatus:   a.Status,
 			SuggestedStatus: suggestedStatus,
 			Reason: fmt.Sprintf(

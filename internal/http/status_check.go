@@ -61,7 +61,7 @@ func (s *Server) handleStatusCheck(w http.ResponseWriter, r *http.Request) {
 	// Annotate each result with can_advance / blocked_reason.
 	for i := range allResults {
 		r := &allResults[i]
-		if p.Workflow.CanTransition(r.CurrentStatus, r.SuggestedStatus, userRoles) {
+		if p.Workflow.CanTransition(r.CurrentStatus, r.SuggestedStatus, userRoles, r.Type) {
 			r.CanAdvance = true
 			slog.Debug("status-check: artifact stale and can advance",
 				"path", r.Path, "current_status", r.CurrentStatus, "suggested_status", r.SuggestedStatus)
@@ -188,7 +188,7 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 		}
 
 		// Check permission.
-		if !p.Workflow.CanTransition(row.Status, suggested, userRoles) {
+		if !p.Workflow.CanTransition(row.Status, suggested, userRoles, row.Type) {
 			reason := fmt.Sprintf("requires role with permission to transition %q → %q", row.Status, suggested)
 			slog.Debug("status-check/advance: advance blocked by permissions",
 				"path", relPath, "from", row.Status, "to", suggested, "reason", reason)

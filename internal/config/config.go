@@ -309,6 +309,9 @@ type Transition struct {
 	From  string   `yaml:"from"`
 	To    string   `yaml:"to"`
 	Roles []string `yaml:"roles"`
+	// Types restricts this transition to artifacts of the listed types.
+	// Empty means the rule applies to all artifact types.
+	Types []string `yaml:"types,omitempty"`
 }
 
 var defaultStages = []Stage{

@@ -41,7 +41,7 @@ func (s *Server) handleAllowedTargets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userRoles := p.Cfg.RolesFor(user.Email)
-	targets := p.Workflow.AllowedTargets(row.Status, userRoles)
+	targets := p.Workflow.AllowedTargets(row.Status, userRoles, row.Type)
 	writeJSON(w, http.StatusOK, map[string]any{"targets": targets})
 }
 
@@ -81,8 +81,8 @@ func (s *Server) handleTransitionArtifact(w http.ResponseWriter, r *http.Request
 	}
 
 	userRoles := p.Cfg.RolesFor(user.Email)
-	if !p.Workflow.CanTransition(row.Status, req.To, userRoles) {
-		allowed := p.Workflow.AllowedTargets(row.Status, userRoles)
+	if !p.Workflow.CanTransition(row.Status, req.To, userRoles, row.Type) {
+		allowed := p.Workflow.AllowedTargets(row.Status, userRoles, row.Type)
 		writeJSON(w, http.StatusForbidden, map[string]any{
 			"error": map[string]any{
 				"code":    "forbidden",

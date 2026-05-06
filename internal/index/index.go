@@ -25,8 +25,10 @@ import (
 // Transitioner checks whether a workflow transition is permitted.
 // It is satisfied by *workflow.Engine; the interface breaks the otherwise-circular
 // index → workflow → index import chain.
+// artifactType is the type field of the artifact being transitioned; pass an
+// empty string when the type is unknown.
 type Transitioner interface {
-	CanTransition(from, to string, userRoles []string) bool
+	CanTransition(from, to string, userRoles []string, artifactType string) bool
 }
 
 const schemaVersion = 4

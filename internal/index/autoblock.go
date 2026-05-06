@@ -35,7 +35,7 @@ func (idx *Index) applyOpenQuestionTransition(a *artifact.Artifact, absPath stri
 }
 
 func (idx *Index) autoBlock(a *artifact.Artifact, absPath string) error {
-	if !idx.wf.CanTransition(a.FM.Status, "blocked", []string{"system"}) {
+	if !idx.wf.CanTransition(a.FM.Status, "blocked", []string{"system"}, a.FM.Type) {
 		slog.Warn("auto-transition: workflow rejected",
 			"path", a.Path,
 			"old_status", a.FM.Status,
@@ -101,7 +101,7 @@ func (idx *Index) autoBlock(a *artifact.Artifact, absPath string) error {
 }
 
 func (idx *Index) autoUnblock(a *artifact.Artifact, absPath string) error {
-	if !idx.wf.CanTransition("blocked", "draft", []string{"system"}) {
+	if !idx.wf.CanTransition("blocked", "draft", []string{"system"}, a.FM.Type) {
 		slog.Warn("auto-transition: workflow rejected",
 			"path", a.Path,
 			"old_status", "blocked",

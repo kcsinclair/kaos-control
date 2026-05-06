@@ -15,6 +15,7 @@ type rule struct {
 	from  string   // empty means "any non-terminal status"
 	to    string
 	roles []string
+	types []string // empty means "any artifact type"; non-empty restricts the rule to listed types
 }
 
 // defaultRules implement the spec §6.2 transition matrix.
@@ -37,6 +38,9 @@ var defaultRules = []rule{
 	// System actor: machine-initiated block/unblock transitions (auto-block on open questions).
 	{from: "", to: "blocked", roles: []string{"system"}},
 	{from: "blocked", to: "draft", roles: []string{"system"}},
+	// Test artifact lifecycle: approved → in-qa (qa initiates) and in-qa → approved (system on success).
+	{from: "approved", to: "in-qa", roles: []string{"qa"}, types: []string{"test"}},
+	{from: "in-qa", to: "approved", roles: []string{"system"}, types: []string{"test"}},
 }
 
 // New builds an Engine, overlaying project-level overrides on the default matrix.
@@ -46,18 +50,39 @@ func New(transitions []config.Transition) *Engine {
 
 	for _, t := range transitions {
 		matched := false
+		// A project-level transition overrides a default rule only when both
+		// (from, to) and the types restriction match exactly. Type-scoped
+		// transitions are always appended as new rules when no exact match exists.
 		for i, r := range rules {
-			if r.from == t.From && r.to == t.To {
+			if r.from == t.From && r.to == t.To && typeSlicesEqual(r.types, t.Types) {
 				rules[i].roles = t.Roles
 				matched = true
 				break
 			}
 		}
 		if !matched {
-			rules = append(rules, rule{from: t.From, to: t.To, roles: t.Roles})
+			rules = append(rules, rule{from: t.From, to: t.To, roles: t.Roles, types: t.Types})
 		}
 	}
 	return &Engine{rules: rules}
+}
+
+// typeSlicesEqual reports whether two type slices contain the same elements
+// (order-insensitive, nil and empty are considered equal).
+func typeSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	set := make(map[string]bool, len(a))
+	for _, v := range a {
+		set[v] = true
+	}
+	for _, v := range b {
+		if !set[v] {
+			return false
+		}
+	}
+	return true
 }
 
 // HasProductOwner reports whether the role list contains the product-owner role.
@@ -72,9 +97,32 @@ func HasProductOwner(roles []string) bool {
 	return false
 }
 
+// ruleMatchesType reports whether a rule applies to the given artifact type.
+// Rules with an empty types list apply to all artifact types.
+// Rules with a non-empty types list only apply when artifactType is in the list.
+// When artifactType is empty (caller does not know the type), type-restricted
+// rules are never matched.
+func ruleMatchesType(r rule, artifactType string) bool {
+	if len(r.types) == 0 {
+		return true // type-agnostic rule — applies to everything
+	}
+	if artifactType == "" {
+		return false // type-restricted rule but caller has no type context
+	}
+	for _, t := range r.types {
+		if t == artifactType {
+			return true
+		}
+	}
+	return false
+}
+
 // CanTransition reports whether a holder of any of the given roles may advance
 // an artifact whose current status is 'from' to status 'to'.
-func (e *Engine) CanTransition(from, to string, userRoles []string) bool {
+// artifactType is the type field of the artifact (e.g. "test", "requirement").
+// Pass an empty string when the type is unknown; in that case type-restricted
+// rules are not considered.
+func (e *Engine) CanTransition(from, to string, userRoles []string, artifactType string) bool {
 	if HasProductOwner(userRoles) {
 		return true
 	}
@@ -84,6 +132,9 @@ func (e *Engine) CanTransition(from, to string, userRoles []string) bool {
 		}
 		// Empty 'from' means the rule applies to any source status.
 		if r.from != "" && r.from != from {
+			continue
+		}
+		if !ruleMatchesType(r, artifactType) {
 			continue
 		}
 		for _, allowed := range r.roles {
@@ -98,7 +149,9 @@ func (e *Engine) CanTransition(from, to string, userRoles []string) bool {
 }
 
 // AllowedTargets returns every status the caller may transition 'from' to.
-func (e *Engine) AllowedTargets(from string, userRoles []string) []string {
+// artifactType filters type-restricted rules; pass an empty string to receive
+// only type-agnostic allowed targets.
+func (e *Engine) AllowedTargets(from string, userRoles []string, artifactType string) []string {
 	seen := map[string]bool{}
 	var out []string
 	if HasProductOwner(userRoles) {
@@ -112,6 +165,9 @@ func (e *Engine) AllowedTargets(from string, userRoles []string) []string {
 	}
 	for _, r := range e.rules {
 		if r.from != "" && r.from != from {
+			continue
+		}
+		if !ruleMatchesType(r, artifactType) {
 			continue
 		}
 		for _, allowed := range r.roles {
