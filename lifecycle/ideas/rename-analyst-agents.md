@@ -1,7 +1,7 @@
 ---
 title: Rename Analyst Agents for Consistency
 type: idea
-status: clarifying
+status: planning
 lineage: rename-analyst-agents
 created: "2026-04-28T16:46:42+10:00"
 priority: normal
