@@ -25,22 +25,30 @@ import (
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
+// staleChild describes one direct child artifact included in a staleEntry.
+type staleChild struct {
+	Path   string `json:"path"`
+	Status string `json:"status"`
+}
+
 // staleEntry represents one entry in the stale array returned by GET /status-check.
 type staleEntry struct {
-	Path            string `json:"path"`
-	Lineage         string `json:"lineage"`
-	CurrentStatus   string `json:"current_status"`
-	SuggestedStatus string `json:"suggested_status"`
-	CanAdvance      bool   `json:"can_advance"`
-	BlockedReason   string `json:"blocked_reason"`
+	Path            string       `json:"path"`
+	Lineage         string       `json:"lineage"`
+	CurrentStatus   string       `json:"current_status"`
+	SuggestedStatus string       `json:"suggested_status"`
+	CanAdvance      bool         `json:"can_advance"`
+	BlockedReason   string       `json:"blocked_reason"`
+	Children        []staleChild `json:"children"`
 }
 
 // advanceResult represents one entry in the results array returned by POST /advance.
 type advanceResult struct {
-	Path      string `json:"path"`
-	Outcome   string `json:"outcome"` // "advanced" | "skipped" | "error"
-	NewStatus string `json:"new_status,omitempty"`
-	Reason    string `json:"reason,omitempty"`
+	Path       string `json:"path"`
+	Outcome    string `json:"outcome"` // "advanced" | "skipped" | "error"
+	Ok         bool   `json:"ok"`
+	AdvancedTo string `json:"advanced_to,omitempty"`
+	Reason     string `json:"reason,omitempty"`
 }
 
 // decodeStaleEntries decodes the "stale" field from a /status-check response body.
@@ -378,8 +386,8 @@ func TestAdvance_Single(t *testing.T) {
 	if results[0].Outcome != "advanced" {
 		t.Errorf("outcome: want %q, got %q", "advanced", results[0].Outcome)
 	}
-	if results[0].NewStatus != "clarifying" {
-		t.Errorf("new_status: want %q, got %q", "clarifying", results[0].NewStatus)
+	if results[0].AdvancedTo != "clarifying" {
+		t.Errorf("advanced_to: want %q, got %q", "clarifying", results[0].AdvancedTo)
 	}
 
 	// Verify status updated on disk.
@@ -693,5 +701,314 @@ func TestAdvance_ReEvaluatesAtExecution(t *testing.T) {
 	}
 	if results[0].Outcome == "advanced" {
 		t.Errorf("expected 'skipped' outcome (already advanced by another client), got %q", results[0].Outcome)
+	}
+}
+
+// ── Milestone 1: Children field shape ────────────────────────────────────────
+
+// TestStatusCheck_ChildrenFieldShape verifies that stale entries returned by
+// GET /status-check include a `children` array of objects — each with non-empty
+// `path` and `status` string fields — rather than bare strings or null.
+func TestStatusCheck_ChildrenFieldShape(t *testing.T) {
+	// Parent at in-development, child at done.
+	seeds := []seedArtifact{
+		{
+			relPath: "lifecycle/ideas/sc-children.md",
+			content: makeArtifact("SC Children Idea", "idea", "in-development", "sc-children", "", "Idea body."),
+		},
+		{
+			relPath: "lifecycle/requirements/sc-children-2.md",
+			content: makeArtifact("SC Children Req", "ticket", "done", "sc-children",
+				"lifecycle/ideas/sc-children.md", "Req body."),
+		},
+	}
+	env := newTestEnv(t, seeds)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/status-check?lineage=sc-children", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+	entries := decodeStaleEntries(t, data)
+
+	entry := findStaleByPath(entries, "lifecycle/ideas/sc-children.md")
+	if entry == nil {
+		t.Fatal("expected lifecycle/ideas/sc-children.md to appear in stale list")
+	}
+
+	// children must be a non-nil, non-empty array of objects.
+	if entry.Children == nil {
+		t.Fatal("children field must not be nil")
+	}
+	if len(entry.Children) == 0 {
+		t.Fatal("expected at least one child in children array")
+	}
+
+	// Each child must have non-empty path and status.
+	for i, ch := range entry.Children {
+		if ch.Path == "" {
+			t.Errorf("children[%d].path is empty", i)
+		}
+		if ch.Status == "" {
+			t.Errorf("children[%d].status is empty", i)
+		}
+	}
+
+	// The requirement child should report status "done".
+	var found bool
+	for _, ch := range entry.Children {
+		if ch.Path == "lifecycle/requirements/sc-children-2.md" {
+			found = true
+			if ch.Status != "done" {
+				t.Errorf("children path=%q status: want %q, got %q",
+					ch.Path, "done", ch.Status)
+			}
+		}
+	}
+	if !found {
+		t.Error("requirement path not found in children array")
+	}
+}
+
+// ── Milestone 2: Advance response contract ───────────────────────────────────
+
+// TestAdvance_OkAndAdvancedToFields verifies that POST /status-check/advance
+// returns `ok: true` and a non-empty `advanced_to` on a successful advance, and
+// that the artifact's frontmatter is actually updated on disk.
+func TestAdvance_OkAndAdvancedToFields(t *testing.T) {
+	seeds := []seedArtifact{
+		{
+			relPath: "lifecycle/ideas/sc-adv-contract.md",
+			content: makeArtifact("SC Adv Contract Idea", "idea", "in-development", "sc-adv-contract", "", "Body."),
+		},
+		{
+			relPath: "lifecycle/requirements/sc-adv-contract-2.md",
+			content: makeArtifact("SC Adv Contract Req", "ticket", "done", "sc-adv-contract",
+				"lifecycle/ideas/sc-adv-contract.md", "Body."),
+		},
+	}
+	env := newTestEnv(t, seeds)
+	env.login("admin@test.local", "admin-pass-123")
+
+	const ideaPath = "lifecycle/ideas/sc-adv-contract.md"
+	resp := env.doRequest("POST", "/api/p/testproject/status-check/advance", map[string]any{
+		"paths": []string{ideaPath},
+	})
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+	results := decodeAdvanceResults(t, data)
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if !results[0].Ok {
+		t.Errorf("ok: want true for successful advance, got false (reason: %q)", results[0].Reason)
+	}
+	if results[0].AdvancedTo == "" {
+		t.Error("advanced_to must be non-empty after a successful advance")
+	}
+	if results[0].AdvancedTo != "done" {
+		t.Errorf("advanced_to: want %q, got %q", "done", results[0].AdvancedTo)
+	}
+
+	// Verify the status was actually written to disk.
+	raw, err := os.ReadFile(filepath.Join(env.projectRoot, ideaPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsLine(string(raw), "status: done") {
+		t.Errorf("on-disk frontmatter should contain 'status: done' after advance; got:\n%s", raw)
+	}
+}
+
+// TestAdvance_ResponseContractPermissionDenied verifies that when the
+// authenticated user lacks the required role, the advance result has
+// `ok: false` and a non-empty `reason`, and the artifact is NOT mutated.
+func TestAdvance_ResponseContractPermissionDenied(t *testing.T) {
+	// dev user (backend-developer role) cannot advance idea from draft → clarifying
+	// (requires product-owner or analyst).
+	seeds := []seedArtifact{
+		{
+			relPath: "lifecycle/ideas/sc-adv-deny.md",
+			content: makeArtifact("SC Adv Deny Idea", "idea", "draft", "sc-adv-deny", "", "Body."),
+		},
+		{
+			relPath: "lifecycle/requirements/sc-adv-deny-2.md",
+			content: makeArtifact("SC Adv Deny Req", "ticket", "clarifying", "sc-adv-deny",
+				"lifecycle/ideas/sc-adv-deny.md", "Body."),
+		},
+	}
+	env := newTestEnv(t, seeds)
+	env.login("dev@test.local", "dev-pass-123")
+
+	const ideaPath = "lifecycle/ideas/sc-adv-deny.md"
+	resp := env.doRequest("POST", "/api/p/testproject/status-check/advance", map[string]any{
+		"paths": []string{ideaPath},
+	})
+	// Overall response is still 200; the denial is per-artifact.
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+	results := decodeAdvanceResults(t, data)
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if results[0].Ok {
+		t.Error("ok must be false when the user lacks the required role")
+	}
+	if results[0].Reason == "" {
+		t.Error("reason must be non-empty when advance is denied")
+	}
+
+	// The file must NOT have been modified.
+	raw, err := os.ReadFile(filepath.Join(env.projectRoot, ideaPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsLine(string(raw), "status: draft") {
+		t.Error("artifact status should still be 'draft' after a denied advance")
+	}
+	if containsLine(string(raw), "status: clarifying") {
+		t.Error("artifact status must not have been changed to 'clarifying' on permission denial")
+	}
+}
+
+// ── Milestone 3: Staleness detection edge cases ───────────────────────────────
+
+// TestStatusCheck_MultiLevelLineageStaleness verifies that in a 3-level lineage
+// (idea → requirement → plan) where the idea is at in-development and both
+// downstream artifacts are at done, the idea is detected as stale (its direct
+// child, the requirement, is at done which is strictly ahead).
+func TestStatusCheck_MultiLevelLineageStaleness(t *testing.T) {
+	seeds := []seedArtifact{
+		{
+			relPath: "lifecycle/ideas/sc-multilevel.md",
+			content: makeArtifact("SC MultiLevel Idea", "idea", "in-development", "sc-multilevel", "", "Body."),
+		},
+		{
+			relPath: "lifecycle/requirements/sc-multilevel-2.md",
+			content: makeArtifact("SC MultiLevel Req", "ticket", "done", "sc-multilevel",
+				"lifecycle/ideas/sc-multilevel.md", "Body."),
+		},
+		{
+			relPath: "lifecycle/backend-plans/sc-multilevel-3-be.md",
+			content: makeArtifact("SC MultiLevel Plan", "plan-backend", "done", "sc-multilevel",
+				"lifecycle/requirements/sc-multilevel-2.md", "Body."),
+		},
+	}
+	env := newTestEnv(t, seeds)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/status-check?lineage=sc-multilevel", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+	entries := decodeStaleEntries(t, data)
+
+	// The idea should be stale: its direct child (req at done) is strictly ahead of in-development.
+	ideaEntry := findStaleByPath(entries, "lifecycle/ideas/sc-multilevel.md")
+	if ideaEntry == nil {
+		t.Fatal("expected lifecycle/ideas/sc-multilevel.md to be stale in multi-level lineage")
+	}
+	if ideaEntry.CurrentStatus != "in-development" {
+		t.Errorf("current_status: want %q, got %q", "in-development", ideaEntry.CurrentStatus)
+	}
+	if ideaEntry.SuggestedStatus != "done" {
+		t.Errorf("suggested_status: want %q, got %q", "done", ideaEntry.SuggestedStatus)
+	}
+
+	// The requirement is at done; its direct child (plan) is also at done.
+	// done == done → child is NOT strictly ahead → requirement should NOT be stale.
+	reqEntry := findStaleByPath(entries, "lifecycle/requirements/sc-multilevel-2.md")
+	if reqEntry != nil {
+		t.Errorf("requirement at 'done' with child also at 'done' should NOT be stale; got: %+v", reqEntry)
+	}
+}
+
+// TestStatusCheck_MixedProgressSiblings verifies that a parent is NOT reported
+// as stale when it has two children at different statuses and at least one child
+// has NOT advanced past the parent. ALL non-terminal children must be ahead for
+// staleness to be reported.
+func TestStatusCheck_MixedProgressSiblings(t *testing.T) {
+	// idea (in-development) with two direct children:
+	//   req-a at done    → ahead of parent
+	//   req-b at in-development → same as parent (NOT ahead)
+	// Not all active children are ahead → idea should NOT be stale.
+	seeds := []seedArtifact{
+		{
+			relPath: "lifecycle/ideas/sc-mixed.md",
+			content: makeArtifact("SC Mixed Idea", "idea", "in-development", "sc-mixed", "", "Body."),
+		},
+		{
+			relPath: "lifecycle/requirements/sc-mixed-2.md",
+			content: makeArtifact("SC Mixed Req A", "ticket", "done", "sc-mixed",
+				"lifecycle/ideas/sc-mixed.md", "Body."),
+		},
+		{
+			relPath: "lifecycle/requirements/sc-mixed-3.md",
+			content: makeArtifact("SC Mixed Req B", "ticket", "in-development", "sc-mixed",
+				"lifecycle/ideas/sc-mixed.md", "Body."),
+		},
+	}
+	env := newTestEnv(t, seeds)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/status-check?lineage=sc-mixed", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+	entries := decodeStaleEntries(t, data)
+
+	// Idea must NOT appear in the stale list.
+	ideaEntry := findStaleByPath(entries, "lifecycle/ideas/sc-mixed.md")
+	if ideaEntry != nil {
+		t.Errorf("idea with mixed-progress siblings should NOT be stale; got: %+v", ideaEntry)
+	}
+}
+
+// TestStatusCheck_TerminalChildExcluded_Integration verifies that a terminal
+// child (rejected) is excluded from the staleness comparison. When the only
+// remaining non-terminal child has advanced past the parent, the parent IS stale.
+func TestStatusCheck_TerminalChildExcluded_Integration(t *testing.T) {
+	// idea (in-development) with two direct children:
+	//   req-a at done     → non-terminal, ahead of parent
+	//   req-b at rejected → terminal, excluded from comparison
+	// After excluding req-b, all remaining active children (req-a) are ahead
+	// → idea IS stale; suggested_status = done.
+	seeds := []seedArtifact{
+		{
+			relPath: "lifecycle/ideas/sc-term-child.md",
+			content: makeArtifact("SC Term Child Idea", "idea", "in-development", "sc-term-child", "", "Body."),
+		},
+		{
+			relPath: "lifecycle/requirements/sc-term-child-2.md",
+			content: makeArtifact("SC Term Child Req A", "ticket", "done", "sc-term-child",
+				"lifecycle/ideas/sc-term-child.md", "Body."),
+		},
+		{
+			relPath: "lifecycle/requirements/sc-term-child-3.md",
+			content: makeArtifact("SC Term Child Req B", "ticket", "rejected", "sc-term-child",
+				"lifecycle/ideas/sc-term-child.md", "Body."),
+		},
+	}
+	env := newTestEnv(t, seeds)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/status-check?lineage=sc-term-child", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+	entries := decodeStaleEntries(t, data)
+
+	// The idea should be stale: rejected child is excluded, non-terminal child (done) is ahead.
+	ideaEntry := findStaleByPath(entries, "lifecycle/ideas/sc-term-child.md")
+	if ideaEntry == nil {
+		t.Fatal("expected idea to be stale when rejected sibling is excluded and remaining child is ahead")
+	}
+	if ideaEntry.SuggestedStatus != "done" {
+		t.Errorf("suggested_status: want %q, got %q", "done", ideaEntry.SuggestedStatus)
+	}
+
+	// The rejected requirement should itself NOT appear in the stale list (terminal).
+	for _, e := range entries {
+		if e.Path == "lifecycle/requirements/sc-term-child-3.md" {
+			t.Errorf("rejected artifact should not appear in stale list; got: %+v", e)
+		}
 	}
 }
