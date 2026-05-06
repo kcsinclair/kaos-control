@@ -10,6 +10,7 @@ import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 import { PRIORITY_COLORS } from '@/components/graph/graphConstants'
+import StatusCheckPanel from './StatusCheckPanel.vue'
 import type { GraphNode, ArtifactDetail, GraphEdge } from '@/types/api'
 
 const props = defineProps<{
@@ -32,6 +33,8 @@ const showRunAgent = ref(false)
 const priorityEditing = ref(false)
 const priorityError = ref<string | null>(null)
 const selectedRunId = ref<string | null>(null)
+const showStatusPanel = ref(false)
+const statusCheckLoading = ref(false)
 
 const PRIORITY_OPTIONS = ['high', 'medium', 'normal', 'low']
 
@@ -78,6 +81,7 @@ const outbound = computed(() =>
 watch(
   () => props.node,
   async (node) => {
+    showStatusPanel.value = false
     if (!node) { detail.value = null; return }
     loading.value = true
     error.value = null
@@ -97,6 +101,10 @@ function openEditor() {
   if (!props.node) return
   router.push(`/p/${props.project}/artifacts/${props.node.id}`)
   emit('close')
+}
+
+function triggerStatusCheck() {
+  showStatusPanel.value = true
 }
 
 function handleOverlayClick(e: MouseEvent) {
@@ -195,6 +203,15 @@ const STATUS_TEXT: Record<string, string> = {
           <button class="action-btn action-btn--primary" @click="openEditor">Edit</button>
           <button class="action-btn" @click="showTransition = true">Change Status</button>
           <button class="action-btn" @click="showRunAgent = true">Run Agent</button>
+          <button
+            v-if="node.lineage"
+            class="action-btn action-btn--check"
+            :disabled="statusCheckLoading"
+            @click="triggerStatusCheck"
+          >
+            <span v-if="statusCheckLoading" class="action-spinner" aria-hidden="true"></span>
+            Check status
+          </button>
         </div>
 
         <div class="modal-body">
@@ -208,6 +225,14 @@ const STATUS_TEXT: Record<string, string> = {
           />
           <div v-else class="state-msg">No preview available.</div>
         </div>
+
+        <StatusCheckPanel
+          v-if="showStatusPanel && node.lineage"
+          :project="project"
+          :lineage="node.lineage"
+          class="modal-status-panel"
+          @close="showStatusPanel = false"
+        />
 
         <ArtifactRunHistory
           v-if="node"
@@ -453,5 +478,34 @@ const STATUS_TEXT: Record<string, string> = {
 .priority-error {
   font-size: 11px;
   color: #dc2626;
+}
+.action-btn--check {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.action-btn--check:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.action-spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: modal-spin 0.6s linear infinite;
+}
+@keyframes modal-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .action-spinner { animation: none; }
+}
+.modal-status-panel {
+  margin: 0 var(--space-6) var(--space-4);
+  flex-shrink: 0;
 }
 </style>
