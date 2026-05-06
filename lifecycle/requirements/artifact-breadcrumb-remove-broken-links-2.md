@@ -3,7 +3,7 @@ title: Remove Non-Functional Hyperlinks from Artifact Breadcrumb
 type: requirement
 status: planning
 lineage: artifact-breadcrumb-remove-broken-links
-created: "2026-05-06"
+created: "2026-05-06T00:00:00+10:00"
 priority: medium
 parent: lifecycle/ideas/artifact-breadcrumb-remove-broken-links.md
 labels:

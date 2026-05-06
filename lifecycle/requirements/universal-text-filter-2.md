@@ -3,7 +3,7 @@ title: Universal Text Filter Across All Views
 type: requirement
 status: planning
 lineage: universal-text-filter
-created: "2026-05-06"
+created: "2026-05-06T00:00:00+10:00"
 priority: high
 parent: lifecycle/ideas/universal-text-filter.md
 labels:
