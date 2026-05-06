@@ -1,7 +1,7 @@
 ---
 title: Dashboard Home Screen — Test Plan
 type: plan-test
-status: blocked
+status: draft
 lineage: dashboard-home-screen
 parent: lifecycle/requirements/dashboard-home-screen-2.md
 assignees:
@@ -112,7 +112,7 @@ This plan covers integration tests for the dashboard backend endpoints and end-t
 - [[dashboard-home-screen-3-be]] — Backend endpoints under test.
 - [[dashboard-home-screen-4-fe]] — Frontend components under test.
 
-## Open Questions
+## Resolved Questions
 
 Milestones 1-3 (Go backend integration tests) have been implemented in
 `tests/integration/dashboard_stats_test.go`, `dashboard_distribution_test.go`,
@@ -132,6 +132,8 @@ a) Remove the assertion; test instead that `GET /p/:project` returns 200.
 b) Add an explicit server-side redirect in `handleFrontend` and update the test.
 c) Move the test to a browser-based E2E suite (Playwright/Cypress).
 
+> a
+
 ### Q2 - Milestone 6: HTML content assertions against a SPA shell
 
 "Dashboard page HTML includes all expected widget containers" and "sidebar HTML
@@ -142,6 +144,8 @@ injected by JavaScript at runtime.
 Pick one:
 a) Drop these assertions; cover widget registration at the unit level (Milestone 4).
 b) Use Playwright to test the rendered DOM in a real browser.
+
+> b
 
 ### Q3 - Milestones 4, 5, 7: Vitest is not installed
 
@@ -154,6 +158,8 @@ agent is `tests/**` and `lifecycle/tests/` - modifying `web/package.json`,
 Decision needed: Should a separate task install Vitest and configure the
 frontend test harness before a subsequent agent implements Milestones 4, 5, 7?
 
+> Vitest is installed.  I have given access to agent for web/src
+
 ### Q4 - Milestone 5: Viewport layout testing in jsdom
 
 The criterion "at viewport >= 1024 px, grid has two columns" tests a CSS
@@ -164,3 +170,5 @@ a) Replace the CSS breakpoint with a JS reactive breakpoint (`useWindowSize`)
    so tests can set `window.innerWidth` in jsdom.
 b) Use Playwright where real CSS is applied.
 c) Drop the column-count assertion; test only DOM slot structure.
+
+> b
