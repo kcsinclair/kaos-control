@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Inline Status Transition Dropdown"
 type: plan-backend
-status: in-development
+status: done
 lineage: artefact-inline-status-change
 parent: lifecycle/requirements/artefact-inline-status-change-2.md
 ---
