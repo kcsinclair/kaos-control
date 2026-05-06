@@ -1,7 +1,7 @@
 ---
 title: Project Feed
 type: requirement
-status: draft
+status: done
 lineage: project-feed
 parent: lifecycle/ideas/project-feed.md
 assignees:
