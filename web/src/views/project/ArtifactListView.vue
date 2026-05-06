@@ -9,6 +9,7 @@ import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
+import TextFilter from '@/components/TextFilter.vue'
 import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug, ShieldCheck } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
@@ -75,6 +76,7 @@ const selectedStatus = ref(store.filter.status ?? '')
 const selectedLabel = ref(store.filter.label ?? '')
 const selectedType = ref(store.filter.type ?? '')
 const selectedPriority = ref(store.filter.priority ?? '')
+const searchText = ref('')
 
 function applyFilters() {
   resetSort()
@@ -85,9 +87,15 @@ function applyFilters() {
     label: selectedLabel.value || undefined,
     type: selectedType.value || undefined,
     priority: selectedPriority.value || undefined,
+    q: searchText.value || undefined,
     limit: 0,
     offset: undefined,
   })
+}
+
+function onSearchText(v: string) {
+  searchText.value = v
+  applyFilters()
 }
 
 function resetFilters() {
@@ -96,7 +104,29 @@ function resetFilters() {
   selectedLabel.value = ''
   selectedType.value = ''
   selectedPriority.value = ''
+  searchText.value = ''
   applyFilters()
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function highlightMatch(text: string): string {
+  if (!searchText.value) return escapeHtml(text)
+  const q = searchText.value.toLowerCase()
+  const lower = text.toLowerCase()
+  const idx = lower.indexOf(q)
+  if (idx === -1) return escapeHtml(text)
+  return (
+    escapeHtml(text.slice(0, idx)) +
+    '<mark>' + escapeHtml(text.slice(idx, idx + q.length)) + '</mark>' +
+    escapeHtml(text.slice(idx + q.length))
+  )
 }
 
 // Reset to page 1 when showCompleted toggle changes
@@ -168,6 +198,7 @@ onMounted(async () => {
     </div>
 
     <div class="filter-bar">
+      <TextFilter :model-value="searchText" @update:model-value="onSearchText" />
       <select v-model="selectedStage" @change="applyFilters">
         <option value="">All stages</option>
         <option v-for="s in stageOptions.slice(1)" :key="s" :value="s">{{ s }}</option>
@@ -215,7 +246,7 @@ onMounted(async () => {
             @keydown.enter="openArtifact(row.path)"
           >
             <td class="cell-path">
-              <span class="artifact-title">{{ row.title || row.slug }}</span>
+              <span class="artifact-title" v-html="highlightMatch(row.title || row.slug)" />
               <span class="artifact-path">{{ row.path }}</span>
             </td>
             <td><span class="stage-tag">{{ row.stage }}</span></td>

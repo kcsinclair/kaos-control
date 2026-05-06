@@ -120,6 +120,7 @@ export interface ArtifactFilter {
   lineage?: string
   type?: string
   priority?: string
+  q?: string
   limit?: number
   offset?: number
 }
