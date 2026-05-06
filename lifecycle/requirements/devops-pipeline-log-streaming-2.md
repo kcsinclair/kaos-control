@@ -3,7 +3,7 @@ title: DevOps Pipeline Log Streaming View
 type: requirement
 status: blocked
 lineage: devops-pipeline-log-streaming
-created: "2026-05-06"
+created: "2026-05-06T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/devops-pipeline-log-streaming.md
 labels:
