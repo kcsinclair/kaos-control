@@ -227,7 +227,7 @@ func TestStartAgentRun_Success(t *testing.T) {
 	}})
 	env.login("admin@test.local", "admin-pass-123")
 
-	resp := env.doRequest("POST", "/api/p/testproject/agents/analyst-requirements/run", map[string]any{
+	resp := env.doRequest("POST", "/api/p/testproject/agents/requirements-analyst/run", map[string]any{
 		"target_path": artifactPath,
 	})
 	requireStatus(t, resp, 202)
@@ -271,7 +271,7 @@ func TestStartAgentRun_BadRequest(t *testing.T) {
 
 	// Send raw invalid JSON directly, bypassing doRequest which always marshals valid JSON.
 	req, err := http.NewRequest("POST",
-		env.baseURL+"/api/p/testproject/agents/analyst-requirements/run",
+		env.baseURL+"/api/p/testproject/agents/requirements-analyst/run",
 		bytes.NewReader([]byte(`{not valid json`)),
 	)
 	if err != nil {
@@ -317,15 +317,15 @@ func TestListAgentRunsByTargetPath_ReturnsMatchingRuns(t *testing.T) {
 
 	base := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	seedAgentRun(t, env, &index.AgentRunRow{
-		RunID: "aaaa0001-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		RunID: "aaaa0001-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: base, Status: "done",
 	})
 	seedAgentRun(t, env, &index.AgentRunRow{
-		RunID: "aaaa0002-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		RunID: "aaaa0002-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: base.Add(time.Minute), Status: "failed",
 	})
 	seedAgentRun(t, env, &index.AgentRunRow{
-		RunID: "bbbb0001-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		RunID: "bbbb0001-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: otherPath, StartedAt: base, Status: "done",
 	})
 
@@ -384,7 +384,7 @@ func TestListAgentRunsByTargetPath_NoParam_ReturnsAll(t *testing.T) {
 	for i, path := range paths {
 		seedAgentRun(t, env, &index.AgentRunRow{
 			RunID:     "dddd000" + string(rune('1'+i)) + "-0000-0000-0000-000000000000",
-			AgentName: "analyst-requirements", Role: "analyst",
+			AgentName: "requirements-analyst", Role: "analyst",
 			TargetPath: path, StartedAt: base.Add(time.Duration(i) * time.Minute),
 			Status: "done",
 		})
@@ -412,15 +412,15 @@ func TestListAgentRunsByTargetPath_OrderNewestFirst(t *testing.T) {
 	newest := middle.Add(time.Hour)
 
 	seedAgentRun(t, env, &index.AgentRunRow{
-		RunID: "eeee0001-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		RunID: "eeee0001-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: oldest, Status: "done",
 	})
 	seedAgentRun(t, env, &index.AgentRunRow{
-		RunID: "eeee0002-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		RunID: "eeee0002-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: middle, Status: "done",
 	})
 	seedAgentRun(t, env, &index.AgentRunRow{
-		RunID: "eeee0003-0000-0000-0000-000000000000", AgentName: "analyst-requirements",
+		RunID: "eeee0003-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: newest, Status: "done",
 	})
 

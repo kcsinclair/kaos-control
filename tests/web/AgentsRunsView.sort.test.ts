@@ -75,7 +75,7 @@ function makeFixtures(): AgentRunRow[] {
     }),
     makeRun({
       run_id:      'aaa00000-0000-0000-0000-000000000000',
-      agent_name:  'analyst-requirements',
+      agent_name:  'requirements-analyst',
       started_at:  '2023-01-01T10:00:00Z',
       finished_at: '2023-01-01T10:00:30Z',  // 30s elapsed
     }),
@@ -142,7 +142,7 @@ describe('AgentsRunsView — Agent column sort', () => {
     await clickSortHeader(wrapper, 'Agent')
 
     const names = getAgentNames(wrapper)
-    expect(names[0]).toBe('analyst-requirements')
+    expect(names[0]).toBe('requirements-analyst')
     expect(names[1]).toBe('backend-developer')
     expect(names[2]).toBe('qa')
   })
@@ -160,7 +160,7 @@ describe('AgentsRunsView — Agent column sort', () => {
 
     const names = getAgentNames(wrapper)
     expect(names[0]).toBe('qa')
-    expect(names[2]).toBe('analyst-requirements')
+    expect(names[2]).toBe('requirements-analyst')
   })
 })
 
@@ -180,8 +180,8 @@ describe('AgentsRunsView — Started column sort', () => {
     await clickSortHeader(wrapper, 'Started')
 
     const names = getAgentNames(wrapper)
-    // analyst-requirements has earliest started_at (2023-01-01)
-    expect(names[0]).toBe('analyst-requirements')
+    // requirements-analyst has earliest started_at (2023-01-01)
+    expect(names[0]).toBe('requirements-analyst')
     // qa has latest started_at (2024-06-01)
     expect(names[2]).toBe('qa')
   })
@@ -203,10 +203,10 @@ describe('AgentsRunsView — Elapsed column sort', () => {
     await clickSortHeader(wrapper, 'Elapsed')
 
     const names = getAgentNames(wrapper)
-    // analyst-requirements: 30s (shortest)
+    // requirements-analyst: 30s (shortest)
     // backend-developer: 2m
     // qa: 5m (longest)
-    expect(names[0]).toBe('analyst-requirements')
+    expect(names[0]).toBe('requirements-analyst')
     expect(names[2]).toBe('qa')
   })
 })

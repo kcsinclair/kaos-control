@@ -32,7 +32,7 @@ func TestAnalystRunBroadcastsStatusChange(t *testing.T) {
 	defer env.proj.Hub.Unregister(ch)
 
 	env.login("admin@test.local", "admin-pass-123")
-	runID := startAgentRun(t, env, "analyst-requirements", artifactPath)
+	runID := startAgentRun(t, env, "requirements-analyst", artifactPath)
 
 	// agent.started is broadcast synchronously inside StartRun, before the HTTP
 	// response is written — the event is already in the channel by the time
@@ -100,7 +100,7 @@ func TestAgentWSEvents_IncludeTargetPath(t *testing.T) {
 	defer env.proj.Hub.Unregister(ch)
 
 	env.login("admin@test.local", "admin-pass-123")
-	runID := startAgentRun(t, env, "analyst-requirements", artifactPath)
+	runID := startAgentRun(t, env, "requirements-analyst", artifactPath)
 
 	type wsEvent struct {
 		Type    string         `json:"type"`

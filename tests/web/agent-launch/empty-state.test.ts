@@ -45,8 +45,8 @@ function makeReactiveFilter(
 // Empty state: no approved artifacts of the correct type
 // ---------------------------------------------------------------------------
 describe('empty state — no approved artifacts of correct type', () => {
-  it('analyst-requirements sees empty list when all ideas are draft', () => {
-    const agent = makeAgentSummary('analyst-requirements', 'approved', ['analyst'])
+  it('requirements-analyst sees empty list when all ideas are draft', () => {
+    const agent = makeAgentSummary('requirements-analyst', 'approved', ['analyst'])
     const ideas = makeArtifactsByStatusAndType('idea', ['draft', 'clarifying', 'rejected'])
 
     const result = applyAgentLaunchFilter(agent.name, agent.roles, ideas)
@@ -77,9 +77,9 @@ describe('empty state — no approved artifacts of correct type', () => {
 // Empty state: artifacts exist but of the wrong type
 // ---------------------------------------------------------------------------
 describe('empty state — approved artifacts exist but wrong type', () => {
-  it('analyst-requirements sees empty list when only approved requirements exist (not ideas)', () => {
-    const agent = makeAgentSummary('analyst-requirements', 'approved', ['analyst'])
-    // Approved requirements — wrong type for analyst-requirements (which wants ideas).
+  it('requirements-analyst sees empty list when only approved requirements exist (not ideas)', () => {
+    const agent = makeAgentSummary('requirements-analyst', 'approved', ['analyst'])
+    // Approved requirements — wrong type for requirements-analyst (which wants ideas).
     const requirements = makeArtifactsByStatusAndType('requirement', ['approved'])
 
     const result = applyAgentLaunchFilter(agent.name, agent.roles, requirements)
@@ -113,8 +113,8 @@ describe('empty state — approved artifacts exist but wrong type', () => {
 // Empty state clears when an approved artifact of the correct type is added
 // ---------------------------------------------------------------------------
 describe('empty state clears when approved artifact is added', () => {
-  it('analyst-requirements list becomes non-empty when an approved idea is added', () => {
-    const agent = makeAgentSummary('analyst-requirements', 'approved', ['analyst'])
+  it('requirements-analyst list becomes non-empty when an approved idea is added', () => {
+    const agent = makeAgentSummary('requirements-analyst', 'approved', ['analyst'])
     const { candidates, filteredItems } = makeReactiveFilter(agent.name, agent.roles, [
       ...makeArtifactsByStatusAndType('idea', ['draft']),
     ])

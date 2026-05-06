@@ -43,11 +43,11 @@ function makeFilteredItems(
 const MIXED_STATUSES = ['draft', 'clarifying', 'approved', 'rejected', 'in-development', 'done']
 
 // ---------------------------------------------------------------------------
-// analyst-requirements: sees only approved ideas
+// requirements-analyst: sees only approved ideas
 // ---------------------------------------------------------------------------
-describe('analyst-requirements input filtering', () => {
+describe('requirements-analyst input filtering', () => {
   it('sees only the approved idea from a mixed-status set', () => {
-    const agent = makeAgentSummary('analyst-requirements', 'approved', ['analyst'])
+    const agent = makeAgentSummary('requirements-analyst', 'approved', ['analyst'])
     const ideas = makeArtifactsByStatusAndType('idea', MIXED_STATUSES)
     const { filteredItems } = makeFilteredItems(agent.name, agent.roles, ideas)
 
@@ -57,7 +57,7 @@ describe('analyst-requirements input filtering', () => {
   })
 
   it('excludes draft, clarifying, rejected, in-development, done ideas', () => {
-    const agent = makeAgentSummary('analyst-requirements', 'approved', ['analyst'])
+    const agent = makeAgentSummary('requirements-analyst', 'approved', ['analyst'])
     const ideas = makeArtifactsByStatusAndType('idea', MIXED_STATUSES)
     const { filteredItems } = makeFilteredItems(agent.name, agent.roles, ideas)
 
@@ -69,11 +69,11 @@ describe('analyst-requirements input filtering', () => {
 })
 
 // ---------------------------------------------------------------------------
-// analyst-planner: sees only approved requirements
+// planning-analyst: sees only approved requirements
 // ---------------------------------------------------------------------------
-describe('analyst-planner input filtering', () => {
+describe('planning-analyst input filtering', () => {
   it('sees only the approved requirement from a mixed-status set', () => {
-    const agent = makeAgentSummary('analyst-planner', 'approved', ['analyst'])
+    const agent = makeAgentSummary('planning-analyst', 'approved', ['analyst'])
     const reqs = makeArtifactsByStatusAndType('requirement', MIXED_STATUSES)
     const { filteredItems } = makeFilteredItems(agent.name, agent.roles, reqs)
 
@@ -83,7 +83,7 @@ describe('analyst-planner input filtering', () => {
   })
 
   it('excludes non-approved requirements', () => {
-    const agent = makeAgentSummary('analyst-planner', 'approved', ['analyst'])
+    const agent = makeAgentSummary('planning-analyst', 'approved', ['analyst'])
     const reqs = makeArtifactsByStatusAndType('requirement', ['draft', 'rejected'])
     const { filteredItems } = makeFilteredItems(agent.name, agent.roles, reqs)
 
@@ -158,7 +158,7 @@ describe('predecessorMap is not used — filter status is always approved', () =
   it('filter status is approved regardless of agent active_status = draft', () => {
     // An agent whose active_status is 'draft' (as if predecessorMap implied 'draft')
     // should still only see 'approved' artifacts.
-    const agent = makeAgentSummary('analyst-requirements', 'draft', ['analyst'])
+    const agent = makeAgentSummary('requirements-analyst', 'draft', ['analyst'])
     const ideas = makeArtifactsByStatusAndType('idea', ['draft', 'approved'])
     const { filteredItems } = makeFilteredItems(agent.name, agent.roles, ideas)
 

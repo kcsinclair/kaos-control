@@ -23,8 +23,8 @@ import (
 
 // agentLifecycleCfgYAML is the lifecycle/config.yaml written by newAgentTestEnv.
 // It extends the base config with three test agents:
-//   - analyst-requirements: active_status=clarifying (no done_on_success)
-//   - analyst-planner:      active_status=planning   (no done_on_success)
+//   - requirements-analyst: active_status=clarifying (no done_on_success)
+//   - planning-analyst:     active_status=planning   (no done_on_success)
 //   - stub-done-agent:      active_status=in-development, done_on_success=true
 const agentLifecycleCfgYAML = `git:
   default_branch: main
@@ -65,7 +65,7 @@ required_plans:
   epic: []
 
 agents:
-  - name: analyst-requirements
+  - name: requirements-analyst
     role: [analyst]
     driver: claude-code-cli
     active_status: clarifying
@@ -73,12 +73,12 @@ agents:
       - lifecycle/requirements
       - lifecycle/ideas
     git_identity:
-      name: Analyst Requirements Agent
-      email: analyst-requirements@test.local
+      name: Requirements Analyst Agent
+      email: requirements-analyst@test.local
     prompt_templates:
-      analyst: "Test analyst requirements prompt for {target_path}"
+      analyst: "Test requirements analyst prompt for {target_path}"
 
-  - name: analyst-planner
+  - name: planning-analyst
     role: [analyst]
     driver: claude-code-cli
     active_status: planning
@@ -88,10 +88,10 @@ agents:
       - lifecycle/test-plans
       - lifecycle/requirements
     git_identity:
-      name: Analyst Planner Agent
-      email: analyst-planner@test.local
+      name: Planning Analyst Agent
+      email: planning-analyst@test.local
     prompt_templates:
-      analyst: "Test analyst planner prompt for {target_path}"
+      analyst: "Test planning analyst prompt for {target_path}"
 
   - name: stub-done-agent
     role: [backend-developer]
@@ -109,7 +109,7 @@ agents:
 `
 
 // newAgentTestEnv creates a fully wired test environment whose lifecycle/config.yaml
-// includes agent definitions (analyst-requirements, analyst-planner, stub-done-agent).
+// includes agent definitions (requirements-analyst, planning-analyst, stub-done-agent).
 // It mirrors newTestEnv but uses agentLifecycleCfgYAML instead of the minimal config.
 func newAgentTestEnv(t *testing.T, seeds []seedArtifact) *testEnv {
 	t.Helper()

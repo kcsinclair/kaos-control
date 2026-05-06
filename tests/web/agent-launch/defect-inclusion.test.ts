@@ -159,11 +159,11 @@ describe('defects assigned to other roles are excluded', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Non-developer agents (analyst-requirements) do not see defects
+// Non-developer agents (requirements-analyst) do not see defects
 // ---------------------------------------------------------------------------
-describe('analyst-requirements does not see defects', () => {
+describe('requirements-analyst does not see defects', () => {
   it('approved defect assigned to analyst role is excluded', () => {
-    const agent = makeAgentSummary('analyst-requirements', 'approved', ['analyst'])
+    const agent = makeAgentSummary('requirements-analyst', 'approved', ['analyst'])
     const ideas = makeArtifactsByStatusAndType('idea', ['approved'])
     const defects = [makeDefect(['analyst'])]
 
@@ -174,7 +174,7 @@ describe('analyst-requirements does not see defects', () => {
   })
 
   it('has no defects even when defect list contains approved entries for every role', () => {
-    const agent = makeAgentSummary('analyst-requirements', 'approved', ['analyst'])
+    const agent = makeAgentSummary('requirements-analyst', 'approved', ['analyst'])
     const ideas = makeArtifactsByStatusAndType('idea', ['approved'])
     const defects = [
       makeDefect(['analyst']),

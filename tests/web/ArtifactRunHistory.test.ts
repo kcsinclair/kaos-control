@@ -43,7 +43,7 @@ vi.mock('@/api/agents', () => ({
 function makeRun(overrides: Partial<AgentRunRow> = {}): AgentRunRow {
   return {
     run_id:             'abcdefgh-1234-0000-0000-000000000000',
-    agent_name:         'analyst-requirements',
+    agent_name:         'requirements-analyst',
     role:               'analyst',
     target_path:        'lifecycle/requirements/foo-2.md',
     started_at:         '2026-01-01T10:00:00Z',
@@ -111,7 +111,7 @@ describe('ArtifactRunHistory — run list rendering', () => {
       artifactRuns: [
         makeRun({
           run_id:     'aaaabbbb-0000-0000-0000-000000000000',
-          agent_name: 'analyst-requirements',
+          agent_name: 'requirements-analyst',
           status:     'done',
         }),
         makeRun({
@@ -129,7 +129,7 @@ describe('ArtifactRunHistory — run list rendering', () => {
     // First row checks
     const first = rows[0]
     expect(first.find('.arh-run-id').text()).toBe('aaaabbbb')
-    expect(first.find('.arh-agent').text()).toBe('analyst-requirements')
+    expect(first.find('.arh-agent').text()).toBe('requirements-analyst')
     expect(first.find('.arh-status').text()).toBe('done')
 
     // Second row checks

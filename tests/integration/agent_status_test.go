@@ -10,7 +10,7 @@ import (
 )
 
 // TestAnalystRequirementsActivatesStatus verifies that starting an
-// analyst-requirements run synchronously sets the target idea artifact's status
+// requirements-analyst run synchronously sets the target idea artifact's status
 // to "clarifying" and commits the change with the expected message pattern.
 // Covers test plan Milestone 1.
 func TestAnalystRequirementsActivatesStatus(t *testing.T) {
@@ -23,7 +23,7 @@ func TestAnalystRequirementsActivatesStatus(t *testing.T) {
 	}})
 	env.login("admin@test.local", "admin-pass-123")
 
-	startAgentRun(t, env, "analyst-requirements", artifactPath)
+	startAgentRun(t, env, "requirements-analyst", artifactPath)
 
 	// Status change is synchronous (happens in StartRun before the driver
 	// process is spawned) — check immediately without waiting for completion.
@@ -51,7 +51,7 @@ func TestAnalystRequirementsActivatesStatus(t *testing.T) {
 	}
 }
 
-// TestAnalystPlannerActivatesStatus verifies that starting an analyst-planner
+// TestAnalystPlannerActivatesStatus verifies that starting an planning-analyst
 // run synchronously sets the target requirement artifact's status to "planning"
 // and commits the change.
 // Covers test plan Milestone 2.
@@ -65,7 +65,7 @@ func TestAnalystPlannerActivatesStatus(t *testing.T) {
 	}})
 	env.login("admin@test.local", "admin-pass-123")
 
-	startAgentRun(t, env, "analyst-planner", artifactPath)
+	startAgentRun(t, env, "planning-analyst", artifactPath)
 
 	raw, err := os.ReadFile(filepath.Join(env.projectRoot, artifactPath))
 	if err != nil {
@@ -103,7 +103,7 @@ func TestAnalystStatusPersistsAfterSuccess(t *testing.T) {
 	}})
 	env.login("admin@test.local", "admin-pass-123")
 
-	runID := startAgentRun(t, env, "analyst-requirements", artifactPath)
+	runID := startAgentRun(t, env, "requirements-analyst", artifactPath)
 	run := waitForRunCompletion(t, env, runID)
 
 	if got, _ := run["status"].(string); got != "done" {
@@ -164,7 +164,7 @@ func TestAnalystStatusPersistsAfterFailure(t *testing.T) {
 	}})
 	env.login("admin@test.local", "admin-pass-123")
 
-	runID := startAgentRun(t, env, "analyst-requirements", artifactPath)
+	runID := startAgentRun(t, env, "requirements-analyst", artifactPath)
 	run := waitForRunCompletion(t, env, runID)
 
 	if got, _ := run["status"].(string); got != "failed" {

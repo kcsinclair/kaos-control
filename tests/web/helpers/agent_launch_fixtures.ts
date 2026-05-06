@@ -85,8 +85,8 @@ export function makeDefect(
  * Mirrors the agentInputTypeMap constant in AgentLaunchModal.vue.
  */
 export const AGENT_INPUT_TYPE_MAP: Record<string, string> = {
-  'analyst-requirements': 'idea',
-  'analyst-planner': 'requirement',
+  'requirements-analyst': 'idea',
+  'planning-analyst': 'requirement',
   'backend-developer': 'plan-backend',
   'frontend-developer': 'plan-frontend',
   'test-developer': 'plan-test',
