@@ -1,7 +1,7 @@
 ---
 title: Universal Text Filter Across All Views
 type: requirement
-status: approved
+status: in-development
 lineage: universal-text-filter
 created: "2026-05-06T00:00:00+10:00"
 priority: high
