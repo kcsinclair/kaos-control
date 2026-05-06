@@ -1,7 +1,7 @@
 ---
 title: Inline Status Transition Dropdown on Artefact View
 type: requirement
-status: blocked
+status: draft
 lineage: artefact-inline-status-change
 created: "2026-05-06"
 priority: normal
@@ -71,7 +71,12 @@ When a user views an artefact, changing its status requires navigating away from
 - [ ] Works correctly for users with multiple roles (union of allowed transitions is shown).
 - [ ] Works on viewports as narrow as 360 px without overflow or clipping.
 
-## Open Questions
+## Resolved Questions
 
 - Should the dropdown show the role(s) required for each transition as a hint, or only list reachable statuses?
+
+> If the user is the product-owner, all statuses should be displayed and they can override.  Which is the way the current Change Status works.
+
 - Is a brief confirmation (e.g. "Are you sure?") needed for irreversible terminal transitions like `rejected` or `abandoned`, or is the single-click flow acceptable?
+
+> No confirmation required.  Actions are not terminal, the file is still there.
