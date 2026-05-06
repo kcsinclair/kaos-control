@@ -1,7 +1,7 @@
 ---
 title: Releases and Roadmaps
 type: requirement
-status: blocked
+status: draft
 lineage: releases-and-roadmaps
 created: "2026-05-06T00:00:00+10:00"
 parent: ideas/releases-and-roadmaps.md
@@ -139,7 +139,7 @@ Expose the following REST endpoints under `/api/v1/projects/:project/releases`:
 - [ ] The `releases` REST API returns correct responses for all CRUD operations.
 - [ ] Artifacts with type `idea` or `defect` appear in roadmap views; other types do not.
 
-## Open Questions
+## Resolved Questions
 
 1. Should releases support a `status` field (e.g., `planned`, `active`, `shipped`) to visually distinguish past/current/future releases on the Gantt chart?
 
