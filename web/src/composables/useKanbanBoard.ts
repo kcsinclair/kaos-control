@@ -69,6 +69,13 @@ export function useKanbanBoard(project: string) {
       if (filters.priority) {
         if ((a.frontmatter?.priority ?? '') !== filters.priority) return false
       }
+      if (filters.release !== undefined && filters.release !== '') {
+        if (filters.release === '__unassigned__') {
+          if (a.frontmatter?.release) return false
+        } else {
+          if ((a.frontmatter?.release ?? '') !== filters.release) return false
+        }
+      }
       if (q) {
         const haystack = [a.title, a.lineage, a.type, a.status].join(' ').toLowerCase()
         if (!haystack.includes(q)) return false

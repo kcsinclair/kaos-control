@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useKanbanBoard } from '@/composables/useKanbanBoard'
 import { useArtifactsStore } from '@/stores/artifacts'
+import { useReleasesStore } from '@/stores/releases'
 import { useWebSocket } from '@/composables/useWebSocket'
 import KanbanCard from '@/components/artifact/KanbanCard.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
@@ -12,9 +13,11 @@ import { ShieldCheck } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 
 const route = useRoute()
+const router = useRouter()
 const project = route.params.project as string
 
 const store = useArtifactsStore()
+const releasesStore = useReleasesStore()
 
 const {
   loading,
@@ -45,6 +48,26 @@ const selectedStatus = ref('')
 const selectedLabel = ref('')
 const selectedType = ref('')
 const selectedPriority = ref('')
+const selectedRelease = ref('')
+
+// Read release filter from URL on mount
+function initFromRoute() {
+  const r = route.query.release
+  if (typeof r === 'string' && r) {
+    selectedRelease.value = r
+  }
+}
+
+// Sync release filter to URL
+watch(selectedRelease, (val) => {
+  const query = { ...route.query }
+  if (val) {
+    query.release = val
+  } else {
+    delete query.release
+  }
+  router.replace({ query })
+})
 
 function onFilterChange() {
   applyFilters({
@@ -53,6 +76,7 @@ function onFilterChange() {
     label: selectedLabel.value || undefined,
     type: selectedType.value || undefined,
     priority: selectedPriority.value || undefined,
+    release: selectedRelease.value || undefined,
   })
 }
 
@@ -62,6 +86,7 @@ function resetFilters() {
   selectedLabel.value = ''
   selectedType.value = ''
   selectedPriority.value = ''
+  selectedRelease.value = ''
   searchText.value = ''
   onFilterChange()
 }
@@ -109,11 +134,15 @@ useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
 })
 
 onMounted(async () => {
+  initFromRoute()
   await Promise.all([
     refresh(),
     store.fetchLabels(project),
     store.fetchPriorities(project),
+    releasesStore.releases.length === 0 ? releasesStore.fetch(project) : Promise.resolve(),
   ])
+  // Apply route-initialised release filter after data is loaded
+  if (selectedRelease.value) onFilterChange()
 })
 </script>
 
@@ -161,6 +190,11 @@ onMounted(async () => {
       <select v-model="selectedPriority" @change="onFilterChange" v-if="store.priorities.length">
         <option value="">All priorities</option>
         <option v-for="p in store.priorities" :key="p" :value="p">{{ p }}</option>
+      </select>
+      <select v-model="selectedRelease" @change="onFilterChange">
+        <option value="">All Releases</option>
+        <option v-for="r in releasesStore.releases" :key="r.id" :value="r.name">{{ r.name }}</option>
+        <option value="__unassigned__">Unassigned</option>
       </select>
       <button class="btn-ghost" @click="resetFilters">Reset</button>
     </div>
