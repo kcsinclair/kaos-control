@@ -15,8 +15,6 @@ labels:
 
 # Test Artifact Status Lifecycle
 
-## this might be redundant now.... need to check.
-
 Test artifacts need a well-defined status lifecycle that mirrors the broader workflow model. A test begins in `draft` status while being authored, then transitions to `approved` once reviewed. Only approved tests are eligible to be executed by the QA agent.
 
 When the QA agent runs an approved test, it may raise defects as a result. Once defect-raising is complete, the agent runner should automatically transition the test artifact back to `approved` status, leaving it ready for the next run. The raised defects stand as the actionable next steps for developers.
