@@ -82,7 +82,11 @@ func (s *Server) handleStatusCheck(w http.ResponseWriter, r *http.Request) {
 //
 // Response:
 //
-//	{"results": [{"path": "...", "advanced_to": "planning", "ok": true}, ...]}
+//	{"results": [
+//	  {"path": "...", "outcome": "advanced", "new_status": "planning"},
+//	  {"path": "...", "outcome": "skipped"},
+//	  {"path": "...", "outcome": "error", "reason": "requires role with permission to transition ..."}
+//	]}
 func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
 	user := userFromCtx(r.Context())
@@ -106,10 +110,10 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 	userRoles := p.Cfg.RolesFor(user.Email)
 
 	type advanceResult struct {
-		Path       string `json:"path"`
-		AdvancedTo string `json:"advanced_to,omitempty"`
-		Ok         bool   `json:"ok"`
-		Error      string `json:"error,omitempty"`
+		Path      string `json:"path"`
+		Outcome   string `json:"outcome"`
+		NewStatus string `json:"new_status,omitempty"`
+		Reason    string `json:"reason,omitempty"`
 	}
 
 	results := make([]advanceResult, 0, len(req.Paths))
@@ -119,17 +123,17 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 		row, err := p.Idx.Get(relPath)
 		if err != nil {
 			results = append(results, advanceResult{
-				Path:  relPath,
-				Ok:    false,
-				Error: fmt.Sprintf("db error: %s", err.Error()),
+				Path:    relPath,
+				Outcome: "error",
+				Reason:  fmt.Sprintf("db error: %s", err.Error()),
 			})
 			continue
 		}
 		if row == nil {
 			results = append(results, advanceResult{
-				Path:  relPath,
-				Ok:    false,
-				Error: "artifact not found",
+				Path:    relPath,
+				Outcome: "error",
+				Reason:  "artifact not found",
 			})
 			continue
 		}
@@ -138,9 +142,9 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 		lineageArtifacts, err := p.Idx.ListByLineage(row.Lineage)
 		if err != nil {
 			results = append(results, advanceResult{
-				Path:  relPath,
-				Ok:    false,
-				Error: fmt.Sprintf("db error fetching lineage: %s", err.Error()),
+				Path:    relPath,
+				Outcome: "error",
+				Reason:  fmt.Sprintf("db error fetching lineage: %s", err.Error()),
 			})
 			continue
 		}
@@ -159,8 +163,8 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 		if suggested == "" {
 			// Artifact is not stale — idempotent no-op.
 			results = append(results, advanceResult{
-				Path: relPath,
-				Ok:   true,
+				Path:    relPath,
+				Outcome: "skipped",
 			})
 			continue
 		}
@@ -168,9 +172,9 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 		// Check permission.
 		if !p.Workflow.CanTransition(row.Status, suggested, userRoles) {
 			results = append(results, advanceResult{
-				Path:  relPath,
-				Ok:    false,
-				Error: fmt.Sprintf("requires role with permission to transition %q → %q", row.Status, suggested),
+				Path:    relPath,
+				Outcome: "error",
+				Reason:  fmt.Sprintf("requires role with permission to transition %q → %q", row.Status, suggested),
 			})
 			continue
 		}
@@ -178,17 +182,17 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 		// Apply the transition.
 		if err := applyTransition(p, row, relPath, suggested, user.Email, ""); err != nil {
 			results = append(results, advanceResult{
-				Path:  relPath,
-				Ok:    false,
-				Error: err.Error(),
+				Path:    relPath,
+				Outcome: "error",
+				Reason:  err.Error(),
 			})
 			continue
 		}
 
 		results = append(results, advanceResult{
-			Path:       relPath,
-			AdvancedTo: suggested,
-			Ok:         true,
+			Path:      relPath,
+			Outcome:   "advanced",
+			NewStatus: suggested,
 		})
 	}
 
