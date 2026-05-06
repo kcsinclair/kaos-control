@@ -142,7 +142,22 @@ Expose the following REST endpoints under `/api/v1/projects/:project/releases`:
 ## Open Questions
 
 1. Should releases support a `status` field (e.g., `planned`, `active`, `shipped`) to visually distinguish past/current/future releases on the Gantt chart?
+
+> Yes, good idea.
+
 2. When deleting a release, should there be an option to reassign its artifacts to another release rather than orphaning them?
+
+> Yes, that would be great.
+
 3. Should the Gantt chart support drag-to-resize release bars for quick date adjustment, or is the edit modal sufficient for v1?
+
+> Edit modal will work for v1
+
 4. How should "Unscheduled" releases (no end date, used as a parking lot) be represented on the Gantt chart — as a separate section or excluded?
+
+> When creating a release include an "Unscheduled" option which disables using dates.
+> For an unscheduled release, lets have a column on the right of the gantt chart, with the title "Unscheduled", so releases can be prepared but not scheduled.
+
 5. Should the roadmap graph view be a separate entry in the left nav, or a tab/toggle within the existing graph page?
+
+> Tab/toggle in the existing graph page.
