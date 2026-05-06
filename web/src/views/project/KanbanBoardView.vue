@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useKanbanBoard } from '@/composables/useKanbanBoard'
 import { useArtifactsStore } from '@/stores/artifacts'
 import { useReleasesStore } from '@/stores/releases'
+import { useUiStore } from '@/stores/ui'
 import { useWebSocket } from '@/composables/useWebSocket'
 import KanbanCard from '@/components/artifact/KanbanCard.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
@@ -18,6 +19,7 @@ const project = route.params.project as string
 
 const store = useArtifactsStore()
 const releasesStore = useReleasesStore()
+const uiStore = useUiStore()
 
 const {
   loading,
@@ -157,6 +159,14 @@ onMounted(async () => {
           v-model="showCompleted"
         />
         <span class="toggle-text">Show completed</span>
+      </label>
+      <label class="toggle-label">
+        <input
+          type="checkbox"
+          class="toggle-input"
+          v-model="uiStore.showTestsOnKanban"
+        />
+        <span class="toggle-text">Show Tests</span>
       </label>
       <button class="btn-check-status" @click="showStatusPanel = !showStatusPanel">
         <ShieldCheck :size="15" />

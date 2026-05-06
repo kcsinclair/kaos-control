@@ -23,6 +23,10 @@ export const useUiStore = defineStore('ui', () => {
     localStorage.setItem('sidebar-collapsed', String(sidebarCollapsed.value))
   }
 
+  // Whether test artifacts are visible in the Kanban board.
+  // Session-only (not persisted to localStorage per plan §F3).
+  const showTestsOnKanban = ref<boolean>(false)
+
   function addToast(type: ToastType, message: string, duration = 4000): void {
     const id = ++_nextId
     toasts.value.push({ id, type, message })
@@ -43,5 +47,6 @@ export const useUiStore = defineStore('ui', () => {
     dismiss,
     sidebarCollapsed,
     toggleSidebar,
+    showTestsOnKanban,
   }
 })

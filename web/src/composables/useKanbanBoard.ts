@@ -4,6 +4,7 @@ import * as artifactsApi from '@/api/artifacts'
 import type { ArtifactRow, ArtifactFilter } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
 import { parseArtifactDate } from '@/composables/useFormatDate'
+import { useUiStore } from '@/stores/ui'
 
 export interface KanbanColumnConfig {
   name: string
@@ -23,6 +24,7 @@ export interface KanbanColumn {
 }
 
 export function useKanbanBoard(project: string) {
+  const uiStore = useUiStore()
   const loading = ref(false)
   const hasConfig = ref(false)
   const config = ref<KanbanConfig | null>(null)
@@ -58,6 +60,8 @@ export function useKanbanBoard(project: string) {
   function applyClientFilters(items: ArtifactRow[]): ArtifactRow[] {
     const q = searchText.value.toLowerCase()
     return items.filter(a => {
+      // Hide test artifacts unless the "Show Tests" toggle is on
+      if (!uiStore.showTestsOnKanban && a.type === 'test') return false
       if (hideTerminal.value && (TERMINAL_STATUSES as readonly string[]).includes(a.status)) return false
       if (filters.stage && a.stage !== filters.stage) return false
       if (filters.status && a.status !== filters.status) return false
