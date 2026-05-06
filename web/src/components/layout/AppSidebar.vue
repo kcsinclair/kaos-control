@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
+import { useTestingStore } from '@/stores/testing'
 import { api } from '@/api/client'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
@@ -22,6 +23,7 @@ import {
   CalendarClock,
   CalendarRange,
   Server,
+  FlaskConical,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
@@ -30,6 +32,7 @@ const route = useRoute()
 const projectStore = useProjectStore()
 const uiStore = useUiStore()
 const authStore = useAuthStore()
+const testingStore = useTestingStore()
 
 const faviconSrc = `${import.meta.env.BASE_URL}favicon-32x32.png`
 
@@ -47,15 +50,23 @@ async function fetchParseErrors(project: string) {
   }
 }
 
-onMounted(() => fetchParseErrors(projectName()))
+onMounted(() => {
+  const p = projectName()
+  fetchParseErrors(p)
+  testingStore.fetchApprovedCount(p)
+})
 
 watch(() => route.params.project, (p) => {
-  if (p) fetchParseErrors(p as string)
+  if (p) {
+    fetchParseErrors(p as string)
+    testingStore.fetchApprovedCount(p as string)
+  }
 })
 
 // Re-check when artifacts are re-indexed (a re-index may fix or introduce errors)
 useWebSocket(projectName(), 'artifact.indexed', (_e: WsEvent) => {
   fetchParseErrors(projectName())
+  testingStore.fetchApprovedCount(projectName())
 })
 
 interface NavItem {
@@ -63,6 +74,7 @@ interface NavItem {
   to: string
   icon: Component
   roles?: string[]
+  badgeCount?: () => number
 }
 
 const navItems = computed((): NavItem[] => {
@@ -73,6 +85,7 @@ const navItems = computed((): NavItem[] => {
     { label: 'Dashboard',    to: `/p/${p}/dashboard`,       icon: LayoutDashboard },
     { label: 'List',         to: `/p/${p}/artifacts`,       icon: List },
     { label: 'Board',        to: `/p/${p}/artifacts/board`, icon: Columns3 },
+    { label: 'Testing',      to: `/p/${p}/testing`,         icon: FlaskConical, badgeCount: () => testingStore.approvedCount },
     { label: 'Graph',        to: `/p/${p}/graph`,           icon: Network },
     { label: 'Roadmap',      to: `/p/${p}/roadmap`,         icon: CalendarRange },
     { label: 'Agents',       to: `/p/${p}/agents`,          icon: Bot },
@@ -158,18 +171,32 @@ watch(
           >
             <span class="nav-icon tooltip-anchor">
               <component :is="item.icon" :size="18" />
+              <!-- Collapsed dot badge: parse errors -->
               <span
                 v-if="item.label === 'Parse Errors' && parseErrorCount > 0 && !isVisuallyExpanded()"
                 class="badge-dot"
                 :aria-label="`${parseErrorCount} parse errors`"
               >{{ parseErrorCount > 9 ? parseErrorCount : '' }}</span>
+              <!-- Collapsed dot badge: generic badgeCount -->
+              <span
+                v-else-if="item.badgeCount && item.badgeCount() > 0 && !isVisuallyExpanded()"
+                class="badge-dot"
+                :aria-label="`${item.badgeCount()} ${item.label.toLowerCase()}`"
+              ></span>
             </span>
             <span class="nav-label">{{ item.label }}</span>
+            <!-- Expanded badge: parse errors -->
             <span
               v-if="item.label === 'Parse Errors' && parseErrorCount > 0 && isVisuallyExpanded()"
               class="badge"
               :aria-label="`${parseErrorCount} parse errors`"
             >{{ parseErrorCount }}</span>
+            <!-- Expanded badge: generic badgeCount -->
+            <span
+              v-else-if="item.badgeCount && item.badgeCount() > 0 && isVisuallyExpanded()"
+              class="badge"
+              :aria-label="`${item.badgeCount()} ${item.label.toLowerCase()}`"
+            >{{ item.badgeCount() }}</span>
           </RouterLink>
         </SidebarTooltip>
       </li>
