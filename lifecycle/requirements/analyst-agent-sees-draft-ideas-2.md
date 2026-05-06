@@ -1,7 +1,7 @@
 ---
 title: Agent Launcher Must Filter Input Artifacts by Approved Status
 type: requirement
-status: blocked
+status: draft
 lineage: analyst-agent-sees-draft-ideas
 parent: defects/analyst-agent-sees-draft-ideas.md
 labels:
@@ -68,7 +68,7 @@ The root cause is in `web/src/components/agent/AgentLaunchModal.vue` (lines 26-3
 - [ ] Existing integration tests (if any) for the agent launcher continue to pass.
 - [ ] Related: [[analyst-agent-sees-draft-ideas]]
 
-## Open Questions
+## Resolved Questions
 
 - Should the backend also enforce input status validation when an agent run is started via `POST /agents/runs`, as a defence-in-depth measure? (Deferred as a non-goal for this fix, but worth tracking.)
 
