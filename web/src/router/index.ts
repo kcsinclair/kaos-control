@@ -51,6 +51,16 @@ const router = createRouter({
           component: () => import('@/views/project/AgentsRunsView.vue'),
         },
         {
+          path: 'scheduler',
+          name: 'scheduler',
+          component: () => import('@/views/project/SchedulerListView.vue'),
+        },
+        {
+          path: 'scheduler/:name',
+          name: 'scheduler-detail',
+          component: () => import('@/views/project/SchedulerDetailView.vue'),
+        },
+        {
           path: 'feed',
           name: 'feed',
           component: () => import('@/views/project/ProjectFeedView.vue'),

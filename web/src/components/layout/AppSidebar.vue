@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Settings,
   Layers,
+  CalendarClock,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
@@ -70,6 +71,7 @@ const navItems = computed((): NavItem[] => {
     { label: 'Board',        to: `/p/${p}/artifacts/board`, icon: Columns3 },
     { label: 'Graph',        to: `/p/${p}/graph`,           icon: Network },
     { label: 'Agents',       to: `/p/${p}/agents`,          icon: Bot },
+    { label: 'Scheduler',    to: `/p/${p}/scheduler`,       icon: CalendarClock },
     { label: 'Feed',         to: `/p/${p}/feed`,            icon: Activity },
     { label: 'Parse Errors', to: `/p/${p}/parse-errors`,    icon: AlertTriangle },
     { label: 'Config',       to: `/p/${p}/config`,          icon: Settings },
