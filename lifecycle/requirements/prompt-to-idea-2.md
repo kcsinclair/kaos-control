@@ -1,7 +1,7 @@
 ---
 title: Conversational Idea Capture Agent
 type: requirement
-status: draft
+status: done
 lineage: prompt-to-idea
 parent: lifecycle/ideas/prompt-to-idea.md
 labels:
