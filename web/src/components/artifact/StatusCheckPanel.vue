@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { checkStatus, advanceStatuses } from '@/api/statusCheck'
-import type { StaleArtifact, StatusCheckResponse } from '@/api/statusCheck'
+import type { StaleArtifact, StaleChild, StatusCheckResponse } from '@/api/statusCheck'
 import { useWebSocket } from '@/composables/useWebSocket'
+
+// Normalise children to StaleChild[] regardless of legacy string[] shape.
+function normaliseChildren(children: StaleChild[] | string[]): StaleChild[] {
+  if (children.length === 0) return []
+  if (typeof children[0] === 'string') {
+    return (children as string[]).map((p) => ({ path: p, status: '?' }))
+  }
+  return children as StaleChild[]
+}
 
 const props = defineProps<{
   project: string
@@ -17,10 +26,18 @@ const results = ref<StatusCheckResponse | null>(null)
 const advancingPaths = ref<Set<string>>(new Set())
 const fixAllLoading = ref(false)
 
+// Normalised stale list — children always StaleChild[].
+const normalisedStale = computed<StaleArtifact[]>(() => {
+  if (!results.value) return []
+  return results.value.stale.map((a) => ({
+    ...a,
+    children: normaliseChildren(a.children),
+  }))
+})
+
 const groupedByLineage = computed<Record<string, StaleArtifact[]>>(() => {
-  if (!results.value) return {}
   const groups: Record<string, StaleArtifact[]> = {}
-  for (const item of results.value.stale) {
+  for (const item of normalisedStale.value) {
     if (!groups[item.lineage]) groups[item.lineage] = []
     groups[item.lineage].push(item)
   }
@@ -28,7 +45,7 @@ const groupedByLineage = computed<Record<string, StaleArtifact[]>>(() => {
 })
 
 const hasAdvanceable = computed(() =>
-  results.value?.stale.some((a) => a.can_advance) ?? false
+  normalisedStale.value.some((a) => a.can_advance)
 )
 
 async function fetchResults() {
@@ -62,7 +79,7 @@ async function advance(artifact: StaleArtifact) {
 
 async function fixAll() {
   if (!results.value) return
-  const paths = results.value.stale.filter((a) => a.can_advance).map((a) => a.path)
+  const paths = normalisedStale.value.filter((a) => a.can_advance).map((a) => a.path)
   if (!paths.length) return
   fixAllLoading.value = true
   error.value = null
@@ -101,7 +118,7 @@ useWebSocket(props.project, 'artifact.indexed', (event) => {
     // If we have no results yet (still loading), ignore.
     return
   }
-  const relevant = results.value.stale.some(
+  const relevant = normalisedStale.value.some(
     (a) =>
       a.path === changedPath ||
       a.children.some((c) => c.path === changedPath),
@@ -142,7 +159,7 @@ watch(() => [props.project, props.lineage] as const, fetchResults, { immediate: 
     </div>
 
     <div
-      v-else-if="results && results.stale.length === 0"
+      v-else-if="results && normalisedStale.length === 0"
       class="sc-state sc-state--empty"
     >
       No stale statuses found
