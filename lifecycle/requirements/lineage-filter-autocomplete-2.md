@@ -1,7 +1,7 @@
 ---
 title: Lineage Filter with Autocomplete
 type: requirement
-status: approved
+status: planning
 lineage: lineage-filter-autocomplete
 created: "2026-05-06T10:00:00+10:00"
 priority: high
