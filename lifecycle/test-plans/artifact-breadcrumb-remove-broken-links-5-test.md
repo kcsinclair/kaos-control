@@ -1,10 +1,10 @@
 ---
-title: "Test Plan: Remove Non-Functional Hyperlinks from Artifact Breadcrumb"
+title: 'Test Plan: Remove Non-Functional Hyperlinks from Artifact Breadcrumb'
 type: plan-test
-status: draft
+status: approved
 lineage: artifact-breadcrumb-remove-broken-links
-parent: lifecycle/requirements/artifact-breadcrumb-remove-broken-links-2.md
 created: "2026-05-06T00:00:00+10:00"
+parent: lifecycle/requirements/artifact-breadcrumb-remove-broken-links-2.md
 assignees:
     - role: test-developer
       who: agent
