@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Inline Status Transition Dropdown"
 type: plan-test
-status: approved
+status: in-development
 lineage: artefact-inline-status-change
 parent: lifecycle/requirements/artefact-inline-status-change-2.md
 ---
