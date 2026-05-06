@@ -4,7 +4,7 @@ type: plan-test
 status: draft
 lineage: artifact-breadcrumb-remove-broken-links
 parent: lifecycle/requirements/artifact-breadcrumb-remove-broken-links-2.md
-created: "2026-05-06"
+created: "2026-05-06T00:00:00+10:00"
 assignees:
     - role: test-developer
       who: agent

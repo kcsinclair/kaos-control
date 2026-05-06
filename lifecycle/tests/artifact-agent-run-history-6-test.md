@@ -4,7 +4,7 @@ type: test
 status: in-qa
 lineage: artifact-agent-run-history
 parent: lifecycle/test-plans/artifact-agent-run-history-5-test.md
-created: "2026-04-28"
+created: "2026-04-28T00:00:00+10:00"
 ---
 
 # Tests: Artifact Agent Run History
