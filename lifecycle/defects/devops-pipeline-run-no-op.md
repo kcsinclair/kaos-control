@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Run Does Nothing; Directory Not Auto-Created
 type: defect
-status: draft
+status: done
 lineage: devops-pipeline-run-no-op
 created: "2026-05-06T15:55:15+10:00"
 priority: normal
