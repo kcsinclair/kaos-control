@@ -35,7 +35,9 @@ type AuthConfig struct {
 }
 
 type LimitsConfig struct {
-	MaxConcurrentAgents int `yaml:"max_concurrent_agents"`
+	MaxConcurrentAgents        int `yaml:"max_concurrent_agents"`
+	MaxConcurrentSchedulerJobs int `yaml:"max_concurrent_scheduler_jobs"`
+	SchedulerRunRetentionDays  int `yaml:"scheduler_run_retention_days"`
 }
 
 func defaultApp() App {
@@ -48,7 +50,9 @@ func defaultApp() App {
 			SessionTTL: 24 * time.Hour,
 		},
 		Limits: LimitsConfig{
-			MaxConcurrentAgents: 4,
+			MaxConcurrentAgents:        4,
+			MaxConcurrentSchedulerJobs: 2,
+			SchedulerRunRetentionDays:  90,
 		},
 	}
 }
@@ -90,6 +94,12 @@ func validateApp(cfg *App) error {
 	}
 	if cfg.Limits.MaxConcurrentAgents <= 0 {
 		cfg.Limits.MaxConcurrentAgents = 4
+	}
+	if cfg.Limits.MaxConcurrentSchedulerJobs <= 0 {
+		cfg.Limits.MaxConcurrentSchedulerJobs = 2
+	}
+	if cfg.Limits.SchedulerRunRetentionDays <= 0 {
+		cfg.Limits.SchedulerRunRetentionDays = 90
 	}
 	if cfg.Server.TLS.Enabled {
 		if cfg.Server.TLS.CertFile == "" || cfg.Server.TLS.KeyFile == "" {
@@ -225,18 +235,24 @@ type FeedConfig struct {
 	MaxEvents     int `yaml:"max_events"`
 }
 
+// SchedulerConfig holds per-project scheduler defaults.
+type SchedulerConfig struct {
+	DefaultTimeout time.Duration `yaml:"default_timeout"` // default job timeout, e.g. "30m"
+}
+
 // Project is the per-project configuration (lifecycle/config.yaml).
 type Project struct {
-	Stages        []Stage       `yaml:"stages"`
-	Git           GitConfig     `yaml:"git"`
-	Roles         []string      `yaml:"roles"`
-	Transitions   []Transition  `yaml:"transitions,omitempty"`
-	Users         []UserBinding `yaml:"users"`
-	Agents        []AgentConfig `yaml:"agents"`
-	RequiredPlans RequiredPlans `yaml:"required_plans"`
-	Ignore        []string      `yaml:"ignore"`
-	Kanban        *KanbanConfig `yaml:"kanban,omitempty"`
-	Feed          FeedConfig    `yaml:"feed"`
+	Stages        []Stage         `yaml:"stages"`
+	Git           GitConfig       `yaml:"git"`
+	Roles         []string        `yaml:"roles"`
+	Transitions   []Transition    `yaml:"transitions,omitempty"`
+	Users         []UserBinding   `yaml:"users"`
+	Agents        []AgentConfig   `yaml:"agents"`
+	RequiredPlans RequiredPlans   `yaml:"required_plans"`
+	Ignore        []string        `yaml:"ignore"`
+	Kanban        *KanbanConfig   `yaml:"kanban,omitempty"`
+	Feed          FeedConfig      `yaml:"feed"`
+	Scheduler     SchedulerConfig `yaml:"scheduler"`
 }
 
 // Transition overrides one edge in the state machine.
@@ -276,6 +292,7 @@ func defaultProject() Project {
 		Roles:         defaultRoles,
 		RequiredPlans: RequiredPlans{"requirement": {}},
 		Ignore:        []string{"README.md"},
+		Scheduler:     SchedulerConfig{DefaultTimeout: 30 * time.Minute},
 	}
 }
 
@@ -336,6 +353,9 @@ func validateProject(cfg *Project) error {
 	}
 	if cfg.Feed.MaxEvents <= 0 {
 		cfg.Feed.MaxEvents = 5000
+	}
+	if cfg.Scheduler.DefaultTimeout <= 0 {
+		cfg.Scheduler.DefaultTimeout = 30 * time.Minute
 	}
 	return nil
 }
