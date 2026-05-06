@@ -1,0 +1,7 @@
+name: Long Build
+type: build
+steps:
+  - name: Slow Compile
+    description: A step with a custom timeout
+    command: echo "slow compile done"
+    timeout: 5m

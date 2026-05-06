@@ -1,0 +1,6 @@
+name: Quick Pass
+type: build
+steps:
+  - name: Echo OK
+    description: Verify environment is working
+    command: echo ok

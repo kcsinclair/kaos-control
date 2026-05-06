@@ -1,0 +1,9 @@
+name: Build Application
+type: build
+steps:
+  - name: Compile
+    description: Compile the Go binary
+    command: echo "compiling..."
+  - name: Test
+    description: Run unit tests
+    command: echo "testing..."

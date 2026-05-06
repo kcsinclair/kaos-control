@@ -1,0 +1,12 @@
+name: Deploy to Staging
+type: deploy
+steps:
+  - name: Push Image
+    description: Push Docker image to registry
+    command: echo "pushing image..."
+  - name: Apply Config
+    description: Apply Kubernetes manifests
+    command: echo "applying config..."
+  - name: Verify
+    description: Health check deployment
+    command: echo "verifying..."

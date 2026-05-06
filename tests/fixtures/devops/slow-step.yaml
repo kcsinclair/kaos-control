@@ -1,0 +1,6 @@
+name: Slow Step
+type: deploy
+steps:
+  - name: Sleep
+    description: A long-running step for concurrency testing
+    command: sleep 30

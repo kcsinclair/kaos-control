@@ -1,0 +1,7 @@
+name: Timeout Step
+type: build
+steps:
+  - name: Will Timeout
+    description: A step with a very short timeout that will be killed
+    command: sleep 10
+    timeout: 1s

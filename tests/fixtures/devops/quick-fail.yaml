@@ -1,0 +1,6 @@
+name: Quick Fail
+type: build
+steps:
+  - name: Exit One
+    description: Step that exits with a non-zero code
+    command: exit 1

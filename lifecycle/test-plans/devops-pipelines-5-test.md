@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: DevOps Pipeline Management'
 type: plan-test
-status: in-development
+status: done
 lineage: devops-pipelines
 parent: lifecycle/requirements/devops-pipelines-2.md
 ---
