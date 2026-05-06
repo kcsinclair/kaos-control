@@ -5,6 +5,27 @@ import type { Pipeline } from '@/api/devops'
 
 export type StepStatus = 'pending' | 'running' | 'passed' | 'failed' | 'cancelled'
 
+// ── Log line types used by PipelineLogPane ────────────────────────────────────
+
+export type LogLineKind = 'output' | 'step-start' | 'step-end' | 'run-start' | 'run-end'
+
+export interface LogLine {
+  kind: LogLineKind
+  /** The step name, if associated with a step */
+  stepName?: string
+  stepIndex?: number
+  timestamp: number
+  /** Text to display. For output lines this is the raw command output. */
+  text: string
+  /** For step-end / run-end: 'passed' | 'failed' | 'cancelled' */
+  status?: string
+  /** Duration in ms for step-end / run-end lines */
+  durationMs?: number
+}
+
+/** Maximum flat log buffer size (evict oldest beyond this) */
+const LOG_BUFFER_MAX = 50_000
+
 export interface StepState {
   name: string
   status: StepStatus
@@ -39,6 +60,16 @@ export const useDevOpsStore = defineStore('devops', () => {
 
   // Ordered list of run history (most recent last), capped at 50
   const runHistory = ref<RunHistoryEntry[]>([])
+
+  // ── Flat log buffer for PipelineLogPane ────────────────────────────────────
+  // Buffers all events for the most recently active/selected pipeline.
+  const logBuffer = ref<LogLine[]>([])
+  /** Slug of the pipeline whose log is currently buffered */
+  const logPipelineSlug = ref<string | null>(null)
+  /** Run ID currently being buffered */
+  const logRunId = ref<string | null>(null)
+  /** True once pipeline.run.completed has been received for the buffered run */
+  const logRunCompleted = ref(false)
 
   const pipelinesByType = computed((): Record<string, Pipeline[]> => {
     const grouped: Record<string, Pipeline[]> = {}
@@ -95,6 +126,13 @@ export const useDevOpsStore = defineStore('devops', () => {
 
   // WebSocket event handlers
 
+  function appendLogLine(line: LogLine): void {
+    if (logBuffer.value.length >= LOG_BUFFER_MAX) {
+      logBuffer.value.shift()
+    }
+    logBuffer.value.push(line)
+  }
+
   function handleRunStarted(payload: Record<string, unknown>): void {
     const slug = payload['pipeline_slug'] as string
     const runId = payload['run_id'] as string
@@ -118,6 +156,13 @@ export const useDevOpsStore = defineStore('devops', () => {
       overallStatus: 'running',
     })
     if (runHistory.value.length > 50) runHistory.value.shift()
+
+    // Reset flat log buffer for this run
+    logBuffer.value = []
+    logPipelineSlug.value = slug
+    logRunId.value = runId
+    logRunCompleted.value = false
+    appendLogLine({ kind: 'run-start', timestamp: Date.now(), text: `Run ${runId} started` })
   }
 
   function handleStepStarted(payload: Record<string, unknown>): void {
@@ -128,6 +173,12 @@ export const useDevOpsStore = defineStore('devops', () => {
     if (!run || stepIndex == null || stepIndex >= run.steps.length) return
     run.steps[stepIndex].status = 'running'
     run.steps[stepIndex].startedAt = Date.now()
+
+    // Append step-start line to flat log buffer
+    if (slug === logPipelineSlug.value) {
+      const stepName = run.steps[stepIndex].name
+      appendLogLine({ kind: 'step-start', stepName, stepIndex, timestamp: Date.now(), text: stepName })
+    }
   }
 
   function handleStepOutput(payload: Record<string, unknown>): void {
@@ -137,12 +188,18 @@ export const useDevOpsStore = defineStore('devops', () => {
     if (!slug || line == null) return
     const run = activeRuns.value.get(slug)
     if (!run || stepIndex == null || stepIndex >= run.steps.length) return
-    // Cap buffer at 1000 lines to avoid unbounded memory growth
+    // Cap per-step buffer at 50,000 lines
     const stepOutput = run.steps[stepIndex].output
-    if (stepOutput.length >= 1000) {
+    if (stepOutput.length >= 50_000) {
       stepOutput.shift()
     }
     stepOutput.push(line)
+
+    // Append output line to flat log buffer
+    if (slug === logPipelineSlug.value) {
+      const stepName = run.steps[stepIndex].name
+      appendLogLine({ kind: 'output', stepName, stepIndex, timestamp: Date.now(), text: line })
+    }
   }
 
   function handleStepCompleted(payload: Record<string, unknown>): void {
@@ -156,11 +213,18 @@ export const useDevOpsStore = defineStore('devops', () => {
     run.steps[stepIndex].status = status
     run.steps[stepIndex].completedAt = Date.now()
     if (durationMs != null) run.steps[stepIndex].durationMs = durationMs
+
+    // Append step-end line to flat log buffer
+    if (slug === logPipelineSlug.value) {
+      const stepName = run.steps[stepIndex].name
+      appendLogLine({ kind: 'step-end', stepName, stepIndex, timestamp: Date.now(), text: stepName, status, durationMs })
+    }
   }
 
   function handleRunCompleted(payload: Record<string, unknown>): void {
     const slug = payload['pipeline_slug'] as string
     const status = payload['status'] as ActiveRun['overallStatus']
+    const durationMs = payload['duration_ms'] as number | undefined
     if (!slug) return
     const run = activeRuns.value.get(slug)
     if (!run) return
@@ -172,6 +236,29 @@ export const useDevOpsStore = defineStore('devops', () => {
       entry.overallStatus = finalStatus
       entry.completedAt = Date.now()
     }
+
+    // Append terminal run-end line to flat log buffer
+    if (slug === logPipelineSlug.value) {
+      logRunCompleted.value = true
+      appendLogLine({ kind: 'run-end', timestamp: Date.now(), text: '', status: finalStatus, durationMs })
+    }
+  }
+
+  /** Load a completed run log from REST and replace the flat log buffer */
+  async function loadRunLog(project: string, runId: string, pipelineSlug: string): Promise<void> {
+    const raw = await devopsApi.getRunLog(project, runId)
+    const lines = devopsApi.parseRunLog(raw)
+    logBuffer.value = lines
+    logPipelineSlug.value = pipelineSlug
+    logRunId.value = runId
+    logRunCompleted.value = true
+  }
+
+  function clearLogBuffer(): void {
+    logBuffer.value = []
+    logPipelineSlug.value = null
+    logRunId.value = null
+    logRunCompleted.value = false
   }
 
   return {
@@ -191,5 +278,12 @@ export const useDevOpsStore = defineStore('devops', () => {
     handleStepOutput,
     handleStepCompleted,
     handleRunCompleted,
+    // Log buffer
+    logBuffer,
+    logPipelineSlug,
+    logRunId,
+    logRunCompleted,
+    loadRunLog,
+    clearLogBuffer,
   }
 })
