@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Rename Analyst Agents to Phase-First Convention"
 type: plan-test
-status: approved
+status: in-development
 lineage: rename-analyst-agents
 parent: lifecycle/requirements/rename-analyst-agents-2.md
 ---
