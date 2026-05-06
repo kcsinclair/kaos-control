@@ -10,7 +10,8 @@ A single-binary lifecycle management tool that turns ideas into shipped releases
 - **Lineage tracking** — every artifact in a chain shares a slug and carries a monotonic index across stages.
 - **Workflow state machine** — role-gated transitions (e.g. only `approver` can move a ticket from `planning` to `in-development`); plan-completion gates.
 - **Agents** — pluggable LLM runners (currently `claude-code-cli`) bound to roles, with sandboxed write paths.
-- **Web UI** — 3D / 2D graph, artifact editor with markdown preview, agent run dialog with live progress, parse-error view, project config editor.
+- **DevOps pipelines** — declarative YAML pipelines in `lifecycle/devops/` (build, deploy, release, …) that the product owner can trigger from the UI; per-step output streams to the browser over WebSocket and is persisted to `~/.kaos-control/devops/<project>/`.
+- **Web UI** — 3D / 2D graph, artifact editor with markdown preview, agent run dialog with live progress, DevOps page with live pipeline runs, parse-error view, project config editor.
 - **Distribution** — one Go binary with the frontend embedded.
 
 ## Tech stack
@@ -28,7 +29,7 @@ make all
 make run
 ```
 
-App config: `~/.kaos-control/config.yaml`. Projects are registered as YAML files in `~/.kaos-control/projects/*.yaml`. Per-project config (roles, agents, plan gates) lives at `<project>/lifecycle/config.yaml`.
+App config: `~/.kaos-control/config.yaml`. Projects are registered as YAML files in `~/.kaos-control/projects/*.yaml`. Per-project config (roles, agents, plan gates) lives at `<project>/lifecycle/config.yaml`. DevOps pipelines live at `<project>/lifecycle/devops/*.yaml`; their run logs are written to `~/.kaos-control/devops/<project>/`.
 
 Open <http://localhost:8080> to see the project picker.
 

@@ -4,13 +4,27 @@ MODULE    := github.com/kaos-control/kaos-control
 LDFLAGS   := -ldflags "-X main.version=$(VERSION) -X $(MODULE)/internal/http.Version=$(VERSION)"
 BUILD_DIR := ./dist
 
-.PHONY: all build build-web test test-unit test-integration lint clean run
+PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
+RELEASE_LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION) -X $(MODULE)/internal/http.Version=$(VERSION)"
+
+.PHONY: all build build-web release test test-unit test-integration lint clean run
 
 all: build-web build
 
 ## build: compile the Go binary (embeds web/dist)
 build:
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/kaos-control
+
+## release: build static binaries for every platform in PLATFORMS into ./dist/
+release:
+	@mkdir -p $(BUILD_DIR)
+	@for p in $(PLATFORMS); do \
+	  os=$${p%/*}; arch=$${p#*/}; ext=$$([ "$$os" = "windows" ] && echo .exe); \
+	  echo "→ $$os/$$arch"; \
+	  CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch \
+	    go build -trimpath $(RELEASE_LDFLAGS) \
+	    -o $(BUILD_DIR)/$(BINARY)-$$os-$$arch$$ext ./cmd/kaos-control || exit 1; \
+	done
 
 ## build-web: build the Vite frontend into web/dist
 build-web:
