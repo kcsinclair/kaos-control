@@ -71,13 +71,15 @@ export const useReleasesStore = defineStore('releases', () => {
 
     const handler = (e: { type: string; payload: Record<string, unknown> }) => {
       if (e.type === 'release.created') {
-        const release = e.payload as unknown as Release
-        if (!releases.value.find((r) => r.id === release.id)) {
+        const release = (e.payload as { release?: Release }).release
+        if (release && !releases.value.find((r) => r.id === release.id)) {
           releases.value = [...releases.value, release]
         }
       } else if (e.type === 'release.updated') {
-        const release = e.payload as unknown as Release
-        releases.value = releases.value.map((r) => (r.id === release.id ? release : r))
+        const release = (e.payload as { release?: Release }).release
+        if (release) {
+          releases.value = releases.value.map((r) => (r.id === release.id ? release : r))
+        }
       } else if (e.type === 'release.deleted') {
         const id = (e.payload as { id?: number }).id
         if (id !== undefined) {
