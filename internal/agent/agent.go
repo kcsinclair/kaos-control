@@ -49,6 +49,10 @@ type Run struct {
 	TargetPath    string // project-relative path to the target artifact
 	ActiveStatus  string // status to set on target when run starts (empty = no change)
 	DoneOnSuccess bool   // if true, set target status to "done" on successful completion
+	TimeoutMinutes int   // 0 = driver default
+	// Ollama-specific fields (only used when Driver == "ollama").
+	OllamaInstanceName string // resolved from AgentConfig.OllamaInstanceName
+	OllamaEndpoint     string // "chat" or "generate"
 }
 
 // Process is a handle to a running agent.
