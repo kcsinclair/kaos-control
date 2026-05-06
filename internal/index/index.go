@@ -648,6 +648,18 @@ func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 	return scanRows(rows)
 }
 
+// Count returns the number of artifacts matching the given filter.
+// It runs the same WHERE logic as List but skips pagination and row scanning,
+// making it suitable for lightweight badge-count queries.
+func (idx *Index) Count(f Filter) (int, error) {
+	where, args := buildWhere(f)
+	var count int
+	if err := idx.db.QueryRow("SELECT COUNT(*) FROM artifacts"+where, args...).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // Get returns a single artifact by project-relative path, or nil if not found.
 func (idx *Index) Get(relPath string) (*ArtifactRow, error) {
 	rows, err := idx.db.Query(

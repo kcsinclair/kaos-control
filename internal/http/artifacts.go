@@ -45,6 +45,17 @@ func (s *Server) handleListArtifacts(w http.ResponseWriter, r *http.Request) {
 		f.Offset, _ = strconv.Atoi(v)
 	}
 
+	// count_only=true: return just the count without fetching full artifact rows.
+	if r.URL.Query().Get("count_only") == "true" {
+		count, err := p.Idx.Count(f)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"count": count})
+		return
+	}
+
 	items, total, err := p.Idx.List(f)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))

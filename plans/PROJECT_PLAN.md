@@ -10,6 +10,7 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-05-06** — Backend plan `test-artifact-management-3-be.md` Milestone 2: added `Count(filter Filter) (int, error)` to `internal/index/index.go` (runs `SELECT COUNT(*)` with the same `buildWhere` logic, no pagination); added `count_only=true` query-param branch to `handleListArtifacts` in `internal/http/artifacts.go` — returns `{"count": N}` without fetching artifact rows, enabling lightweight badge counts. `go build ./...` + `go vet ./...` pass.
 - **2026-05-06** — Backend plan `test-artifact-management-3-be.md` Milestone 1 verified: `CREATE INDEX idx_artifacts_type ON artifacts(type)` exists in `createSchema()` at `internal/index/index.go:1385`; `buildWhere` already handles `type = ?` filter correctly. `GET /api/p/:project/artifacts?type=test` is index-backed. No code changes needed.
 
 - **2026-05-06** — Rename analyst agents to phase-first convention: `analyst-requirements` → `requirements-analyst`, `analyst-planner` → `planning-analyst`. Updated `lifecycle/config.yaml` (names + git identities), `internal/workflow/workflow_test.go` comments, `CLAUDE.md` agent listing, all three plan docs, and 14 lifecycle artifact body texts. `make build`, `make lint`, `make test-unit` all pass. Plan: `lifecycle/backend-plans/rename-analyst-agents-3-be.md`.
