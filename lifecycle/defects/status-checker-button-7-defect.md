@@ -1,7 +1,7 @@
 ---
 title: "POST /status-check/advance response schema mismatch — outcome always empty"
 type: defect
-status: draft
+status: in-development
 lineage: status-checker-button
 parent: lifecycle/tests/status-checker-button-6-test.md
 labels: [defect]
