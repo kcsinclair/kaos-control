@@ -1,12 +1,12 @@
 ---
 title: 'Test Plan: Frontmatter Editor Dropdowns'
 type: plan-test
-status: done
+status: blocked
 lineage: frontmatter-editor-dropdowns
 parent: requirements/frontmatter-editor-dropdowns-2.md
 assignees:
-  - role: product-owner
-    who: agent
+    - role: product-owner
+      who: agent
 ---
 
 # Test Plan: Frontmatter Editor Dropdowns
