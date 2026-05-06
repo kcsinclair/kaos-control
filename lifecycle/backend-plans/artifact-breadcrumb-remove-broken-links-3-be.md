@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Remove Non-Functional Hyperlinks from Artifact Breadcrumb"
 type: plan-backend
-status: approved
+status: in-development
 lineage: artifact-breadcrumb-remove-broken-links
 parent: lifecycle/requirements/artifact-breadcrumb-remove-broken-links-2.md
 created: "2026-05-06T00:00:00+10:00"
