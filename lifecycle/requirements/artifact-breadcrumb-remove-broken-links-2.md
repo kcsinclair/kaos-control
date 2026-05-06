@@ -1,7 +1,7 @@
 ---
 title: Remove Non-Functional Hyperlinks from Artifact Breadcrumb
 type: requirement
-status: blocked
+status: approved
 lineage: artifact-breadcrumb-remove-broken-links
 created: "2026-05-06"
 priority: medium
@@ -62,6 +62,6 @@ Only the first segment (`artifacts` — the list view) and the final segment (th
 - [ ] Breadcrumb renders correctly for artifacts in every stage directory listed in [[artifact-breadcrumb-remove-broken-links]] config.
 - [ ] No console errors or routing warnings when viewing an artifact's breadcrumb.
 
-## Open Questions
+## Questions
 
 None — the idea is well-defined and the scope is narrow.
