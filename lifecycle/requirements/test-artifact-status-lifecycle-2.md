@@ -1,7 +1,7 @@
 ---
 title: Test Artifact Status Lifecycle
 type: requirement
-status: approved
+status: planning
 lineage: test-artifact-status-lifecycle
 parent: ideas/test-artifact-status-lifecycle.md
 labels:
