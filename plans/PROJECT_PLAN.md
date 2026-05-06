@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-05-06** — Backend plan `test-artifact-management-3-be.md` Milestone 1 verified: `CREATE INDEX idx_artifacts_type ON artifacts(type)` exists in `createSchema()` at `internal/index/index.go:1385`; `buildWhere` already handles `type = ?` filter correctly. `GET /api/p/:project/artifacts?type=test` is index-backed. No code changes needed.
+
 - **2026-05-06** — Rename analyst agents to phase-first convention: `analyst-requirements` → `requirements-analyst`, `analyst-planner` → `planning-analyst`. Updated `lifecycle/config.yaml` (names + git identities), `internal/workflow/workflow_test.go` comments, `CLAUDE.md` agent listing, all three plan docs, and 14 lifecycle artifact body texts. `make build`, `make lint`, `make test-unit` all pass. Plan: `lifecycle/backend-plans/rename-analyst-agents-3-be.md`.
 - **2026-04-29** — Backend plan `editor-live-refresh-on-disk-change-3-be.md` Milestone 3 verified: `GET /api/p/:project/artifacts/*path` in `internal/http/artifacts.go` computes `sha256.Sum256(raw)` and returns `file_sha` in every response; SHA is deterministic for identical content and changes when the file changes. No code changes needed.
 - **2026-04-29** — Backend plan `editor-live-refresh-on-disk-change-3-be.md` Milestone 2 verified: 150 ms debounce in `watcher.go` resets timer on each fsnotify event and fires exactly one `file.changed` per coalesced burst; subsequent writes after a quiet period each produce a new event. No code changes needed.
