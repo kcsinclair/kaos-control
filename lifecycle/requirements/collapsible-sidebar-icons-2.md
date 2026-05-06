@@ -1,7 +1,7 @@
 ---
 title: Collapsible Sidebar with Icon-Only Mode
 type: requirement
-status: draft
+status: done
 lineage: collapsible-sidebar-icons
 created: "2026-04-28T00:00:00+10:00"
 parent: lifecycle/ideas/collapsible-sidebar-icons.md
