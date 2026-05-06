@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTestingStore } from '@/stores/testing'
 import { useArtifactsStore } from '@/stores/artifacts'
@@ -64,6 +64,30 @@ function resetFilters() {
   filterPriority.value = ''
 }
 
+// ── selection ─────────────────────────────────────────────────────────────────
+function onCheckboxClick(e: MouseEvent, path: string) {
+  e.stopPropagation()
+  store.toggleSelection(path)
+}
+
+function onCheckboxKeydown(e: KeyboardEvent, path: string) {
+  if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault()
+    e.stopPropagation()
+    store.toggleSelection(path)
+  }
+}
+
+// ── batch execution ───────────────────────────────────────────────────────────
+function runSelected() {
+  store.startBatch(project)
+}
+
+function runAllApproved() {
+  store.selectAll()
+  store.startBatch(project)
+}
+
 // ── navigation ────────────────────────────────────────────────────────────────
 function openArtifact(artifact: ArtifactRow) {
   router.push(`/p/${project}/artifacts/${artifact.path}`)
@@ -91,6 +115,44 @@ onMounted(async () => {
         <FlaskConical :size="20" class="testing-title-icon" />
         <h2 class="testing-title">Testing</h2>
         <span class="testing-count">{{ filteredTests.length }} test{{ filteredTests.length !== 1 ? 's' : '' }}</span>
+      </div>
+
+      <!-- Batch action toolbar -->
+      <div class="batch-toolbar">
+        <template v-if="store.batchRunning">
+          <div class="batch-progress">
+            <span class="batch-progress-text">
+              Running {{ store.batchProgress.current + 1 }}/{{ store.batchProgress.total }}
+              <template v-if="store.batchProgress.currentTest">
+                : {{ store.batchProgress.currentTest.title || store.batchProgress.currentTest.slug }}
+              </template>
+            </span>
+            <div class="batch-progress-bar">
+              <div
+                class="batch-progress-fill"
+                :style="{ width: `${((store.batchProgress.current) / store.batchProgress.total) * 100}%` }"
+              ></div>
+            </div>
+          </div>
+          <button class="btn-ghost" @click="store.cancelBatch()">Cancel</button>
+        </template>
+        <template v-else>
+          <button
+            v-if="store.selectedTests.length > 0"
+            class="btn-primary"
+            @click="runSelected"
+          >Run Tests ({{ store.selectedTests.length }})</button>
+          <button
+            v-if="store.approvedTests.length > 0"
+            class="btn-run-all"
+            @click="runAllApproved"
+          >Run All Approved</button>
+          <button
+            v-if="store.selectedPaths.size > 0"
+            class="btn-ghost"
+            @click="store.clearSelection()"
+          >Clear selection</button>
+        </template>
       </div>
     </div>
 
@@ -127,13 +189,32 @@ onMounted(async () => {
         v-for="test in filteredTests"
         :key="test.path"
         class="test-card"
-        :class="{ 'test-card--dimmed': test.status !== 'approved' }"
+        :class="{
+          'test-card--dimmed': test.status !== 'approved',
+          'test-card--selected': store.selectedPaths.has(test.path),
+          'test-card--running': store.batchRunning && store.batchQueue[store.batchCurrentIndex] === test.path,
+        }"
         tabindex="0"
         role="button"
         :aria-label="`Open test: ${test.title || test.slug}`"
         @click="openArtifact(test)"
         @keydown.enter="openArtifact(test)"
       >
+        <!-- Checkbox for approved tests -->
+        <div class="card-select-row" v-if="test.status === 'approved'">
+          <input
+            type="checkbox"
+            class="card-checkbox"
+            :checked="store.selectedPaths.has(test.path)"
+            :disabled="store.batchRunning"
+            :aria-label="`Select ${test.title || test.slug}`"
+            @click="onCheckboxClick($event, test.path)"
+            @keydown="onCheckboxKeydown($event, test.path)"
+          />
+          <span v-if="store.batchRunning && store.batchQueue[store.batchCurrentIndex] === test.path"
+            class="running-indicator">Running…</span>
+        </div>
+
         <!-- Status badge -->
         <div class="card-header">
           <span class="status-badge" :class="`status-badge--${test.status}`">{{ test.status }}</span>
@@ -205,6 +286,40 @@ onMounted(async () => {
   color: var(--color-text-muted);
 }
 
+/* Batch toolbar */
+.batch-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.batch-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.batch-progress-text {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.batch-progress-bar {
+  width: 120px;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.batch-progress-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
 /* Filter bar */
 .filter-bar {
   display: flex;
@@ -234,6 +349,28 @@ onMounted(async () => {
   cursor: pointer;
 }
 .btn-ghost:hover { background: var(--color-surface); color: var(--color-text); }
+.btn-primary {
+  padding: var(--space-1) var(--space-4);
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-primary:hover { opacity: 0.88; }
+.btn-run-all {
+  padding: var(--space-1) var(--space-3);
+  background: #059669;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-run-all:hover { opacity: 0.88; }
 
 .state-msg {
   padding: var(--space-8) var(--space-6);
@@ -274,6 +411,34 @@ onMounted(async () => {
 }
 .test-card--dimmed {
   opacity: 0.6;
+}
+.test-card--selected {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-bg));
+}
+.test-card--running {
+  border-color: #059669;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+}
+
+/* Selection checkbox row */
+.card-select-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.card-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.card-checkbox:disabled { cursor: not-allowed; }
+.running-indicator {
+  font-size: 11px;
+  font-weight: 600;
+  color: #059669;
 }
 
 /* Card header: status + priority */
