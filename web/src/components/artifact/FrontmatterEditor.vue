@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { ArtifactFrontmatter, ArtifactAssignee } from '@/types/api'
 import { useProjectConfigStore } from '@/stores/projectConfig'
+import { useReleasesStore } from '@/stores/releases'
 import AssigneeEditor from './AssigneeEditor.vue'
+import ReleaseFormModal from '@/components/releases/ReleaseFormModal.vue'
 
 const props = defineProps<{ modelValue: ArtifactFrontmatter; project: string }>()
 const emit = defineEmits<{ 'update:modelValue': [v: ArtifactFrontmatter] }>()
@@ -21,10 +23,32 @@ const STATUS_VOCAB = [
 ] as const
 
 const projectConfigStore = useProjectConfigStore()
+const releasesStore = useReleasesStore()
+
+const showCreateReleaseModal = ref(false)
 
 onMounted(() => {
   projectConfigStore.fetchRoles(props.project)
+  if (releasesStore.releases.length === 0) {
+    releasesStore.fetch(props.project)
+  }
 })
+
+function onReleaseSelectChange(event: Event) {
+  const val = (event.target as HTMLSelectElement).value
+  if (val === '__create__') {
+    showCreateReleaseModal.value = true
+    // Reset select to current value
+    ;(event.target as HTMLSelectElement).value = props.modelValue.release ?? ''
+  } else {
+    update('release', val || undefined)
+  }
+}
+
+function onReleaseCreated(release: import('@/types/release').Release) {
+  showCreateReleaseModal.value = false
+  update('release', release.name)
+}
 
 function update<K extends keyof ArtifactFrontmatter>(field: K, value: ArtifactFrontmatter[K]) {
   emit('update:modelValue', { ...props.modelValue, [field]: value })
@@ -127,15 +151,29 @@ const assigneeError = computed(() => {
         />
       </label>
 
-      <label class="fm-field">
+      <div class="fm-field">
         <span class="fm-label">Release</span>
-        <input
-          class="fm-input"
-          type="text"
+        <select
+          class="fm-input fm-select"
           :value="modelValue.release ?? ''"
-          @input="update('release', ($event.target as HTMLInputElement).value || undefined)"
-        />
-      </label>
+          @change="onReleaseSelectChange"
+        >
+          <option value="">Unassigned</option>
+          <option
+            v-for="r in releasesStore.releases"
+            :key="r.id"
+            :value="r.name"
+          >{{ r.name }}</option>
+          <option value="__create__">+ Create Release</option>
+        </select>
+      </div>
+
+      <ReleaseFormModal
+        v-if="showCreateReleaseModal"
+        :project="props.project"
+        @saved="onReleaseCreated"
+        @close="showCreateReleaseModal = false"
+      />
 
       <label class="fm-field">
         <span class="fm-label">Sprint</span>
