@@ -19,3 +19,9 @@ registerWidget(
   defineAsyncComponent(() => import('./widgets/StatusDistributionWidget.vue')),
   { slot: 'chart', order: 0 },
 )
+
+registerWidget(
+  'velocity-chart',
+  defineAsyncComponent(() => import('./widgets/VelocityChartWidget.vue')),
+  { slot: 'chart', order: 1 },
+)
