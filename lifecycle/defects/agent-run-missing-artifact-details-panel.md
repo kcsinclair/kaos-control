@@ -1,7 +1,7 @@
 ---
 title: Agent Run Not Visible at Bottom of Artifact Details Panel
 type: defect
-status: in-development
+status: done
 lineage: agent-run-missing-artifact-details-panel
 created: "2026-04-29T15:31:57+10:00"
 priority: normal
