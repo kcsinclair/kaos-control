@@ -1,7 +1,7 @@
 ---
 title: Agent and Task Scheduler
 type: idea
-status: in-development
+status: done
 lineage: agent-task-scheduler
 created: "2026-04-28T08:08:14+10:00"
 priority: normal
