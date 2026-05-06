@@ -10,11 +10,13 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kaos-control/kaos-control/internal/auth"
+	"github.com/kaos-control/kaos-control/internal/config"
 	"github.com/kaos-control/kaos-control/internal/project"
 )
 
@@ -27,23 +29,32 @@ type Server struct {
 	router   chi.Router
 	httpSrv  *http.Server
 	projects map[string]*project.Project
+
+	// App-level config mutation (Ollama instance CRUD).
+	appCfgMu   sync.RWMutex
+	appCfg     *config.App
+	appCfgPath string
 }
 
 // ServerConfig holds what the HTTP layer needs.
 type ServerConfig struct {
-	Listen   string
-	TLSCert  string
-	TLSKey   string
-	TLSOn    bool
-	Frontend fs.FS
-	Auth     *auth.Store // nil when auth is not configured
+	Listen     string
+	TLSCert    string
+	TLSKey     string
+	TLSOn      bool
+	Frontend   fs.FS
+	Auth       *auth.Store  // nil when auth is not configured
+	AppCfg     *config.App  // may be nil; required for Ollama instance management
+	AppCfgPath string       // path to app config.yaml; required for Ollama instance management
 }
 
 // New constructs and wires the server. projects maps project name → project.Project.
 func New(cfg ServerConfig, projects map[string]*project.Project) *Server {
 	s := &Server{
-		cfg:      cfg,
-		projects: projects,
+		cfg:        cfg,
+		projects:   projects,
+		appCfg:     cfg.AppCfg,
+		appCfgPath: cfg.AppCfgPath,
 	}
 	s.router = s.buildRouter()
 	s.httpSrv = &http.Server{
@@ -78,6 +89,16 @@ func (s *Server) buildRouter() chi.Router {
 
 		// Project registry
 		r.Get("/projects", s.handleListProjects)
+
+		// Ollama instance management (app-level, not project-scoped)
+		r.Route("/ollama/instances", func(r chi.Router) {
+			r.Get("/", s.handleListOllamaInstances)
+			r.Post("/", s.handleCreateOllamaInstance)
+			r.Put("/{name}", s.handleUpdateOllamaInstance)
+			r.Delete("/{name}", s.handleDeleteOllamaInstance)
+			r.Get("/{name}/health", s.handleOllamaHealth)
+			r.Get("/{name}/models", s.handleOllamaModels)
+		})
 
 		// Per-project routes
 		r.Route("/p/{project}", func(r chi.Router) {

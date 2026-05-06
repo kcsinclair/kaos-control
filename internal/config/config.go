@@ -135,6 +135,26 @@ func validateApp(cfg *App) error {
 	return nil
 }
 
+// SaveApp writes the app config atomically (temp file + rename) to path.
+func SaveApp(path string, cfg App) error {
+	data, err := yaml.Marshal(&cfg)
+	if err != nil {
+		return fmt.Errorf("marshalling app config: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("creating config dir: %w", err)
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		return fmt.Errorf("writing tmp config: %w", err)
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("renaming tmp config: %w", err)
+	}
+	return nil
+}
+
 // ProjectEntry is one registration record from projects_dir/*.yaml.
 type ProjectEntry struct {
 	Name        string `yaml:"name"`
@@ -225,6 +245,9 @@ type AgentConfig struct {
 	// Status lifecycle: set target artifact status at run start/end.
 	ActiveStatus  string `yaml:"active_status,omitempty"`   // status to set when run starts (empty = no change)
 	DoneOnSuccess bool   `yaml:"done_on_success,omitempty"` // if true, set status=done when run completes successfully
+	// Ollama-specific fields (only used when Driver == "ollama").
+	OllamaInstanceName string `yaml:"ollama_instance,omitempty"` // name of OllamaInstance in app config
+	OllamaEndpoint     string `yaml:"ollama_endpoint,omitempty"` // "chat" (default) or "generate"
 }
 
 // GitIdentity is the git author identity for an agent or user commit.

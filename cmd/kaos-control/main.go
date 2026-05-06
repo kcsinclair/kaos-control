@@ -87,12 +87,14 @@ func run() error {
 	}
 
 	srv := khttp.New(khttp.ServerConfig{
-		Listen:   appCfg.Server.Listen,
-		TLSOn:    appCfg.Server.TLS.Enabled,
-		TLSCert:  appCfg.Server.TLS.CertFile,
-		TLSKey:   appCfg.Server.TLS.KeyFile,
-		Frontend: web.FS,
-		Auth:     authStore,
+		Listen:     appCfg.Server.Listen,
+		TLSOn:      appCfg.Server.TLS.Enabled,
+		TLSCert:    appCfg.Server.TLS.CertFile,
+		TLSKey:     appCfg.Server.TLS.KeyFile,
+		Frontend:   web.FS,
+		Auth:       authStore,
+		AppCfg:     appCfg,
+		AppCfgPath: cfgPath,
 	}, projects)
 
 	return srv.ListenAndServe(ctx)
