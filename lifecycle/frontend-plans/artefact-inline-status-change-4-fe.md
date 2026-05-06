@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Inline Status Transition Dropdown"
 type: plan-frontend
-status: in-development
+status: done
 lineage: artefact-inline-status-change
 parent: lifecycle/requirements/artefact-inline-status-change-2.md
 ---
