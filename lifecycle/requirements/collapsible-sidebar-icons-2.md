@@ -1,9 +1,9 @@
 ---
 title: Collapsible Sidebar with Icon-Only Mode
 type: requirement
-status: blocked
+status: draft
 lineage: collapsible-sidebar-icons
-created: "2026-04-28"
+created: "2026-04-28T00:00:00+10:00"
 parent: lifecycle/ideas/collapsible-sidebar-icons.md
 labels:
     - frontend
@@ -80,7 +80,7 @@ The left navigation sidebar in the project workspace is fixed at 220 px and alwa
 - [ ] Collapsed icon-only links have `aria-label` attributes matching their visible labels.
 - [ ] No new runtime warnings or errors in the browser console.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the collapsed sidebar support a hover-to-temporarily-expand interaction (i.e., hovering the collapsed strip reveals the full sidebar as an overlay without toggling the persisted state)?
 
