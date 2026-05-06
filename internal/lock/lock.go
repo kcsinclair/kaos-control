@@ -75,8 +75,14 @@ func (m *Manager) Get(lineage string) (*index.LockRow, error) {
 	return m.idx.GetLock(lineage)
 }
 
+// staleTestThreshold is how long a test artifact may stay in-qa before a
+// test.stale WebSocket event is broadcast.
+const staleTestThreshold = 60 * time.Minute
+
 // StartReaper launches a goroutine that forcibly releases stale locks every 60 s.
 // Locks are considered stale when last_heartbeat is older than 5 minutes.
+// The same tick also checks for test artifacts that have been in in-qa for more
+// than 60 minutes and broadcasts a test.stale WebSocket event for each.
 func (m *Manager) StartReaper(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
@@ -87,9 +93,39 @@ func (m *Manager) StartReaper(ctx context.Context) {
 				return
 			case <-ticker.C:
 				m.reap()
+				m.checkStaleTestArtifacts()
 			}
 		}
 	}()
+}
+
+// checkStaleTestArtifacts queries for test artifacts in in-qa status and
+// broadcasts a test.stale event for any that have been there for over 60
+// minutes. Called once per reaper tick (every 60 s).
+func (m *Manager) checkStaleTestArtifacts() {
+	rows, _, err := m.idx.List(index.Filter{Type: "test", Status: "in-qa", Unlimited: true})
+	if err != nil {
+		slog.Warn("lock reaper: querying stale test artifacts", "err", err)
+		return
+	}
+	now := time.Now()
+	for _, row := range rows {
+		age := now.Sub(row.Mtime)
+		if age < staleTestThreshold {
+			continue
+		}
+		slog.Warn("test artifact has been in in-qa for over 60 minutes",
+			"path", row.Path, "age", age.Round(time.Second).String())
+		m.hub.Broadcast(hub.Event{
+			Type: "test.stale",
+			Payload: map[string]any{
+				"path":    row.Path,
+				"lineage": row.Lineage,
+				"age_s":   int64(age.Seconds()),
+				"age":     age.Round(time.Second).String(),
+			},
+		})
+	}
 }
 
 func (m *Manager) reap() {
