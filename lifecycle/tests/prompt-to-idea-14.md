@@ -1,7 +1,7 @@
 ---
 title: Single-Submit Idea & Defect Capture – Integration Tests
 type: test
-status: approved
+status: done
 lineage: prompt-to-idea
 parent: lifecycle/test-plans/prompt-to-idea-13-test.md
 ---
