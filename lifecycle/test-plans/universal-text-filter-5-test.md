@@ -1,7 +1,7 @@
 ---
-title: "Universal Text Filter — Test Plan"
+title: Universal Text Filter — Test Plan
 type: plan-test
-status: draft
+status: approved
 lineage: universal-text-filter
 parent: lifecycle/requirements/universal-text-filter-2.md
 ---
