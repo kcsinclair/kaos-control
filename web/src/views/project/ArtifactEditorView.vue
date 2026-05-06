@@ -7,6 +7,7 @@ import { useLock } from '@/composables/useLock'
 import { useExternalChange } from '@/composables/useExternalChange'
 import { useWebSocket } from '@/composables/useWebSocket'
 import * as artifactsApi from '@/api/artifacts'
+import * as agentsApi from '@/api/agents'
 import LineageBreadcrumb from '@/components/artifact/LineageBreadcrumb.vue'
 import FrontmatterPanel from '@/components/artifact/FrontmatterPanel.vue'
 import FrontmatterEditor from '@/components/artifact/FrontmatterEditor.vue'
@@ -50,6 +51,33 @@ async function load() {
 
 // ── toolbar dialogs ──────────────────────────────────────────────────────────
 const showRunAgent = ref(false)
+
+// ── run test (single execution) ──────────────────────────────────────────────
+const runTestRunning = ref(false)
+const isTestArtifact = computed(
+  () => artifact.value?.type === 'test' && artifact.value?.status === 'approved',
+)
+
+async function runTest() {
+  if (!artifact.value || runTestRunning.value) return
+  runTestRunning.value = true
+  try {
+    await agentsApi.startRun(project.value, 'qa', artifactPath.value)
+  } catch (e: unknown) {
+    ui.error(e instanceof Error ? e.message : 'Failed to start test run')
+    runTestRunning.value = false
+  }
+}
+
+// Reset running state when the agent finishes/fails for this artifact
+useWebSocket(project.value, 'agent.finished', (e) => {
+  const tp = e.payload?.target_path as string | undefined
+  if (tp === artifactPath.value) runTestRunning.value = false
+})
+useWebSocket(project.value, 'agent.failed', (e) => {
+  const tp = e.payload?.target_path as string | undefined
+  if (tp === artifactPath.value) runTestRunning.value = false
+})
 
 // ── edit mode state ─────────────────────────────────────────────────────────
 const editing = ref(false)
@@ -215,6 +243,12 @@ onMounted(() => {
 
       <div class="topbar-actions" v-if="artifact && !loading">
         <template v-if="!editing">
+          <button
+            v-if="isTestArtifact"
+            class="btn-run-test"
+            :disabled="runTestRunning"
+            @click="runTest"
+          >{{ runTestRunning ? 'Running…' : 'Run Test' }}</button>
           <button class="btn-ghost" @click="showRunAgent = true">Run Agent</button>
           <button
             class="btn-primary"
@@ -339,6 +373,18 @@ onMounted(() => {
 }
 .btn-primary:hover:not(:disabled) { opacity: 0.88; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-run-test {
+  padding: var(--space-1) var(--space-4);
+  background: #059669;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-run-test:hover:not(:disabled) { opacity: 0.88; }
+.btn-run-test:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-ghost {
   padding: var(--space-1) var(--space-3);
   background: none;
