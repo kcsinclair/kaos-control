@@ -29,7 +29,7 @@ type Transitioner interface {
 	CanTransition(from, to string, userRoles []string) bool
 }
 
-const schemaVersion = 3
+const schemaVersion = 4
 
 // Index wraps the SQLite database for one project.
 type Index struct {
@@ -1253,6 +1253,7 @@ func (idx *Index) dropAndRecreate() error {
 		`DROP TABLE IF EXISTS labels_index`,
 		`DROP TABLE IF EXISTS lineage_locks`,
 		`DROP TABLE IF EXISTS parse_errors`,
+		`DROP TABLE IF EXISTS releases`,
 	}
 	for _, s := range stmts {
 		if _, err := idx.db.Exec(s); err != nil {
@@ -1408,6 +1409,20 @@ CREATE TABLE lineage_locks (
     acquired_at     INTEGER NOT NULL,
     last_heartbeat  INTEGER NOT NULL
 );
+
+CREATE TABLE releases (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id  TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'planned',
+    start_date  TEXT,
+    end_date    TEXT,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    UNIQUE(project_id, name)
+);
+
+CREATE INDEX idx_artifacts_release ON artifacts(json_extract(frontmatter_json, '$.release'));
 `
 	_, err := idx.db.Exec(ddl)
 	return err
