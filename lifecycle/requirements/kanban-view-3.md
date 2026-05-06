@@ -1,15 +1,18 @@
 ---
 title: Kanban View (revised)
 type: requirement
-status: done
+status: draft
 lineage: kanban-view
-created: "2026-04-27"
+created: "2026-04-27T00:00:00+10:00"
 priority: normal
 parent: requirements/kanban-view-2.md
 labels:
     - artefacts
     - workflow
     - frontend
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Kanban View (revised)
@@ -143,6 +146,6 @@ A secondary aspect is renaming the UI label "Artifacts" to "Artefacts" and restr
 - [ ] The board renders 500 cards without perceptible jank.
 - [ ] No new runtime dependencies are introduced.
 
-## Open Questions
+## No Questions
 
 None — all questions from [[kanban-view-2]] have been resolved.
