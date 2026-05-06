@@ -214,6 +214,10 @@ useWebSocket(project.value, 'artifact.indexed', async (e: WsEvent) => {
       ui.info('Status changed to blocked — open questions detected.')
     } else if (prevStatus === 'blocked') {
       ui.info('Blocked status cleared — open questions resolved.')
+    } else if (newStatus === 'in-qa') {
+      ui.info('QA run started — artifact is now in-qa')
+    } else if (prevStatus === 'in-qa' && newStatus === 'approved') {
+      ui.success('QA run completed — artifact returned to approved')
     }
   }
 })
