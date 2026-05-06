@@ -159,7 +159,7 @@ func summariseLog(path, runID string) *RunSummary {
 	// Extract pipeline name from the run.started payload if present.
 	if firstEntry.EventType == EventRunStarted {
 		if m, ok := firstEntry.Payload.(map[string]any); ok {
-			if p, ok := m["pipeline"].(string); ok {
+			if p, ok := m["pipeline_slug"].(string); ok {
 				summary.Pipeline = p
 			}
 		}

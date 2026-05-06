@@ -168,6 +168,7 @@ func executeRun(
 			Pipeline:  pipeline.Slug,
 			Step:      step.Name,
 			StepIndex: i,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
 		})
 
 		stepStart := time.Now()
@@ -257,6 +258,7 @@ func runStep(
 				StepIndex: stepIdx,
 				Text:      scanner.Text(),
 				Stream:    stream,
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
 			})
 		}
 	}
