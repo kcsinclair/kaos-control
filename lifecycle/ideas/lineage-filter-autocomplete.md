@@ -1,7 +1,7 @@
 ---
 title: Lineage Filter with Autocomplete for Artifact List and Board
 type: idea
-status: clarifying
+status: planning
 lineage: lineage-filter-autocomplete
 created: "2026-04-29T10:58:00+10:00"
 priority: high
