@@ -1,7 +1,7 @@
 ---
 title: artifact.indexed WebSocket event not emitted after release rename propagation
 type: defect
-status: approved
+status: done
 lineage: releases-and-roadmaps
 priority: high
 parent: lifecycle/tests/releases-and-roadmaps-6-test.md
