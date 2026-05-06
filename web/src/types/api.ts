@@ -197,6 +197,46 @@ export type WsEventType =
   | 'pipeline.step.output'
   | 'pipeline.step.completed'
   | 'pipeline.run.completed'
+  | 'scheduler.job.started'
+  | 'scheduler.job.completed'
+
+export interface ScheduleSpec {
+  type: 'cron' | 'interval' | 'once'
+  expression: string
+}
+
+export interface Precondition {
+  type: 'after_job' | 'file_exists' | 'http_ok' | 'shell'
+  value: string
+}
+
+export type RunStatus = 'running' | 'success' | 'failure' | 'timeout' | 'skipped'
+
+export interface SchedulerJob {
+  name: string
+  target_type: 'agent' | 'shell'
+  target: string
+  args?: Record<string, string>
+  schedule: ScheduleSpec
+  preconditions?: Precondition[]
+  enabled: boolean
+  priority: number
+  timeout_sec: number
+  next_run_at?: string
+  last_run_status?: RunStatus
+  last_run_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SchedulerRun {
+  id: number
+  job_name: string
+  start_time: string
+  end_time?: string
+  status: RunStatus
+  log_path?: string
+}
 
 export interface WsEvent {
   type: WsEventType
