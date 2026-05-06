@@ -80,7 +80,6 @@ function displayPath(path: string): string {
   return path.split('/').pop() ?? path
 }
 
-// Debounced WS refresh — handled in Milestone 5; stub here for structure
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 function scheduleRefresh() {
@@ -94,8 +93,22 @@ onUnmounted(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
 })
 
-useWebSocket(props.project, 'artifact.indexed', () => {
-  scheduleRefresh()
+useWebSocket(props.project, 'artifact.indexed', (event) => {
+  // Refresh when the changed artifact is in our results (as a stale item
+  // or as a child that drives staleness), so the panel stays current.
+  const changedPath = event.payload?.path as string | undefined
+  if (!changedPath || !results.value) {
+    // If we have no results yet (still loading), ignore.
+    return
+  }
+  const relevant = results.value.stale.some(
+    (a) =>
+      a.path === changedPath ||
+      a.children.some((c) => c.path === changedPath),
+  )
+  if (relevant) {
+    scheduleRefresh()
+  }
 })
 
 watch(() => [props.project, props.lineage] as const, fetchResults, { immediate: true })
