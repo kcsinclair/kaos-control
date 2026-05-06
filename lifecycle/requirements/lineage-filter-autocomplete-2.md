@@ -1,7 +1,7 @@
 ---
 title: Lineage Filter with Autocomplete
 type: requirement
-status: blocked
+status: approved
 lineage: lineage-filter-autocomplete
 created: "2026-05-06T10:00:00+10:00"
 priority: high
@@ -73,7 +73,12 @@ Users working with many artifacts across multiple lineages have no efficient way
 - [ ] ARIA attributes are present (`role="combobox"`, `role="listbox"`, `role="option"`).
 - [ ] No perceptible lag on autocomplete with ≤ 500 lineage slugs.
 
-## Open Questions
+## Questions
 
 - Should the filter support multiple lineage selections (OR within lineage, AND with other filters), or is single-lineage sufficient for the initial implementation?
+
+> Single lineage is sufficient.
+
 - Should the autocomplete dropdown show a count of artifacts per lineage slug to help users gauge result size?
+
+> Yes please.
