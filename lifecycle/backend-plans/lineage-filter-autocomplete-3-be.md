@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Lineage Filter with Autocomplete"
 type: plan-backend
-status: approved
+status: abandoned
 lineage: lineage-filter-autocomplete
 parent: lifecycle/requirements/lineage-filter-autocomplete-2.md
 ---
