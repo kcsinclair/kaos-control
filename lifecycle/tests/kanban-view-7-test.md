@@ -1,7 +1,7 @@
 ---
 title: Kanban View — Integration Tests
 type: test
-status: approved
+status: done
 lineage: kanban-view
 parent: test-plans/kanban-view-6-test.md
 ---
