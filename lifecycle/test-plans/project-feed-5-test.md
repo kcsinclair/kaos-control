@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Project Feed'
 type: plan-test
-status: draft
+status: in-development
 lineage: project-feed
 created: "2026-04-29T00:00:00+10:00"
 parent: lifecycle/requirements/project-feed-2.md
