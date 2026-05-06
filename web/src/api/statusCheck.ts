@@ -23,9 +23,10 @@ export interface StatusCheckResponse {
 
 export interface AdvanceResult {
   path: string
+  outcome: string
   ok: boolean
   advanced_to?: string
-  error?: string
+  reason?: string
 }
 
 export interface AdvanceResponse {
