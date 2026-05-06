@@ -3,11 +3,30 @@ import { ref, computed } from 'vue'
 import * as agentsApi from '@/api/agents'
 import type { AgentRunRow, AgentSummary } from '@/types/api'
 
-// formatEvent renders a parsed Claude Code stream-json event as a single line
-// of text suitable for the live progress panel. Falls back to raw JSON on any
-// unknown shape so we never silently drop information.
+// formatEvent renders a parsed stream event as a single line of text suitable
+// for the live progress panel.
+//
+// Handles two event shapes:
+//   - Claude Code stream-json: type in {system, assistant, user, result}
+//   - Ollama driver:           type in {started, output, completed, error}
+//
+// Falls back to raw JSON on any unknown shape so we never silently drop info.
 function formatEvent(ev: Record<string, unknown>): string {
   const type = ev.type as string | undefined
+
+  // ── Ollama driver events ────────────────────────────────────────────────
+  if (type === 'started') return '▸ started'
+  if (type === 'output') {
+    const text = typeof ev.text === 'string' ? ev.text : ''
+    return text.trimEnd()
+  }
+  if (type === 'completed') return '▸ completed'
+  if (type === 'error') {
+    const msg = typeof ev.message === 'string' ? ev.message : JSON.stringify(ev)
+    return `✗ ${msg}`
+  }
+
+  // ── Claude Code stream-json events ─────────────────────────────────────
   if (type === 'system' && ev.subtype === 'init') {
     return '▸ session started'
   }
