@@ -1,7 +1,7 @@
 ---
 title: Project Feed
 type: idea
-status: clarifying
+status: planning
 lineage: project-feed
 priority: high
 labels:
