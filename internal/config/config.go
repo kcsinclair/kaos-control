@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -9,13 +10,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// OllamaInstance is one registered Ollama server shared across all projects.
+type OllamaInstance struct {
+	Name    string `yaml:"name"`
+	BaseURL string `yaml:"base_url"`
+	APIKey  string `yaml:"api_key,omitempty"`
+}
+
 // App is the top-level application configuration (install-dir/config.yaml).
 type App struct {
-	Server      ServerConfig  `yaml:"server"`
-	Auth        AuthConfig    `yaml:"auth"`
-	ProjectsDir string        `yaml:"projects_dir"`
-	Limits      LimitsConfig  `yaml:"limits"`
-	DataDir     string        `yaml:"data_dir"` // where app DBs live; defaults to projects_dir/../data
+	Server          ServerConfig     `yaml:"server"`
+	Auth            AuthConfig       `yaml:"auth"`
+	ProjectsDir     string           `yaml:"projects_dir"`
+	Limits          LimitsConfig     `yaml:"limits"`
+	DataDir         string           `yaml:"data_dir"` // where app DBs live; defaults to projects_dir/../data
+	OllamaInstances []OllamaInstance `yaml:"ollama_instances,omitempty"`
 }
 
 type ServerConfig struct {
@@ -104,6 +113,23 @@ func validateApp(cfg *App) error {
 	if cfg.Server.TLS.Enabled {
 		if cfg.Server.TLS.CertFile == "" || cfg.Server.TLS.KeyFile == "" {
 			return fmt.Errorf("server.tls.cert_file and server.tls.key_file are required when TLS is enabled")
+		}
+	}
+	seen := make(map[string]bool, len(cfg.OllamaInstances))
+	for i, inst := range cfg.OllamaInstances {
+		if inst.Name == "" {
+			return fmt.Errorf("ollama_instances[%d]: name must not be empty", i)
+		}
+		if seen[inst.Name] {
+			return fmt.Errorf("ollama_instances: duplicate name %q", inst.Name)
+		}
+		seen[inst.Name] = true
+		if inst.BaseURL == "" {
+			return fmt.Errorf("ollama_instances[%d] %q: base_url must not be empty", i, inst.Name)
+		}
+		u, err := url.ParseRequestURI(inst.BaseURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			return fmt.Errorf("ollama_instances[%d] %q: base_url %q is not a valid http/https URL", i, inst.Name, inst.BaseURL)
 		}
 	}
 	return nil
