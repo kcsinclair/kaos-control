@@ -1,7 +1,7 @@
 ---
 title: Inline Status Transition Dropdown on Artefact View
 type: requirement
-status: draft
+status: planning
 lineage: artefact-inline-status-change
 created: "2026-05-06"
 priority: normal
