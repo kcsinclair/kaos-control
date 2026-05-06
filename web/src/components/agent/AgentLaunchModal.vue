@@ -25,8 +25,8 @@ const running = ref(false)
 
 // Maps agent name to the artifact type it expects as input.
 const agentInputTypeMap: Record<string, string> = {
-  'analyst-requirements': 'idea',
-  'analyst-planner': 'requirement',
+  'requirements-analyst': 'idea',
+  'planning-analyst': 'requirement',
   'backend-developer': 'plan-backend',
   'frontend-developer': 'plan-frontend',
   'test-developer': 'plan-test',
