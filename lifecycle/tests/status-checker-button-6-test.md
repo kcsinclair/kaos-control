@@ -1,7 +1,7 @@
 ---
 title: "Test Suite — Lineage Status Checker"
 type: test
-status: done
+status: approved
 lineage: status-checker-button
 parent: lifecycle/test-plans/status-checker-button-5-test.md
 ---
