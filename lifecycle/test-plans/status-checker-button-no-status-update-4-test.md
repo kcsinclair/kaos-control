@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Status Check Advance Flow"
 type: plan-test
-status: approved
+status: in-development
 lineage: status-checker-button-no-status-update
 parent: lifecycle/defects/status-checker-button-no-status-update.md
 ---
