@@ -1,7 +1,7 @@
 ---
 title: Built-in YAML Editor for Config and DevOps Pipelines
 type: idea
-status: draft
+status: approved
 lineage: built-in-yaml-editor
 created: "2026-05-06T11:02:09+10:00"
 priority: normal
