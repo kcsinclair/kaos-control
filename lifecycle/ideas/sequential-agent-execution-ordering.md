@@ -19,3 +19,5 @@ On a given kaos-control instance, allowing multiple agent types to run concurren
 Within a lineage, agents should be sequenced in a fixed order: backend-developer first, then frontend-developer, then test-developer. This mirrors the natural dependency chain — frontend plans often reference backend contracts, and test plans cover both — so enforcing this order ensures each agent operates on a stable, complete prior output.
 
 This could be implemented as a per-instance queue in the agent runner, where submitted agent jobs are serialised and dispatched in the prescribed order. The existing lineage lock manager may provide a foundation, but a higher-level scheduling layer would be needed to enforce cross-agent ordering beyond simple per-lineage mutual exclusion.
+
+The Agent Runner could have an option to "Start Development" which then works through the instances in order.
