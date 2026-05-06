@@ -23,7 +23,12 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: (to) => `/p/${to.params.project}/graph`,
+          redirect: (to) => `/p/${to.params.project}/dashboard`,
+        },
+        {
+          path: 'dashboard',
+          name: 'dashboard',
+          component: () => import('@/views/project/DashboardView.vue'),
         },
         {
           path: 'artifacts',

@@ -10,6 +10,7 @@ import type { WsEvent } from '@/types/api'
 import {
   ChevronLeft,
   ChevronRight,
+  LayoutDashboard,
   List,
   Columns3,
   Network,
@@ -69,6 +70,7 @@ const navItems = computed((): NavItem[] => {
   const roles = authStore.rolesForProject(p)
   const hasDevOpsAccess = roles.includes('product-owner') || roles.includes('devops')
   const items: NavItem[] = [
+    { label: 'Dashboard',    to: `/p/${p}/dashboard`,       icon: LayoutDashboard },
     { label: 'List',         to: `/p/${p}/artifacts`,       icon: List },
     { label: 'Board',        to: `/p/${p}/artifacts/board`, icon: Columns3 },
     { label: 'Graph',        to: `/p/${p}/graph`,           icon: Network },
