@@ -45,6 +45,7 @@ function closeModal() {
 // away and returning always starts with terminal nodes hidden.
 onMounted(() => {
   store.hideTerminal = true
+  store.hideTests = true
 })
 </script>
 
@@ -61,10 +62,12 @@ onMounted(() => {
       :total-count="store.rawNodes.length"
       :show-label-nodes="store.showLabelNodes"
       :hide-terminal="store.hideTerminal"
+      :hide-tests="store.hideTests"
       @toggle="store.toggleFilterValue"
       @reset="store.setFilter({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })"
       @toggle-label-nodes="store.toggleShowLabelNodes"
       @toggle-hide-terminal="store.toggleHideTerminal"
+      @toggle-hide-tests="store.toggleHideTests"
     />
 
     <div class="graph-main">

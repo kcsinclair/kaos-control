@@ -12,6 +12,7 @@ const props = defineProps<{
   totalCount: number
   showLabelNodes: boolean
   hideTerminal: boolean
+  hideTests: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +20,7 @@ const emit = defineEmits<{
   reset: []
   toggleLabelNodes: []
   toggleHideTerminal: []
+  toggleHideTests: []
 }>()
 
 const isActive = (key: keyof GraphFilter, value: string) =>
@@ -60,6 +62,15 @@ const hasFilters = () =>
           @change="emit('toggleHideTerminal')"
         />
         <span class="toggle-text">Show completed</span>
+      </label>
+      <label class="toggle-label">
+        <input
+          type="checkbox"
+          class="toggle-input"
+          :checked="!hideTests"
+          @change="emit('toggleHideTests')"
+        />
+        <span class="toggle-text">Show tests</span>
       </label>
     </div>
 
