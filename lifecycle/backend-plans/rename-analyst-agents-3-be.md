@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Rename Analyst Agents to Phase-First Convention"
 type: plan-backend
-status: draft
+status: approved
 lineage: rename-analyst-agents
 parent: lifecycle/requirements/rename-analyst-agents-2.md
 ---
