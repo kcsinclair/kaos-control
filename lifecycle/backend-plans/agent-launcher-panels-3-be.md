@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Agent Launcher Panels'
 type: plan-backend
-status: blocked
+status: done
 lineage: agent-launcher-panels
 parent: lifecycle/requirements/agent-launcher-panels-2.md
 assignees:
@@ -61,7 +61,7 @@ The requirement (FR-6) states the frontend must be able to retrieve artifacts fi
 - [ ] If filtering already works correctly, no code changes are committed for this milestone.
 - [ ] If filtering is broken or missing for either parameter, fix it and commit.
 
-## Open Questions
+## Resolved Questions
 
 1. The requirement's Open Question 2 asks whether the artifact list should also filter by `type`. The backend already supports `?type=` filtering, so the frontend can opt in without backend changes. No backend decision needed — this is a [[agent-launcher-panels]] frontend plan concern.
 
