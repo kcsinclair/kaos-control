@@ -1,7 +1,7 @@
 ---
 title: Dashboard Home Screen
 type: idea
-status: approved
+status: clarifying
 lineage: dashboard-home-screen
 created: "2026-05-06T14:48:54+10:00"
 priority: normal
