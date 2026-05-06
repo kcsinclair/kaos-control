@@ -7,6 +7,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [agent: AgentSummary]
+  edit: [agent: AgentSummary]
 }>()
 
 function isInline(agent: AgentSummary): boolean {
@@ -42,7 +43,15 @@ function handleClick(agent: AgentSummary) {
       :aria-disabled="isInline(agent) ? 'true' : undefined"
       @click="handleClick(agent)"
     >
-      <span class="panel-name">{{ agent.name }}</span>
+      <div class="panel-header">
+        <span class="panel-name">{{ agent.name }}</span>
+        <button
+          v-if="!isInline(agent)"
+          class="panel-edit-btn"
+          title="Edit agent"
+          @click.stop="emit('edit', agent)"
+        >✎</button>
+      </div>
       <span class="panel-roles">{{ agent.roles.join(', ') }}</span>
       <span v-if="!isInline(agent)" class="panel-driver" :data-driver="agent.driver">{{ driverLabel(agent) }}</span>
       <span v-if="agent.model" class="panel-model">{{ agent.model }}</span>
@@ -91,9 +100,34 @@ function handleClick(agent: AgentSummary) {
   cursor: not-allowed;
 }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
 .panel-name {
   font-size: var(--text-sm);
   font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+.panel-edit-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.agent-panel:hover .panel-edit-btn {
+  opacity: 1;
+}
+.panel-edit-btn:hover {
+  background: var(--color-surface);
   color: var(--color-text);
 }
 
