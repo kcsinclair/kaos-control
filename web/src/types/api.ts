@@ -72,6 +72,23 @@ export interface LockRow {
   last_heartbeat: string
 }
 
+export interface OllamaInstance {
+  name: string
+  base_url: string
+  api_key?: string
+}
+
+export interface OllamaHealthResponse {
+  ok: boolean
+  latency_ms?: number
+  error?: string
+}
+
+export interface OllamaModel {
+  name: string
+  size: number
+}
+
 export interface AgentSummary {
   name: string
   roles: string[]
@@ -79,6 +96,8 @@ export interface AgentSummary {
   model?: string
   active_status?: string
   allowed_write_paths?: string[]
+  ollama_instance?: string
+  ollama_endpoint?: string
 }
 
 export interface AgentRunRow {
