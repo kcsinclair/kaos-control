@@ -1,7 +1,7 @@
 ---
 title: Status Checker Button Does Not Update Artifact Statuses
 type: defect
-status: planning
+status: done
 lineage: status-checker-button-no-status-update
 created: "2026-05-06T12:35:38+10:00"
 priority: normal
