@@ -1,7 +1,7 @@
 ---
 title: Dashboard Home Screen
 type: requirement
-status: blocked
+status: draft
 lineage: dashboard-home-screen
 created: "2026-05-06T00:00:00+10:00"
 priority: normal
@@ -72,9 +72,20 @@ When users open a project they land on an artifact list or graph view with no su
 - [ ] Charts have accessible labels; colours pass WCAG AA contrast check.
 - [ ] No new charting dependency exceeds 80 KB gzipped.
 
-## Open Questions
+## Resolved Questions
 
 - Should the completion velocity chart default to daily or weekly granularity, and should the user be able to toggle between them?
+
+> Daily, Weekly and Monthly summaries would be great.
+
 - Should charts be interactive (tooltips on hover, click-to-filter) or purely informational in v1?
+
+> Some interactive features would be great.
+
 - Is there a preferred charting library (e.g., Chart.js, Apache ECharts, lightweight D3 wrapper) given the existing bundle and three.js dependency?
+
+> The Apache ECharts look fantastic.
+
 - Should the activity feed on the dashboard be limited to N most recent entries with a "View all" link, or infinite-scroll?
+
+> Limit to N rows and a view all link.
