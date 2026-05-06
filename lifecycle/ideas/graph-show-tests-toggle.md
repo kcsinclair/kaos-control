@@ -1,7 +1,7 @@
 ---
 title: Graph Show Tests Toggle
 type: idea
-status: clarifying
+status: planning
 lineage: graph-show-tests-toggle
 created: "2026-05-06T13:37:33+10:00"
 priority: normal
