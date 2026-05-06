@@ -1,17 +1,20 @@
 ---
 title: Auto-Refresh Editor Content on External Disk Change
 type: requirement
-status: planning
+status: blocked
 lineage: editor-live-refresh-on-disk-change
-parent: lifecycle/ideas/editor-live-refresh-on-disk-change.md
 created: "2026-04-29"
 priority: high
+parent: lifecycle/ideas/editor-live-refresh-on-disk-change.md
 labels:
     - frontend
     - enhancement
     - watcher
     - usability
     - vue
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Auto-Refresh Editor Content on External Disk Change
