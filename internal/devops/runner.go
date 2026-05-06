@@ -256,7 +256,7 @@ func runStep(
 				Pipeline:  pipelineSlug,
 				Step:      step.Name,
 				StepIndex: stepIdx,
-				Text:      scanner.Text(),
+				Text:      StripANSI(scanner.Text()),
 				Stream:    stream,
 				Timestamp: time.Now().UTC().Format(time.RFC3339),
 			})
