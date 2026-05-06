@@ -1,7 +1,7 @@
 ---
 title: "Graph: Show Tests Toggle — Frontend Plan"
 type: plan-frontend
-status: in-development
+status: done
 lineage: graph-show-tests-toggle
 parent: lifecycle/requirements/graph-show-tests-toggle-2.md
 ---
