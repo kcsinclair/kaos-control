@@ -18,6 +18,10 @@ export const useGraphStore = defineStore('graph', () => {
   // explicitly filtered by status, in which case we honour their selection).
   const hideTerminal = ref(true)
 
+  // When true, nodes with type === 'test' are excluded (unless the user has
+  // explicitly filtered by type, in which case we honour their selection).
+  const hideTests = ref(true)
+
   const uniqueTypes = computed(() => [...new Set(rawNodes.value.map((n) => n.type))].sort())
   const uniqueStatuses = computed(() => [...new Set(rawNodes.value.map((n) => n.status))].sort())
   const uniqueLineages = computed(() => [...new Set(rawNodes.value.map((n) => n.lineage))].sort())
@@ -31,8 +35,10 @@ export const useGraphStore = defineStore('graph', () => {
   const filteredNodes = computed(() => {
     const f = filter.value
     const noStatusFilter = !(f.statuses?.length)
+    const noTypeFilter = !(f.types?.length)
     return rawNodes.value.filter((n) => {
       if (hideTerminal.value && noStatusFilter && (TERMINAL_STATUSES as readonly string[]).includes(n.status)) return false
+      if (hideTests.value && noTypeFilter && n.type === 'test') return false
       if (f.types?.length && !f.types.includes(n.type)) return false
       if (f.statuses?.length && !f.statuses.includes(n.status)) return false
       if (f.lineages?.length && !f.lineages.includes(n.lineage)) return false
@@ -115,6 +121,10 @@ export const useGraphStore = defineStore('graph', () => {
     hideTerminal.value = !hideTerminal.value
   }
 
+  function toggleHideTests(): void {
+    hideTests.value = !hideTests.value
+  }
+
   function updateNodePriority(nodeId: string, priority: string | null): void {
     const idx = rawNodes.value.findIndex((n) => n.id === nodeId)
     if (idx === -1) return
@@ -134,6 +144,7 @@ export const useGraphStore = defineStore('graph', () => {
     filter,
     showLabelNodes,
     hideTerminal,
+    hideTests,
     uniqueTypes,
     uniqueStatuses,
     uniqueLineages,
@@ -150,6 +161,7 @@ export const useGraphStore = defineStore('graph', () => {
     toggleFilterValue,
     toggleShowLabelNodes,
     toggleHideTerminal,
+    toggleHideTests,
     updateNodePriority,
   }
 })
