@@ -27,13 +27,17 @@ const triggerRef = ref<HTMLElement | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
 
 // ── watch prop for external WS status changes ─────────────────────────────────
+// ArtifactEditorView re-fetches the artifact on artifact.indexed WS events and
+// updates artifact.value, which flows down as the :status prop here.
+// If the dropdown is open when the prop changes, we close it so the user sees
+// the up-to-date status rather than acting on stale data.
 watch(() => props.status, (newVal) => {
   if (isOpen.value) {
-    // Another user/agent transitioned — close and reset
+    // Another user/agent transitioned while dropdown was open — close and reset
     closeMenu()
   }
   optimisticStatus.value = newVal
-  // Reset hasFetched so the badge stays interactive for the new status
+  // Reset hasFetched so the badge is interactive again for the new status
   hasFetched.value = false
 })
 
