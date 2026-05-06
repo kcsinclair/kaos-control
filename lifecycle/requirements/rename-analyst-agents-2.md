@@ -1,10 +1,10 @@
 ---
 title: Rename Analyst Agents to Phase-First Convention
 type: requirement
-status: blocked
+status: approved
 lineage: rename-analyst-agents
 created: "2026-05-06"
-priority: normal
+priority: high
 parent: lifecycle/ideas/rename-analyst-agents.md
 labels:
     - agent
@@ -105,7 +105,12 @@ The two analyst agents are currently named `analyst-requirements` and `analyst-p
 - [ ] Existing artifacts produced before the rename continue to render and index correctly (no backfill required).
 - [ ] The agent launcher modal correctly lists `requirements-analyst` and `planning-analyst` with the correct input artifact types.
 
-## Open Questions
+## Resolved Questions
 
 1. **Lifecycle artifact updates** — Should references to the old names in existing lifecycle artifacts (plans, requirements, test docs, defects) be updated to the new names, or left as historical record? This requirement assumes they should be updated for consistency, but the idea states "no backfill of historical artifacts is required." Clarification needed on whether lifecycle artifact *body text* (not frontmatter) counts as "historical."
+
+> Yes, please update the frontmatter.
+
 2. **`project-notes.md`** — This file references `analyst-requirements` in prose. Should it be updated, or is it considered a personal scratch file outside the rename scope?
+
+> outside scope.
