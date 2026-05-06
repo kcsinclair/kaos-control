@@ -580,6 +580,7 @@ type Filter struct {
 	Lineage   string
 	Type      string
 	Priority  string
+	Q         string // free-text substring match across title, slug, lineage, type, status
 	Limit     int
 	Offset    int
 	Unlimited bool // when true, no LIMIT is applied (returns all matching rows)
@@ -1414,6 +1415,15 @@ CREATE TABLE lineage_locks (
 
 // ----- helpers -----
 
+// escapeLike escapes SQLite LIKE special characters (%, _) in s so they
+// match literally. The caller must use ESCAPE '\' in the SQL expression.
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, "%", `\%`)
+	s = strings.ReplaceAll(s, "_", `\_`)
+	return s
+}
+
 func buildWhere(f Filter) (clause string, args []any) {
 	var conds []string
 	if f.Stage != "" {
@@ -1439,6 +1449,13 @@ func buildWhere(f Filter) (clause string, args []any) {
 	if f.Priority != "" {
 		conds = append(conds, "priority = ?")
 		args = append(args, f.Priority)
+	}
+	if f.Q != "" {
+		pattern := "%" + escapeLike(f.Q) + "%"
+		conds = append(conds,
+			`(title LIKE ? ESCAPE '\' OR slug LIKE ? ESCAPE '\' OR lineage LIKE ? ESCAPE '\' OR type LIKE ? ESCAPE '\' OR status LIKE ? ESCAPE '\')`,
+		)
+		args = append(args, pattern, pattern, pattern, pattern, pattern)
 	}
 	if len(conds) == 0 {
 		return "", args
