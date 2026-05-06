@@ -13,6 +13,14 @@ import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
 import type { AgentSummary, AgentRunRow } from '@/types/api'
 
+function agentDriver(agentName: string, agents: AgentSummary[]): string {
+  const a = agents.find((ag) => ag.name === agentName)
+  if (!a) return ''
+  if (a.driver === 'ollama') return 'Ollama'
+  if (a.driver === 'claude-code-cli') return 'Claude Code'
+  return a.driver
+}
+
 const route = useRoute()
 const router = useRouter()
 const store = useAgentsStore()
@@ -116,6 +124,7 @@ onMounted(() => {
         <tr>
           <SortHeader label="Run ID"  column="run_id"      :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
           <SortHeader label="Agent"   column="agent_name"  :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
+          <th>Driver</th>
           <SortHeader label="Target"  column="target_path" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
           <SortHeader label="Status"  column="status"      :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
           <SortHeader label="Started" column="started_at"  :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
@@ -128,6 +137,13 @@ onMounted(() => {
           <tr class="run-row" @click="toggleExpand(run.run_id)">
             <td class="cell-mono">{{ run.run_id.slice(0, 8) }}…</td>
             <td>{{ run.agent_name }}</td>
+            <td>
+              <span
+                v-if="agentDriver(run.agent_name, store.agents)"
+                class="driver-badge"
+                :data-driver="store.agents.find(a => a.name === run.agent_name)?.driver"
+              >{{ agentDriver(run.agent_name, store.agents) }}</span>
+            </td>
             <td class="cell-path">
               <button
                 class="path-link"
@@ -149,7 +165,7 @@ onMounted(() => {
             </td>
           </tr>
           <tr v-if="expandedRun === run.run_id" class="run-detail">
-            <td colspan="7" class="detail-cell">
+            <td colspan="8" class="detail-cell">
               <!-- Live progress for running runs -->
               <div v-if="run.status === 'running' && store.progressLines.get(run.run_id)?.length" class="detail-section">
                 <div class="detail-label">Progress</div>
@@ -371,4 +387,16 @@ onMounted(() => {
 }
 .artifact-link:hover { text-decoration: underline; }
 .detail-empty { font-size: var(--text-sm); color: var(--color-text-muted); }
+.driver-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.driver-badge[data-driver="ollama"] { background: #dbeafe; color: #1d4ed8; }
+.driver-badge[data-driver="claude-code-cli"] { background: #f3e8ff; color: #7e22ce; }
 </style>
