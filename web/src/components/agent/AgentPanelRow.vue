@@ -13,6 +13,17 @@ function isInline(agent: AgentSummary): boolean {
   return agent.driver === 'inline'
 }
 
+function isOllama(agent: AgentSummary): boolean {
+  return agent.driver === 'ollama'
+}
+
+function driverLabel(agent: AgentSummary): string {
+  if (agent.driver === 'ollama') return 'Ollama'
+  if (agent.driver === 'claude-code-cli') return 'Claude Code'
+  if (agent.driver === 'inline') return ''
+  return agent.driver
+}
+
 function handleClick(agent: AgentSummary) {
   if (!isInline(agent)) {
     emit('select', agent)
