@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 
 const route = useRoute()
 const project = computed(() => route.params.project as string)
@@ -11,9 +12,7 @@ const project = computed(() => route.params.project as string)
     <header class="dashboard-header">
       <h2 class="dashboard-title">Dashboard</h2>
     </header>
-    <div class="dashboard-content">
-      <!-- widgets rendered here in Milestone 2 -->
-    </div>
+    <DashboardGrid :project="project" />
   </div>
 </template>
 
@@ -36,9 +35,5 @@ const project = computed(() => route.params.project as string)
   font-weight: 600;
   margin: 0;
   color: var(--color-text);
-}
-
-.dashboard-content {
-  flex: 1;
 }
 </style>
