@@ -374,8 +374,8 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 			"end_date":   rel.EndDate,
 		})
 
-		// Timeline edge to next release.
-		if i+1 < len(releases) {
+		// Timeline edge to next release — only when both releases are scheduled.
+		if i+1 < len(releases) && rel.StartDate != nil && releases[i+1].StartDate != nil {
 			edges = append(edges, map[string]any{
 				"source": fmt.Sprintf("release:%d", rel.ID),
 				"target": fmt.Sprintf("release:%d", releases[i+1].ID),
