@@ -381,7 +381,8 @@ func validateProject(cfg *Project) error {
 	if cfg.Git.BranchTemplate == "" {
 		cfg.Git.BranchTemplate = "requirement/{slug}"
 	}
-	for _, a := range cfg.Agents {
+	for i := range cfg.Agents {
+		a := &cfg.Agents[i]
 		if a.Name == "" {
 			return fmt.Errorf("project config: agent entry missing name")
 		}
@@ -390,6 +391,19 @@ func validateProject(cfg *Project) error {
 		}
 		if a.Driver == "" {
 			return fmt.Errorf("project config: agent %q missing driver", a.Name)
+		}
+		if a.Driver == "ollama" {
+			if a.OllamaInstanceName == "" {
+				return fmt.Errorf("project config: agent %q has driver=ollama but missing ollama_instance", a.Name)
+			}
+			if a.Model == "" {
+				return fmt.Errorf("project config: agent %q has driver=ollama but missing model", a.Name)
+			}
+			if a.OllamaEndpoint == "" {
+				a.OllamaEndpoint = "chat"
+			} else if a.OllamaEndpoint != "chat" && a.OllamaEndpoint != "generate" {
+				return fmt.Errorf("project config: agent %q ollama_endpoint must be \"chat\" or \"generate\", got %q", a.Name, a.OllamaEndpoint)
+			}
 		}
 	}
 	for _, pat := range cfg.Ignore {

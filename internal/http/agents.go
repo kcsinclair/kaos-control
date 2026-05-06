@@ -19,22 +19,26 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type agentSummary struct {
-		Name         string   `json:"name"`
-		Roles        []string `json:"roles"`
-		Driver       string   `json:"driver"`
-		Model        string   `json:"model,omitempty"`
-		ActiveStatus string   `json:"active_status,omitempty"`
-		AllowedPaths []string `json:"allowed_write_paths,omitempty"`
+		Name               string   `json:"name"`
+		Roles              []string `json:"roles"`
+		Driver             string   `json:"driver"`
+		Model              string   `json:"model,omitempty"`
+		ActiveStatus       string   `json:"active_status,omitempty"`
+		AllowedPaths       []string `json:"allowed_write_paths,omitempty"`
+		OllamaInstanceName string   `json:"ollama_instance,omitempty"`
+		OllamaEndpoint     string   `json:"ollama_endpoint,omitempty"`
 	}
 	var out []agentSummary
 	for _, ag := range p.Agents.Agents() {
 		out = append(out, agentSummary{
-			Name:         ag.Name,
-			Roles:        ag.Roles,
-			Driver:       ag.Driver,
-			Model:        ag.Model,
-			ActiveStatus: ag.ActiveStatus,
-			AllowedPaths: ag.AllowedPaths,
+			Name:               ag.Name,
+			Roles:              ag.Roles,
+			Driver:             ag.Driver,
+			Model:              ag.Model,
+			ActiveStatus:       ag.ActiveStatus,
+			AllowedPaths:       ag.AllowedPaths,
+			OllamaInstanceName: ag.OllamaInstanceName,
+			OllamaEndpoint:     ag.OllamaEndpoint,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"agents": out})
