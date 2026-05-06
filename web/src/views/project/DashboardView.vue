@@ -21,9 +21,18 @@ const project = computed(() => route.params.project as string)
   display: flex;
   flex-direction: column;
   height: 100%;
+  /* Prevent any widget from causing horizontal scroll */
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: var(--space-6) var(--space-4);
   box-sizing: border-box;
-  overflow-y: auto;
+  min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .dashboard-view {
+    padding: var(--space-4) var(--space-3);
+  }
 }
 
 .dashboard-header {

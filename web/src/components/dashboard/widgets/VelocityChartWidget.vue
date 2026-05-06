@@ -196,9 +196,12 @@ const GRANULARITIES: { value: Granularity; label: string }[] = [
   transition: background 0.12s, color 0.12s;
 }
 
-.toggle-btn:hover {
+.toggle-btn:hover,
+.toggle-btn:focus-visible {
   background: var(--color-sidebar-hover);
   color: var(--color-text);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
 .toggle-btn--active {

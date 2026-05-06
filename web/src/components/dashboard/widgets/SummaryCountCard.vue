@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="summary-card" role="figure" :aria-label="`${label}: ${value}`">
+  <div class="summary-card" role="figure" :aria-label="`${label}: ${value}`" tabindex="0">
     <div class="summary-card-icon" aria-hidden="true">
       <component :is="icon" v-if="icon" :size="20" />
     </div>
@@ -30,6 +30,12 @@ defineProps<{
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
+  outline: none;
+}
+
+.summary-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .summary-card-icon {

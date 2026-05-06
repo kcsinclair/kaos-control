@@ -11,8 +11,12 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
 
 <template>
   <div class="dashboard-grid">
-    <!-- Summary row -->
-    <section v-if="summaryWidgets.length" class="dashboard-summary" aria-label="Summary statistics">
+    <!-- Summary row: four stat cards -->
+    <section
+      v-if="summaryWidgets.length"
+      class="dashboard-summary"
+      aria-label="Summary statistics"
+    >
       <component
         :is="widget.component"
         v-for="widget in summaryWidgets"
@@ -21,7 +25,7 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
       />
     </section>
 
-    <!-- Charts + Panel row -->
+    <!-- Charts column + Panel column -->
     <div class="dashboard-main">
       <section class="dashboard-charts" aria-label="Charts">
         <component
@@ -32,7 +36,11 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
         />
       </section>
 
-      <section v-if="panelWidgets.length" class="dashboard-panels" aria-label="Panels">
+      <section
+        v-if="panelWidgets.length"
+        class="dashboard-panels"
+        aria-label="Panels"
+      >
         <component
           :is="widget.component"
           v-for="widget in panelWidgets"
@@ -49,25 +57,30 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-/* Summary row: auto-fit cards */
+/* Summary row: auto-fit cards, min 150 px each */
 .dashboard-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-3);
 }
 
-/* Main two-column layout at ≥ 1024 px */
+/* Main area: single column by default (mobile) */
 .dashboard-main {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
+  min-width: 0;
 }
 
+/* Two-column at ≥ 1024 px: charts left, panel right (fixed 340 px) */
 @media (min-width: 1024px) {
   .dashboard-main {
-    grid-template-columns: 1fr 360px;
+    grid-template-columns: 1fr 340px;
+    align-items: start;
   }
 }
 

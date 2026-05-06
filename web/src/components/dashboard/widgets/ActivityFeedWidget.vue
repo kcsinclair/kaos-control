@@ -106,8 +106,11 @@ function viewAll() {
   text-underline-offset: 2px;
 }
 
-.view-all-btn:hover {
+.view-all-btn:hover,
+.view-all-btn:focus-visible {
   opacity: 0.8;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .activity-feed-body {
