@@ -1,7 +1,7 @@
 ---
 title: Artifacts Incorrect Created Date Format
 type: defect
-status: in-development
+status: done
 lineage: artifacts-incorrect-created-date-format
 priority: normal
 labels:
