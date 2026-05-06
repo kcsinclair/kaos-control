@@ -1,15 +1,18 @@
 ---
 title: Kanban View
 type: requirement
-status: abandoned
+status: draft
 lineage: kanban-view
-created: "2026-04-27"
+created: "2026-04-27T00:00:00+10:00"
 priority: normal
 parent: ideas/kanban-view.md
 labels:
     - artefacts
     - workflow
     - frontend
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Kanban View
@@ -122,7 +125,7 @@ A secondary aspect of the idea is renaming the UI label "Artifacts" to "Artefact
 - [ ] The board renders 500 cards without perceptible jank.
 - [ ] No new runtime dependencies are introduced.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the `card_fields` config support computed/derived fields (e.g. `age` = days since created) or only raw frontmatter fields?
 
