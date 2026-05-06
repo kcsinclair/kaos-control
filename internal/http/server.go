@@ -179,6 +179,20 @@ func (s *Server) buildRouter() chi.Router {
 			r.Post("/devops/pipelines/{slug}/run", s.handleRunPipeline)
 			r.Post("/devops/pipelines/{slug}/cancel", s.handleCancelPipeline)
 			r.Get("/devops/runs/{run_id}", s.handleGetRunLog)
+
+			// Scheduler
+			r.With(requireAuth).Route("/scheduler", func(r chi.Router) {
+				r.Get("/jobs", s.handleListSchedulerJobs)
+				r.Post("/jobs", s.handleCreateSchedulerJob)
+				r.Get("/jobs/{name}", s.handleGetSchedulerJob)
+				r.Put("/jobs/{name}", s.handleUpdateSchedulerJob)
+				r.Delete("/jobs/{name}", s.handleDeleteSchedulerJob)
+				r.Post("/jobs/{name}/trigger", s.handleTriggerSchedulerJob)
+				r.Post("/jobs/{name}/pause", s.handlePauseSchedulerJob)
+				r.Post("/jobs/{name}/resume", s.handleResumeSchedulerJob)
+				r.Get("/jobs/{name}/runs", s.handleListSchedulerRuns)
+				r.Get("/jobs/{name}/runs/{id}/log", s.handleGetSchedulerRunLog)
+			})
 		})
 	})
 

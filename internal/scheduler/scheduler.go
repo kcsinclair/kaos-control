@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,6 +14,9 @@ import (
 	"github.com/kaos-control/kaos-control/internal/agent"
 	"github.com/kaos-control/kaos-control/internal/hub"
 )
+
+// ErrJobNotFound is returned when a job name cannot be resolved.
+var ErrJobNotFound = errors.New("scheduler job not found")
 
 const tickInterval = 15 * time.Second
 
@@ -102,7 +106,7 @@ func (sc *Scheduler) TriggerNow(jobName string) error {
 		return err
 	}
 	if job == nil {
-		return fmt.Errorf("job %q not found", jobName)
+		return fmt.Errorf("job %q: %w", jobName, ErrJobNotFound)
 	}
 	sc.mu.Lock()
 	_, alreadyRunning := sc.running[jobName]

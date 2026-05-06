@@ -16,6 +16,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/ideachat"
 	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/lock"
+	"github.com/kaos-control/kaos-control/internal/scheduler"
 	"github.com/kaos-control/kaos-control/internal/watcher"
 	"github.com/kaos-control/kaos-control/internal/workflow"
 )
@@ -31,9 +32,11 @@ type Project struct {
 	Workflow       *workflow.Engine
 	Locks          *lock.Manager
 	Agents         *agent.Manager  // nil if no agents configured
-	IdeaChatStore  *ideachat.Store // per-project conversational idea-capture sessions
-	DevopsRunner   *devops.Runner  // manages active pipeline runs
-	DevopsLogs     *devops.LogStore // persists run logs to ~/.kaos-control/devops/<project>/
+	IdeaChatStore  *ideachat.Store      // per-project conversational idea-capture sessions
+	DevopsRunner   *devops.Runner       // manages active pipeline runs
+	DevopsLogs     *devops.LogStore     // persists run logs to ~/.kaos-control/devops/<project>/
+	Scheduler      *scheduler.Scheduler // nil until StartScheduler is called
+	SchedulerStore *scheduler.Store     // always set after Open()
 
 	// watcherDone is closed when the watcher goroutine exits.
 	// Close() waits on this before closing the index DB.
