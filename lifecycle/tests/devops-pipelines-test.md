@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Management — Integration & Unit Test Suite
 type: test
-status: approved
+status: in-qa
 lineage: devops-pipelines
 parent: lifecycle/test-plans/devops-pipelines-5-test.md
 ---
