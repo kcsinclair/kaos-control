@@ -1,7 +1,7 @@
 ---
 title: Labels as Graph Nodes with Priority Visualisation
 type: requirement
-status: blocked
+status: done
 lineage: labels-are-nodes
 parent: ideas/labels-are-nodes.md
 labels:
@@ -101,7 +101,7 @@ Finally, the current `NODE_COLORS` map only covers a subset of artifact types (`
 - [ ] Colour constants are shared between 2D and 3D graph components (single source of truth).
 - [ ] [[labels-are-nodes]] idea requirements are fully addressed.
 
-## Open Questions
+## Resolved Questions
 
 1. Should label nodes be filterable independently (e.g., show only the "auth" label node), or is the global show/hide toggle sufficient for v1?
 > toggle all label nodes for now.
