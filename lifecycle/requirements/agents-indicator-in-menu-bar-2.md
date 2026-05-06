@@ -1,7 +1,7 @@
 ---
 title: Move Running Agents Indicator to Menu Bar
 type: requirement
-status: planning
+status: blocked
 lineage: agents-indicator-in-menu-bar
 parent: lifecycle/ideas/agents-indicator-in-menu-bar.md
 labels:
@@ -10,6 +10,9 @@ labels:
     - usability
     - agent
     - vue
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Move Running Agents Indicator to Menu Bar
