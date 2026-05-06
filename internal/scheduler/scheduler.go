@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/kaos-control/kaos-control/internal/agent"
@@ -42,6 +43,7 @@ type Scheduler struct {
 	stopOnce sync.Once
 	stopCh   chan struct{}
 	doneCh   chan struct{}
+	started  atomic.Bool // true once Start() has launched goroutines
 }
 
 // New creates a Scheduler. logDir is the base directory for per-run log files;
@@ -70,6 +72,7 @@ func New(store *Store, agents *agent.Manager, h *hub.Hub, projectRoot, logDir st
 // ctx is used only to propagate cancellation into job execution; the scheduler
 // itself is stopped via Stop().
 func (sc *Scheduler) Start(ctx context.Context) {
+	sc.started.Store(true)
 	// Startup reconciliation.
 	if err := sc.store.MarkStaleRunsFailed(); err != nil {
 		slog.Warn("SCHEDULER: marking stale runs failed", "err", err)
@@ -90,11 +93,14 @@ func (sc *Scheduler) Start(ctx context.Context) {
 }
 
 // Stop signals the scheduler to stop and waits for it to drain.
+// If Start was never called, Stop returns immediately.
 func (sc *Scheduler) Stop() {
 	sc.stopOnce.Do(func() {
 		close(sc.stopCh)
 	})
-	<-sc.doneCh
+	if sc.started.Load() {
+		<-sc.doneCh
+	}
 	slog.Info("SCHEDULER: scheduler stopped")
 }
 
@@ -264,6 +270,8 @@ func (sc *Scheduler) execute(job *Job) {
 		delete(sc.running, job.Name)
 		sc.mu.Unlock()
 		<-sc.workerSem
+		// Drain any queued jobs now that a worker slot is free.
+		sc.tryDispatch()
 	}()
 
 	logPath := sc.runLogPath(job.Name, 0) // temp, will be updated after insert

@@ -1,7 +1,7 @@
 ---
 title: "Ollama Agent Support — Backend Plan"
 type: plan-backend
-status: in-development
+status: done
 lineage: ollama-agent-support
 parent: lifecycle/requirements/ollama-agent-support-2.md
 ---

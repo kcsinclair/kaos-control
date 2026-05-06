@@ -4,7 +4,7 @@ type: plan-backend
 status: done
 lineage: editor-live-refresh-on-disk-change
 parent: lifecycle/requirements/editor-live-refresh-on-disk-change-2.md
-created: "2026-04-29"
+created: "2026-04-29T00:00:00+10:00"
 ---
 
 # Backend Plan: Auto-Refresh Editor Content on External Disk Change
