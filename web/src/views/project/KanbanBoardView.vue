@@ -6,6 +6,7 @@ import { useArtifactsStore } from '@/stores/artifacts'
 import { useWebSocket } from '@/composables/useWebSocket'
 import KanbanCard from '@/components/artifact/KanbanCard.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
+import TextFilter from '@/components/TextFilter.vue'
 import { ShieldCheck } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 
@@ -20,6 +21,7 @@ const {
   columns,
   cardFields,
   hideTerminal,
+  searchText,
   refresh,
   applyFilters,
   reorderColumns,
@@ -56,6 +58,7 @@ function resetFilters() {
   selectedLabel.value = ''
   selectedType.value = ''
   selectedPriority.value = ''
+  searchText.value = ''
   onFilterChange()
 }
 
@@ -134,6 +137,7 @@ onMounted(async () => {
 
     <!-- Filter bar -->
     <div v-if="hasConfig" class="filter-bar">
+      <TextFilter v-model="searchText" />
       <select v-model="selectedStage" @change="onFilterChange">
         <option value="">All stages</option>
         <option v-for="s in stageOptions.slice(1)" :key="s" :value="s">{{ s }}</option>
@@ -186,7 +190,9 @@ onMounted(async () => {
           <span class="column-count">{{ col.cards.length }}</span>
         </div>
         <div class="column-cards">
-          <div v-if="col.cards.length === 0" class="column-empty">No artefacts</div>
+          <div v-if="col.cards.length === 0" class="column-empty">
+            {{ searchText ? 'No matching items' : 'No artefacts' }}
+          </div>
           <KanbanCard
             v-for="card in col.cards"
             :key="card.path"

@@ -31,6 +31,9 @@ export function useKanbanBoard(project: string) {
   // Reactive filter state
   const filters = reactive<Partial<ArtifactFilter>>({})
 
+  // Client-side text search
+  const searchText = ref('')
+
   // When true, terminal-status cards (done/rejected/abandoned) are excluded
   const hideTerminal = ref(true)
 
@@ -53,6 +56,7 @@ export function useKanbanBoard(project: string) {
 
   // Apply client-side filters to an artifact list
   function applyClientFilters(items: ArtifactRow[]): ArtifactRow[] {
+    const q = searchText.value.toLowerCase()
     return items.filter(a => {
       if (hideTerminal.value && (TERMINAL_STATUSES as readonly string[]).includes(a.status)) return false
       if (filters.stage && a.stage !== filters.stage) return false
@@ -64,6 +68,10 @@ export function useKanbanBoard(project: string) {
       }
       if (filters.priority) {
         if ((a.frontmatter?.priority ?? '') !== filters.priority) return false
+      }
+      if (q) {
+        const haystack = [a.title, a.lineage, a.type, a.status].join(' ').toLowerCase()
+        if (!haystack.includes(q)) return false
       }
       return true
     })
@@ -164,6 +172,7 @@ export function useKanbanBoard(project: string) {
     columns,
     cardFields,
     filters,
+    searchText,
     hideTerminal,
     refresh,
     applyFilters,
