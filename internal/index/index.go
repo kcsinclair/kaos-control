@@ -1600,6 +1600,54 @@ func (idx *Index) PruneEvents(maxAgeDays int, maxCount int) error {
 	return tx.Commit()
 }
 
+// ----- dashboard -----
+
+// DashboardStatsRow holds summary counts returned by the dashboard stats endpoint.
+type DashboardStatsRow struct {
+	TotalTickets      int `json:"total_tickets"`
+	InProgress        int `json:"in_progress"`
+	Blocked           int `json:"blocked"`
+	CompletedThisWeek int `json:"completed_this_week"`
+}
+
+// DashboardStats returns summary ticket counts for the dashboard.
+// sinceTime is the start of the current ISO week, used to compute
+// completed_this_week (tickets that had a done-transition since that instant).
+func (idx *Index) DashboardStats(sinceTime time.Time) (*DashboardStatsRow, error) {
+	row := &DashboardStatsRow{}
+
+	if err := idx.db.QueryRow(
+		`SELECT COUNT(*) FROM artifacts WHERE type='ticket' AND status != 'abandoned'`,
+	).Scan(&row.TotalTickets); err != nil {
+		return nil, fmt.Errorf("counting total tickets: %w", err)
+	}
+
+	if err := idx.db.QueryRow(
+		`SELECT COUNT(*) FROM artifacts WHERE type='ticket' AND status = 'in-development'`,
+	).Scan(&row.InProgress); err != nil {
+		return nil, fmt.Errorf("counting in-progress tickets: %w", err)
+	}
+
+	if err := idx.db.QueryRow(
+		`SELECT COUNT(*) FROM artifacts WHERE type='ticket' AND status IN ('blocked', 'clarifying')`,
+	).Scan(&row.Blocked); err != nil {
+		return nil, fmt.Errorf("counting blocked tickets: %w", err)
+	}
+
+	if err := idx.db.QueryRow(
+		`SELECT COUNT(DISTINCT artifact_path) FROM events
+		 WHERE event_type = 'status_transition'
+		 AND summary LIKE '%→ done%'
+		 AND timestamp >= ?
+		 AND artifact_path IN (SELECT path FROM artifacts WHERE type='ticket')`,
+		sinceTime.Unix(),
+	).Scan(&row.CompletedThisWeek); err != nil {
+		return nil, fmt.Errorf("counting completed this week: %w", err)
+	}
+
+	return row, nil
+}
+
 // ScanArtifactRows scans a *sql.Rows result set of the standard artifact
 // projection (path, slug, lineage, idx, stage, type, status, title,
 // frontmatter_json, mtime, created) into []*ArtifactRow. It is exported so

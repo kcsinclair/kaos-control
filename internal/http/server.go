@@ -206,6 +206,11 @@ func (s *Server) buildRouter() chi.Router {
 				r.Get("/{releaseID}/artifacts", s.handleListReleaseArtifacts)
 			})
 
+			// Dashboard
+			r.Route("/dashboard", func(r chi.Router) {
+				r.Get("/stats", s.handleGetDashboardStats)
+			})
+
 			// DevOps pipelines
 			r.Get("/devops/pipelines", s.handleListPipelines)
 			r.Post("/devops/pipelines/{slug}/run", s.handleRunPipeline)
