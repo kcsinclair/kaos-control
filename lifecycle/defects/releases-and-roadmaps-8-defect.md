@@ -1,16 +1,19 @@
 ---
-title: "DELETE /releases/:id returns 500 instead of 404 for non-existent ID"
+title: DELETE /releases/:id returns 500 instead of 404 for non-existent ID
 type: defect
 status: abandoned
 lineage: releases-and-roadmaps
 parent: lifecycle/tests/releases-and-roadmaps-6-test.md
-labels: [defect]
+labels:
+    - defect
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # DELETE /releases/:id returns 500 instead of 404 for non-existent ID
+
+**Duplicate**
 
 ## Reproduction Steps
 
