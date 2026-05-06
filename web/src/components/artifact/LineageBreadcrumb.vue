@@ -10,13 +10,16 @@ const props = defineProps<{
 
 const router = useRouter()
 
+type SegmentRole = 'intermediate' | 'current'
+
 const segments = computed(() => {
   const parts = props.path.split('/')
-  const result: { label: string; path: string }[] = []
+  const result: { label: string; path: string; role: SegmentRole }[] = []
   for (let i = 0; i < parts.length; i++) {
     result.push({
       label: parts[i],
       path: parts.slice(0, i + 1).join('/'),
+      role: i === parts.length - 1 ? 'current' : 'intermediate',
     })
   }
   return result
