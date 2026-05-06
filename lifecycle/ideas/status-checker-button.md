@@ -1,7 +1,7 @@
 ---
 title: Status Checker Button
 type: idea
-status: clarifying
+status: planning
 lineage: status-checker-button
 created: "2026-04-29T15:48:39+10:00"
 priority: normal
