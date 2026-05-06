@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Releases and Roadmaps"
 type: plan-backend
-status: approved
+status: in-development
 lineage: releases-and-roadmaps
 parent: lifecycle/requirements/releases-and-roadmaps-2.md
 ---
