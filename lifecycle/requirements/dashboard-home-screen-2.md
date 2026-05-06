@@ -1,7 +1,7 @@
 ---
 title: Dashboard Home Screen
 type: requirement
-status: draft
+status: planning
 lineage: dashboard-home-screen
 created: "2026-05-06T00:00:00+10:00"
 priority: normal
