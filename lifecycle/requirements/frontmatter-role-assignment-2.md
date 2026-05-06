@@ -1,15 +1,18 @@
 ---
 title: Frontmatter Role-Based Assignment Control
 type: requirement
-status: done
+status: draft
 lineage: frontmatter-role-assignment
-created: "2026-04-28"
+created: "2026-04-28T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/frontmatter-role-assignment.md
 labels:
     - feature
     - frontend
     - workflow
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Frontmatter Role-Based Assignment Control
@@ -87,7 +90,7 @@ The role dropdown and who input must be keyboard-navigable and have appropriate 
 - [ ] `go vet` and `vue-tsc --noEmit` pass after all changes.
 - [ ] Related: [[frontmatter-role-assignment]]
 
-## Open Questions
+## Resolved Questions
 
 1. Should the `who` field for human users accept free-text emails, or should it be restricted to emails present in the project's `users` list? (Free-text is more flexible for new team members; restricted is safer.)
 
