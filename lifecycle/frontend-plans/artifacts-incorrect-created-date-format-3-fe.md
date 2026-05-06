@@ -1,7 +1,7 @@
 ---
 title: "Fix Incorrect Created Date Format — Frontend Plan"
 type: plan-frontend
-status: draft
+status: approved
 lineage: artifacts-incorrect-created-date-format
 parent: lifecycle/defects/artifacts-incorrect-created-date-format.md
 ---
