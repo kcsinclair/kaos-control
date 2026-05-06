@@ -28,6 +28,9 @@ export default defineConfig({
           if (id.includes('markdown-it')) {
             return 'vendor-markdown'
           }
+          if (id.includes('node_modules/echarts') || id.includes('node_modules/zrender')) {
+            return 'vendor-echarts'
+          }
         },
       },
     },

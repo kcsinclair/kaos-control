@@ -1,11 +1,11 @@
 import { reactive } from 'vue'
-import type { Component } from 'vue'
+import type { AsyncComponentLoader, Component } from 'vue'
 
 export type WidgetSlot = 'summary' | 'chart' | 'panel'
 
 export interface WidgetEntry {
   id: string
-  component: Component
+  component: Component | AsyncComponentLoader
   slot: WidgetSlot
   order: number
 }
@@ -14,7 +14,7 @@ export const widgetList = reactive<WidgetEntry[]>([])
 
 export function registerWidget(
   id: string,
-  component: Component,
+  component: Component | AsyncComponentLoader,
   options: { slot: WidgetSlot; order: number },
 ): void {
   // Avoid duplicate registration (e.g. hot module reload)
