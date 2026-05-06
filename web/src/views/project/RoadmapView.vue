@@ -6,6 +6,7 @@ import GanttChart from '@/components/releases/GanttChart.vue'
 import ReleaseFormModal from '@/components/releases/ReleaseFormModal.vue'
 import ReleaseDeleteModal from '@/components/releases/ReleaseDeleteModal.vue'
 import ReleaseDetailModal from '@/components/releases/ReleaseDetailModal.vue'
+import RoadmapGraphView from '@/components/releases/RoadmapGraphView.vue'
 import * as releasesApi from '@/api/releases'
 import type { Release, ReleaseDetail } from '@/types/release'
 
@@ -134,8 +135,11 @@ function openEdit(releaseId: number) {
       @create="showCreateModal = true"
     />
 
-    <!-- Graph view placeholder — implemented in Milestone 5 -->
-    <div v-else class="state-msg">Graph view loading…</div>
+    <!-- Graph view -->
+    <RoadmapGraphView
+      v-else-if="viewMode === 'graph'"
+      :project="project"
+    />
 
     <!-- Create / Edit modal -->
     <ReleaseFormModal
