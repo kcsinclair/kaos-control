@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Releases and Roadmaps"
 type: plan-frontend
-status: in-development
+status: done
 lineage: releases-and-roadmaps
 parent: lifecycle/requirements/releases-and-roadmaps-2.md
 ---
