@@ -104,6 +104,11 @@ func Open(dbPath, projectRoot string, stages []config.Stage, opts ...Option) (*I
 	if err := idx.ensureEventsTable(); err != nil {
 		return nil, fmt.Errorf("ensuring events table: %w", err)
 	}
+	// scheduler_jobs and scheduler_runs are not part of the versioned schema so they
+	// survive schema rebuilds.
+	if err := idx.ensureSchedulerTables(); err != nil {
+		return nil, fmt.Errorf("ensuring scheduler tables: %w", err)
+	}
 	// Always scan on startup: the index is a cache and files may have changed
 	// while the server was not running (watcher only covers live changes).
 	if err := idx.Scan(stages); err != nil {
@@ -1298,6 +1303,46 @@ func (idx *Index) ensureEventsTable() error {
 		return err
 	}
 	_, err = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type)`)
+	return err
+}
+
+// DB returns the underlying *sql.DB so packages such as scheduler can share the
+// same database connection without opening a second WAL connection.
+func (idx *Index) DB() *sql.DB { return idx.db }
+
+// ensureSchedulerTables creates the scheduler_jobs and scheduler_runs tables if
+// they don't already exist. Called unconditionally on Open so they survive
+// schema-version cache rebuilds.
+func (idx *Index) ensureSchedulerTables() error {
+	_, err := idx.db.Exec(`CREATE TABLE IF NOT EXISTS scheduler_jobs (
+		name                TEXT PRIMARY KEY,
+		target_type         TEXT NOT NULL,
+		target              TEXT NOT NULL,
+		args_json           TEXT,
+		schedule            TEXT NOT NULL,
+		preconditions_json  TEXT,
+		enabled             INTEGER NOT NULL DEFAULT 1,
+		priority            INTEGER NOT NULL DEFAULT 5,
+		timeout_sec         INTEGER NOT NULL,
+		created_at          TEXT NOT NULL,
+		updated_at          TEXT NOT NULL
+	)`)
+	if err != nil {
+		return err
+	}
+	_, err = idx.db.Exec(`CREATE TABLE IF NOT EXISTS scheduler_runs (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		job_name    TEXT NOT NULL REFERENCES scheduler_jobs(name) ON DELETE CASCADE,
+		start_time  TEXT NOT NULL,
+		end_time    TEXT,
+		status      TEXT NOT NULL,
+		log_path    TEXT,
+		created_at  TEXT NOT NULL
+	)`)
+	if err != nil {
+		return err
+	}
+	_, err = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_runs_job_start ON scheduler_runs(job_name, start_time DESC)`)
 	return err
 }
 
