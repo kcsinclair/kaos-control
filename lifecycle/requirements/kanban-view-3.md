@@ -1,7 +1,7 @@
 ---
 title: Kanban View (revised)
 type: requirement
-status: draft
+status: done
 lineage: kanban-view
 created: "2026-04-27T00:00:00+10:00"
 priority: normal
