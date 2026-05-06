@@ -1,7 +1,7 @@
 ---
 title: Collapsible Left Menu with Icon-Only Mode
 type: idea
-status: clarifying
+status: planning
 lineage: collapsible-sidebar-icons
 created: "2026-04-28T14:12:22+10:00"
 priority: normal
