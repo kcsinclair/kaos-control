@@ -1,7 +1,7 @@
 ---
 title: "Dashboard Home Screen — Frontend Plan"
 type: plan-frontend
-status: in-development
+status: done
 lineage: dashboard-home-screen
 parent: lifecycle/requirements/dashboard-home-screen-2.md
 ---
