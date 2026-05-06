@@ -1,7 +1,7 @@
 ---
 title: 'Graph: Show Tests Toggle'
 type: requirement
-status: blocked
+status: draft
 lineage: graph-show-tests-toggle
 created: "2026-05-06"
 priority: normal
@@ -66,6 +66,6 @@ Both the 2D and 3D graph views display every artifact type by default, including
 - [ ] Visual styling matches the existing "Show completed" checkbox.
 - [ ] Related: [[graph-show-tests-toggle]]
 
-## Open Questions
+## No Questions
 
 _None — the idea is well-defined and follows the established pattern of the "Show completed" toggle._
