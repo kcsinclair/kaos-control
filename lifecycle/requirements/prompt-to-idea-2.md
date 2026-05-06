@@ -1,7 +1,7 @@
 ---
 title: Conversational Idea Capture Agent
 type: requirement
-status: done
+status: blocked
 lineage: prompt-to-idea
 parent: lifecycle/ideas/prompt-to-idea.md
 labels:
@@ -9,6 +9,9 @@ labels:
     - workflow
     - usability
     - agent
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Conversational Idea Capture Agent
@@ -32,7 +35,7 @@ The result is either (a) ideas never get recorded, or (b) they are recorded in l
 ### Non-goals
 
 - This agent does **not** produce requirements, plans, or any artifact type other than `idea`.
-- It does **not** replace the analyst-requirements agent; it feeds into it.
+- It does **not** replace the requirements-analyst agent; it feeds into it.
 - It does **not** support batch creation of multiple ideas in a single conversation.
 - It does **not** need to work outside the web UI (CLI-only usage is out of scope for v1).
 

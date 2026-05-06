@@ -1,9 +1,12 @@
 ---
 title: Agent Launcher Panels
 type: requirement
-status: done
+status: blocked
 lineage: agent-launcher-panels
 parent: lifecycle/ideas/agent-launcher-panels.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 ## Problem
@@ -87,4 +90,4 @@ Panels must be keyboard-navigable (focusable, activatable with Enter/Space). Dis
 ## Open Questions
 
 1. **Artifact eligibility mapping** — The idea says "approved or ready state for that agent's stage." The agent config has `active_status` (the status the agent *sets* on the target when it starts a run), but there is no explicit "input status" field. Should eligibility be defined as artifacts one workflow step before `active_status`, or should a new `input_status` field be added to agent config? For this requirement, we assume the mapping is: show artifacts whose status is the workflow predecessor of `active_status` (e.g. if `active_status` is `clarifying`, show `draft` artifacts; if `active_status` is `in-development`, show `planning` artifacts). This should be validated against the workflow state machine.
-2. **Scope of artifact list** — Should the modal list *all* artifacts matching the status, or only those whose `type` aligns with the agent's expected input type (e.g. `analyst-planner` only sees `requirement` type artifacts)? Recommend filtering by type as well for precision, but this needs confirmation.
+2. **Scope of artifact list** — Should the modal list *all* artifacts matching the status, or only those whose `type` aligns with the agent's expected input type (e.g. `planning-analyst` only sees `requirement` type artifacts)? Recommend filtering by type as well for precision, but this needs confirmation.

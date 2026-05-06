@@ -15,7 +15,7 @@ labels:
 
 ## Reproduction Steps
 
-1. Trigger an analyst agent run (e.g. `analyst-requirements` or `analyst-planner`) against an artifact in a qualifying state.
+1. Trigger an analyst agent run (e.g. `requirements-analyst` or `planning-analyst`) against an artifact in a qualifying state.
 2. Observe the artifact status while the agent is actively working.
 3. Compare behaviour to the `backend-developer` or `frontend-developer` agent runs, which were recently updated to set `in-development` status, and the `qa` agent which sets `in-qa`.
 

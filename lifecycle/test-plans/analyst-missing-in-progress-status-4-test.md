@@ -14,11 +14,11 @@ labels:
 
 This plan defines integration tests that verify analyst agents correctly set an in-progress status on their target artifacts during execution, matching the behaviour of developer agents (`in-development`) and the QA agent (`in-qa`).
 
-## Milestone 1: Test `analyst-requirements` Sets `clarifying` on Run Start
+## Milestone 1: Test `requirements-analyst` Sets `clarifying` on Run Start
 
 ### Description
 
-Write an integration test that triggers an `analyst-requirements` agent run against an idea artifact in `draft` status and verifies the artifact's status is updated to `clarifying` before the agent process begins its work. This mirrors the existing pattern where `backend-developer` sets `in-development`.
+Write an integration test that triggers an `requirements-analyst` agent run against an idea artifact in `draft` status and verifies the artifact's status is updated to `clarifying` before the agent process begins its work. This mirrors the existing pattern where `backend-developer` sets `in-development`.
 
 ### Files to Change
 
@@ -27,16 +27,16 @@ Write an integration test that triggers an `analyst-requirements` agent run agai
 ### Acceptance Criteria
 
 - [ ] Test creates a minimal idea artifact with `status: draft` in a temporary lifecycle directory
-- [ ] Test triggers the `analyst-requirements` agent (or simulates the `StartRun` flow via the agent manager)
+- [ ] Test triggers the `requirements-analyst` agent (or simulates the `StartRun` flow via the agent manager)
 - [ ] After `StartRun` returns, the idea artifact's frontmatter on disk has `status: clarifying`
 - [ ] A git commit exists with the message pattern `status(<lineage>): draft → clarifying [run:<id>]`
 - [ ] Test passes with `go test ./tests/ -run TestAnalystRequirementsActivatesStatus`
 
-## Milestone 2: Test `analyst-planner` Sets `planning` on Run Start
+## Milestone 2: Test `planning-analyst` Sets `planning` on Run Start
 
 ### Description
 
-Write an integration test that triggers an `analyst-planner` agent run against a requirement artifact in `clarifying` status and verifies the artifact's status is updated to `planning` before the agent process begins.
+Write an integration test that triggers an `planning-analyst` agent run against a requirement artifact in `clarifying` status and verifies the artifact's status is updated to `planning` before the agent process begins.
 
 ### Files to Change
 
@@ -45,7 +45,7 @@ Write an integration test that triggers an `analyst-planner` agent run against a
 ### Acceptance Criteria
 
 - [ ] Test creates a minimal requirement artifact with `status: clarifying` in a temporary lifecycle directory
-- [ ] Test triggers the `analyst-planner` agent (or simulates the `StartRun` flow)
+- [ ] Test triggers the `planning-analyst` agent (or simulates the `StartRun` flow)
 - [ ] After `StartRun` returns, the requirement artifact's frontmatter on disk has `status: planning`
 - [ ] A git commit exists with the message pattern `status(<lineage>): clarifying → planning [run:<id>]`
 - [ ] Test passes with `go test ./tests/ -run TestAnalystPlannerActivatesStatus`

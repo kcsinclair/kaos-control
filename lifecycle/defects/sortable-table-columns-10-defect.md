@@ -1,7 +1,7 @@
 ---
 title: SortHeader.vue uses slot for label text but test plan specifies a label prop
 type: defect
-status: in-development
+status: done
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-6-test.md
 labels: [defect]

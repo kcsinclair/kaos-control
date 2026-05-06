@@ -234,7 +234,7 @@ The matrix is overridable per project in `config.yaml`.
 ### 6.3 Plan branches (backend/frontend/test)
 - A `ticket` requires all three plan types — `plan-backend`, `plan-frontend`, `plan-test` — in `approved` state before it can leave `planning`. The default is set in `config.yaml` (`required_plans.ticket`).
 - An `epic` has no plan requirement by default; it spans multiple tickets each with their own plans.
-- All three plans are produced by the same `analyst` role (typically the `analyst-planner` agent), and they progress in parallel through review and approval.
+- All three plans are produced by the same `analyst` role (typically the `planning-analyst` agent), and they progress in parallel through review and approval.
 
 ### 6.4 Clarifying questions
 An agent in `clarifying` produces a `questions.md` artifact linked to the requirement. Answering a question updates the artifact in place (no new lineage index) — this is the only stage where in-place edit is standard, because questions are conversational.
@@ -248,7 +248,7 @@ An **agent** is a configured pluggable LLM runner bound to one or more roles. Ag
 
 ```yaml
 agents:
-  - name: analyst-planner
+  - name: planning-analyst
     role: [analyst]
     driver: claude-code-cli
     model: claude-sonnet-4-6
@@ -257,8 +257,8 @@ agents:
       - lifecycle/frontend-plans
       - lifecycle/test-plans
     git_identity:
-      name: analyst-planner
-      email: analyst-planner@innovation-maker.local
+      name: planning-analyst
+      email: planning-analyst@innovation-maker.local
   - name: backend-developer
     role: [backend-developer]
     driver: claude-code-cli
@@ -270,7 +270,7 @@ agents:
       email: backend-developer@innovation-maker.local
 ```
 
-A single role can be served by multiple agents (e.g., `analyst-requirements` and `analyst-planner` both share `role: [analyst]`), and the operator picks which agent to invoke from the UI.
+A single role can be served by multiple agents (e.g., `requirements-analyst` and `planning-analyst` both share `role: [analyst]`), and the operator picks which agent to invoke from the UI.
 
 ### 7.2 Execution drivers
 - **v1**: `claude-code-cli` — spawn Claude Code as a subprocess with a prompt and working directory. Invocation is `claude --dangerously-skip-permissions -p <prompt> --output-format stream-json --verbose [--model <name>]`.
@@ -280,7 +280,7 @@ A single role can be served by multiple agents (e.g., `analyst-requirements` and
 - **Roadmap**: `anthropic-api`, `openai-api`, `ollama-local`, `mcp` (agent is itself an MCP server the app calls).
 
 ### 7.3 Trigger model
-- Agents are **triggered on demand** from the UI (e.g., "Run analyst-planner on this requirement") or by a role-authorised user.
+- Agents are **triggered on demand** from the UI (e.g., "Run planning-analyst on this requirement") or by a role-authorised user.
 - No automatic state-change triggers in v1 (roadmap).
 - When triggered, the app records an **agent run** entity with start time, status, artifact(s) produced, and exit code.
 

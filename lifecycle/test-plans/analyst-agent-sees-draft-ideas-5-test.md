@@ -38,8 +38,8 @@ Test that the artifact filtering logic always uses `status: 'approved'`, not the
 
 ### Acceptance Criteria
 
-- [ ] **Test: analyst-requirements sees only approved ideas** — given ideas with statuses `draft`, `clarifying`, `approved`, `rejected`, only the `approved` idea appears.
-- [ ] **Test: analyst-planner sees only approved requirements** — given requirements with mixed statuses, only `approved` requirements appear.
+- [ ] **Test: requirements-analyst sees only approved ideas** — given ideas with statuses `draft`, `clarifying`, `approved`, `rejected`, only the `approved` idea appears.
+- [ ] **Test: planning-analyst sees only approved requirements** — given requirements with mixed statuses, only `approved` requirements appear.
 - [ ] **Test: backend-developer sees only approved plan-backend** — given plan-backend artifacts with mixed statuses, only `approved` ones appear.
 - [ ] **Test: frontend-developer sees only approved plan-frontend** — given plan-frontend artifacts with mixed statuses, only `approved` ones appear.
 - [ ] **Test: test-developer sees only approved plan-test** — given plan-test artifacts with mixed statuses, only `approved` ones appear.
@@ -63,7 +63,7 @@ Test that developer agents see approved defects assigned to their role in additi
 - [ ] **Test: test-developer sees approved defects assigned to test-developer role** — same pattern for test.
 - [ ] **Test: developer agent does not see unapproved defects** — defects with `status: draft` or other non-approved statuses are excluded even if assigned to the correct role.
 - [ ] **Test: developer agent does not see defects assigned to other roles** — defects assigned to a different developer role are excluded.
-- [ ] **Test: analyst-requirements does not see defects** — non-developer agents get no defect results.
+- [ ] **Test: requirements-analyst does not see defects** — non-developer agents get no defect results.
 - [ ] **Test: qa does not see defects** — qa agent gets no defect results.
 
 ## Milestone 4: Empty State Tests
@@ -78,7 +78,7 @@ Test that the modal displays the empty state message when no artifacts match the
 
 ### Acceptance Criteria
 
-- [ ] **Test: empty state when no approved artifacts of correct type exist** — given only `draft` ideas, the analyst-requirements agent sees an empty list.
-- [ ] **Test: empty state when artifacts exist but wrong type** — given approved requirements but no approved ideas, analyst-requirements sees an empty list.
+- [ ] **Test: empty state when no approved artifacts of correct type exist** — given only `draft` ideas, the requirements-analyst agent sees an empty list.
+- [ ] **Test: empty state when artifacts exist but wrong type** — given approved requirements but no approved ideas, requirements-analyst sees an empty list.
 - [ ] **Test: empty state clears when approved artifact is added** — after adding an approved artifact of the correct type, the list is no longer empty.
 - [ ] **Test: developer agent empty state includes defect check** — a developer agent with no approved plans and no approved defects for its role sees the empty state.

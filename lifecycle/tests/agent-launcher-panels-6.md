@@ -67,7 +67,7 @@ Seeds one draft idea and queries `?status=approved`. Asserts:
 #### `TestStartAgentRun_Success`
 
 Uses `setupFakeClaude(0)` (stub exits 0). Creates a valid draft idea artifact.
-Calls `POST /api/p/testproject/agents/analyst-requirements/run` with
+Calls `POST /api/p/testproject/agents/requirements-analyst/run` with
 `{"target_path": "lifecycle/ideas/launch-target.md"}`. Asserts:
 
 - HTTP 202 response.

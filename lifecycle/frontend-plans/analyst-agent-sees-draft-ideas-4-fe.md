@@ -42,7 +42,7 @@ Confirm that the existing defect-fetching block (lines 70–79) continues to wor
 
 - [ ] Developer agents (`backend-developer`, `frontend-developer`, `test-developer`) see approved defects assigned to their role in the artifact list.
 - [ ] The defect query uses `status: 'approved'` and `type: 'defect'` (already the case — confirm no regression).
-- [ ] Non-developer agents (e.g. `analyst-requirements`, `qa`) do not see defect artifacts in their list.
+- [ ] Non-developer agents (e.g. `requirements-analyst`, `qa`) do not see defect artifacts in their list.
 
 ## Milestone 3: Verify Empty State Behaviour
 

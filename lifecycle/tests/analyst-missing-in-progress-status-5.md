@@ -24,7 +24,7 @@ developer and QA agents.
 
 ### Milestone 1 — `TestAnalystRequirementsActivatesStatus`
 
-Starts an `analyst-requirements` run against an idea artifact with
+Starts an `requirements-analyst` run against an idea artifact with
 `status: draft`.  Asserts:
 
 - The artifact's `status` field on disk is updated to `clarifying`
@@ -34,7 +34,7 @@ Starts an `analyst-requirements` run against an idea artifact with
 
 ### Milestone 2 — `TestAnalystPlannerActivatesStatus`
 
-Starts an `analyst-planner` run against a requirement artifact with
+Starts an `planning-analyst` run against a requirement artifact with
 `status: clarifying`.  Asserts:
 
 - The artifact's `status` on disk is updated to `planning` synchronously.
@@ -47,9 +47,9 @@ Three independent test cases:
 
 | Test | Agent | Exit | Expected artifact status |
 |------|-------|------|--------------------------|
-| `TestAnalystStatusPersistsAfterSuccess` | `analyst-requirements` | 0 (success) | `clarifying` (retained, not reverted) |
+| `TestAnalystStatusPersistsAfterSuccess` | `requirements-analyst` | 0 (success) | `clarifying` (retained, not reverted) |
 | `TestAnalystStatusSetsDoneAfterSuccess` | `stub-done-agent` (done_on_success=true) | 0 (success) | `done` |
-| `TestAnalystStatusPersistsAfterFailure` | `analyst-requirements` | 1 (failure) | `clarifying` (retained, not reverted to `draft`) |
+| `TestAnalystStatusPersistsAfterFailure` | `requirements-analyst` | 1 (failure) | `clarifying` (retained, not reverted to `draft`) |
 
 ### Milestone 4 — `TestAnalystRunBroadcastsStatusChange`
 

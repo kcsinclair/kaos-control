@@ -1,7 +1,7 @@
 ---
 title: Agent Launcher Must Filter Input Artifacts by Approved Status
 type: requirement
-status: planning
+status: blocked
 lineage: analyst-agent-sees-draft-ideas
 parent: defects/analyst-agent-sees-draft-ideas.md
 labels:
@@ -11,13 +11,15 @@ labels:
 assignees:
     - role: analyst
       who: agent
+    - role: product-owner
+      who: agent
 ---
 
 # Agent Launcher Must Filter Input Artifacts by Approved Status
 
 ## Problem
 
-The agent launcher modal presents candidate artifacts to the user based on a hardcoded `predecessorMap` that determines which input status to filter by, derived from the agent's `active_status`. For the `analyst-requirements` agent (`active_status: clarifying`), this map resolves to `draft`, causing unapproved ideas to appear as valid targets. An operator can then invoke the analyst against an idea that has not been reviewed or approved, producing requirements from potentially incomplete or rejected input.
+The agent launcher modal presents candidate artifacts to the user based on a hardcoded `predecessorMap` that determines which input status to filter by, derived from the agent's `active_status`. For the `requirements-analyst` agent (`active_status: clarifying`), this map resolves to `draft`, causing unapproved ideas to appear as valid targets. An operator can then invoke the analyst against an idea that has not been reviewed or approved, producing requirements from potentially incomplete or rejected input.
 
 The root cause is in `web/src/components/agent/AgentLaunchModal.vue` (lines 26-32): the `predecessorMap` assumes a single fixed predecessor status per `active_status`, but the correct input status for any agent should always be `approved` — an artifact must be approved before the next lifecycle phase can begin.
 
@@ -55,8 +57,8 @@ The root cause is in `web/src/components/agent/AgentLaunchModal.vue` (lines 26-3
 
 ## Acceptance Criteria
 
-- [ ] Opening the agent launcher for `analyst-requirements` shows only ideas with `status: approved`; ideas with `status: draft`, `clarifying`, `rejected`, or any other status do not appear.
-- [ ] Opening the agent launcher for `analyst-planner` shows only requirements with `status: approved`.
+- [ ] Opening the agent launcher for `requirements-analyst` shows only ideas with `status: approved`; ideas with `status: draft`, `clarifying`, `rejected`, or any other status do not appear.
+- [ ] Opening the agent launcher for `planning-analyst` shows only requirements with `status: approved`.
 - [ ] Opening the agent launcher for `backend-developer` shows only `plan-backend` artifacts with `status: approved`, plus any `defect` artifacts with `status: approved` assigned to the `backend-developer` role.
 - [ ] Opening the agent launcher for `frontend-developer` shows only `plan-frontend` artifacts with `status: approved`, plus any `defect` artifacts with `status: approved` assigned to the `frontend-developer` role.
 - [ ] Opening the agent launcher for `test-developer` shows only `plan-test` artifacts with `status: approved`, plus any `defect` artifacts with `status: approved` assigned to the `test-developer` role.

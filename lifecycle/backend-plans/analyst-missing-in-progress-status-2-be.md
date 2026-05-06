@@ -12,9 +12,9 @@ labels:
 
 # Backend Plan: Add Active Status to Analyst Agents
 
-The analyst agents (`analyst-requirements` and `analyst-planner`) do not set an in-progress status on the target artifact when a run starts. The backend already supports this via the `active_status` config field — developer agents use `in-development` and QA uses `in-qa` — but neither analyst agent is configured with one.
+The analyst agents (`requirements-analyst` and `planning-analyst`) do not set an in-progress status on the target artifact when a run starts. The backend already supports this via the `active_status` config field — developer agents use `in-development` and QA uses `in-qa` — but neither analyst agent is configured with one.
 
-This plan adds a new `clarifying` active status for `analyst-requirements` and `planning` for `analyst-planner`, using existing statuses from the vocabulary rather than introducing a new one. These statuses are semantically correct: the analyst-requirements agent clarifies an idea into a requirement, and the analyst-planner agent plans a requirement into implementation plans.
+This plan adds a new `clarifying` active status for `requirements-analyst` and `planning` for `planning-analyst`, using existing statuses from the vocabulary rather than introducing a new one. These statuses are semantically correct: the requirements-analyst agent clarifies an idea into a requirement, and the planning-analyst agent plans a requirement into implementation plans.
 
 ## Milestone 1: Configure `active_status` on Analyst Agents
 
@@ -24,14 +24,14 @@ Add `active_status` and `done_on_success` fields to the two analyst agent defini
 
 ### Files to Change
 
-- `lifecycle/config.yaml` — add `active_status: clarifying` to `analyst-requirements`; add `active_status: planning` to `analyst-planner`. Optionally add `done_on_success: true` to both if the target artifact should be marked `done` when the agent finishes successfully.
+- `lifecycle/config.yaml` — add `active_status: clarifying` to `requirements-analyst`; add `active_status: planning` to `planning-analyst`. Optionally add `done_on_success: true` to both if the target artifact should be marked `done` when the agent finishes successfully.
 
 ### Acceptance Criteria
 
-- [ ] `analyst-requirements` config block includes `active_status: clarifying`
-- [ ] `analyst-planner` config block includes `active_status: planning`
-- [ ] Running `analyst-requirements` against an idea artifact causes its status to change to `clarifying` before the agent process starts
-- [ ] Running `analyst-planner` against a requirement artifact causes its status to change to `planning` before the agent process starts
+- [ ] `requirements-analyst` config block includes `active_status: clarifying`
+- [ ] `planning-analyst` config block includes `active_status: planning`
+- [ ] Running `requirements-analyst` against an idea artifact causes its status to change to `clarifying` before the agent process starts
+- [ ] Running `planning-analyst` against a requirement artifact causes its status to change to `planning` before the agent process starts
 - [ ] A git commit is produced for each status change with the message format `status(<lineage>): <old> → <new> [run:<id>]`
 - [ ] No changes are needed to Go source code — the existing `active_status` machinery in `internal/agent/agent.go` handles this generically
 
@@ -55,13 +55,13 @@ Confirm that `setArtifactStatus` in `internal/agent/agent.go` bypasses the workf
 
 ### Description
 
-The developer agents set `done_on_success: true`, meaning the target plan artifact is marked `done` when the agent completes successfully. For analyst agents, the semantics are different: the analyst-requirements agent produces a *new* requirement artifact (it does not "complete" the idea), and the analyst-planner agent produces *new* plan artifacts (it does not "complete" the requirement).
+The developer agents set `done_on_success: true`, meaning the target plan artifact is marked `done` when the agent completes successfully. For analyst agents, the semantics are different: the requirements-analyst agent produces a *new* requirement artifact (it does not "complete" the idea), and the planning-analyst agent produces *new* plan artifacts (it does not "complete" the requirement).
 
 Determine whether `done_on_success` should be set. If the product owner wants the source artifact (idea or requirement) to remain in its pre-run status after a successful agent run, leave `done_on_success` unset. If the source should be advanced (e.g. idea → `done` after requirement is produced), set it.
 
 ### Files to Change
 
-- `lifecycle/config.yaml` — add or omit `done_on_success` on `analyst-requirements` and `analyst-planner` based on the decision.
+- `lifecycle/config.yaml` — add or omit `done_on_success` on `requirements-analyst` and `planning-analyst` based on the decision.
 
 ### Acceptance Criteria
 

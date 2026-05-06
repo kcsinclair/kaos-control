@@ -63,7 +63,7 @@ Verify the run-start endpoint works correctly when called with a target artifact
 ### Files to change
 
 - `tests/agents_api_test.go` — Add or extend test functions:
-  - `TestStartAgentRun_Success`: create a valid artifact, call `POST /api/p/:project/agents/analyst-requirements/run` with `{"target_path": "<artifact_path>"}`. Assert HTTP 202 and a non-empty `run_id`.
+  - `TestStartAgentRun_Success`: create a valid artifact, call `POST /api/p/:project/agents/requirements-analyst/run` with `{"target_path": "<artifact_path>"}`. Assert HTTP 202 and a non-empty `run_id`.
   - `TestStartAgentRun_AgentNotFound`: call with a non-existent agent name. Assert HTTP 404 with `"not_found"` error code.
   - `TestStartAgentRun_BadRequest`: call with invalid JSON body. Assert HTTP 400.
 
