@@ -1,7 +1,7 @@
 ---
 title: Status-Checker Button Non-Functional on Graph Views and Missing from Artifacts/Kanban Screens
 type: defect
-status: draft
+status: in-development
 lineage: status-checker-button-not-working-graph-missing-screens
 created: "2026-05-06T12:05:07+10:00"
 priority: normal
