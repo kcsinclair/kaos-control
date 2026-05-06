@@ -120,12 +120,14 @@ const STATUS_COLORS: Record<string, string> = {
   approved: '#dbeafe',
   'in-progress': '#fef3c7',
   blocked: '#fee2e2',
+  'in-qa': '#ede9fe',
 }
 const STATUS_TEXT: Record<string, string> = {
   done: '#065f46',
   approved: '#1e40af',
   'in-progress': '#92400e',
   blocked: '#991b1b',
+  'in-qa': '#6d28d9',
 }
 </script>
 
