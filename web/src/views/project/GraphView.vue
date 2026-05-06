@@ -7,6 +7,7 @@ import GraphFilters from '@/components/graph/GraphFilters.vue'
 import GraphLegend from '@/components/graph/GraphLegend.vue'
 import LabelModal from '@/components/graph/LabelModal.vue'
 import ArtifactModal from '@/components/artifact/ArtifactModal.vue'
+import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
 import type { GraphNode } from '@/types/api'
 
 // Lazy-load Cytoscape 2D so it doesn't increase the 3D chunk
@@ -22,6 +23,7 @@ const store = useGraphData(project)
 const selectedNode = ref<GraphNode | null>(null)
 const selectedLabelName = ref<string | null>(null)
 const view = ref<'3d' | '2d'>('3d')
+const showStatusPanel = ref(false)
 
 function onNodeClick(node: GraphNode) {
   if (node.type === 'label') {
@@ -66,19 +68,24 @@ onMounted(() => {
     />
 
     <div class="graph-main">
-      <div class="view-toggle" role="group" aria-label="Graph view mode">
-        <button
-          class="toggle-btn"
-          :class="{ active: view === '3d' }"
-          @click="view = '3d'"
-          aria-pressed="view === '3d'"
-        >3D</button>
-        <button
-          class="toggle-btn"
-          :class="{ active: view === '2d' }"
-          @click="view = '2d'"
-          aria-pressed="view === '2d'"
-        >2D</button>
+      <div class="view-controls">
+        <div class="view-toggle" role="group" aria-label="Graph view mode">
+          <button
+            class="toggle-btn"
+            :class="{ active: view === '3d' }"
+            @click="view = '3d'"
+            aria-pressed="view === '3d'"
+          >3D</button>
+          <button
+            class="toggle-btn"
+            :class="{ active: view === '2d' }"
+            @click="view = '2d'"
+            aria-pressed="view === '2d'"
+          >2D</button>
+        </div>
+        <button class="check-status-btn" @click="showStatusPanel = true">
+          Check all statuses
+        </button>
       </div>
 
       <div v-if="store.loading" class="graph-state" role="status" aria-live="polite">Loading graph…</div>
@@ -109,6 +116,13 @@ onMounted(() => {
       <div class="graph-hint" v-if="!store.loading && store.rawNodes.length > 0">
         <template v-if="view === '3d'">Scroll to zoom · Drag to orbit · Click node to inspect</template>
         <template v-else>Scroll to zoom · Drag to pan · Click node to inspect</template>
+      </div>
+
+      <div v-if="showStatusPanel" class="graph-status-panel-wrap">
+        <StatusCheckPanel
+          :project="project"
+          @close="showStatusPanel = false"
+        />
       </div>
     </div>
   </div>
@@ -141,15 +155,49 @@ onMounted(() => {
   overflow: hidden;
   background: #0f172a;
 }
-.view-toggle {
+.view-controls {
   position: absolute;
   top: var(--space-3);
   right: var(--space-3);
   z-index: 10;
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.view-toggle {
+  display: flex;
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: var(--radius-sm);
   overflow: hidden;
+}
+.check-status-btn {
+  padding: 4px 10px;
+  background: rgba(15,23,42,0.8);
+  color: rgba(241,245,249,0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.check-status-btn:hover {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+.graph-status-panel-wrap {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 20;
+  width: 380px;
+  max-height: calc(100% - var(--space-6));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
 }
 .toggle-btn {
   padding: 4px 10px;
