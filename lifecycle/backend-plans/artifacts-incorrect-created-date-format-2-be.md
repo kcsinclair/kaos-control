@@ -1,7 +1,7 @@
 ---
 title: "Fix Incorrect Created Date Format — Backend Plan"
 type: plan-backend
-status: in-development
+status: done
 lineage: artifacts-incorrect-created-date-format
 parent: lifecycle/defects/artifacts-incorrect-created-date-format.md
 ---
