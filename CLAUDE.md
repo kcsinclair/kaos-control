@@ -79,7 +79,7 @@ Roles split by lifecycle phase:
 - **Verify**: `qa` — runs tests, raises defects in `lifecycle/defects/`, assigns to the right developer role.
 - **Cross-cutting**: `product-owner`, `reviewer`, `approver`.
 
-Six agents are configured in [lifecycle/config.yaml](lifecycle/config.yaml): `analyst-requirements`, `analyst-planner`, `backend-developer`, `frontend-developer`, `test-developer`, `qa`. Each has scoped `allowed_write_paths` and a focused prompt template.
+Six agents are configured in [lifecycle/config.yaml](lifecycle/config.yaml): `requirements-analyst`, `planning-analyst`, `backend-developer`, `frontend-developer`, `test-developer`, `qa`. Each has scoped `allowed_write_paths` and a focused prompt template.
 
 `required_plans.ticket = [plan-backend, plan-frontend, plan-test]` gates `planning → in-development`.
 
