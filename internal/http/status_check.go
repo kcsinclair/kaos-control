@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/kaos-control/kaos-control/internal/statuscheck"
@@ -34,12 +35,14 @@ func (s *Server) handleStatusCheck(w http.ResponseWriter, r *http.Request) {
 
 	if lineageSlug != "" {
 		// Single-lineage check.
+		slog.Debug("status-check: evaluating lineage", "lineage", lineageSlug, "user", user.Email)
 		artifacts, err := p.Idx.ListByLineage(lineageSlug)
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 			return
 		}
 		allResults = statuscheck.Check(artifacts)
+		slog.Debug("status-check: lineage evaluated", "lineage", lineageSlug, "stale_count", len(allResults))
 	} else {
 		// Project-wide check: run algorithm per lineage.
 		grouped, err := p.Idx.ListAllGroupedByLineage()
@@ -47,8 +50,11 @@ func (s *Server) handleStatusCheck(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 			return
 		}
-		for _, artifacts := range grouped {
-			allResults = append(allResults, statuscheck.Check(artifacts)...)
+		for lineage, artifacts := range grouped {
+			slog.Debug("status-check: evaluating lineage", "lineage", lineage, "artifact_count", len(artifacts))
+			results := statuscheck.Check(artifacts)
+			slog.Debug("status-check: lineage evaluated", "lineage", lineage, "stale_count", len(results))
+			allResults = append(allResults, results...)
 		}
 	}
 
@@ -57,10 +63,15 @@ func (s *Server) handleStatusCheck(w http.ResponseWriter, r *http.Request) {
 		r := &allResults[i]
 		if p.Workflow.CanTransition(r.CurrentStatus, r.SuggestedStatus, userRoles) {
 			r.CanAdvance = true
+			slog.Debug("status-check: artifact stale and can advance",
+				"path", r.Path, "current_status", r.CurrentStatus, "suggested_status", r.SuggestedStatus)
 		} else {
 			r.CanAdvance = false
 			r.BlockedReason = fmt.Sprintf("requires role with permission to transition %q → %q",
 				r.CurrentStatus, r.SuggestedStatus)
+			slog.Debug("status-check: artifact stale but advance blocked",
+				"path", r.Path, "current_status", r.CurrentStatus, "suggested_status", r.SuggestedStatus,
+				"reason", r.BlockedReason)
 		}
 	}
 
@@ -83,9 +94,9 @@ func (s *Server) handleStatusCheck(w http.ResponseWriter, r *http.Request) {
 // Response:
 //
 //	{"results": [
-//	  {"path": "...", "outcome": "advanced", "new_status": "planning"},
-//	  {"path": "...", "outcome": "skipped"},
-//	  {"path": "...", "outcome": "error", "reason": "requires role with permission to transition ..."}
+//	  {"path": "...", "outcome": "advanced", "ok": true, "advanced_to": "planning"},
+//	  {"path": "...", "outcome": "skipped", "ok": false},
+//	  {"path": "...", "outcome": "error", "ok": false, "reason": "requires role with permission to transition ..."}
 //	]}
 func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
@@ -120,9 +131,12 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 	results := make([]advanceResult, 0, len(req.Paths))
 
 	for _, relPath := range req.Paths {
+		slog.Debug("status-check/advance: processing artifact", "path", relPath, "user", user.Email)
+
 		// Re-fetch the artifact from the index at execution time.
 		row, err := p.Idx.Get(relPath)
 		if err != nil {
+			slog.Debug("status-check/advance: db error fetching artifact", "path", relPath, "err", err)
 			results = append(results, advanceResult{
 				Path:    relPath,
 				Outcome: "error",
@@ -131,6 +145,7 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 			continue
 		}
 		if row == nil {
+			slog.Debug("status-check/advance: artifact not found", "path", relPath)
 			results = append(results, advanceResult{
 				Path:    relPath,
 				Outcome: "error",
@@ -142,6 +157,7 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 		// Re-evaluate staleness for this artifact's lineage.
 		lineageArtifacts, err := p.Idx.ListByLineage(row.Lineage)
 		if err != nil {
+			slog.Debug("status-check/advance: db error fetching lineage", "path", relPath, "lineage", row.Lineage, "err", err)
 			results = append(results, advanceResult{
 				Path:    relPath,
 				Outcome: "error",
@@ -163,6 +179,7 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 
 		if suggested == "" {
 			// Artifact is not stale — idempotent no-op.
+			slog.Debug("status-check/advance: artifact not stale, skipping", "path", relPath, "status", row.Status)
 			results = append(results, advanceResult{
 				Path:    relPath,
 				Outcome: "skipped",
@@ -172,16 +189,20 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 
 		// Check permission.
 		if !p.Workflow.CanTransition(row.Status, suggested, userRoles) {
+			reason := fmt.Sprintf("requires role with permission to transition %q → %q", row.Status, suggested)
+			slog.Debug("status-check/advance: advance blocked by permissions",
+				"path", relPath, "from", row.Status, "to", suggested, "reason", reason)
 			results = append(results, advanceResult{
 				Path:    relPath,
 				Outcome: "error",
-				Reason:  fmt.Sprintf("requires role with permission to transition %q → %q", row.Status, suggested),
+				Reason:  reason,
 			})
 			continue
 		}
 
 		// Apply the transition.
 		if err := applyTransition(p, row, relPath, suggested, user.Email, ""); err != nil {
+			slog.Debug("status-check/advance: transition error", "path", relPath, "from", row.Status, "to", suggested, "err", err)
 			results = append(results, advanceResult{
 				Path:    relPath,
 				Outcome: "error",
@@ -190,6 +211,8 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 			continue
 		}
 
+		slog.Info("status-check/advance: artifact advanced",
+			"path", relPath, "from", row.Status, "to", suggested, "user", user.Email)
 		results = append(results, advanceResult{
 			Path:       relPath,
 			Outcome:    "advanced",
@@ -200,4 +223,3 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 
 	writeJSON(w, http.StatusOK, map[string]any{"results": results})
 }
-
