@@ -1,9 +1,9 @@
 ---
 title: Artifact Agent Run History
 type: requirement
-status: blocked
+status: draft
 lineage: artifact-agent-run-history
-created: "2026-04-28"
+created: "2026-04-28T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/artifact-agent-run-history.md
 labels:
@@ -113,7 +113,7 @@ The modal must trap focus while open and restore focus on close. Run status badg
 - [ ] `go build ./...` and `go vet ./...` pass with backend changes.
 - [ ] `pnpm exec vue-tsc --noEmit` and `pnpm build` pass with frontend changes.
 
-## Open Questions
+## Resolved Questions
 
 - Should the run list also include runs that _produced_ the current artifact (i.e. where the artifact appears in `artifacts_produced_json`), or strictly only runs whose `target_path` matches? The idea specifies target-path matching; producing-run matching would require a more expensive query.
 
