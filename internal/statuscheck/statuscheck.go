@@ -31,18 +31,26 @@ func statusRank(s string) int {
 	return -1
 }
 
+// ChildInfo describes a direct child artifact in a lineage, including its
+// current workflow status. This allows the frontend to display child statuses
+// and perform WebSocket relevance matching.
+type ChildInfo struct {
+	Path   string `json:"path"`
+	Status string `json:"status"`
+}
+
 // Result describes a single stale artifact and the recommended advancement.
 // The CanAdvance and BlockedReason fields are filled in by the caller (they
 // require the workflow engine and user context).
 type Result struct {
-	Path            string   `json:"path"`
-	Lineage         string   `json:"lineage"`
-	CurrentStatus   string   `json:"current_status"`
-	SuggestedStatus string   `json:"suggested_status"`
-	Reason          string   `json:"reason"`
-	Children        []string `json:"children"`
-	CanAdvance      bool     `json:"can_advance"`
-	BlockedReason   string   `json:"blocked_reason,omitempty"`
+	Path            string      `json:"path"`
+	Lineage         string      `json:"lineage"`
+	CurrentStatus   string      `json:"current_status"`
+	SuggestedStatus string      `json:"suggested_status"`
+	Reason          string      `json:"reason"`
+	Children        []ChildInfo `json:"children"`
+	CanAdvance      bool        `json:"can_advance"`
+	BlockedReason   string      `json:"blocked_reason,omitempty"`
 }
 
 // Check runs the staleness algorithm over a flat slice of artifacts that share
@@ -108,7 +116,7 @@ func Check(artifacts []*index.ArtifactRow) []Result {
 		// Verify every active child is strictly ahead of the parent.
 		allAhead := true
 		minChildRank := -1
-		var childPaths_ []string
+		var childInfos []ChildInfo
 		for _, child := range activeChildren {
 			cr := statusRank(child.Status)
 			if cr == -1 || cr <= parentRank {
@@ -118,7 +126,7 @@ func Check(artifacts []*index.ArtifactRow) []Result {
 			if minChildRank == -1 || cr < minChildRank {
 				minChildRank = cr
 			}
-			childPaths_ = append(childPaths_, child.Path)
+			childInfos = append(childInfos, ChildInfo{Path: child.Path, Status: child.Status})
 		}
 
 		if !allAhead || minChildRank == -1 {
@@ -135,7 +143,7 @@ func Check(artifacts []*index.ArtifactRow) []Result {
 				"all active children have advanced to at least %q; parent is still %q",
 				suggestedStatus, a.Status,
 			),
-			Children: childPaths_,
+			Children: childInfos,
 		})
 	}
 
