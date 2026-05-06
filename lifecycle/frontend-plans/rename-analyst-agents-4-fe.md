@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Rename Analyst Agents to Phase-First Convention"
 type: plan-frontend
-status: draft
+status: approved
 lineage: rename-analyst-agents
 parent: lifecycle/requirements/rename-analyst-agents-2.md
 ---
