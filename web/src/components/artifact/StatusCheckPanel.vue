@@ -66,7 +66,11 @@ async function advance(artifact: StaleArtifact) {
   advancingPaths.value = next
   error.value = null
   try {
-    await advanceStatuses(props.project, [artifact.path])
+    const response = await advanceStatuses(props.project, [artifact.path])
+    const failed = response.results.filter((r) => !r.ok)
+    if (failed.length) {
+      error.value = failed.map((r) => r.reason ?? r.outcome).join('; ')
+    }
     await fetchResults()
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to advance'
@@ -84,7 +88,16 @@ async function fixAll() {
   fixAllLoading.value = true
   error.value = null
   try {
-    await advanceStatuses(props.project, paths)
+    const response = await advanceStatuses(props.project, paths)
+    const advanced = response.results.filter((r) => r.ok).length
+    const failed = response.results.filter((r) => !r.ok)
+    if (failed.length) {
+      const reasons = failed.map((r) => r.reason ?? r.outcome).join('; ')
+      error.value =
+        advanced > 0
+          ? `${advanced} advanced, ${failed.length} failed: ${reasons}`
+          : `Failed: ${reasons}`
+    }
     await fetchResults()
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to fix all'
