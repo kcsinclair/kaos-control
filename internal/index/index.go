@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -108,6 +109,11 @@ func Open(dbPath, projectRoot string, stages []config.Stage, opts ...Option) (*I
 	if err := idx.Scan(stages); err != nil {
 		return nil, fmt.Errorf("initial scan: %w", err)
 	}
+	// One-time backfill: rewrite any on-disk artifacts that carry a plain-date
+	// created field (YYYY-MM-DD) to full RFC3339 format.
+	if err := idx.NormaliseDates(); err != nil {
+		slog.Warn("normalise dates failed", "err", err)
+	}
 	// Prune stale rows whose path escapes the project root (e.g. left over
 	// from past firmlink-related Rel computations or a project-path change).
 	if err := idx.pruneEscapingPaths(); err != nil {
@@ -172,6 +178,104 @@ func (idx *Index) pruneEscapingPaths() error {
 // Close closes the underlying database connection.
 func (idx *Index) Close() error {
 	return idx.db.Close()
+}
+
+// plainDateInFMRe matches a `created:` YAML line whose value is a bare date
+// (YYYY-MM-DD), with or without surrounding quotes. Used by NormaliseDates.
+var plainDateInFMRe = regexp.MustCompile(`(?m)^(created:[ \t]*)["']?([0-9]{4}-[0-9]{2}-[0-9]{2})["']?[ \t]*$`)
+
+// NormaliseDates scans all indexed artifacts and rewrites any that have a
+// plain-date (YYYY-MM-DD) created field to RFC3339 format (midnight in the
+// server's local timezone). Only the `created:` line is changed; all other
+// file content is preserved. Called once after the startup Scan.
+func (idx *Index) NormaliseDates() error {
+	rows, err := idx.db.Query(`SELECT path, frontmatter_json FROM artifacts`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	type pending struct {
+		path    string
+		rfc3339 string
+	}
+	var toFix []pending
+
+	for rows.Next() {
+		var relPath, fmJSON string
+		if err := rows.Scan(&relPath, &fmJSON); err != nil {
+			return err
+		}
+		var fm struct {
+			Created string `json:"created"`
+		}
+		if err := json.Unmarshal([]byte(fmJSON), &fm); err != nil || fm.Created == "" {
+			continue
+		}
+		// Skip entries that are already RFC3339.
+		if _, err := time.Parse(time.RFC3339, fm.Created); err == nil {
+			continue
+		}
+		t, err := time.Parse("2006-01-02", fm.Created)
+		if err != nil {
+			continue // unrecognised format — leave as-is
+		}
+		localMidnight := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Now().Location())
+		toFix = append(toFix, pending{path: relPath, rfc3339: localMidnight.Format(time.RFC3339)})
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	fixed := 0
+	for _, e := range toFix {
+		absPath := filepath.Join(idx.projectRoot, filepath.FromSlash(e.path))
+		if err := rewriteCreatedField(absPath, e.rfc3339); err != nil {
+			slog.Warn("normalise dates: failed to rewrite file", "path", e.path, "err", err)
+			continue
+		}
+		fixed++
+	}
+	if fixed > 0 {
+		slog.Info("normalised plain-date created fields to RFC3339 on disk", "count", fixed)
+	}
+	return nil
+}
+
+// rewriteCreatedField rewrites the `created:` line in the YAML frontmatter of
+// absPath, replacing a plain-date value with the provided RFC3339 string.
+// All other file content (including frontmatter field order and the body) is
+// preserved unchanged.
+func rewriteCreatedField(absPath, rfc3339 string) error {
+	raw, err := os.ReadFile(absPath)
+	if err != nil {
+		return err
+	}
+
+	// Require an opening frontmatter delimiter.
+	if !bytes.HasPrefix(raw, []byte("---\n")) {
+		return nil // no frontmatter — skip silently
+	}
+
+	// Locate the closing "---" line. It starts with "\n---" after the opening delimiter.
+	closingIdx := bytes.Index(raw[4:], []byte("\n---"))
+	if closingIdx < 0 {
+		return fmt.Errorf("no closing frontmatter delimiter found in %s", absPath)
+	}
+	closingIdx += 4 // adjust relative-to-raw[4:] offset back to raw
+
+	// Replace the created: line only within the frontmatter block.
+	fmBytes := raw[4:closingIdx]
+	newFMBytes := plainDateInFMRe.ReplaceAll(fmBytes, []byte(`${1}"`+rfc3339+`"`))
+	if bytes.Equal(fmBytes, newFMBytes) {
+		return nil // already correct or pattern not found
+	}
+
+	var out bytes.Buffer
+	out.WriteString("---\n")
+	out.Write(newFMBytes)
+	out.Write(raw[closingIdx:])
+	return atomicWrite(absPath, out.Bytes())
 }
 
 // loadStoredMtimes returns a map of project-relative path → stored mtime (Unix seconds)
