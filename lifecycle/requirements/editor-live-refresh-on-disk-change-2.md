@@ -1,7 +1,7 @@
 ---
 title: Auto-Refresh Editor Content on External Disk Change
 type: requirement
-status: draft
+status: done
 lineage: editor-live-refresh-on-disk-change
 created: "2026-04-29T00:00:00+10:00"
 priority: high
