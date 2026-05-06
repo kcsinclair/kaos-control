@@ -1,9 +1,9 @@
 ---
 title: Auto-Refresh Editor Content on External Disk Change
 type: requirement
-status: blocked
+status: draft
 lineage: editor-live-refresh-on-disk-change
-created: "2026-04-29"
+created: "2026-04-29T00:00:00+10:00"
 priority: high
 parent: lifecycle/ideas/editor-live-refresh-on-disk-change.md
 labels:
@@ -76,7 +76,7 @@ The existing `useExternalChange` composable (`web/src/composables/useExternalCha
 - [ ] Existing `useExternalChange` unit/integration tests continue to pass; new tests cover the auto-refresh and dirty-guard paths.
 - [ ] Related: [[editor-live-refresh-on-disk-change]]
 
-## Open Questions
+## Resolved Questions
 
 1. Should the toast include a one-click "Undo" or "Show diff" action for users who want to see what changed, or is a plain informational message sufficient for v1?
 2. If a future iteration adds a user preference to disable auto-refresh globally, should the composable accept a reactive `enabled` flag now to make that easier, or defer the design?
