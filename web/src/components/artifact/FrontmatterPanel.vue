@@ -195,6 +195,7 @@ function fmt(v: string | undefined): string {
   font-size: var(--text-sm);
   color: var(--color-text);
 }
+/* Fallback badge for when project/path props are absent (StatusDropdown not rendered) */
 .badge {
   display: inline-block;
   padding: 1px 8px;
@@ -202,13 +203,32 @@ function fmt(v: string | undefined): string {
   font-size: 11px;
   font-weight: 500;
   background: var(--color-border);
+  color: var(--color-text);
 }
-.badge[data-status="done"] { background: #d1fae5; color: #065f46; }
-.badge[data-status="approved"] { background: #dbeafe; color: #1e40af; }
-.badge[data-status="in-progress"] { background: #fef3c7; color: #92400e; }
-.badge[data-status="blocked"] { background: #fee2e2; color: #991b1b; }
-.badge[data-status="clarifying"] { background: var(--badge-clarifying-bg); color: var(--badge-clarifying-text); }
-.badge[data-status="planning"]   { background: var(--badge-planning-bg);   color: var(--badge-planning-text); }
+.badge[data-status="draft"]          { background: #f3f4f6; color: #374151; }
+.badge[data-status="clarifying"]     { background: #ede9fe; color: #5b21b6; }
+.badge[data-status="planning"]       { background: #fef3c7; color: #92400e; }
+.badge[data-status="in-development"] { background: #dbeafe; color: #1e40af; }
+.badge[data-status="in-qa"]          { background: #ede9fe; color: #6d28d9; }
+.badge[data-status="approved"]       { background: #d1fae5; color: #065f46; }
+.badge[data-status="done"]           { background: #bbf7d0; color: #14532d; }
+.badge[data-status="blocked"]        { background: #fee2e2; color: #991b1b; }
+.badge[data-status="rejected"]       { background: #fef2f2; color: #b91c1c; }
+.badge[data-status="abandoned"]      { background: #f3f4f6; color: #6b7280; }
+.badge[data-status="in-progress"]    { background: #fef3c7; color: #92400e; }
+@media (prefers-color-scheme: dark) {
+  .badge[data-status="draft"]          { background: #374151; color: #d1d5db; }
+  .badge[data-status="clarifying"]     { background: #3b2f6e; color: #c4b5fd; }
+  .badge[data-status="planning"]       { background: #422006; color: #fcd34d; }
+  .badge[data-status="in-development"] { background: #1e3a5f; color: #93c5fd; }
+  .badge[data-status="in-qa"]          { background: #2e1065; color: #c4b5fd; }
+  .badge[data-status="approved"]       { background: #064e3b; color: #6ee7b7; }
+  .badge[data-status="done"]           { background: #052e16; color: #4ade80; }
+  .badge[data-status="blocked"]        { background: #7f1d1d; color: #fca5a5; }
+  .badge[data-status="rejected"]       { background: #7f1d1d; color: #fca5a5; }
+  .badge[data-status="abandoned"]      { background: #1f2937; color: #9ca3af; }
+  .badge[data-status="in-progress"]    { background: #422006; color: #fcd34d; }
+}
 .tag {
   display: inline-block;
   background: var(--color-border);
