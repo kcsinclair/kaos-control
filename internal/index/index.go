@@ -581,6 +581,9 @@ type Filter struct {
 	Type      string
 	Priority  string
 	Q         string // free-text substring match across title, slug, lineage, type, status
+	// Release filters to artifacts whose frontmatter release field equals this value.
+	// The special value "__unassigned__" matches artifacts with a null or empty release field.
+	Release   string
 	Limit     int
 	Offset    int
 	Unlimited bool // when true, no LIMIT is applied (returns all matching rows)
@@ -1471,6 +1474,14 @@ func buildWhere(f Filter) (clause string, args []any) {
 			`(title LIKE ? ESCAPE '\' OR slug LIKE ? ESCAPE '\' OR lineage LIKE ? ESCAPE '\' OR type LIKE ? ESCAPE '\' OR status LIKE ? ESCAPE '\')`,
 		)
 		args = append(args, pattern, pattern, pattern, pattern, pattern)
+	}
+	if f.Release == "__unassigned__" {
+		conds = append(conds,
+			`(json_extract(frontmatter_json, '$.release') IS NULL OR json_extract(frontmatter_json, '$.release') = '')`,
+		)
+	} else if f.Release != "" {
+		conds = append(conds, "json_extract(frontmatter_json, '$.release') = ?")
+		args = append(args, f.Release)
 	}
 	if len(conds) == 0 {
 		return "", args

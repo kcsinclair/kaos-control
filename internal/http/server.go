@@ -195,6 +195,17 @@ func (s *Server) buildRouter() chi.Router {
 			r.With(requireAuth).Get("/status-check", s.handleStatusCheck)
 			r.With(requireAuth).Post("/status-check/advance", s.handleStatusCheckAdvance)
 
+			// Releases
+			r.Route("/releases", func(r chi.Router) {
+				r.Get("/", s.handleListReleases)
+				r.Post("/", s.handleCreateRelease)
+				r.Get("/graph", s.handleRoadmapGraph)
+				r.Get("/{releaseID}", s.handleGetRelease)
+				r.Put("/{releaseID}", s.handleUpdateRelease)
+				r.Delete("/{releaseID}", s.handleDeleteRelease)
+				r.Get("/{releaseID}/artifacts", s.handleListReleaseArtifacts)
+			})
+
 			// DevOps pipelines
 			r.Get("/devops/pipelines", s.handleListPipelines)
 			r.Post("/devops/pipelines/{slug}/run", s.handleRunPipeline)
