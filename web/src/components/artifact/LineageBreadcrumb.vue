@@ -65,6 +65,9 @@ const segments = computed(() => {
 .crumb-link:hover {
   text-decoration: underline;
 }
+.crumb-intermediate {
+  color: var(--color-text-muted);
+}
 .crumb-current {
   color: var(--color-text);
   font-weight: 500;
