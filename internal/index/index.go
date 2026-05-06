@@ -1589,6 +1589,15 @@ func (idx *Index) PruneEvents(maxAgeDays int, maxCount int) error {
 	return tx.Commit()
 }
 
+// ScanArtifactRows scans a *sql.Rows result set of the standard artifact
+// projection (path, slug, lineage, idx, stage, type, status, title,
+// frontmatter_json, mtime, created) into []*ArtifactRow. It is exported so
+// other packages (e.g. internal/release) can reuse the scan logic.
+func ScanArtifactRows(rows *sql.Rows) ([]*ArtifactRow, error) {
+	out, _, err := scanRows(rows)
+	return out, err
+}
+
 func scanRows(rows *sql.Rows) ([]*ArtifactRow, int, error) {
 	var out []*ArtifactRow
 	for rows.Next() {
