@@ -28,7 +28,7 @@ stages:
 
 users:
   - email: keith@sinclair.org.au
-    roles: [product-owner, analyst, reviewer, approver]
+    roles: [product-owner, analyst, reviewer, approver, devops]
 
 kanban:
   columns:
@@ -52,7 +52,7 @@ kanban:
 
 agents:
   # ── Think phase ─────────────────────────────────────────────────────────────
-  - name: analyst-requirements
+  - name: requirements-analyst
     role: [analyst]
     driver: claude-code-cli
     model: opus
@@ -62,8 +62,8 @@ agents:
       - lifecycle/requirements
       - lifecycle/ideas       # so the agent can block the input idea when stuck
     git_identity:
-      name: Analyst (Requirements) Agent
-      email: analyst-requirements@kaos-control.local
+      name: Requirements Analyst Agent
+      email: requirements-analyst@kaos-control.local
     prompt_templates:
       analyst: |
         You are an analyst for the Innovation Maker project.
@@ -100,7 +100,7 @@ agents:
               who: agent
         Then stop — do not write a partial requirement.
 
-  - name: analyst-planner
+  - name: planning-analyst
     role: [analyst]
     driver: claude-code-cli
     model: opus
@@ -112,8 +112,8 @@ agents:
       - lifecycle/test-plans
       - lifecycle/requirements   # so the agent can block the input requirement when stuck
     git_identity:
-      name: Analyst (Planner) Agent
-      email: analyst-planner@kaos-control.local
+      name: Planning Analyst Agent
+      email: planning-analyst@kaos-control.local
     prompt_templates:
       analyst: |
         You are an analyst for the Innovation Maker project.
