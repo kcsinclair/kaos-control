@@ -1,7 +1,7 @@
 ---
 title: Project Feed
 type: requirement
-status: blocked
+status: draft
 lineage: project-feed
 parent: lifecycle/ideas/project-feed.md
 assignees:
@@ -123,7 +123,7 @@ Each feed entry must contain:
 - [ ] Feed entries are keyboard-navigable.
 - [ ] Related artifacts: [[project-feed]]
 
-## Open Questions
+## Resolved Questions
 
 - Should the feed show lock/unlock events (`lock.acquired`, `lock.released`)? They are noisy but may be useful for debugging contention. Recommend: omit for v1, add later if requested.
 
