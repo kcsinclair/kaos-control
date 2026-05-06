@@ -212,6 +212,10 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 	store := release.NewStore(p.Idx.DB())
 	oldName, err := store.Update(rel)
 	if err != nil {
+		if err == release.ErrNotFound {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
+			return
+		}
 		if isDuplicateError(err) {
 			writeJSON(w, http.StatusConflict, apiError("conflict", fmt.Sprintf("release %q already exists in this project", rel.Name)))
 			return

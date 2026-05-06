@@ -128,7 +128,7 @@ func (s *Store) Update(r *Release) (string, error) {
 		`SELECT name FROM releases WHERE project_id = ? AND id = ?`, r.ProjectID, r.ID,
 	).Scan(&oldName)
 	if err == sql.ErrNoRows {
-		return "", fmt.Errorf("release %d not found in project %q", r.ID, r.ProjectID)
+		return "", ErrNotFound
 	}
 	if err != nil {
 		return "", err
@@ -161,7 +161,7 @@ func (s *Store) Delete(projectID string, id int64) (string, int, error) {
 		`SELECT name FROM releases WHERE project_id = ? AND id = ?`, projectID, id,
 	).Scan(&name)
 	if err == sql.ErrNoRows {
-		return "", 0, fmt.Errorf("release %d not found in project %q", id, projectID)
+		return "", 0, ErrNotFound
 	}
 	if err != nil {
 		return "", 0, err

@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+// ErrNotFound is returned by Store methods when the requested release does not exist.
+var ErrNotFound = errors.New("release not found")
+
 // ValidStatuses is the set of allowed release status values.
 var ValidStatuses = map[string]bool{
 	"planned": true,
