@@ -1,7 +1,7 @@
 ---
 title: "Test Artifact Management — Frontend Plan"
 type: plan-frontend
-status: draft
+status: approved
 lineage: test-artifact-management
 parent: lifecycle/requirements/test-artifact-management-2.md
 assignees:
