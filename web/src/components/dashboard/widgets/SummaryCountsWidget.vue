@@ -1,0 +1,43 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { api } from '@/api/client'
+import { useWebSocket } from '@/composables/useWebSocket'
+import type { WsEvent } from '@/types/api'
+import SummaryCountCard from './SummaryCountCard.vue'
+import { Ticket, Play, AlertOctagon, CheckCircle } from 'lucide-vue-next'
+
+const props = defineProps<{ project: string }>()
+
+interface DashboardStats {
+  total: number
+  in_progress: number
+  blocked: number
+  completed_this_week: number
+}
+
+const stats = ref<DashboardStats>({ total: 0, in_progress: 0, blocked: 0, completed_this_week: 0 })
+
+async function fetchStats() {
+  try {
+    const data = await api.get<DashboardStats>(
+      `/p/${encodeURIComponent(props.project)}/dashboard/stats`
+    )
+    stats.value = data
+  } catch {
+    // keep zeroes on error
+  }
+}
+
+onMounted(fetchStats)
+
+useWebSocket(props.project, 'artifact.indexed', (_e: WsEvent) => {
+  void fetchStats()
+})
+</script>
+
+<template>
+  <SummaryCountCard label="Total Tickets"       :value="stats.total"               :icon="Ticket" />
+  <SummaryCountCard label="In Progress"          :value="stats.in_progress"         :icon="Play" />
+  <SummaryCountCard label="Blocked"              :value="stats.blocked"             :icon="AlertOctagon" />
+  <SummaryCountCard label="Completed This Week"  :value="stats.completed_this_week" :icon="CheckCircle" />
+</template>
