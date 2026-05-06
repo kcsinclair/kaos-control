@@ -1,7 +1,7 @@
 ---
 title: Universal Text Filter Across All Views
 type: idea
-status: approved
+status: clarifying
 lineage: universal-text-filter
 created: "2026-04-28T09:29:36+10:00"
 priority: high
