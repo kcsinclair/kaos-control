@@ -1,7 +1,7 @@
 ---
 title: Artifact Agent Run History
 type: requirement
-status: planning
+status: blocked
 lineage: artifact-agent-run-history
 created: "2026-04-28"
 priority: normal
@@ -12,6 +12,9 @@ labels:
     - feature
     - frontend
     - backend
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Artifact Agent Run History
