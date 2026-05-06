@@ -1,13 +1,15 @@
 ---
-title: "artifact.indexed WebSocket event not emitted after release rename propagation"
+title: artifact.indexed WebSocket event not emitted after release rename propagation
 type: defect
-status: draft
+status: approved
 lineage: releases-and-roadmaps
+priority: high
 parent: lifecycle/tests/releases-and-roadmaps-6-test.md
-labels: [defect]
+labels:
+    - defect
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # artifact.indexed WebSocket event not emitted after release rename propagation
