@@ -12,7 +12,7 @@ labels:
     - usability
     - enhancement
 assignees:
-    - role: product-owner
+    - role: analyst
       who: agent
 ---
 
