@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Log Streaming View
 type: requirement
-status: blocked
+status: draft
 lineage: devops-pipeline-log-streaming
 created: "2026-05-06T00:00:00+10:00"
 priority: normal
@@ -107,8 +107,16 @@ When a DevOps pipeline is running, users must open a modal (`LogViewer.vue`) to 
 - [ ] Layout stacks correctly on viewports < 768 px wide.
 - [ ] No regressions to existing agent run log viewing ([[devops-pipelines]]).
 
-## Open Questions
+## Resolved Questions
 
 1. Should the step filter also be available as clickable step labels in the top pane (click a step → filter log to that step), or is a standalone dropdown sufficient?
+
+> standalone dropdown works.
+
 2. Is there a maximum log retention duration for in-memory buffers when the user leaves the pipeline page and returns — should the buffer survive navigation, or is clearing on route change acceptable?
+
+> Clearing on route change is acceptable.
+
 3. Should ANSI escape codes be stripped server-side (current behaviour) or should basic colour support be added as a future enhancement?
+
+> Strip ANSI server side.
