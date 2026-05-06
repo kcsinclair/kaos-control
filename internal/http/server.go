@@ -209,6 +209,7 @@ func (s *Server) buildRouter() chi.Router {
 			// Dashboard
 			r.Route("/dashboard", func(r chi.Router) {
 				r.Get("/stats", s.handleGetDashboardStats)
+				r.Get("/status-distribution", s.handleGetStatusDistribution)
 			})
 
 			// DevOps pipelines

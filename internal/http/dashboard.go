@@ -33,3 +33,20 @@ func (s *Server) handleGetDashboardStats(w http.ResponseWriter, r *http.Request)
 
 	writeJSON(w, http.StatusOK, stats)
 }
+
+// handleGetStatusDistribution handles GET /api/p/:project/dashboard/status-distribution
+func (s *Server) handleGetStatusDistribution(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	distribution, err := p.Idx.StatusDistribution()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"distribution": distribution})
+}

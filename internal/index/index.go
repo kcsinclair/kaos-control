@@ -1648,6 +1648,38 @@ func (idx *Index) DashboardStats(sinceTime time.Time) (*DashboardStatsRow, error
 	return row, nil
 }
 
+// StatusCount holds one status and its ticket count for the distribution endpoint.
+type StatusCount struct {
+	Status string `json:"status"`
+	Count  int    `json:"count"`
+}
+
+// StatusDistribution returns ticket counts grouped by status, excluding
+// tickets with status "done" or "abandoned". Returns an empty (non-nil)
+// slice when no matching tickets exist.
+func (idx *Index) StatusDistribution() ([]StatusCount, error) {
+	rows, err := idx.db.Query(
+		`SELECT status, COUNT(*) FROM artifacts
+		 WHERE type='ticket' AND status NOT IN ('done','abandoned')
+		 GROUP BY status
+		 ORDER BY status`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying status distribution: %w", err)
+	}
+	defer rows.Close()
+
+	out := []StatusCount{}
+	for rows.Next() {
+		var sc StatusCount
+		if err := rows.Scan(&sc.Status, &sc.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, sc)
+	}
+	return out, rows.Err()
+}
+
 // ScanArtifactRows scans a *sql.Rows result set of the standard artifact
 // projection (path, slug, lineage, idx, stage, type, status, title,
 // frontmatter_json, mtime, created) into []*ArtifactRow. It is exported so
