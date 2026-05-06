@@ -1,7 +1,7 @@
 ---
-title: "Ollama Agent Support — Frontend Plan"
+title: Ollama Agent Support — Frontend Plan
 type: plan-frontend
-status: draft
+status: approved
 lineage: ollama-agent-support
 parent: lifecycle/requirements/ollama-agent-support-2.md
 ---
