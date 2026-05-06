@@ -1680,6 +1680,134 @@ func (idx *Index) StatusDistribution() ([]StatusCount, error) {
 	return out, rows.Err()
 }
 
+// VelocityBucket holds a time period label and the count of completions in it.
+type VelocityBucket struct {
+	Period string `json:"period"`
+	Count  int    `json:"count"`
+}
+
+// CompletionVelocity returns time-bucketed counts of artifacts that
+// transitioned to "done" within the lookback window.
+//
+// granularity must be "daily", "weekly", or "monthly"; any other value
+// is coerced to "weekly".
+// days controls the lookback window (default 90, capped at 365).
+// All periods within the window are included even when count is zero.
+func (idx *Index) CompletionVelocity(granularity string, days int) ([]VelocityBucket, error) {
+	switch granularity {
+	case "daily", "weekly", "monthly":
+	default:
+		granularity = "weekly"
+	}
+	if days <= 0 {
+		days = 90
+	}
+	if days > 365 {
+		days = 365
+	}
+
+	since := time.Now().AddDate(0, 0, -days)
+	rows, err := idx.db.Query(
+		`SELECT timestamp FROM events
+		 WHERE event_type = 'status_transition'
+		 AND summary LIKE '%→ done%'
+		 AND timestamp >= ?
+		 ORDER BY timestamp ASC`,
+		since.Unix(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying velocity events: %w", err)
+	}
+	defer rows.Close()
+
+	var timestamps []time.Time
+	for rows.Next() {
+		var ts int64
+		if err := rows.Scan(&ts); err != nil {
+			return nil, err
+		}
+		timestamps = append(timestamps, time.Unix(ts, 0))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Build all period keys in range, then count events per period.
+	periods := velocityPeriods(granularity, since, time.Now())
+	counts := make(map[string]int, len(periods))
+	for _, p := range periods {
+		counts[p] = 0
+	}
+	for _, ts := range timestamps {
+		key := velocityPeriodKey(granularity, ts)
+		if _, ok := counts[key]; ok {
+			counts[key]++
+		}
+	}
+
+	result := make([]VelocityBucket, len(periods))
+	for i, p := range periods {
+		result[i] = VelocityBucket{Period: p, Count: counts[p]}
+	}
+	return result, nil
+}
+
+// velocityPeriods returns the ordered list of period keys from since to now
+// (inclusive) for the given granularity.
+func velocityPeriods(granularity string, since, now time.Time) []string {
+	var periods []string
+	switch granularity {
+	case "daily":
+		cur := time.Date(since.Year(), since.Month(), since.Day(), 0, 0, 0, 0, since.Location())
+		end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		for !cur.After(end) {
+			periods = append(periods, cur.Format("2006-01-02"))
+			cur = cur.AddDate(0, 0, 1)
+		}
+	case "weekly":
+		cur := isoWeekMonday(since)
+		end := isoWeekMonday(now)
+		for !cur.After(end) {
+			year, week := cur.ISOWeek()
+			periods = append(periods, fmt.Sprintf("%04d-W%02d", year, week))
+			cur = cur.AddDate(0, 0, 7)
+		}
+	case "monthly":
+		cur := time.Date(since.Year(), since.Month(), 1, 0, 0, 0, 0, since.Location())
+		end := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		for !cur.After(end) {
+			periods = append(periods, cur.Format("2006-01"))
+			cur = cur.AddDate(0, 1, 0)
+		}
+	}
+	return periods
+}
+
+// velocityPeriodKey returns the bucket label for a given timestamp under the
+// requested granularity.
+func velocityPeriodKey(granularity string, t time.Time) string {
+	switch granularity {
+	case "daily":
+		return t.Format("2006-01-02")
+	case "monthly":
+		return t.Format("2006-01")
+	default: // weekly
+		year, week := t.ISOWeek()
+		return fmt.Sprintf("%04d-W%02d", year, week)
+	}
+}
+
+// isoWeekMonday returns the Monday of the ISO week that contains t,
+// truncated to midnight in t's location.
+func isoWeekMonday(t time.Time) time.Time {
+	weekday := int(t.Weekday())
+	if weekday == 0 {
+		weekday = 7 // Sunday = 7 in ISO 8601
+	}
+	monday := t.AddDate(0, 0, -(weekday - 1))
+	return time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, t.Location())
+}
+
 // ScanArtifactRows scans a *sql.Rows result set of the standard artifact
 // projection (path, slug, lineage, idx, stage, type, status, title,
 // frontmatter_json, mtime, created) into []*ArtifactRow. It is exported so

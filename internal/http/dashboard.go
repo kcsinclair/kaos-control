@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -49,4 +50,43 @@ func (s *Server) handleGetStatusDistribution(w http.ResponseWriter, r *http.Requ
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"distribution": distribution})
+}
+
+// handleGetVelocity handles GET /api/p/:project/dashboard/velocity
+// Query params:
+//   - granularity  string  daily|weekly|monthly  (default: weekly)
+//   - days         int     lookback window        (default: 90, max: 365)
+func (s *Server) handleGetVelocity(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	q := r.URL.Query()
+
+	granularity := q.Get("granularity")
+	switch granularity {
+	case "daily", "weekly", "monthly":
+	default:
+		granularity = "weekly"
+	}
+
+	days := 90
+	if v := q.Get("days"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			days = n
+		}
+	}
+
+	buckets, err := p.Idx.CompletionVelocity(granularity, days)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"granularity": granularity,
+		"buckets":     buckets,
+	})
 }
