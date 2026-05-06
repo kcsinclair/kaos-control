@@ -1,9 +1,9 @@
 ---
 title: Sortable Table Columns
 type: requirement
-status: done
+status: draft
 lineage: sortable-table-columns
-created: "2026-04-27"
+created: "2026-04-27T00:00:00+10:00"
 priority: normal
 parent: ideas/sortable-table-columns.md
 labels:
@@ -11,6 +11,9 @@ labels:
     - frontend
     - usability
     - vue
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Sortable Table Columns
@@ -91,7 +94,7 @@ All data tables in the Innovation Maker UI currently display rows in a fixed ser
 - [ ] Sort logic is extracted into a reusable composable or component, not duplicated per view.
 - [ ] No new runtime dependencies are introduced.
 
-## Open Questions
+## Resolved Questions
 
 1. Should enum sort orders for `status` and `priority` be defined in the frontend only, or derived from the project's `config.yaml` workflow definition?
 
