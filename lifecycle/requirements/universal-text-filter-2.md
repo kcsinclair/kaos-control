@@ -1,7 +1,7 @@
 ---
 title: Universal Text Filter Across All Views
 type: requirement
-status: blocked
+status: approved
 lineage: universal-text-filter
 created: "2026-05-06"
 priority: high
@@ -121,8 +121,44 @@ A reusable `TextFilter` (or similarly named) component must be created and place
 - [ ] Filter input has appropriate `aria-label` and the clear button is keyboard-accessible.
 - [ ] Filter input placement and behaviour are consistent across all four views.
 
-## Open Questions
+## Questions
 
 - **OQ-1**: Should the Graph view offer a "focus" mode that, in addition to dimming, re-centres the camera on matched nodes? This could improve usability for large graphs but adds complexity.
+
+> Yes, I think this code from https://github.com/kcsinclair/tekadm/blob/main/link-tag-visualisation/generate_tag_graph_3d.py should be helpful
+
+```
+  function focusNode(node) {
+    const distance = 80;
+    const distRatio = 1 + distance / Math.hypot(node.x || 1, node.y || 1, node.z || 1);
+    Graph.cameraPosition(
+      { x: (node.x || 0) * distRatio, y: (node.y || 0) * distRatio, z: (node.z || 0) * distRatio },
+      node,
+      1000
+    );
+  }
+
+  function handleNodeClick(node) {
+    nodes.forEach(n => { n.__highlighted = false; });
+    node.__highlighted = true;
+    const connectedIds = new Set();
+    links.forEach(l => {
+      const src = typeof l.source === "object" ? l.source.id : l.source;
+      const tgt = typeof l.target === "object" ? l.target.id : l.target;
+      if (src === node.id) connectedIds.add(tgt);
+      if (tgt === node.id) connectedIds.add(src);
+    });
+    connectedIds.forEach(id => { if (nodeMap[id]) nodeMap[id].__highlighted = true; });
+    Graph.nodeColor(Graph.nodeColor());
+    focusNode(node);
+    showModal(node);
+  }
+```
+
 - **OQ-2**: Should the Project Feed text filter also match on actor/agent names, or only on artifact titles and event descriptions?
+
+> rtifact titles and event descriptions works for now.
+  
 - **OQ-3**: Is the `/` keyboard shortcut acceptable, or does it conflict with any planned shortcut (e.g. command palette)?
+
+> Yes / is perfect, as I am a VI guy!
