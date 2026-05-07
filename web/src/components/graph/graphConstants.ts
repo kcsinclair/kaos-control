@@ -8,6 +8,8 @@ export const NODE_COLORS: Record<string, string> = {
   prototype:       '#14b8a6',  // teal
   defect:          '#f43f5e',  // rose
   label:           '#a855f7',  // purple — synthetic label nodes
+  release:         '#93c5fd',  // light blue — scheduled/unscheduled release nodes
+  backlog:         '#6b7280',  // gray — synthetic Backlog root node
 }
 
 export const PRIORITY_COLORS: Record<string, string> = {

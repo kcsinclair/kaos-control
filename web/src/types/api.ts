@@ -143,12 +143,16 @@ export interface GraphNode {
   index: number
   priority?: string
   labels?: string[]
+  /** True for synthetic nodes such as the Backlog root in the roadmap graph */
+  synthetic?: boolean
 }
 
 export interface GraphEdge {
   source: string
   target: string
   kind: string
+  /** Human-readable duration label for timeline edges (e.g. "2 weeks") */
+  label?: string
 }
 
 export interface GraphData {
