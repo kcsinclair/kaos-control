@@ -10,6 +10,7 @@ labels:
     - enhancement
     - workflow
     - artefacts
+release: June2026
 ---
 
 relates-to: [[ideas/improved-agent-handling]]
