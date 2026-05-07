@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import type { GraphNode, GraphEdge } from '@/types/api'
-import { NODE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS, APPROVED_TEST_RING_COLOR } from './graphConstants'
+import { NODE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS, APPROVED_TEST_RING_COLOR, EDGE_COLORS } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
   edges: GraphEdge[]
   onNodeClick: (node: GraphNode) => void
   matchedNodeIds?: Set<string>
+  /** Use left-to-right breadthfirst layout instead of fcose (for directed chains) */
+  directed?: boolean
 }>()
 
 const container = ref<HTMLDivElement | null>(null)
@@ -15,7 +17,10 @@ let cy: any = null
 let pulseInterval: ReturnType<typeof setInterval> | null = null
 let pulseTick = false
 
-function nodeColor(type: string): string {
+function nodeColor(type: string, synthetic?: boolean): string {
+  if (type === 'release') {
+    return synthetic ? NODE_COLORS['backlog'] : NODE_COLORS['release']
+  }
   return NODE_COLORS[type] ?? '#6b7280'
 }
 
@@ -26,7 +31,9 @@ function buildElements() {
       label: n.title || n.slug,
       type: n.type,
       status: n.status,
-      color: nodeColor(n.type),
+      // 'synthetic' stored as string so Cytoscape attribute selectors work
+      synthetic: n.synthetic ? 'true' : 'false',
+      color: nodeColor(n.type, n.synthetic),
       priorityColor: (n.priority || n.status === 'done')
         ? (n.status === 'done' ? '#6b7280' : (PRIORITY_COLORS[n.priority!] ?? '#6b7280'))
         : null,
@@ -38,7 +45,9 @@ function buildElements() {
       id: `e${i}`,
       source: e.source,
       target: e.target,
-      label: e.kind,
+      kind: e.kind,
+      // Show duration for timeline edges; hide kind label for other edges
+      label: e.kind === 'timeline' && e.label ? e.label : '',
     },
   }))
   return [...nodes, ...edges]
@@ -119,6 +128,44 @@ async function init() {
         },
       },
       {
+        // Release nodes: rounded rectangle, light blue
+        selector: 'node[type="release"]',
+        style: {
+          shape: 'round-rectangle',
+          width: 'label',
+          height: 24,
+          padding: '10px',
+          'background-color': NODE_COLORS['release'],
+          'border-color': '#60a5fa',
+          'border-width': 1.5,
+          'text-valign': 'center',
+          'text-halign': 'center',
+          color: '#1e3a5f',
+          'font-size': 11,
+          'font-weight': '600',
+          'text-max-width': 160,
+        },
+      },
+      {
+        // Backlog synthetic node: diamond shape in gray
+        selector: 'node[type="release"][synthetic="true"]',
+        style: {
+          shape: 'diamond',
+          width: 36,
+          height: 36,
+          padding: '0px',
+          'background-color': NODE_COLORS['backlog'],
+          'border-color': '#9ca3af',
+          'border-width': 1.5,
+          'text-valign': 'bottom',
+          'text-halign': 'center',
+          'text-margin-y': 6,
+          color: '#d1d5db',
+          'font-size': 10,
+          'font-weight': '600',
+        },
+      },
+      {
         selector: 'edge',
         style: {
           width: 1.5,
@@ -134,15 +181,51 @@ async function init() {
           'text-background-padding': '2px',
         },
       },
+      {
+        // Timeline edges: blue directional arrows with duration label
+        selector: 'edge[kind="timeline"]',
+        style: {
+          'line-color': '#3b82f6',
+          'target-arrow-color': '#3b82f6',
+          'target-arrow-shape': 'triangle',
+          width: 2,
+          label: 'data(label)',
+          'font-size': 9,
+          color: '#93c5fd',
+          'text-background-color': '#1e293b',
+          'text-background-opacity': 0.9,
+          'text-background-padding': '2px',
+        },
+      },
+      {
+        // Assigned edges (artifact → release): lighter, no arrow, no label
+        selector: 'edge[kind="assigned"]',
+        style: {
+          'line-color': '#334155',
+          'target-arrow-color': '#334155',
+          'target-arrow-shape': 'none',
+          width: 1,
+          label: '',
+        },
+      },
     ],
-    layout: {
-      name: 'fcose',
-      quality: 'proof',
-      randomize: true,
-      animate: false,
-      nodeSeparation: 120,
-      idealEdgeLength: () => 80,
-    } as any,
+    layout: props.directed
+      ? {
+          name: 'breadthfirst',
+          directed: true,
+          padding: 40,
+          spacingFactor: 1.6,
+          avoidOverlap: true,
+          animate: false,
+        } as any
+      : {
+          name: 'fcose',
+          quality: 'proof',
+          randomize: true,
+          animate: false,
+          nodeSeparation: 120,
+          idealEdgeLength: () => 80,
+        } as any,
     userZoomingEnabled: true,
     userPanningEnabled: true,
     boxSelectionEnabled: false,
@@ -199,7 +282,10 @@ function update() {
   if (!cy) return
   cy.elements().remove()
   cy.add(buildElements())
-  cy.layout({ name: 'fcose', quality: 'proof', randomize: false, animate: false } as any).run()
+  const layoutOpts = props.directed
+    ? { name: 'breadthfirst', directed: true, padding: 40, spacingFactor: 1.6, avoidOverlap: true, animate: false } as any
+    : { name: 'fcose', quality: 'proof', randomize: false, animate: false } as any
+  cy.layout(layoutOpts).run()
   nextTick(applySearchHighlight)
 }
 
