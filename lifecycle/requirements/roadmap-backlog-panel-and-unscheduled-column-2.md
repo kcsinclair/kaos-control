@@ -1,7 +1,7 @@
 ---
 title: Roadmap Backlog Panel and Unscheduled Column
 type: requirement
-status: blocked
+status: approved
 lineage: roadmap-backlog-panel-and-unscheduled-column
 parent: ideas/roadmap-backlog-panel-and-unscheduled-column.md
 labels:
@@ -10,6 +10,7 @@ labels:
     - roadmaps
     - usability
     - vue
+release: May2026
 assignees:
     - role: product-owner
       who: agent
@@ -109,8 +110,16 @@ The current "Unscheduled" card list conflates two distinct concepts — releases
 - [ ] All interactive elements are keyboard-accessible
 - [ ] Related: [[roadmap-backlog-panel-and-unscheduled-column]]
 
-## Open Questions
+## Resolved Questions
 
 - OQ1: Should the Backlog panel support filtering or sorting (e.g., by type, status, priority), or is a flat list sufficient for v1?
+
+> A filter with type, status and priority would be great.
+
 - OQ2: Should the Unscheduled column width scale if there are many unscheduled releases, or remain fixed at one column-width with vertical stacking only?
+
+> Fixed with with vertical stacking.
+
 - OQ3: When the Gantt view mode is set to a narrow granularity (e.g., week) with many columns, should the Unscheduled column be pinned/sticky on the right edge during horizontal scroll?
+
+> Yes.
