@@ -1,7 +1,7 @@
 ---
 title: 'Roadmap Gantt: Release Name Displayed in First Column Misaligns Rows'
 type: defect
-status: approved
+status: in-development
 lineage: roadmap-gantt-release-name-in-column
 created: "2026-05-07T11:33:33+10:00"
 priority: high
