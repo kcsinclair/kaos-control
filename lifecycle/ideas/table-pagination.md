@@ -9,6 +9,7 @@ labels:
     - frontend
     - vue
     - usability
+release: April2026
 ---
 
 # Table Pagination Controls
