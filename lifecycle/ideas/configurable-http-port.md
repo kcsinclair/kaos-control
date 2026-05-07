@@ -8,6 +8,7 @@ labels:
     - backend
     - feature
     - go
+release: April2026
 ---
 
 # Configurable HTTP Port via YAML Config
