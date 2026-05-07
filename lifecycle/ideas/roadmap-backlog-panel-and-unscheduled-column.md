@@ -11,6 +11,7 @@ labels:
     - roadmaps
     - usability
     - vue
+release: May2026
 ---
 
 # Roadmap Backlog Panel and Unscheduled Column Placement
