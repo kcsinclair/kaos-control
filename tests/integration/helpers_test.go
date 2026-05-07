@@ -307,6 +307,15 @@ func makeArtifact(title, typ, status, lineage, parent, body string, labels ...st
 	return sb.String()
 }
 
+// makeBlockedArtifact builds a markdown artifact with status "blocked" and an
+// "## Open Questions" section in its body so that the autoblock rule in
+// internal/index/autoblock.go does not fire and auto-transition the artifact
+// back to "draft" during indexing.
+func makeBlockedArtifact(title, typ, lineage, parent string, labels ...string) string {
+	body := "Body.\n\n## Open Questions\n- Why is the sky blue?"
+	return makeArtifact(title, typ, "blocked", lineage, parent, body, labels...)
+}
+
 // makeArtifactWithPriority is like makeArtifact but also sets the priority field.
 // Pass priority="" to omit the field entirely.
 func makeArtifactWithPriority(title, typ, status, lineage, priority, body string, labels ...string) string {

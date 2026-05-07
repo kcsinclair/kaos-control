@@ -51,9 +51,10 @@ func TestDashboardStats_MixedStatuses(t *testing.T) {
 			content: makeArtifact("Stats Dev 1", "ticket", "in-development", "stats-dev-1", "", "Body.")},
 		{relPath: "lifecycle/requirements/stats-dev-2.md",
 			content: makeArtifact("Stats Dev 2", "ticket", "in-development", "stats-dev-2", "", "Body.")},
-		// blocked (counted in total + blocked)
+		// blocked (counted in total + blocked); must include ## Open Questions so
+		// autoblock does not auto-transition the artifact back to draft on index.
 		{relPath: "lifecycle/requirements/stats-blocked-1.md",
-			content: makeArtifact("Stats Blocked 1", "ticket", "blocked", "stats-blocked-1", "", "Body.")},
+			content: makeBlockedArtifact("Stats Blocked 1", "ticket", "stats-blocked-1", "")},
 		// clarifying (also counted as blocked per implementation)
 		{relPath: "lifecycle/requirements/stats-clarifying-1.md",
 			content: makeArtifact("Stats Clarifying 1", "ticket", "clarifying", "stats-clarifying-1", "", "Body.")},

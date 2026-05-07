@@ -50,9 +50,10 @@ func TestStatusDistribution_CorrectCounts(t *testing.T) {
 			content: makeArtifact("Dist Dev 1", "ticket", "in-development", "dist-dev-1", "", "Body.")},
 		{relPath: "lifecycle/requirements/dist-dev-2.md",
 			content: makeArtifact("Dist Dev 2", "ticket", "in-development", "dist-dev-2", "", "Body.")},
-		// 1 blocked ticket
+		// 1 blocked ticket; must include ## Open Questions so autoblock does not
+		// auto-transition the artifact back to draft on index.
 		{relPath: "lifecycle/requirements/dist-blocked-1.md",
-			content: makeArtifact("Dist Blocked 1", "ticket", "blocked", "dist-blocked-1", "", "Body.")},
+			content: makeBlockedArtifact("Dist Blocked 1", "ticket", "dist-blocked-1", "")},
 	}
 
 	env := newTestEnv(t, seeds)
