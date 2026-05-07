@@ -1,7 +1,7 @@
 ---
 title: 2D Graph Layout Selector
 type: idea
-status: draft
+status: clarifying
 lineage: 2d-graph-layout-selector
 created: "2026-05-07T15:48:11+10:00"
 priority: normal
