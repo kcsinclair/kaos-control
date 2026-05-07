@@ -1,7 +1,7 @@
 ---
 title: 'Graph: Show Releases Overlay'
 type: idea
-status: draft
+status: approved
 lineage: graph-show-releases-overlay
 created: "2026-05-07T11:04:02+10:00"
 priority: normal
