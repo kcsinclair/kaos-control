@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: Directed Release Chain Graph Rendering'
 type: plan-frontend
-status: approved
+status: in-development
 lineage: roadmap-graph-release-connections
 created: "2026-05-07"
 priority: high
