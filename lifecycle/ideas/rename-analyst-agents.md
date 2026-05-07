@@ -8,6 +8,7 @@ priority: normal
 labels:
     - agent
     - process
+release: May2026
 ---
 
 # Rename Analyst Agents for Consistency
