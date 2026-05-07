@@ -1,14 +1,15 @@
 ---
-title: "Assisted ideas or defects"
-priority: normal
+title: Assisted ideas or defects
 type: idea
 status: done
 lineage: prompt-to-idea
+priority: normal
 labels:
     - agent
     - workflow
     - process
     - enhancement
+release: April2026
 ---
 
 relates-to: [[ideas/prompt-to-idea]]
