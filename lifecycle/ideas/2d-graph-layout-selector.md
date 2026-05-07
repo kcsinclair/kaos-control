@@ -10,6 +10,7 @@ labels:
     - feature
     - usability
     - vue
+release: May2026
 ---
 
 # 2D Graph Layout Selector
