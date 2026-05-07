@@ -20,15 +20,10 @@ const emit = defineEmits<{
 const container = ref<HTMLElement>()
 const { palette, isDark } = useGraphTheme()
 
-// Dim-blend target for unmatched nodes: matches the canvas background per theme
-function dimColor(): string {
-  return isDark.value ? '#1e2535' : '#d1d5db'
-}
-
 function nodeColor(n: GraphNode): string {
   const matched = props.matchedNodeIds
   if (matched && matched.size > 0 && !matched.has(n.id)) {
-    return dimColor()
+    return palette.value.dimBlend
   }
   const p = palette.value
   if (n.type === 'release') {

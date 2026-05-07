@@ -38,6 +38,8 @@ export interface GraphPalette {
   selectedBorderColor: string
   /** Search-match highlight ring colour */
   searchHighlight: string
+  /** Dim-blend colour for unmatched nodes: matches the canvas background at reduced opacity */
+  dimBlend: string
 }
 
 // ─── Dark palette ─────────────────────────────────────────────────────────────
@@ -95,6 +97,7 @@ const DARK_PALETTE: GraphPalette = {
   borderDefault:        'rgba(255,255,255,0.25)',
   selectedBorderColor:  '#ffffff',
   searchHighlight:      '#facc15',   // yellow-400
+  dimBlend:             '#1e2535',
 }
 
 // ─── Light palette ────────────────────────────────────────────────────────────
@@ -152,6 +155,7 @@ const LIGHT_PALETTE: GraphPalette = {
   borderDefault:        'rgba(0,0,0,0.15)',
   selectedBorderColor:  '#000000',
   searchHighlight:      '#eab308',   // yellow-500 — darker for light bg
+  dimBlend:             '#d1d5db',
 }
 
 // ─── Composable ───────────────────────────────────────────────────────────────
