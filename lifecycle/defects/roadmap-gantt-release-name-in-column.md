@@ -11,6 +11,9 @@ labels:
     - roadmaps
     - vue
 release: May2026
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Roadmap Gantt: Release Name Displayed in First Column Misaligns Rows
