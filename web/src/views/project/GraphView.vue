@@ -126,7 +126,7 @@ onMounted(() => {
       </template>
 
       <div class="graph-legend-wrap">
-        <GraphLegend :show-label-nodes="store.showLabelNodes" />
+        <GraphLegend :show-label-nodes="store.showLabelNodes" :show-releases="store.showReleases" />
       </div>
 
       <div class="graph-hint" v-if="!store.loading && store.rawNodes.length > 0">

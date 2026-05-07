@@ -4,13 +4,23 @@ import { useGraphTheme } from './graphConstants'
 
 const props = defineProps<{
   showLabelNodes?: boolean
+  showReleases?: boolean
 }>()
 
 const { palette, isDark } = useGraphTheme()
 
+// Node types that belong to the release overlay
+const RELEASE_NODE_TYPES = new Set(['release', 'backlog'])
+// Edge kinds that belong to the release overlay
+const RELEASE_EDGE_KINDS = new Set(['timeline', 'assigned'])
+
 const nodeTypes = computed(() =>
   Object.entries(palette.value.nodeColors)
-    .filter(([type]) => type !== 'label' || props.showLabelNodes)
+    .filter(([type]) => {
+      if (type === 'label' && !props.showLabelNodes) return false
+      if (RELEASE_NODE_TYPES.has(type) && !props.showReleases) return false
+      return true
+    })
     .map(([type, color]) => ({
       type,
       color,
@@ -28,7 +38,11 @@ const priorityEntries = computed(() =>
 
 const edgeKinds = computed(() =>
   Object.entries(palette.value.edgeColors)
-    .filter(([kind]) => kind !== 'label' || props.showLabelNodes)
+    .filter(([kind]) => {
+      if (kind === 'label' && !props.showLabelNodes) return false
+      if (RELEASE_EDGE_KINDS.has(kind) && !props.showReleases) return false
+      return true
+    })
     .map(([kind, color]) => ({
       kind,
       color,
