@@ -10,9 +10,12 @@ labels:
     - defect
     - workflow
     - agent
+release: May2026-2
 ---
 
 # QA Agent Should Assign Defects to the Correct Role
+
+**This appears to be happening, needs to be verified**
 
 Currently, the QA agent identifies defects and labels them by type (e.g. frontend, backend), but does not assign the defect artifact to the corresponding responsible role. This means defects sit unowned after creation, requiring manual intervention to route them to the right developer.
 
