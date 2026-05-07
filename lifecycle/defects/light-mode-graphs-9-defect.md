@@ -1,7 +1,7 @@
 ---
 title: ForceGraph3D.vue hardcodes #bfdbfe for release-node label — invisible in light mode
 type: defect
-status: approved
+status: in-development
 lineage: light-mode-graphs
 parent: lifecycle/tests/light-mode-graphs-6-test.md
 labels: [defect]
