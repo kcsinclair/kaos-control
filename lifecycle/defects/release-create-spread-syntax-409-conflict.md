@@ -1,7 +1,7 @@
 ---
 title: 'Release Creation: Spread Syntax Error Causes Partial Save and 409 Conflict on Retry'
 type: defect
-status: draft
+status: approved
 lineage: release-create-spread-syntax-409-conflict
 created: "2026-05-07T08:45:11+10:00"
 priority: normal
