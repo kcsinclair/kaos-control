@@ -28,11 +28,6 @@ var stageSuffix = map[string]string{
 	"test-plans":     "test",
 }
 
-// validPriorities is the allowed vocabulary for the priority field.
-var validPriorities = map[string]bool{
-	"high": true, "medium": true, "normal": true, "low": true, "": true,
-}
-
 // handleCreateArtifact handles POST /api/p/:project/artifacts
 func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
@@ -185,11 +180,6 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
-		return
-	}
-
-	if !validPriorities[req.Frontmatter.Priority] {
-		writeJSON(w, http.StatusBadRequest, apiError("bad_request", `priority must be one of: high, medium, normal, low, "" (unset)`))
 		return
 	}
 
@@ -450,11 +440,6 @@ func (s *Server) handlePatchPriority(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
-		return
-	}
-
-	if !validPriorities[req.Priority] {
-		writeJSON(w, http.StatusBadRequest, apiError("bad_request", `priority must be one of: high, medium, normal, low, "" (unset)`))
 		return
 	}
 
