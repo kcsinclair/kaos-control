@@ -39,15 +39,33 @@ const visibleItems = computed(() =>
     : store.items.filter(r => !(TERMINAL_STATUSES as readonly string[]).includes(r.status))
 )
 
+function priorityOrder(value: string | undefined): number {
+  switch (value) {
+    case 'critical': return 4
+    case 'high':     return 3
+    case 'normal':   return 2
+    case 'low':      return 1
+    default:         return 0
+  }
+}
+
 const { sortColumn, sortDirection, sortedRows, toggleSort, resetSort } = useSortableTable(
   visibleItems,
   {
-    title:   { type: 'string' },
-    stage:   { type: 'string' },
-    status:  { type: 'string' },
-    type:    { type: 'string' },
-    created: { type: 'date' },
-    mtime:   { type: 'date' },
+    title:    { type: 'string' },
+    stage:    { type: 'string' },
+    status:   { type: 'string' },
+    type:     { type: 'string' },
+    created:  { type: 'date' },
+    mtime:    { type: 'date' },
+    priority: {
+      type: 'number',
+      getValue: (row) => priorityOrder((row as { frontmatter?: { priority?: string } }).frontmatter?.priority),
+    },
+    release: {
+      type: 'string',
+      getValue: (row) => (row as { frontmatter?: { release?: string } }).frontmatter?.release ?? '',
+    },
   },
 )
 
