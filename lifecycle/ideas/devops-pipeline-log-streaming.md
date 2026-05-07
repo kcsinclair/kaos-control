@@ -10,6 +10,7 @@ labels:
     - frontend
     - agent-runner
     - usability
+release: May2026
 ---
 
 # DevOps Pipeline Log Streaming View
