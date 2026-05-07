@@ -10,6 +10,7 @@ labels:
     - feature
     - usability
     - vue
+release: April2026
 ---
 
 # Collapsible Left Menu with Icon-Only Mode
