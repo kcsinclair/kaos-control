@@ -1,9 +1,11 @@
 ---
 title: 'Frontend Plan: Artefacts List Release & Priority Columns'
 type: plan-frontend
-status: approved
+status: draft
 lineage: artefacts-list-release-priority-columns
+priority: high
 parent: requirements/artefacts-list-release-priority-columns-2.md
+release: May2026
 ---
 
 # Frontend Plan: Artefacts List Release & Priority Columns
