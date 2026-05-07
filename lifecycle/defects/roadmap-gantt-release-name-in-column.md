@@ -10,6 +10,7 @@ labels:
     - frontend
     - roadmaps
     - vue
+release: May2026
 ---
 
 # Roadmap Gantt: Release Name Displayed in First Column Misaligns Rows
