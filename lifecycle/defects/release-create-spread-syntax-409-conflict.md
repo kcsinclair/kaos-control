@@ -10,6 +10,10 @@ labels:
     - releases
     - frontend
     - backend
+release: May2026
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Release Creation: Spread Syntax Error Causes Partial Save and 409 Conflict on Retry
