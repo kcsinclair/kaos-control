@@ -1,12 +1,13 @@
 ---
-title: "Labels are Nodes"
-priority: high
+title: Labels are Nodes
 type: idea
 status: done
 lineage: labels-are-nodes
+priority: high
 labels:
     - enhancement
     - frontend
+release: April2026
 ---
 
 # Labels are Nodes
