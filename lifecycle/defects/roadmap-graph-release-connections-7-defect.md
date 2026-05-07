@@ -1,7 +1,7 @@
 ---
 title: Unscheduled releases collapse to shared terminus instead of forming individual chain
 type: defect
-status: draft
+status: approved
 lineage: roadmap-graph-release-connections
 parent: lifecycle/tests/roadmap-graph-release-connections-6-test.md
 labels: [defect]
