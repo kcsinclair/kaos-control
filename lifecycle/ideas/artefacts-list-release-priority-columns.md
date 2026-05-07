@@ -10,7 +10,7 @@ labels:
     - frontend
     - enhancement
     - releases
-release: June2026
+release: May2026
 ---
 
 # Artefacts List: Release & Priority Columns with Releases Filter
