@@ -374,13 +374,24 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 		"synthetic": true,
 	})
 
+	// Partition releases into scheduled (have a start_date) and unscheduled.
+	// store.List already returns them ordered: scheduled by start_date ASC, name ASC;
+	// then unscheduled by name ASC.
+	var scheduled, unscheduled []*release.Release
+	for _, rel := range releases {
+		if rel.StartDate != nil {
+			scheduled = append(scheduled, rel)
+		} else {
+			unscheduled = append(unscheduled, rel)
+		}
+	}
+
 	// Track paths of artifact nodes for edge filtering.
 	artifactNodeSet := map[string]bool{}
 
-	for _, rel := range releases {
+	// addReleaseNode appends a release node and its assigned artifact nodes/edges.
+	addReleaseNode := func(rel *release.Release) error {
 		releaseNodeID := fmt.Sprintf("release:%d", rel.ID)
-
-		// Add release node.
 		nodes = append(nodes, map[string]any{
 			"id":         releaseNodeID,
 			"title":      rel.Name,
@@ -394,17 +405,10 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 			"start_date": rel.StartDate,
 			"end_date":   rel.EndDate,
 		})
-
-		// Fetch assigned ideas and defects.
-		artifacts, _, err := p.Idx.List(index.Filter{
-			Release:   rel.Name,
-			Unlimited: true,
-		})
+		artifacts, _, err := p.Idx.List(index.Filter{Release: rel.Name, Unlimited: true})
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-			return
+			return err
 		}
-
 		for _, a := range artifacts {
 			if a.Type != "idea" && a.Type != "defect" {
 				continue
@@ -427,6 +431,28 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 				"kind":   "assigned",
 			})
 		}
+		return nil
+	}
+
+	// Build directed chain: Backlog → scheduled[0] → scheduled[1] → …
+	prevID := backlogID
+	for i, rel := range scheduled {
+		nodeID := fmt.Sprintf("release:%d", rel.ID)
+		if err := addReleaseNode(rel); err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
+		}
+		label := ""
+		if i > 0 {
+			label = humanDuration(*scheduled[i-1].StartDate, *rel.StartDate)
+		}
+		edges = append(edges, map[string]any{
+			"source": prevID,
+			"target": nodeID,
+			"kind":   "timeline",
+			"label":  label,
+		})
+		prevID = nodeID
 	}
 
 	// Add existing depends_on / blocks edges between included artifact nodes.
@@ -479,6 +505,40 @@ func parseDuration(s string) (time.Duration, error) {
 	default:
 		return 0, fmt.Errorf("unknown duration unit %q; use 'd' (days) or 'w' (weeks)", string(unit))
 	}
+}
+
+// humanDuration returns a human-readable string for the duration between two dates.
+// Uses the largest appropriate unit: days (< 8), weeks (< 5), months (< 13), years.
+func humanDuration(from, to time.Time) string {
+	days := int(to.Sub(from).Hours() / 24)
+	if days < 0 {
+		days = -days
+	}
+	if days < 8 {
+		if days == 1 {
+			return "1 day"
+		}
+		return fmt.Sprintf("%d days", days)
+	}
+	weeks := days / 7
+	if weeks < 5 {
+		if weeks == 1 {
+			return "1 week"
+		}
+		return fmt.Sprintf("%d weeks", weeks)
+	}
+	months := days / 30
+	if months < 13 {
+		if months == 1 {
+			return "1 month"
+		}
+		return fmt.Sprintf("%d months", months)
+	}
+	years := days / 365
+	if years == 1 {
+		return "1 year"
+	}
+	return fmt.Sprintf("%d years", years)
 }
 
 // isDuplicateError returns true when err is a SQLite unique constraint violation.
