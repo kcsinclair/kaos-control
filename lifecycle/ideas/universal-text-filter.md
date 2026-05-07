@@ -10,6 +10,7 @@ labels:
     - frontend
     - usability
     - enhancement
+release: May2026
 ---
 
 # Universal Text Filter Across All Views
