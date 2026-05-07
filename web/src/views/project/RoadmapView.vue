@@ -7,8 +7,10 @@ import ReleaseFormModal from '@/components/releases/ReleaseFormModal.vue'
 import ReleaseDeleteModal from '@/components/releases/ReleaseDeleteModal.vue'
 import ReleaseDetailModal from '@/components/releases/ReleaseDetailModal.vue'
 import RoadmapGraphView from '@/components/releases/RoadmapGraphView.vue'
+import ArtifactModal from '@/components/artifact/ArtifactModal.vue'
 import * as releasesApi from '@/api/releases'
 import type { Release, ReleaseDetail } from '@/types/release'
+import type { GraphNode, GraphEdge } from '@/types/api'
 
 const route = useRoute()
 const project = route.params.project as string
@@ -24,6 +26,10 @@ const editRelease = ref<Release | null>(null)
 const deleteRelease = ref<Release | null>(null)
 const deleteArtifactCount = ref(0)
 const detailReleaseId = ref<number | null>(null)
+
+// Graph artifact click state
+const selectedArtifactNode = ref<GraphNode | null>(null)
+const selectedArtifactEdges = ref<GraphEdge[]>([])
 
 // Cache for release details (summary badge counts)
 const releaseDetails = ref<Map<number, ReleaseDetail>>(new Map())
@@ -139,6 +145,8 @@ function openEdit(releaseId: number) {
     <RoadmapGraphView
       v-else-if="viewMode === 'graph'"
       :project="project"
+      @release-click="detailReleaseId = $event"
+      @artifact-click="(node, edges) => { selectedArtifactNode = node; selectedArtifactEdges = edges }"
     />
 
     <!-- Create / Edit modal -->
@@ -174,6 +182,15 @@ function openEdit(releaseId: number) {
       :artifact-count="deleteArtifactCount"
       @confirmed="confirmDelete"
       @close="deleteRelease = null"
+    />
+
+    <!-- Artifact detail modal (opened from graph view clicks) -->
+    <ArtifactModal
+      v-if="selectedArtifactNode !== null"
+      :node="selectedArtifactNode"
+      :project="project"
+      :edges="selectedArtifactEdges"
+      @close="selectedArtifactNode = null"
     />
   </div>
 </template>

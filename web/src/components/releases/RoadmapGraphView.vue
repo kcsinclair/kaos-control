@@ -15,17 +15,16 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  nodeClick: [node: GraphNode]
+  /** Emitted when a non-Backlog release node is clicked */
+  releaseClick: [releaseId: number]
+  /** Emitted when an idea or defect artifact node is clicked */
+  artifactClick: [node: GraphNode, edges: GraphEdge[]]
 }>()
 
 const view = ref<'3d' | '2d'>('3d')
 const loading = ref(true)
 const error = ref<string | null>(null)
 const rawData = ref<GraphData>({ nodes: [], edges: [] })
-
-// Release nodes get a synthetic type of 'release' for visual distinction.
-// We inject them into the graph as extra nodes and add timeline edges.
-const RELEASE_NODE_TYPE = 'release'
 
 const allNodes = computed<GraphNode[]>(() => rawData.value.nodes)
 const allEdges = computed<GraphEdge[]>(() => rawData.value.edges)
@@ -39,6 +38,21 @@ async function load() {
     error.value = e instanceof Error ? e.message : 'Failed to load roadmap graph.'
   } finally {
     loading.value = false
+  }
+}
+
+/** Handle a node click from either graph subcomponent. */
+function handleNodeClick(node: GraphNode) {
+  if (node.type === 'release') {
+    // Backlog synthetic node — no action
+    if (node.synthetic) return
+    // Extract numeric release ID from "release:<id>"
+    const parts = node.id.split(':')
+    const id = parseInt(parts[1] ?? '', 10)
+    if (!isNaN(id)) emit('releaseClick', id)
+  } else {
+    // Idea or defect artifact
+    emit('artifactClick', node, allEdges.value)
   }
 }
 
@@ -77,13 +91,15 @@ useWebSocket(props.project, 'artifact.indexed', load)
         v-if="view === '3d'"
         :nodes="allNodes"
         :edges="allEdges"
-        @node-click="emit('nodeClick', $event)"
+        dag-mode="lr"
+        @node-click="handleNodeClick"
       />
       <Graph2DView
         v-else
         :nodes="allNodes"
         :edges="allEdges"
-        :on-node-click="(n) => emit('nodeClick', n)"
+        :directed="true"
+        :on-node-click="handleNodeClick"
       />
     </template>
   </div>
