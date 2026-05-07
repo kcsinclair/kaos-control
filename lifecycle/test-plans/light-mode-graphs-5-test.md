@@ -1,9 +1,11 @@
 ---
-title: "Test Plan — Light Mode Colour Scheme for Graphs"
+title: Test Plan — Light Mode Colour Scheme for Graphs
 type: plan-test
-status: draft
+status: approved
 lineage: light-mode-graphs
+priority: medium
 parent: lifecycle/requirements/light-mode-graphs-2.md
+release: May2026
 ---
 
 # Test Plan — Light Mode Colour Scheme for Graphs
