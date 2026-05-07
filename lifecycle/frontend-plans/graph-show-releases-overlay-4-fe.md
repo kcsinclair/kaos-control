@@ -1,9 +1,10 @@
 ---
 title: 'Frontend Plan: Graph Releases Overlay'
 type: plan-frontend
-status: draft
+status: approved
 lineage: graph-show-releases-overlay
 parent: lifecycle/requirements/graph-show-releases-overlay-2.md
+release: May2026
 ---
 
 # Frontend Plan: Graph Releases Overlay
