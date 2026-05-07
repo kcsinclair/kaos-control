@@ -1,7 +1,7 @@
 ---
 title: Roadmap Backlog Panel and Unscheduled Column
 type: requirement
-status: approved
+status: planning
 lineage: roadmap-backlog-panel-and-unscheduled-column
 parent: ideas/roadmap-backlog-panel-and-unscheduled-column.md
 labels:
