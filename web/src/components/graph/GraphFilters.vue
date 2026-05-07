@@ -13,6 +13,7 @@ const props = defineProps<{
   nodeCount: number
   totalCount: number
   showLabelNodes: boolean
+  showReleases: boolean
   hideTerminal: boolean
   hideTests: boolean
   searchText: string
@@ -22,6 +23,7 @@ const emit = defineEmits<{
   toggle: [key: keyof GraphFilter, value: string]
   reset: []
   toggleLabelNodes: []
+  toggleShowReleases: []
   toggleHideTerminal: []
   toggleHideTests: []
   'update:searchText': [value: string]
@@ -91,6 +93,20 @@ const hasFilters = () =>
           @change="emit('toggleHideTests')"
         />
         <span class="toggle-text">Show tests</span>
+      </label>
+      <label
+        class="toggle-label"
+        for="toggle-show-releases"
+        aria-label="Show release overlay nodes and timeline"
+      >
+        <input
+          id="toggle-show-releases"
+          type="checkbox"
+          class="toggle-input"
+          :checked="showReleases"
+          @change="emit('toggleShowReleases')"
+        />
+        <span class="toggle-text">Show Releases</span>
       </label>
     </div>
 
