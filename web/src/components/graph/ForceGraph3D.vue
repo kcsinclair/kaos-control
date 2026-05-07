@@ -100,7 +100,7 @@ function buildReleaseObject(n: GraphNode): THREE.Object3D {
   // Use a light color against the node background; for dark the palette releaseText
   // is dark-blue (#1e3a5f) which contrasts on the light-blue node — keep it.
   // For the synthetic backlog node use the backlogText colour.
-  group.add(textSprite(n.title || n.slug, n.synthetic ? p.backlogText : '#bfdbfe'))
+  group.add(textSprite(n.title || n.slug, n.synthetic ? p.backlogText : p.releaseText))
   return group
 }
 
