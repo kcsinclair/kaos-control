@@ -1,7 +1,7 @@
 ---
 title: Backend Plan — Light Mode Colour Scheme for Graphs
 type: plan-backend
-status: approved
+status: in-development
 lineage: light-mode-graphs
 priority: medium
 parent: lifecycle/requirements/light-mode-graphs-2.md
