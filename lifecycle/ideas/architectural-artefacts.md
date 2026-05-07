@@ -8,7 +8,6 @@ labels:
     - architecture
     - artefacts
     - enhancement
-release: Unscheduled
 ---
 
 # Architectural Artefacts
