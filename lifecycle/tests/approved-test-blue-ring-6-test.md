@@ -1,7 +1,7 @@
 ---
 title: "Tests — Blue Ring Indicator for Approved Test Artifacts"
 type: test
-status: draft
+status: approved
 lineage: approved-test-blue-ring
 parent: lifecycle/test-plans/approved-test-blue-ring-5-test.md
 created: "2026-04-29T00:00:00+10:00"
