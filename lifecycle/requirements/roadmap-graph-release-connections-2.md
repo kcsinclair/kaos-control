@@ -1,7 +1,7 @@
 ---
 title: 'Roadmap Graph: Directed Release Chain with Backlog Root and Unscheduled Leaves'
 type: requirement
-status: blocked
+status: approved
 lineage: roadmap-graph-release-connections
 created: "2026-05-07"
 priority: high
@@ -83,9 +83,21 @@ The Roadmap graph currently displays releases without a clear directed temporal 
 - [ ] Graph renders without perceptible delay (< 200 ms) with 50 release nodes.
 - [ ] No label overlap with up to 20 release nodes at default zoom.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the Backlog node visually differ from release nodes (e.g., different colour, shape, or icon)?
+
+> Yes, releases can be light blue, if a rounded cube shape is possible, that would be awesome.
+
 2. When two scheduled releases share the same `start` date, what is the tiebreaker for ordering — alphabetical by name, or creation date?
+
+> Alphabetical for tiebreaker works.
+
 3. Should edges display any label or tooltip (e.g., time gap between releases)?
+
+> Yes, time between starting dates would be great.
+
 4. Does clicking a release node navigate somewhere (e.g., filtered artifact list for that release), or is interaction out of scope for this requirement?
+
+> Clicking on the release node should display the same modal as displayed in the gantt view.
+> Clicking on an idea or defect node should display the same modal as used in the regular graphs.
