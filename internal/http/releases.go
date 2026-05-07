@@ -587,7 +587,7 @@ func humanDuration(from, to time.Time) string {
 	if days < 0 {
 		days = -days
 	}
-	if days < 8 {
+	if days < 7 {
 		if days == 1 {
 			return "1 day"
 		}
