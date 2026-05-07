@@ -4,12 +4,13 @@ type: idea
 status: planning
 lineage: graph-show-releases-overlay
 created: "2026-05-07T11:04:02+10:00"
-priority: normal
+priority: medium
 labels:
     - feature
     - frontend
     - releases
     - vue
+release: May2026-2
 ---
 
 # Graph: Show Releases Overlay
