@@ -5,6 +5,7 @@ status: approved
 lineage: artefacts-list-release-priority-columns
 priority: high
 parent: requirements/artefacts-list-release-priority-columns-2.md
+release: May2026
 ---
 
 # Backend Plan: Artefacts List Release & Priority Columns
