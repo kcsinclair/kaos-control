@@ -1,7 +1,7 @@
 ---
 title: 2D Graph Layout Selector
 type: requirement
-status: draft
+status: planning
 lineage: 2d-graph-layout-selector
 created: "2026-05-07"
 priority: normal
