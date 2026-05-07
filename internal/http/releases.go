@@ -14,6 +14,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
+	"github.com/kaos-control/kaos-control/internal/project"
 	"github.com/kaos-control/kaos-control/internal/release"
 )
 
@@ -348,35 +349,52 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	store := release.NewStore(p.Idx.DB())
-	releases, err := store.List(p.Entry.Name)
+	data, err := buildRoadmapGraph(p)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
 	}
+	writeJSON(w, http.StatusOK, data)
+}
 
-	// Build node set and edge list.
-	var nodes []map[string]any
-	var edges []map[string]any
+// buildRoadmapGraph constructs the release overlay graph for the given project.
+//
+// The graph contains:
+//   - A synthetic "Backlog" node (release:backlog) that anchors the timeline
+//     chain and collects unassigned ideas/defects.
+//   - One node per release, ordered start_date ASC, name ASC (NULLs last) —
+//     the store.List ordering already satisfies this (Milestone 4 verified).
+//   - A synthetic "Unscheduled" node (release:unscheduled) when at least one
+//     release has no start_date; each such release emits a timeline edge to it.
+//   - "assigned" edges from release nodes to their idea/defect artifacts.
+//   - "timeline" edges forming the spine: Backlog → dated[0] → … → dated[n]
+//     → Unscheduled (when present).
+//   - Cross-artifact depends_on / blocks edges for all included artifact nodes.
+func buildRoadmapGraph(p *project.Project) (*index.GraphData, error) {
+	store := release.NewStore(p.Idx.DB())
+	releases, err := store.List(p.Entry.Name)
+	if err != nil {
+		return nil, err
+	}
 
-	// Synthetic Backlog node — always present as the chain root.
+	var nodes []*index.GraphNode
+	var edges []*index.GraphEdge
+
+	// Synthetic Backlog node — always present as the timeline chain root.
+	// status "planned" signals it is a meta-node, not a real release.
 	const backlogID = "release:backlog"
-	nodes = append(nodes, map[string]any{
-		"id":        backlogID,
-		"title":     "Backlog",
-		"type":      "release",
-		"status":    "",
-		"stage":     "",
-		"lineage":   "",
-		"slug":      "",
-		"index":     0,
-		"labels":    []string{},
-		"synthetic": true,
+	nodes = append(nodes, &index.GraphNode{
+		ID:        backlogID,
+		Title:     "Backlog",
+		Type:      "release",
+		Status:    "planned",
+		Labels:    []string{},
+		Synthetic: true,
 	})
 
 	// Partition releases into scheduled (have a start_date) and unscheduled.
-	// store.List already returns them ordered: scheduled by start_date ASC, name ASC;
-	// then unscheduled by name ASC.
+	// store.List already returns them ordered: scheduled by start_date ASC,
+	// name ASC; then unscheduled by name ASC.
 	var scheduled, unscheduled []*release.Release
 	for _, rel := range releases {
 		if rel.StartDate != nil {
@@ -386,24 +404,21 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Track paths of artifact nodes for edge filtering.
+	// Track artifact paths already added to avoid duplicate nodes.
 	artifactNodeSet := map[string]bool{}
 
-	// addReleaseNode appends a release node and its assigned artifact nodes/edges.
+	// addReleaseNode appends a typed release node plus its assigned idea/defect
+	// artifact nodes and "assigned" edges.
 	addReleaseNode := func(rel *release.Release) error {
 		releaseNodeID := fmt.Sprintf("release:%d", rel.ID)
-		nodes = append(nodes, map[string]any{
-			"id":         releaseNodeID,
-			"title":      rel.Name,
-			"type":       "release",
-			"status":     rel.Status,
-			"stage":      "",
-			"lineage":    "",
-			"slug":       "",
-			"index":      0,
-			"labels":     []string{},
-			"start_date": rel.StartDate,
-			"end_date":   rel.EndDate,
+		nodes = append(nodes, &index.GraphNode{
+			ID:        releaseNodeID,
+			Title:     rel.Name,
+			Type:      "release",
+			Status:    rel.Status,
+			Labels:    []string{},
+			StartDate: rel.StartDate,
+			EndDate:   rel.EndDate,
 		})
 		artifacts, _, err := p.Idx.List(index.Filter{Release: rel.Name, Unlimited: true})
 		if err != nil {
@@ -413,120 +428,143 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 			if a.Type != "idea" && a.Type != "defect" {
 				continue
 			}
+			if artifactNodeSet[a.Path] {
+				continue // deduplicate
+			}
 			artifactNodeSet[a.Path] = true
-			nodes = append(nodes, map[string]any{
-				"id":      a.Path,
-				"title":   a.Title,
-				"type":    a.Type,
-				"status":  a.Status,
-				"stage":   a.Stage,
-				"lineage": a.Lineage,
-				"slug":    a.Slug,
-				"index":   a.Index,
-				"labels":  a.FM.Labels,
+			labels := a.FM.Labels
+			if labels == nil {
+				labels = []string{}
+			}
+			nodes = append(nodes, &index.GraphNode{
+				ID:      a.Path,
+				Title:   a.Title,
+				Type:    a.Type,
+				Status:  a.Status,
+				Stage:   a.Stage,
+				Lineage: a.Lineage,
+				Slug:    a.Slug,
+				Index:   a.Index,
+				Labels:  labels,
 			})
-			edges = append(edges, map[string]any{
-				"source": releaseNodeID,
-				"target": a.Path,
-				"kind":   "assigned",
+			edges = append(edges, &index.GraphEdge{
+				Source: releaseNodeID,
+				Target: a.Path,
+				Kind:   "assigned",
 			})
 		}
 		return nil
 	}
 
-	// Build directed chain: Backlog → scheduled[0] → scheduled[1] → …
+	// Build directed timeline chain: Backlog → scheduled[0] → … → scheduled[n].
+	// store.List guarantees start_date ASC, name ASC ordering for scheduled releases.
 	prevID := backlogID
 	for i, rel := range scheduled {
 		nodeID := fmt.Sprintf("release:%d", rel.ID)
 		if err := addReleaseNode(rel); err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-			return
+			return nil, err
 		}
 		label := ""
 		if i > 0 {
 			label = humanDuration(*scheduled[i-1].StartDate, *rel.StartDate)
 		}
-		edges = append(edges, map[string]any{
-			"source": prevID,
-			"target": nodeID,
-			"kind":   "timeline",
-			"label":  label,
+		edges = append(edges, &index.GraphEdge{
+			Source: prevID,
+			Target: nodeID,
+			Kind:   "timeline",
+			Label:  label,
 		})
 		prevID = nodeID
 	}
 
-	// Unscheduled releases are terminal leaves appended after the last scheduled.
-	// prevID is the tail of the scheduled chain (or backlogID if none scheduled).
-	for _, rel := range unscheduled {
-		nodeID := fmt.Sprintf("release:%d", rel.ID)
-		if err := addReleaseNode(rel); err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-			return
+	// Unscheduled releases converge onto a synthetic "Unscheduled" terminus node.
+	// Each undated release emits a timeline edge to release:unscheduled.
+	// The last dated release (or Backlog if none) also links to it.
+	// This node only appears when at least one undated release exists.
+	if len(unscheduled) > 0 {
+		const unscheduledID = "release:unscheduled"
+		nodes = append(nodes, &index.GraphNode{
+			ID:        unscheduledID,
+			Title:     "Unscheduled",
+			Type:      "release",
+			Status:    "planned",
+			Labels:    []string{},
+			Synthetic: true,
+		})
+		// Spine edge: last dated release (or Backlog) → Unscheduled.
+		edges = append(edges, &index.GraphEdge{
+			Source: prevID,
+			Target: unscheduledID,
+			Kind:   "timeline",
+		})
+		// Each undated release node points to the Unscheduled terminus.
+		for _, rel := range unscheduled {
+			nodeID := fmt.Sprintf("release:%d", rel.ID)
+			if err := addReleaseNode(rel); err != nil {
+				return nil, err
+			}
+			edges = append(edges, &index.GraphEdge{
+				Source: nodeID,
+				Target: unscheduledID,
+				Kind:   "timeline",
+			})
 		}
-		edges = append(edges, map[string]any{
-			"source": prevID,
-			"target": nodeID,
-			"kind":   "timeline",
-			"label":  "",
-		})
-		prevID = nodeID
 	}
 
-	// Artifacts with no release assignment attach as "assigned" edges from the Backlog node.
+	// Unassigned ideas/defects (no release field) attach to the Backlog node.
 	unassigned, _, err := p.Idx.List(index.Filter{Release: "__unassigned__", Unlimited: true})
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-		return
+		return nil, err
 	}
 	for _, a := range unassigned {
 		if a.Type != "idea" && a.Type != "defect" {
 			continue
 		}
+		if artifactNodeSet[a.Path] {
+			continue
+		}
 		artifactNodeSet[a.Path] = true
-		nodes = append(nodes, map[string]any{
-			"id":      a.Path,
-			"title":   a.Title,
-			"type":    a.Type,
-			"status":  a.Status,
-			"stage":   a.Stage,
-			"lineage": a.Lineage,
-			"slug":    a.Slug,
-			"index":   a.Index,
-			"labels":  a.FM.Labels,
+		labels := a.FM.Labels
+		if labels == nil {
+			labels = []string{}
+		}
+		nodes = append(nodes, &index.GraphNode{
+			ID:      a.Path,
+			Title:   a.Title,
+			Type:    a.Type,
+			Status:  a.Status,
+			Stage:   a.Stage,
+			Lineage: a.Lineage,
+			Slug:    a.Slug,
+			Index:   a.Index,
+			Labels:  labels,
 		})
-		edges = append(edges, map[string]any{
-			"source": backlogID,
-			"target": a.Path,
-			"kind":   "assigned",
+		edges = append(edges, &index.GraphEdge{
+			Source: backlogID,
+			Target: a.Path,
+			Kind:   "assigned",
 		})
 	}
 
-	// Add existing depends_on / blocks edges between included artifact nodes.
-	graphData, err := p.Idx.Graph(index.Filter{Unlimited: true})
+	// Add cross-artifact depends_on / blocks edges between nodes that are
+	// already included in this graph.
+	allEdges, err := p.Idx.Graph(index.Filter{Unlimited: true})
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-		return
+		return nil, err
 	}
-	for _, e := range graphData.Edges {
+	for _, e := range allEdges.Edges {
 		if artifactNodeSet[e.Source] && artifactNodeSet[e.Target] {
-			edges = append(edges, map[string]any{
-				"source": e.Source,
-				"target": e.Target,
-				"kind":   e.Kind,
-			})
+			edges = append(edges, e)
 		}
 	}
 
 	if nodes == nil {
-		nodes = []map[string]any{}
+		nodes = []*index.GraphNode{}
 	}
 	if edges == nil {
-		edges = []map[string]any{}
+		edges = []*index.GraphEdge{}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"nodes": nodes,
-		"edges": edges,
-	})
+	return &index.GraphData{Nodes: nodes, Edges: edges}, nil
 }
 
 // ----- helpers -----
