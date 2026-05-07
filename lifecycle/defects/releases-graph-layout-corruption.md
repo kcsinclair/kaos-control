@@ -1,7 +1,7 @@
 ---
 title: Show Releases Corrupts 3D/2D Graph Layout and Renders Phantom Arrow Cones
 type: defect
-status: in-development
+status: done
 lineage: releases-graph-layout-corruption
 created: "2026-05-07T18:54:49+10:00"
 priority: normal
