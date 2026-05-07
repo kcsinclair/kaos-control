@@ -9,6 +9,7 @@ labels:
     - workflow
     - process
     - enhancement
+release: April2026
 ---
 
 relates-to: [[ideas/prompt-to-idea]]
