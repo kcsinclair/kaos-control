@@ -203,8 +203,16 @@ onMounted(() => {
     .linkTarget('target')
     .linkColor((l: object) => edgeColor(l as GraphEdge))
     .linkLabel((l: object) => timelineLinkLabel(l as GraphEdge))
-    .linkWidth((l: object) => (l as GraphEdge).kind === 'timeline' ? 1.5 : 0.5)
-    .linkDirectionalArrowLength(3)
+    .linkWidth((l: object) => {
+      const kind = (l as GraphEdge).kind
+      if (kind === 'timeline') return 1.5
+      if (kind === 'assigned') return 0.8   // membership edge — lighter than timeline
+      return 0.5
+    })
+    .linkDirectionalArrowLength((l: object) => {
+      // Assigned edges are undirected membership links — no arrow needed.
+      return (l as GraphEdge).kind === 'assigned' ? 0 : 3
+    })
     .linkDirectionalArrowRelPos(1)
     .linkCurvature(0.1)
     .backgroundColor(p.canvasBg)
