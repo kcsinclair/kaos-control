@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
+release: May2026
 ---
 
 # Sort tests for ArtifactListView and AgentsRunsView crash on mount — useRoute mock missing query

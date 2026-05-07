@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: frontend-developer
     who: agent
+release: May2026
 ---
 
 # useSortableTable columns API mismatch — sort not applied for any type

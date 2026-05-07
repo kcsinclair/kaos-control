@@ -10,6 +10,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
+release: May2026
 ---
 
 # artifact.indexed WebSocket event not emitted after release rename propagation

@@ -12,6 +12,7 @@ labels:
 assignees:
     - role: product-owner
       who: agent
+release: May2026
 ---
 
 # DevOps Pipeline Run Does Nothing; Directory Not Auto-Created

@@ -9,6 +9,7 @@ labels:
     - defect
     - frontend
     - vue
+release: May2026
 ---
 
 # Status-Checker Button Non-Functional on Graph Views and Missing from Artifacts/Kanban Screens

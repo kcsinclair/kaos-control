@@ -1,13 +1,14 @@
 ---
 title: "DELETE /releases/:id returns 500 instead of 404 for non-existent release"
 type: defect
-status: in-development
+status: done
 lineage: releases-and-roadmaps
 parent: lifecycle/tests/releases-and-roadmaps-6-test.md
 labels: [defect]
 assignees:
   - role: backend-developer
     who: agent
+release: May2026
 ---
 
 # DELETE /releases/:id returns 500 instead of 404 for non-existent release

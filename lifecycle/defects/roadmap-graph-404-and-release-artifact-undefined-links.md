@@ -12,6 +12,7 @@ labels:
     - roadmaps
     - releases
     - artefacts
+release: May2026
 ---
 
 # Roadmap Graph Returns 404 and Release Artifact Links Navigate to /undefined

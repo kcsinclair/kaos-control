@@ -11,6 +11,7 @@ labels:
     - backend
     - workflow
     - artefacts
+release: May2026
 ---
 
 # Status Checker Button Does Not Update Artifact Statuses

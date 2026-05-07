@@ -9,6 +9,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
+release: May2026
 ---
 
 # GET /allowed-targets returns 404 — endpoint not implemented

@@ -9,6 +9,7 @@ labels:
     - defect
     - agent
     - workflow
+release: May2026
 ---
 
 # Requirements Analyst Agent Surfaces Draft Ideas in Agent Launcher Panel

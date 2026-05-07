@@ -13,6 +13,7 @@ labels:
 assignees:
     - role: frontend-developer
       who: agent
+release: May2026
 ---
 
 # Artifact Editor Details Panel Missing Inbound/Outbound Relationship Info

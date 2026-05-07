@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
+release: May2026
 ---
 
 # ParseErrorsView.sort.test.ts fails to collect — vi.mock factory references top-level variable before initialization

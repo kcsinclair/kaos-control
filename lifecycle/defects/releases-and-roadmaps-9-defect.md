@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: backend-developer
     who: agent
+release: May2026
 ---
 
 # Unscheduled release incorrectly included in roadmap timeline edges

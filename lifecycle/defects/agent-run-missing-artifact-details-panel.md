@@ -10,6 +10,7 @@ labels:
     - frontend
     - artefacts
     - vue
+release: May2026
 ---
 
 # Agent Run Not Visible at Bottom of Artifact Details Panel

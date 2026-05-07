@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: backend-developer
     who: agent
+release: May2026
 ---
 
 # PUT /releases/:id returns 500 instead of 404 for non-existent ID

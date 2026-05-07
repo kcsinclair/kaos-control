@@ -9,6 +9,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
+release: May2026
 ---
 
 # DELETE /releases/:id returns 500 instead of 404 for non-existent ID

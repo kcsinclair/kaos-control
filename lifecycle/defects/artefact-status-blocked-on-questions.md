@@ -9,6 +9,7 @@ labels:
     - defect
     - workflow
     - artefacts
+release: May2026
 ---
 
 # Artefact Status Should Be 'blocked' (Not 'draft') When Questions Are Added
