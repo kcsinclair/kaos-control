@@ -1,10 +1,12 @@
 ---
 title: 'Frontend Plan: Directed Release Chain Graph Rendering'
 type: plan-frontend
-status: draft
+status: approved
 lineage: roadmap-graph-release-connections
-parent: lifecycle/requirements/roadmap-graph-release-connections-2.md
 created: "2026-05-07"
+priority: high
+parent: lifecycle/requirements/roadmap-graph-release-connections-2.md
+release: May2026
 ---
 
 # Frontend Plan: Directed Release Chain Graph Rendering
