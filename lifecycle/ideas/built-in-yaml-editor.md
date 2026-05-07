@@ -10,6 +10,7 @@ labels:
     - frontend
     - backend
     - enhancement
+release: May2026
 ---
 
 # Built-in YAML Editor for Config and DevOps Pipelines
