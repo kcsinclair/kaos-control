@@ -45,7 +45,13 @@ export const useReleasesStore = defineStore('releases', () => {
 
   async function create(project: string, data: CreateReleasePayload): Promise<Release> {
     const release = await releasesApi.createRelease(project, data)
-    releases.value = [...releases.value, release]
+    // Guard: ensure releases.value is always an array before spreading.
+    // A WS release.created event may have already inserted this release while
+    // the HTTP response was in flight; deduplicate by id to avoid doubles.
+    const current = Array.isArray(releases.value) ? releases.value : []
+    if (!current.some((r) => r.id === release.id)) {
+      releases.value = [...current, release]
+    }
     return release
   }
 
