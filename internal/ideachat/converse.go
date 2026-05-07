@@ -116,7 +116,7 @@ func Converse(
 func buildLLMMessages(sess *Session) []LLMMessage {
 	msgs := make([]LLMMessage, 0, len(sess.Messages))
 	for _, m := range sess.Messages {
-		msgs = append(msgs, LLMMessage{Role: m.Role, Content: m.Content})
+		msgs = append(msgs, LLMMessage(m))
 	}
 
 	// If we've reached the clarification limit, inject a forcing instruction

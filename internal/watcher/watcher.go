@@ -201,8 +201,5 @@ func (w *Watcher) shouldProcess(path string) bool {
 			return false
 		}
 	}
-	if config.ShouldIgnore(path, w.ignore) {
-		return false
-	}
-	return true
+	return !config.ShouldIgnore(path, w.ignore)
 }

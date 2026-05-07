@@ -7,6 +7,11 @@ BUILD_DIR := ./dist
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 RELEASE_LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION) -X $(MODULE)/internal/http.Version=$(VERSION)"
 
+# Resolve Go's bin dir so `go install`-ed tools (staticcheck, etc.) are
+# discoverable regardless of the calling shell's PATH.
+GOBIN := $(shell go env GOPATH)/bin
+export PATH := $(GOBIN):$(PATH)
+
 .PHONY: all build build-web release test test-unit test-integration lint clean run
 
 all: build-web build
@@ -48,7 +53,13 @@ test: test-unit test-integration
 ## lint: run go vet and staticcheck
 lint:
 	go vet ./...
-	@which staticcheck > /dev/null 2>&1 && staticcheck ./... || echo "staticcheck not installed; skipping"
+	@if [ -x "$(GOBIN)/staticcheck" ]; then \
+	  "$(GOBIN)/staticcheck" ./...; \
+	elif command -v staticcheck >/dev/null 2>&1; then \
+	  staticcheck ./...; \
+	else \
+	  echo "staticcheck not installed; install with: go install honnef.co/go/tools/cmd/staticcheck@latest"; \
+	fi
 
 ## clean: remove build artefacts
 clean:

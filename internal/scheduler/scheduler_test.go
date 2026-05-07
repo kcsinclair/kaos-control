@@ -53,24 +53,6 @@ func waitForRunStatus(t *testing.T, store *Store, jobName string, timeout time.D
 	return nil
 }
 
-// waitForRunCount polls until the total run count for jobName is at least n.
-func waitForRunCount(t *testing.T, store *Store, jobName string, n int, timeout time.Duration) {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		_, total, err := store.ListRuns(jobName, 1, 100)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if total >= n {
-			return
-		}
-		time.Sleep(25 * time.Millisecond)
-	}
-	_, total, _ := store.ListRuns(jobName, 1, 100)
-	t.Fatalf("timeout: job %q has %d runs, want at least %d", jobName, total, n)
-}
-
 // insertShellJob creates and persists a shell job via the store.
 func insertShellJob(t *testing.T, store *Store, name, cmd string, priority, timeoutSec int) *Job {
 	t.Helper()

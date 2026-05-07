@@ -35,7 +35,6 @@ type Scheduler struct {
 	mu      sync.Mutex
 	queue   *jobQueue
 	running map[string]struct{} // set of job names currently executing
-	seq     int64               // used by workers to avoid concurrent executions
 
 	workerSem chan struct{} // sized to maxWorkers
 	workCh    chan *Job    // unbufffered handoff from dispatcher to workers
