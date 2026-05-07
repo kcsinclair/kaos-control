@@ -9,6 +9,7 @@ labels:
     - frontend
     - usability
     - vue
+release: April2026
 ---
 
 # Frontmatter Editor: Add Priority Dropdown and Convert Status to Dropdown
