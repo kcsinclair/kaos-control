@@ -1,7 +1,7 @@
 ---
 title: 7-day gap between releases labelled "7 days" instead of "1 week"
 type: defect
-status: in-development
+status: done
 lineage: roadmap-graph-release-connections
 parent: lifecycle/tests/roadmap-graph-release-connections-6-test.md
 labels: [defect]
