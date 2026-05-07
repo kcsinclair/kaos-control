@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Roadmap Backlog Panel and Unscheduled Column"
 type: plan-backend
-status: draft
+status: approved
 lineage: roadmap-backlog-panel-and-unscheduled-column
 parent: lifecycle/requirements/roadmap-backlog-panel-and-unscheduled-column-2.md
 ---
