@@ -1,13 +1,14 @@
 ---
-title: "Epic Redefined"
-priority: normal
+title: Epic Redefined
 type: idea
 status: draft
 lineage: epic-redefined
+priority: normal
 labels:
     - workflow
     - process
     - feature
+release: May2026-2
 ---
 
 The concept of Epics is a little different with agentic development, you can get so many things done in a release, it makes less sense.
