@@ -1,7 +1,7 @@
 ---
 title: Stale graphConstants mock breaks ForceGraph3D and Graph2DView approved-ring tests (21 failures)
 type: defect
-status: approved
+status: in-development
 lineage: light-mode-graphs
 parent: lifecycle/tests/light-mode-graphs-6-test.md
 labels:
