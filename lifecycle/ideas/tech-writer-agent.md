@@ -6,6 +6,7 @@ lineage: tech-writer-agent
 priority: medium
 labels:
     - agent
+release: May2026
 ---
 
 # Tech Writer Agent
