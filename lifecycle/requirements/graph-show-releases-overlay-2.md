@@ -1,7 +1,7 @@
 ---
 title: 'Graph: Show Releases Overlay'
 type: requirement
-status: blocked
+status: draft
 lineage: graph-show-releases-overlay
 created: "2026-05-07T00:00:00+10:00"
 priority: normal
@@ -71,9 +71,20 @@ The 2D (Cytoscape.js) and 3D (3d-force-graph) graph views currently show ideas, 
 - [ ] No perceptible performance degradation with ≤ 20 releases and ≤ 500 artifacts.
 - [ ] Toggle is keyboard-accessible and has an accessible label.
 
-## Open Questions
+## Resolved Questions
 
 1. What frontmatter field on ideas/defects indicates their release assignment? Is it `release: <slug>`, `release: <title>`, or something else? Does this field already exist in the schema?
+
+> It is the 'release: <title>'
+
 2. How should release chronological order be determined — by a `date` field, `created` timestamp, or explicit `order` field in release frontmatter?
+
+> Releases have a defined start date, or they are unscheduled, the start date should be used.
+
 3. Should the "Unscheduled" node be shown if no artifacts are explicitly marked unscheduled, or should it always appear as the chain terminus?
+
+> Do not display an Unscheduled release unless it has artifacts associated.  The Unscheduled release may NOT be called Unscheduled, it might be called "Future-Release" for example.
+
 4. Are there existing colour/shape conventions for node types in the graph that the release nodes should follow or intentionally contrast with?
+
+> There is a defined colour scheme, lets make Releases light blue.
