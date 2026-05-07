@@ -1,9 +1,11 @@
 ---
-title: "Backend Plan — Roadmap Backlog Panel and Unscheduled Column"
+title: Backend Plan — Roadmap Backlog Panel and Unscheduled Column
 type: plan-backend
-status: approved
+status: draft
 lineage: roadmap-backlog-panel-and-unscheduled-column
+priority: high
 parent: lifecycle/requirements/roadmap-backlog-panel-and-unscheduled-column-2.md
+release: May2026
 ---
 
 # Backend Plan — Roadmap Backlog Panel and Unscheduled Column
