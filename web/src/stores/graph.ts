@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import * as graphApi from '@/api/graph'
 import type { GraphNode, GraphEdge, GraphFilter } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
+import { LAYOUT_CONFIGS } from '@/components/graph/layoutConfigs'
 
 export const useGraphStore = defineStore('graph', () => {
   const rawNodes = ref<GraphNode[]>([])
@@ -13,6 +14,10 @@ export const useGraphStore = defineStore('graph', () => {
   const filter = ref<GraphFilter>({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })
 
   const searchText = ref('')
+
+  // Layout state — session-scoped (no localStorage persistence)
+  const activeLayout = ref<string>('fcose')
+  const directed = ref<boolean>(false)
 
   const showLabelNodes = ref(false)
 
@@ -138,6 +143,16 @@ export const useGraphStore = defineStore('graph', () => {
     hideTests.value = !hideTests.value
   }
 
+  function setLayout(key: string): void {
+    if (key in LAYOUT_CONFIGS) {
+      activeLayout.value = key
+    }
+  }
+
+  function toggleDirected(): void {
+    directed.value = !directed.value
+  }
+
   function updateNodePriority(nodeId: string, priority: string | null): void {
     const idx = rawNodes.value.findIndex((n) => n.id === nodeId)
     if (idx === -1) return
@@ -160,6 +175,8 @@ export const useGraphStore = defineStore('graph', () => {
     showLabelNodes,
     hideTerminal,
     hideTests,
+    activeLayout,
+    directed,
     uniqueTypes,
     uniqueStatuses,
     uniqueLineages,
@@ -177,6 +194,8 @@ export const useGraphStore = defineStore('graph', () => {
     toggleShowLabelNodes,
     toggleHideTerminal,
     toggleHideTests,
+    setLayout,
+    toggleDirected,
     updateNodePriority,
   }
 })
