@@ -82,6 +82,7 @@ export const LAYOUT_CONFIGS: Record<string, LayoutConfig> = {
       // directed: true is the default; overridden by the directed toggle at runtime
       directed: true,
     },
-    // plugin added in Milestone 5 when cytoscape-dagre is installed
+    // Loaded on first use only — code-split, not in the initial bundle
+    plugin: () => import('cytoscape-dagre'),
   },
 }
