@@ -1,7 +1,7 @@
 ---
 title: 'Artefacts List: Release & Priority Columns with Releases Filter'
 type: idea
-status: draft
+status: approved
 lineage: artefacts-list-release-priority-columns
 created: "2026-05-07T10:04:43+10:00"
 priority: normal
@@ -10,6 +10,7 @@ labels:
     - frontend
     - enhancement
     - releases
+release: June2026
 ---
 
 # Artefacts List: Release & Priority Columns with Releases Filter
