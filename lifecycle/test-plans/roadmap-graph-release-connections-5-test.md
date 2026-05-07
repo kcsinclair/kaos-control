@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Directed Release Chain Graph'
 type: plan-test
-status: in-development
+status: done
 lineage: roadmap-graph-release-connections
 created: "2026-05-07T00:00:00+10:00"
 priority: high
