@@ -42,5 +42,9 @@ export function listReleaseArtifacts(project: string, id: number): Promise<Artif
 }
 
 export function getRoadmapGraph(project: string): Promise<GraphData> {
-  return api.get<GraphData>(`/p/${encodeURIComponent(project)}/roadmap/graph`)
+  return api
+    .get<{ nodes: GraphData['nodes'] | null; edges: GraphData['edges'] | null }>(
+      `/p/${encodeURIComponent(project)}/releases/graph`,
+    )
+    .then((r) => ({ nodes: r.nodes ?? [], edges: r.edges ?? [] }))
 }
