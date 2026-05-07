@@ -1,7 +1,7 @@
 ---
 title: Light Mode Support for Graphs
 type: idea
-status: draft
+status: approved
 lineage: light-mode-graphs
 created: "2026-05-07T15:44:31+10:00"
 priority: normal
