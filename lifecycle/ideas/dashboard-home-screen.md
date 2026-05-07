@@ -9,6 +9,7 @@ labels:
     - feature
     - frontend
     - vue
+release: May2026
 ---
 
 # Dashboard Home Screen
