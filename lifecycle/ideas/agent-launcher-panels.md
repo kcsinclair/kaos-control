@@ -10,6 +10,7 @@ labels:
     - frontend
     - agent
     - vue
+release: April2026
 ---
 
 # Agent Launcher Panels on Agents Screen
