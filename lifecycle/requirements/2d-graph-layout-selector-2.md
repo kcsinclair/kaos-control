@@ -1,9 +1,9 @@
 ---
 title: 2D Graph Layout Selector
 type: requirement
-status: planning
+status: done
 lineage: 2d-graph-layout-selector
-created: "2026-05-07"
+created: "2026-05-07T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/2d-graph-layout-selector.md
 labels:
