@@ -113,9 +113,30 @@ export const useGraphStore = defineStore('graph', () => {
     rawNodes.value.filter((n) => n.type === 'release')
   )
 
-  const releaseEdges = computed<GraphEdge[]>(() =>
-    rawEdges.value.filter((e) => e.kind === 'timeline' || e.kind === 'assigned')
-  )
+  // Only include release edges whose non-release endpoints are currently visible.
+  // Without this guard, assigned edges that reference filtered-out artifact nodes cause
+  // 3d-force-graph to auto-create phantom nodes at (0,0,0), corrupting the force
+  // simulation layout and generating phantom arrow-cone artefacts.
+  const releaseEdges = computed<GraphEdge[]>(() => {
+    const artifactIds = new Set(filteredNodes.value.map((n) => n.id))
+    const releaseIds = new Set(releaseNodes.value.map((n) => n.id))
+    return rawEdges.value.filter((e) => {
+      if (e.kind === 'timeline') {
+        // Timeline edges connect two release nodes — both must exist.
+        return releaseIds.has(e.source) && releaseIds.has(e.target)
+      }
+      if (e.kind === 'assigned') {
+        // One end is a release node; the other is an artifact.
+        // Only include the edge when the artifact is currently visible.
+        const srcIsRelease = releaseIds.has(e.source)
+        const tgtIsRelease = releaseIds.has(e.target)
+        if (srcIsRelease && !tgtIsRelease) return artifactIds.has(e.target)
+        if (!srcIsRelease && tgtIsRelease) return artifactIds.has(e.source)
+        return true // both endpoints are release nodes
+      }
+      return false
+    })
+  })
 
   const augmentedNodes = computed<GraphNode[]>(() => {
     const base = showLabelNodes.value ? [...filteredNodes.value, ...labelNodes.value] : filteredNodes.value

@@ -361,8 +361,16 @@ async function update() {
         _raw: n,
       },
     }))
+    // Guard: only add edges where both endpoints are known to Cytoscape.
+    // currentNodeIds holds all pre-existing node IDs; releaseNodeIdSet holds the
+    // newly added ones. An edge whose non-release endpoint is absent would make
+    // Cytoscape throw and leave the graph in a broken state.
+    const knownNodeIds = new Set<string>([...currentNodeIds, ...releaseNodeIdSet])
     const newCyEdges = props.edges
-      .filter((e) => releaseNodeIdSet.has(e.source) || releaseNodeIdSet.has(e.target))
+      .filter((e) =>
+        (releaseNodeIdSet.has(e.source) || releaseNodeIdSet.has(e.target)) &&
+        knownNodeIds.has(e.source) && knownNodeIds.has(e.target)
+      )
       .map((e) => ({
         data: {
           id: `rel_${e.source}__${e.target}__${e.kind}`,
