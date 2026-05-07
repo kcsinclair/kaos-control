@@ -10,6 +10,7 @@ labels:
     - workflow
     - artefacts
     - process
+release: May2026
 ---
 
 When an agent writes questions into a plan or requirement artifact — for example, appending a questions section or frontmatter field — the artifact's status should be automatically transitioned to `blocked`.
