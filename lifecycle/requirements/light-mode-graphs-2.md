@@ -79,4 +79,9 @@ The 2D (Cytoscape.js) and 3D (3d-force-graph / three.js) graph visualisations us
 ## Open Questions
 
 1. **Light palette specifics** — Should the light-mode canvas background be pure white (`#ffffff`), the app's surface token (`--color-surface`), or a slightly tinted neutral? Using the CSS token would keep graphs consistent with the rest of the UI but may not suit the graph aesthetic.
+
+> app's surface token.  I will need to see it.
+
 2. **Node colour adjustment strategy** — The current node colours (amber, violet, cyan, etc.) were chosen for a dark background. Should the light palette use the same hues at a darker shade, or should it use the existing CSS design-token scale (e.g. `--color-primary`, `--color-accent`)?
+
+> CSS design-token scale
