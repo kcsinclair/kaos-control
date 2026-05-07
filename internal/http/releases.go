@@ -393,8 +393,10 @@ func buildRoadmapGraph(p *project.Project) (*index.GraphData, error) {
 	})
 
 	// Partition releases into scheduled (have a start_date) and unscheduled.
-	// store.List already returns them ordered: scheduled by start_date ASC,
-	// name ASC; then unscheduled by name ASC.
+	// Milestone 4 verification: release.Store.List orders rows by
+	//   CASE WHEN start_date IS NULL THEN 1 ELSE 0 END, start_date ASC, name ASC
+	// so scheduled releases are already sorted by start_date ascending with a
+	// stable secondary sort by name.  No additional sorting is required here.
 	var scheduled, unscheduled []*release.Release
 	for _, rel := range releases {
 		if rel.StartDate != nil {
