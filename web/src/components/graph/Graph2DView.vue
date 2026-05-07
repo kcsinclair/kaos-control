@@ -325,6 +325,59 @@ function applySearchHighlight() {
 
 async function update() {
   if (!cy) return
+
+  // Compute the delta between what Cytoscape currently holds and the new props.
+  const currentNodeIds = new Set<string>(cy.nodes().map((n: any) => n.data('id') as string))
+  const newNodeIds = new Set(props.nodes.map((n) => n.id))
+
+  const addedNodes = props.nodes.filter((n) => !currentNodeIds.has(n.id))
+  const removedIds = [...currentNodeIds].filter((id) => !newNodeIds.has(id))
+
+  // Determine whether the delta is exclusively release nodes so we can skip layout.
+  const addedAreAllRelease = addedNodes.length > 0 && addedNodes.every((n) => n.type === 'release')
+  const removedAreAllRelease =
+    removedIds.length > 0 &&
+    removedIds.every((id) => cy.getElementById(id).data('type') === 'release')
+
+  // Pure release-overlay REMOVE: yank release nodes (Cytoscape removes their edges automatically).
+  if (removedAreAllRelease && addedNodes.length === 0) {
+    removedIds.forEach((id) => cy.getElementById(id).remove())
+    nextTick(applySearchHighlight)
+    return
+  }
+
+  // Pure release-overlay ADD: append release nodes + their edges without re-running layout.
+  if (addedAreAllRelease && removedIds.length === 0) {
+    const releaseNodeIdSet = new Set(addedNodes.map((n) => n.id))
+    const newCyNodes = addedNodes.map((n) => ({
+      data: {
+        id: n.id,
+        label: n.title || n.slug,
+        type: n.type,
+        status: n.status,
+        synthetic: n.synthetic ? 'true' : 'false',
+        color: nodeColor(n.type, n.synthetic),
+        priorityColor: null,
+        _raw: n,
+      },
+    }))
+    const newCyEdges = props.edges
+      .filter((e) => releaseNodeIdSet.has(e.source) || releaseNodeIdSet.has(e.target))
+      .map((e) => ({
+        data: {
+          id: `rel_${e.source}__${e.target}__${e.kind}`,
+          source: e.source,
+          target: e.target,
+          kind: e.kind,
+          label: e.kind === 'timeline' && e.label ? e.label : '',
+        },
+      }))
+    cy.add([...newCyNodes, ...newCyEdges])
+    nextTick(applySearchHighlight)
+    return
+  }
+
+  // Default: full replace + layout (handles non-release changes like new artifacts).
   cy.elements().remove()
   cy.add(buildElements())
   await runLayout(false)
