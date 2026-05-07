@@ -1,7 +1,7 @@
 ---
 title: Roadmap Graph Returns 404 and Release Artifact Links Navigate to /undefined
 type: defect
-status: approved
+status: in-development
 lineage: roadmap-graph-404-and-release-artifact-undefined-links
 created: "2026-05-07T11:00:29+10:00"
 priority: normal
