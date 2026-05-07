@@ -1,13 +1,14 @@
 ---
-title: "Architectural Artefacts"
-priority: normal
+title: Architectural Artefacts
 type: idea
 status: draft
 lineage: architectural-artefacts
+priority: normal
 labels:
     - architecture
     - artefacts
     - enhancement
+release: Unscheduled
 ---
 
 # Architectural Artefacts
