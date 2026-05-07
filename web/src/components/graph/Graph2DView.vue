@@ -61,7 +61,8 @@ function buildElements() {
 
 async function runLayout(animate = true) {
   if (!cy || !Cy) return
-  if (cy.elements().length === 0) return
+  // Guard: no-op on empty graph to avoid errors from layout algorithms
+  if (cy.nodes().length === 0) return
 
   const layoutKey = graphStore.activeLayout
   const config = LAYOUT_CONFIGS[layoutKey] ?? LAYOUT_CONFIGS['fcose']
@@ -90,7 +91,12 @@ async function runLayout(animate = true) {
   // Stop any in-progress layout animation before starting a new one
   cy.stop()
 
-  cy.layout(options).run()
+  graphStore.layoutAnimating = true
+  const layout = cy.layout(options)
+  layout.one('layoutstop', () => {
+    graphStore.layoutAnimating = false
+  })
+  layout.run()
 }
 
 async function init() {

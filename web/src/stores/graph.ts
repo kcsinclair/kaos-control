@@ -18,6 +18,8 @@ export const useGraphStore = defineStore('graph', () => {
   // Layout state — session-scoped (no localStorage persistence)
   const activeLayout = ref<string>('fcose')
   const directed = ref<boolean>(false)
+  // True while a layout animation is running (used to disable the selector)
+  const layoutAnimating = ref<boolean>(false)
 
   const showLabelNodes = ref(false)
 
@@ -177,6 +179,7 @@ export const useGraphStore = defineStore('graph', () => {
     hideTests,
     activeLayout,
     directed,
+    layoutAnimating,
     uniqueTypes,
     uniqueStatuses,
     uniqueLineages,

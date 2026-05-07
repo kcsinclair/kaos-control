@@ -7,8 +7,6 @@ const store = useGraphStore()
 
 const layouts = computed(() => Object.values(LAYOUT_CONFIGS))
 
-const isAnimating = defineModel<boolean>('isAnimating', { default: false })
-
 function onLayoutChange(e: Event) {
   const key = (e.target as HTMLSelectElement).value
   store.setLayout(key)
@@ -22,7 +20,7 @@ function onLayoutChange(e: Event) {
       id="layout-select"
       class="layout-select"
       :value="store.activeLayout"
-      :disabled="isAnimating"
+      :disabled="store.layoutAnimating"
       aria-label="Select graph layout algorithm"
       @change="onLayoutChange"
     >
@@ -35,7 +33,7 @@ function onLayoutChange(e: Event) {
       :class="{ active: store.directed }"
       :aria-pressed="store.directed"
       aria-label="Toggle directed graph mode"
-      :disabled="isAnimating"
+      :disabled="store.layoutAnimating"
       @click="store.toggleDirected()"
     >
       Directed
