@@ -6,6 +6,7 @@ import ForceGraph3D from '@/components/graph/ForceGraph3D.vue'
 import GraphFilters from '@/components/graph/GraphFilters.vue'
 import GraphLegend from '@/components/graph/GraphLegend.vue'
 import LabelModal from '@/components/graph/LabelModal.vue'
+import LayoutSelector from '@/components/graph/LayoutSelector.vue'
 import ArtifactModal from '@/components/artifact/ArtifactModal.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
 import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
@@ -93,6 +94,7 @@ onMounted(() => {
             aria-pressed="view === '2d'"
           >2D</button>
         </div>
+        <LayoutSelector v-if="view === '2d'" />
         <button class="check-status-btn" @click="showStatusPanel = true">
           Check all statuses
         </button>
