@@ -1,7 +1,7 @@
 ---
 title: 2D Graph Layout Selector
 type: requirement
-status: blocked
+status: draft
 lineage: 2d-graph-layout-selector
 created: "2026-05-07"
 priority: normal
@@ -88,8 +88,16 @@ The 2D graph view currently uses a single layout algorithm (fcose for undirected
 - [ ] No new npm dependencies are required for built-in Cytoscape layouts.
 - [ ] Graph with 200+ nodes re-layouts in under 2 seconds.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the selector also appear in a future mobile/narrow viewport, or is it acceptable to hide it below a breakpoint?
+
+> Yes
+
 2. Is dagre (hierarchical with edge routing) desired as a fifth option? It would require adding the `cytoscape-dagre` npm package.
+
+> Yes, please go ahead.
+
 3. Should the "directed" toggle (currently a prop, not exposed in UI) be surfaced alongside or merged with the layout selector?
+
+> Yes.
