@@ -683,16 +683,19 @@ func (idx *Index) Get(relPath string) (*ArtifactRow, error) {
 
 // GraphNode is a single node in the visualisation graph.
 type GraphNode struct {
-	ID       string   `json:"id"`
-	Title    string   `json:"title"`
-	Type     string   `json:"type"`
-	Status   string   `json:"status"`
-	Stage    string   `json:"stage"`
-	Lineage  string   `json:"lineage"`
-	Slug     string   `json:"slug"`
-	Index    int      `json:"index"`
-	Priority string   `json:"priority,omitempty"`
-	Labels   []string `json:"labels"`
+	ID        string     `json:"id"`
+	Title     string     `json:"title"`
+	Type      string     `json:"type"`
+	Status    string     `json:"status"`
+	Stage     string     `json:"stage"`
+	Lineage   string     `json:"lineage"`
+	Slug      string     `json:"slug"`
+	Index     int        `json:"index"`
+	Priority  string     `json:"priority,omitempty"`
+	Labels    []string   `json:"labels"`
+	StartDate *time.Time `json:"start_date,omitempty"`
+	EndDate   *time.Time `json:"end_date,omitempty"`
+	Synthetic bool       `json:"synthetic,omitempty"`
 }
 
 // GraphEdge is a directed relationship between two nodes.
@@ -700,6 +703,7 @@ type GraphEdge struct {
 	Source string `json:"source"`
 	Target string `json:"target"`
 	Kind   string `json:"kind"`
+	Label  string `json:"label,omitempty"`
 }
 
 // GraphData is the full graph payload ready for 3d-force-graph / Cytoscape.
