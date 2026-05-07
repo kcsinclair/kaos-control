@@ -6,7 +6,6 @@ lineage: multi-language-support
 priority: low
 labels:
     - feature
-release: Unscheduled
 ---
 
 # Multi Language Support
