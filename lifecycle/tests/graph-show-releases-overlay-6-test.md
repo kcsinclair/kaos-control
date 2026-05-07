@@ -1,7 +1,7 @@
 ---
 title: "Integration Tests — Graph Releases Overlay"
 type: test
-status: approved
+status: in-qa
 lineage: graph-show-releases-overlay
 parent: lifecycle/test-plans/graph-show-releases-overlay-5-test.md
 ---
