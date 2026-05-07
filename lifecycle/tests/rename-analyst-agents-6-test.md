@@ -1,7 +1,7 @@
 ---
 title: "Test Coverage — Rename Analyst Agents to Phase-First Convention"
 type: test
-status: draft
+status: approved
 lineage: rename-analyst-agents
 parent: lifecycle/test-plans/rename-analyst-agents-5-test.md
 ---
