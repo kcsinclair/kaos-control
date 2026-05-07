@@ -8,6 +8,7 @@ labels:
     - workflow
     - artefacts
     - feature
+release: May2026
 ---
 
 # ideas are features or enhancements
