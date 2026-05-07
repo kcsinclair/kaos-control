@@ -1,7 +1,7 @@
 ---
 title: "Test Suite — Move Running Agents Indicator to Menu Bar"
 type: test
-status: draft
+status: approved
 lineage: agents-indicator-in-menu-bar
 parent: lifecycle/test-plans/agents-indicator-in-menu-bar-5-test.md
 ---
