@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useReleasesStore } from '@/stores/releases'
+import { ApiError } from '@/api/client'
 import type { Release } from '@/types/release'
 
 const props = defineProps<{
@@ -101,10 +102,21 @@ onMounted(() => {
 
 function validate(): boolean {
   const e: Record<string, string> = {}
-  if (!name.value.trim()) {
+  const trimmedName = name.value.trim()
+  if (!trimmedName) {
     e.name = 'Name is required.'
   } else if (name.value.length > 120) {
     e.name = 'Name must be 120 characters or fewer.'
+  } else if (!isEdit.value && store.byName(trimmedName)) {
+    // Pre-flight: catch conflicts before any network request is sent.
+    e.name = `A release named "${trimmedName}" already exists.`
+  } else if (
+    isEdit.value &&
+    props.release &&
+    trimmedName !== props.release.name &&
+    store.byName(trimmedName)
+  ) {
+    e.name = `A release named "${trimmedName}" already exists.`
   }
   if (isScheduled.value) {
     if (!startDate.value) {
@@ -121,6 +133,9 @@ function validate(): boolean {
 }
 
 async function submit() {
+  // Guard: prevent concurrent submissions (e.g. rapid double-clicks or
+  // pressing Enter while the first request is still in flight).
+  if (saving.value) return
   if (!validate()) return
   saving.value = true
   try {
@@ -138,7 +153,13 @@ async function submit() {
     }
     emit('saved', release)
   } catch (e: unknown) {
-    errors.value.submit = e instanceof Error ? e.message : 'Save failed.'
+    if (e instanceof ApiError && e.status === 409) {
+      // Server-side conflict: name is already taken. Surface this on the
+      // name field so the user understands why and can fix it.
+      errors.value.name = `A release named "${name.value.trim()}" already exists.`
+    } else {
+      errors.value.submit = e instanceof Error ? e.message : 'Save failed.'
+    }
   } finally {
     saving.value = false
   }
