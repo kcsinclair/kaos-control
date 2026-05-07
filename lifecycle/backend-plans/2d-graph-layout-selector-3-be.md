@@ -1,9 +1,10 @@
 ---
-title: "2D Graph Layout Selector — Backend Plan"
+title: 2D Graph Layout Selector — Backend Plan
 type: plan-backend
 status: approved
 lineage: 2d-graph-layout-selector
 parent: lifecycle/requirements/2d-graph-layout-selector-2.md
+release: May2026
 ---
 
 # 2D Graph Layout Selector — Backend Plan
