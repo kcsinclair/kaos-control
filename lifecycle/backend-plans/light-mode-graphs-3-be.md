@@ -1,9 +1,11 @@
 ---
-title: "Backend Plan — Light Mode Colour Scheme for Graphs"
+title: Backend Plan — Light Mode Colour Scheme for Graphs
 type: plan-backend
-status: draft
+status: approved
 lineage: light-mode-graphs
+priority: medium
 parent: lifecycle/requirements/light-mode-graphs-2.md
+release: May2026
 ---
 
 # Backend Plan — Light Mode Colour Scheme for Graphs
