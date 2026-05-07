@@ -10,6 +10,7 @@ labels:
     - agent-runner
     - architecture
     - workflow
+release: June2026
 ---
 
 # Sequential Agent Execution Ordering to Prevent Race Conditions
