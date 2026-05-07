@@ -265,7 +265,7 @@ const PANEL_ID = 'backlog-panel-list'
   outline-offset: 1px;
 }
 
-/* Card list */
+/* Card list — contain:content limits paint/layout to this subtree for large lists (NFR2) */
 .backlog-list {
   max-height: 300px;
   overflow-y: auto;
@@ -273,6 +273,7 @@ const PANEL_ID = 'backlog-panel-list'
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  contain: content;
 }
 
 .backlog-empty {
