@@ -4,7 +4,7 @@ type: defect
 status: approved
 lineage: roadmap-gantt-release-name-in-column
 created: "2026-05-07T11:33:33+10:00"
-priority: normal
+priority: high
 labels:
     - defect
     - frontend
