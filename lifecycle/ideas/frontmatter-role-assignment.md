@@ -9,6 +9,7 @@ labels:
     - feature
     - frontend
     - workflow
+release: April2026
 ---
 
 # Frontmatter Editor Role-Based Assignment
