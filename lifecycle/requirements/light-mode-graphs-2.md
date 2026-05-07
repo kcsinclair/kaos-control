@@ -1,7 +1,7 @@
 ---
 title: Light Mode Colour Scheme for 2D and 3D Graphs
 type: requirement
-status: blocked
+status: approved
 lineage: light-mode-graphs
 created: "2026-05-07"
 priority: medium
@@ -76,7 +76,7 @@ The 2D (Cytoscape.js) and 3D (3d-force-graph / three.js) graph visualisations us
 - [ ] Existing dark-mode appearance is unchanged (no visual regression).
 - [ ] Related: [[light-mode-graphs]]
 
-## Open Questions
+## Resolved Questions
 
 1. **Light palette specifics** — Should the light-mode canvas background be pure white (`#ffffff`), the app's surface token (`--color-surface`), or a slightly tinted neutral? Using the CSS token would keep graphs consistent with the rest of the UI but may not suit the graph aesthetic.
 
