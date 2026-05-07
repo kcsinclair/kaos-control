@@ -1,7 +1,7 @@
 ---
 title: 'Tests: Remove Non-Functional Hyperlinks from Artifact Breadcrumb'
 type: test
-status: draft
+status: approved
 lineage: artifact-breadcrumb-remove-broken-links
 parent: lifecycle/test-plans/artifact-breadcrumb-remove-broken-links-5-test.md
 created: "2026-05-06T00:00:00+10:00"
