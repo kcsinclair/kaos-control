@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Graph Releases Overlay'
 type: plan-backend
-status: draft
+status: approved
 lineage: graph-show-releases-overlay
 parent: lifecycle/requirements/graph-show-releases-overlay-2.md
 ---
