@@ -8,7 +8,6 @@ labels:
     - artefacts
     - workflow
     - usability
-release: Unscheduled
 ---
 
 # Parsing Errors can Trigger an Agent to resolve
