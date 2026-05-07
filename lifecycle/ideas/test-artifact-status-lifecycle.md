@@ -11,6 +11,7 @@ labels:
     - qa
     - workflow
     - artefacts
+release: May2026
 ---
 
 # Test Artifact Status Lifecycle
