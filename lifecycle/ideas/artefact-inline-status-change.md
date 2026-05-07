@@ -11,6 +11,7 @@ labels:
     - usability
     - enhancement
     - vue
+release: May2026
 ---
 
 # Inline Status Change on Artefact View
