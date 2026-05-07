@@ -3,7 +3,7 @@ title: 'Graph: Show Releases Overlay'
 type: requirement
 status: blocked
 lineage: graph-show-releases-overlay
-created: "2026-05-07"
+created: "2026-05-07T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/graph-show-releases-overlay.md
 labels:
