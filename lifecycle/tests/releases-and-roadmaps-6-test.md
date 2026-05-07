@@ -1,7 +1,7 @@
 ---
 title: "Integration Tests — Releases and Roadmaps"
 type: test
-status: done
+status: approved
 lineage: releases-and-roadmaps
 parent: lifecycle/test-plans/releases-and-roadmaps-5-test.md
 ---
