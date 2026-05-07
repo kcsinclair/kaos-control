@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArtifactsStore } from '@/stores/artifacts'
+import { useReleasesStore } from '@/stores/releases'
 import { useWebSocket } from '@/composables/useWebSocket'
 import { usePagination } from '@/composables/usePagination'
 import { useSortableTable } from '@/composables/useSortableTable'
@@ -20,6 +21,7 @@ import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate
 const route = useRoute()
 const router = useRouter()
 const store = useArtifactsStore()
+const releasesStore = useReleasesStore()
 const ui = useUiStore()
 
 const showBrainDump = ref(false)
@@ -98,6 +100,7 @@ const selectedStatus = ref(store.filter.status ?? '')
 const selectedLabel = ref(store.filter.label ?? '')
 const selectedType = ref(store.filter.type ?? '')
 const selectedPriority = ref(store.filter.priority ?? '')
+const selectedRelease = ref(store.filter.release ?? '')
 const searchText = ref('')
 
 function applyFilters() {
@@ -109,6 +112,7 @@ function applyFilters() {
     label: selectedLabel.value || undefined,
     type: selectedType.value || undefined,
     priority: selectedPriority.value || undefined,
+    release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
     q: searchText.value || undefined,
     limit: 0,
     offset: undefined,
@@ -126,6 +130,7 @@ function resetFilters() {
   selectedLabel.value = ''
   selectedType.value = ''
   selectedPriority.value = ''
+  selectedRelease.value = ''
   searchText.value = ''
   applyFilters()
 }
@@ -176,6 +181,7 @@ onMounted(async () => {
     store.fetchList(project, { limit: 0, offset: undefined }),
     store.fetchLabels(project),
     store.fetchPriorities(project),
+    releasesStore.fetch(project),
   ])
 })
 </script>
@@ -240,6 +246,12 @@ onMounted(async () => {
       <select v-model="selectedPriority" @change="applyFilters" v-if="store.priorities.length">
         <option value="">All priorities</option>
         <option v-for="p in store.priorities" :key="p" :value="p">{{ p }}</option>
+      </select>
+      <label class="sr-only" for="release-filter">Release</label>
+      <select id="release-filter" v-model="selectedRelease" @change="applyFilters">
+        <option value="">All releases</option>
+        <option v-for="r in releasesStore.releases" :key="r.id" :value="r.name">{{ r.name }}</option>
+        <option value="__unassigned__">Unassigned</option>
       </select>
       <button class="btn-ghost" @click="resetFilters">Reset</button>
     </div>
@@ -494,6 +506,17 @@ onMounted(async () => {
 .badge[data-status="planning"]     { background: var(--badge-planning-bg);      color: var(--badge-planning-text); }
 .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
 .cell-date { white-space: nowrap; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 .priority-pill {
   display: inline-block;
   padding: 1px 8px;
