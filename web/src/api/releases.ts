@@ -36,7 +36,9 @@ export function deleteRelease(project: string, id: number, reassignTo?: number):
 }
 
 export function listReleaseArtifacts(project: string, id: number): Promise<ArtifactRow[]> {
-  return api.get<ArtifactRow[]>(`/p/${encodeURIComponent(project)}/releases/${id}/artifacts`)
+  return api
+    .get<{ items: ArtifactRow[] | null }>(`/p/${encodeURIComponent(project)}/releases/${id}/artifacts`)
+    .then((r) => r.items ?? [])
 }
 
 export function getRoadmapGraph(project: string): Promise<GraphData> {
