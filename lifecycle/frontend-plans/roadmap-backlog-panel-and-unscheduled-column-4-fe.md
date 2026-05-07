@@ -1,7 +1,7 @@
 ---
 title: Frontend Plan — Roadmap Backlog Panel and Unscheduled Column
 type: plan-frontend
-status: in-development
+status: done
 lineage: roadmap-backlog-panel-and-unscheduled-column
 priority: high
 parent: lifecycle/requirements/roadmap-backlog-panel-and-unscheduled-column-2.md
