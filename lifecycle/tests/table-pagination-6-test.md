@@ -1,7 +1,7 @@
 ---
 title: "Table Pagination — Test Suite"
 type: test
-status: draft
+status: approved
 lineage: table-pagination
 parent: lifecycle/test-plans/table-pagination-5-test.md
 ---
