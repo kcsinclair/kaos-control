@@ -11,6 +11,7 @@ labels:
     - frontend
     - workflow
     - v1
+release: May2026
 ---
 
 # DevOps Pipeline Management
