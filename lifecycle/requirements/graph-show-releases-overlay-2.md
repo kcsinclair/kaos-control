@@ -75,7 +75,7 @@ The 2D (Cytoscape.js) and 3D (3d-force-graph) graph views currently show ideas, 
 
 1. What frontmatter field on ideas/defects indicates their release assignment? Is it `release: <slug>`, `release: <title>`, or something else? Does this field already exist in the schema?
 
-> It is the 'release: <title>'
+> It is 'release: title'
 
 2. How should release chronological order be determined — by a `date` field, `created` timestamp, or explicit `order` field in release frontmatter?
 
