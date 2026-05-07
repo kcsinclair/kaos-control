@@ -9,6 +9,8 @@ const props = defineProps<{
   nodes: GraphNode[]
   edges: GraphEdge[]
   matchedNodeIds?: Set<string>
+  /** When set, applies a DAG layout mode (e.g. 'lr' for left-to-right chains) */
+  dagMode?: string
 }>()
 
 const emit = defineEmits<{
@@ -22,6 +24,9 @@ function nodeColor(n: GraphNode): string {
   if (matched && matched.size > 0 && !matched.has(n.id)) {
     // Dim unmatched nodes to ~0.15 opacity by blending towards the background (#0f172a)
     return '#1e2535'
+  }
+  if (n.type === 'release') {
+    return n.synthetic ? NODE_COLORS['backlog'] : NODE_COLORS['release']
   }
   return NODE_COLORS[n.type] ?? '#6b7280'
 }
@@ -68,8 +73,33 @@ function priorityRing(n: GraphNode): THREE.Mesh | null {
   return new THREE.Mesh(geo, mat)
 }
 
+// Build a box mesh for release nodes (replaces the default sphere via nodeThreeObjectExtend=false).
+function buildReleaseObject(n: GraphNode): THREE.Object3D {
+  const group = new THREE.Group()
+  const size = 7  // consistent with ~nodeVal 4 sphere (radius ≈ Math.cbrt(4)*4 ≈ 6.3)
+  const color = n.synthetic ? NODE_COLORS['backlog'] : NODE_COLORS['release']
+
+  if (n.synthetic) {
+    // Backlog: octahedron for visual distinction
+    const geo = new THREE.OctahedronGeometry(size * 0.8)
+    const mat = new THREE.MeshLambertMaterial({ color })
+    group.add(new THREE.Mesh(geo, mat))
+  } else {
+    // Regular release: box geometry
+    const geo = new THREE.BoxGeometry(size, size * 0.65, size * 0.65)
+    const mat = new THREE.MeshLambertMaterial({ color })
+    group.add(new THREE.Mesh(geo, mat))
+  }
+
+  // Always show name label for release nodes
+  group.add(textSprite(n.title || n.slug, n.synthetic ? '#d1d5db' : '#bfdbfe'))
+  return group
+}
+
 // Build the Three.js object for a node: priority ring, approved-test ring, active pulse ring, text sprite.
 function buildNodeObject(n: GraphNode): THREE.Object3D {
+  // Release nodes use custom geometry (this function is only called when
+  // nodeThreeObjectExtend returns true, i.e. for non-release nodes).
   const group = new THREE.Group()
   const ring = priorityRing(n)
   if (ring) group.add(ring)
@@ -126,16 +156,32 @@ onMounted(() => {
     .nodeId('id')
     .nodeLabel((n: object) => {
       const node = n as GraphNode
+      if (node.type === 'release') {
+        const dateInfo = (node as any).start_date
+          ? `<br/><span style="opacity:.6">${(node as any).start_date}</span>`
+          : ''
+        return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:#1e293b;border-radius:4px;color:#f1f5f9">${node.title}<br/><span style="opacity:.6">${node.status || 'backlog'}</span>${dateInfo}</div>`
+      }
       return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:#1e293b;border-radius:4px;color:#f1f5f9">${node.title || node.slug}<br/><span style="opacity:.6">${node.type} · ${node.status}</span></div>`
     })
     .nodeColor((n: object) => nodeColor(n as GraphNode))
     .nodeVal((n: object) => nodeVal(n as GraphNode))
-    .nodeThreeObjectExtend(true)
-    .nodeThreeObject((n: object) => buildNodeObject(n as GraphNode))
+    .nodeThreeObjectExtend((n: object) => (n as GraphNode).type !== 'release')
+    .nodeThreeObject((n: object) => {
+      const node = n as GraphNode
+      return node.type === 'release' ? buildReleaseObject(node) : buildNodeObject(node)
+    })
     .linkSource('source')
     .linkTarget('target')
     .linkColor((l: object) => edgeColor(l as GraphEdge))
-    .linkWidth(0.5)
+    .linkLabel((l: object) => {
+      const edge = l as GraphEdge
+      if (edge.kind === 'timeline' && edge.label) {
+        return `<div style="font:11px sans-serif;padding:2px 6px;background:#1e293b;border-radius:3px;color:#93c5fd">${edge.label}</div>`
+      }
+      return ''
+    })
+    .linkWidth((l: object) => (l as GraphEdge).kind === 'timeline' ? 1.5 : 0.5)
     .linkDirectionalArrowLength(3)
     .linkDirectionalArrowRelPos(1)
     .linkCurvature(0.1)
@@ -147,6 +193,10 @@ onMounted(() => {
       const s = 1 + 0.15 * Math.sin(Date.now() / 500)
       activeRings.forEach((mesh) => mesh.scale.setScalar(s))
     })
+
+  if (props.dagMode) {
+    graph.dagMode(props.dagMode as any)
+  }
 
   // Fit camera after initial layout settles
   setTimeout(() => graph?.zoomToFit(400, 80), 1000)
