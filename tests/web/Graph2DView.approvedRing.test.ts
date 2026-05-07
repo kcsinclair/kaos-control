@@ -29,6 +29,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { setActivePinia, createPinia } from 'pinia'
 import type { GraphNode, GraphEdge } from '../../web/src/types/api'
 
 // ---------------------------------------------------------------------------
@@ -48,9 +49,14 @@ const { mockCyConstructor, mockCyInstance, setCyNodes } = vi.hoisted(() => {
 
   const mockCyInstance = {
     on: vi.fn(),
+    stop: vi.fn(),
     elements: vi.fn().mockReturnValue({ remove: vi.fn() }),
     add: vi.fn(),
-    layout: vi.fn().mockReturnValue({ run: vi.fn() }),
+    layout: vi.fn(() => ({
+      // Fire layoutstop synchronously so graphStore.layoutAnimating resets
+      one: vi.fn((_event: string, cb: () => void) => { cb() }),
+      run: vi.fn(),
+    })),
     nodes: vi.fn(() => ({
       forEach: (cb: (n: any) => void) => _cyNodes.forEach(cb),
     })),
@@ -76,43 +82,65 @@ vi.mock('cytoscape-fcose', () => ({ default: {} }))
 
 // Mock graphConstants so:
 //   - APPROVED_TEST_RING_COLOR has a known value
-//   - ACTIVE_STATUS_COLORS includes 'approved', making the pulse-loop guard testable
-vi.mock('@/components/graph/graphConstants', () => ({
-  NODE_COLORS: {
-    idea: '#f59e0b',
-    requirement: '#3b82f6',
-    'plan-backend': '#8b5cf6',
-    'plan-frontend': '#a78bfa',
-    'plan-test': '#c084fc',
-    test: '#06b6d4',
-    prototype: '#14b8a6',
-    defect: '#f43f5e',
-    label: '#a855f7',
-  },
-  PRIORITY_COLORS: {
-    high: '#ef4444',
-    medium: '#f97316',
-    normal: '#22c55e',
-    low: '#3b82f6',
-  },
-  ACTIVE_STATUS_COLORS: {
-    'in-development': '#4ade80',
-    'in-qa': '#fbbf24',
-    'in-progress': '#4ade80',
-    clarifying: '#60a5fa',
-    planning: '#a78bfa',
-    // Intentionally included so the pulse-loop guard is exercised in test 4
-    approved: '#00ff00',
-  },
-  EDGE_COLORS: {
-    parent: '#94a3b8',
-    depends_on: '#f97316',
-    blocks: '#ef4444',
-    related_to: '#64748b',
-    label: '#a855f7',
-  },
-  APPROVED_TEST_RING_COLOR,
-}))
+//   - activeStatusColors includes 'approved', making the pulse-loop guard testable
+vi.mock('@/components/graph/graphConstants', async () => {
+  const { computed, ref } = await import('vue')
+  return {
+    useGraphTheme: () => ({
+      palette: computed(() => ({
+        nodeColors: {
+          idea: '#f59e0b',
+          requirement: '#3b82f6',
+          'plan-backend': '#8b5cf6',
+          'plan-frontend': '#a78bfa',
+          'plan-test': '#c084fc',
+          test: '#06b6d4',
+          prototype: '#14b8a6',
+          defect: '#f43f5e',
+          label: '#a855f7',
+          release: '#93c5fd',
+          backlog: '#6b7280',
+        },
+        priorityColors: { high: '#ef4444', medium: '#f97316', normal: '#22c55e', low: '#3b82f6' },
+        activeStatusColors: {
+          'in-development': '#4ade80',
+          'in-qa': '#fbbf24',
+          'in-progress': '#4ade80',
+          clarifying: '#60a5fa',
+          planning: '#a78bfa',
+          // Intentionally included so the pulse-loop guard is exercised in test 4
+          approved: '#00ff00',
+        },
+        edgeColors: {
+          parent: '#94a3b8',
+          depends_on: '#f97316',
+          blocks: '#ef4444',
+          related_to: '#64748b',
+          label: '#a855f7',
+        },
+        approvedTestRingColor: '#2563eb',
+        canvasBg: '#0f172a',
+        labelColor: '#f1f5f9',
+        labelNodeBg: '#2e1a4a',
+        labelNodeText: '#d8b4fe',
+        labelNodeBorder: '#a855f7',
+        releaseText: '#1e3a5f',
+        releaseBorderColor: '#60a5fa',
+        backlogText: '#d1d5db',
+        edgeLabelBg: '#1e293b',
+        edgeLabelText: '#94a3b8',
+        timelineEdgeColor: '#3b82f6',
+        timelineEdgeTextColor: '#93c5fd',
+        assignedEdgeColor: '#334155',
+        borderDefault: 'rgba(255,255,255,0.25)',
+        selectedBorderColor: '#ffffff',
+        searchHighlight: '#facc15',
+        dimBlend: '#1e2535',
+      })),
+      isDark: ref(true),
+    }),
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -173,6 +201,7 @@ function findStyleRule(
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
+  setActivePinia(createPinia())
   mockCyConstructor.mockClear()
   mockCyInstance.on.mockClear()
   mockCyInstance.nodes.mockClear()

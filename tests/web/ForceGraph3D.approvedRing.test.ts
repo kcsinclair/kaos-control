@@ -41,40 +41,62 @@ const APPROVED_TEST_RING_COLOR = '#2563eb'
 // Mock: graphConstants
 // ---------------------------------------------------------------------------
 
-vi.mock('@/components/graph/graphConstants', () => ({
-  NODE_COLORS: {
-    idea: '#f59e0b',
-    requirement: '#3b82f6',
-    'plan-backend': '#8b5cf6',
-    'plan-frontend': '#a78bfa',
-    'plan-test': '#c084fc',
-    test: '#06b6d4',
-    prototype: '#14b8a6',
-    defect: '#f43f5e',
-    label: '#a855f7',
-  },
-  PRIORITY_COLORS: {
-    high: '#ef4444',
-    medium: '#f97316',
-    normal: '#22c55e',
-    low: '#3b82f6',
-  },
-  ACTIVE_STATUS_COLORS: {
-    'in-development': '#4ade80',
-    'in-qa': '#fbbf24',
-    'in-progress': '#4ade80',
-    clarifying: '#60a5fa',
-    planning: '#a78bfa',
-  },
-  EDGE_COLORS: {
-    parent: '#94a3b8',
-    depends_on: '#f97316',
-    blocks: '#ef4444',
-    related_to: '#64748b',
-    label: '#a855f7',
-  },
-  APPROVED_TEST_RING_COLOR,
-}))
+vi.mock('@/components/graph/graphConstants', async () => {
+  const { computed, ref } = await import('vue')
+  return {
+    useGraphTheme: () => ({
+      palette: computed(() => ({
+        nodeColors: {
+          idea: '#f59e0b',
+          requirement: '#3b82f6',
+          'plan-backend': '#8b5cf6',
+          'plan-frontend': '#a78bfa',
+          'plan-test': '#c084fc',
+          test: '#06b6d4',
+          prototype: '#14b8a6',
+          defect: '#f43f5e',
+          label: '#a855f7',
+          release: '#93c5fd',
+          backlog: '#6b7280',
+        },
+        priorityColors: { high: '#ef4444', medium: '#f97316', normal: '#22c55e', low: '#3b82f6' },
+        activeStatusColors: {
+          'in-development': '#4ade80',
+          'in-qa': '#fbbf24',
+          'in-progress': '#4ade80',
+          clarifying: '#60a5fa',
+          planning: '#a78bfa',
+        },
+        edgeColors: {
+          parent: '#94a3b8',
+          depends_on: '#f97316',
+          blocks: '#ef4444',
+          related_to: '#64748b',
+          label: '#a855f7',
+        },
+        approvedTestRingColor: '#2563eb',
+        canvasBg: '#0f172a',
+        labelColor: '#f1f5f9',
+        labelNodeBg: '#2e1a4a',
+        labelNodeText: '#d8b4fe',
+        labelNodeBorder: '#a855f7',
+        releaseText: '#1e3a5f',
+        releaseBorderColor: '#60a5fa',
+        backlogText: '#d1d5db',
+        edgeLabelBg: '#1e293b',
+        edgeLabelText: '#94a3b8',
+        timelineEdgeColor: '#3b82f6',
+        timelineEdgeTextColor: '#93c5fd',
+        assignedEdgeColor: '#334155',
+        borderDefault: 'rgba(255,255,255,0.25)',
+        selectedBorderColor: '#ffffff',
+        searchHighlight: '#facc15',
+        dimBlend: '#1e2535',
+      })),
+      isDark: ref(true),
+    }),
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Mock: THREE — minimal stand-ins that record constructor arguments
@@ -182,6 +204,7 @@ const { getNodeThreeObjectCallback, getOnEngineTickCallback, mockGraphInstance }
   instance.linkSource = fluent()
   instance.linkTarget = fluent()
   instance.linkColor = fluent()
+  instance.linkLabel = fluent()
   instance.linkWidth = fluent()
   instance.linkDirectionalArrowLength = fluent()
   instance.linkDirectionalArrowRelPos = fluent()
