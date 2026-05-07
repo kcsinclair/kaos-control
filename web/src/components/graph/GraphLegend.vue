@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NODE_COLORS, PRIORITY_COLORS, EDGE_COLORS } from './graphConstants'
+import { useGraphTheme } from './graphConstants'
 
 const props = defineProps<{
   showLabelNodes?: boolean
 }>()
 
+const { palette, isDark } = useGraphTheme()
+
 const nodeTypes = computed(() =>
-  Object.entries(NODE_COLORS)
+  Object.entries(palette.value.nodeColors)
     .filter(([type]) => type !== 'label' || props.showLabelNodes)
     .map(([type, color]) => ({
       type,
@@ -16,14 +18,16 @@ const nodeTypes = computed(() =>
     }))
 )
 
-const priorityEntries = Object.entries(PRIORITY_COLORS).map(([level, color]) => ({
-  level,
-  color,
-  label: level.charAt(0).toUpperCase() + level.slice(1),
-}))
+const priorityEntries = computed(() =>
+  Object.entries(palette.value.priorityColors).map(([level, color]) => ({
+    level,
+    color,
+    label: level.charAt(0).toUpperCase() + level.slice(1),
+  }))
+)
 
 const edgeKinds = computed(() =>
-  Object.entries(EDGE_COLORS)
+  Object.entries(palette.value.edgeColors)
     .filter(([kind]) => kind !== 'label' || props.showLabelNodes)
     .map(([kind, color]) => ({
       kind,
@@ -31,29 +35,46 @@ const edgeKinds = computed(() =>
       label: kind.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
     }))
 )
+
+const legendStyle = computed(() => ({
+  background: isDark.value ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.92)',
+  color: palette.value.labelColor,
+}))
+
+const titleStyle = computed(() => ({
+  color: isDark.value
+    ? 'rgba(241, 245, 249, 0.5)'
+    : 'rgba(15, 23, 42, 0.45)',
+}))
+
+const itemLabelStyle = computed(() => ({
+  color: isDark.value
+    ? 'rgba(241, 245, 249, 0.8)'
+    : 'rgba(15, 23, 42, 0.75)',
+}))
 </script>
 
 <template>
-  <div class="legend">
+  <div class="legend" :style="legendStyle">
     <div class="legend-section">
-      <div class="legend-title">Nodes</div>
+      <div class="legend-title" :style="titleStyle">Nodes</div>
       <div v-for="item in nodeTypes" :key="item.type" class="legend-item">
         <span class="legend-dot" :style="{ background: item.color }" />
-        <span class="legend-label">{{ item.label }}</span>
+        <span class="legend-label" :style="itemLabelStyle">{{ item.label }}</span>
       </div>
     </div>
     <div class="legend-section">
-      <div class="legend-title">Priority</div>
+      <div class="legend-title" :style="titleStyle">Priority</div>
       <div v-for="item in priorityEntries" :key="item.level" class="legend-item">
         <span class="legend-ring" :style="{ borderColor: item.color }" />
-        <span class="legend-label">{{ item.label }}</span>
+        <span class="legend-label" :style="itemLabelStyle">{{ item.label }}</span>
       </div>
     </div>
     <div class="legend-section">
-      <div class="legend-title">Edges</div>
+      <div class="legend-title" :style="titleStyle">Edges</div>
       <div v-for="item in edgeKinds" :key="item.kind" class="legend-item">
         <span class="legend-line" :style="{ background: item.color }" />
-        <span class="legend-label">{{ item.label }}</span>
+        <span class="legend-label" :style="itemLabelStyle">{{ item.label }}</span>
       </div>
     </div>
   </div>
@@ -64,12 +85,10 @@ const edgeKinds = computed(() =>
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(148, 163, 184, 0.15);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   backdrop-filter: blur(4px);
-  color: #f1f5f9;
 }
 .legend-section {
   display: flex;
@@ -81,7 +100,6 @@ const edgeKinds = computed(() =>
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(241, 245, 249, 0.5);
   margin-bottom: var(--space-1);
 }
 .legend-item {
@@ -111,6 +129,5 @@ const edgeKinds = computed(() =>
 }
 .legend-label {
   font-size: 11px;
-  color: rgba(241, 245, 249, 0.8);
 }
 </style>
