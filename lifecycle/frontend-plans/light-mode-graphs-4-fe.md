@@ -1,9 +1,11 @@
 ---
-title: "Frontend Plan — Light Mode Colour Scheme for Graphs"
+title: Frontend Plan — Light Mode Colour Scheme for Graphs
 type: plan-frontend
-status: draft
+status: approved
 lineage: light-mode-graphs
+priority: medium
 parent: lifecycle/requirements/light-mode-graphs-2.md
+release: April2026
 ---
 
 # Frontend Plan — Light Mode Colour Scheme for Graphs
