@@ -1,7 +1,7 @@
 ---
 title: 'Artefacts List: Release & Priority Columns with Releases Filter'
 type: requirement
-status: approved
+status: planning
 lineage: artefacts-list-release-priority-columns
 created: "2026-05-07T00:00:00+10:00"
 priority: normal
