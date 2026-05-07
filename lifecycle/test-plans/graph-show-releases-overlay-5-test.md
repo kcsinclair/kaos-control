@@ -4,7 +4,6 @@ type: plan-test
 status: draft
 lineage: graph-show-releases-overlay
 parent: lifecycle/requirements/graph-show-releases-overlay-2.md
-release: May2026-2
 ---
 
 # Test Plan: Graph Releases Overlay
