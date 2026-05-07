@@ -9,6 +9,7 @@ labels:
     - testing
     - qa
     - feature
+release: May2026
 assignees:
     - role: product-owner
       who: agent
