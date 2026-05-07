@@ -11,6 +11,7 @@ labels:
     - defect-fix
     - usability
     - vue
+release: May2026
 ---
 
 # Remove Non-Functional Hyperlinks from Artifact Breadcrumb Path
