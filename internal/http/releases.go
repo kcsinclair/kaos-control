@@ -359,33 +359,41 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 	var nodes []map[string]any
 	var edges []map[string]any
 
+	// Synthetic Backlog node — always present as the chain root.
+	const backlogID = "release:backlog"
+	nodes = append(nodes, map[string]any{
+		"id":        backlogID,
+		"title":     "Backlog",
+		"type":      "release",
+		"status":    "",
+		"stage":     "",
+		"lineage":   "",
+		"slug":      "",
+		"index":     0,
+		"labels":    []string{},
+		"synthetic": true,
+	})
+
 	// Track paths of artifact nodes for edge filtering.
 	artifactNodeSet := map[string]bool{}
 
-	for i, rel := range releases {
+	for _, rel := range releases {
+		releaseNodeID := fmt.Sprintf("release:%d", rel.ID)
+
 		// Add release node.
 		nodes = append(nodes, map[string]any{
-			"id":     fmt.Sprintf("release:%d", rel.ID),
-			"title":  rel.Name,
-			"type":   "release",
-			"status": rel.Status,
-			"stage":  "",
-			"lineage": "",
-			"slug":   "",
-			"index":  0,
-			"labels": []string{},
+			"id":         releaseNodeID,
+			"title":      rel.Name,
+			"type":       "release",
+			"status":     rel.Status,
+			"stage":      "",
+			"lineage":    "",
+			"slug":       "",
+			"index":      0,
+			"labels":     []string{},
 			"start_date": rel.StartDate,
 			"end_date":   rel.EndDate,
 		})
-
-		// Timeline edge to next release — only when both releases are scheduled.
-		if i+1 < len(releases) && rel.StartDate != nil && releases[i+1].StartDate != nil {
-			edges = append(edges, map[string]any{
-				"source": fmt.Sprintf("release:%d", rel.ID),
-				"target": fmt.Sprintf("release:%d", releases[i+1].ID),
-				"kind":   "timeline",
-			})
-		}
 
 		// Fetch assigned ideas and defects.
 		artifacts, _, err := p.Idx.List(index.Filter{
@@ -414,7 +422,7 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 				"labels":  a.FM.Labels,
 			})
 			edges = append(edges, map[string]any{
-				"source": fmt.Sprintf("release:%d", rel.ID),
+				"source": releaseNodeID,
 				"target": a.Path,
 				"kind":   "assigned",
 			})
@@ -437,6 +445,12 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if nodes == nil {
+		nodes = []map[string]any{}
+	}
+	if edges == nil {
+		edges = []map[string]any{}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"nodes": nodes,
 		"edges": edges,
