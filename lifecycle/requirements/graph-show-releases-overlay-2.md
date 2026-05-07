@@ -1,7 +1,7 @@
 ---
 title: 'Graph: Show Releases Overlay'
 type: requirement
-status: draft
+status: approved
 lineage: graph-show-releases-overlay
 created: "2026-05-07T00:00:00+10:00"
 priority: normal
