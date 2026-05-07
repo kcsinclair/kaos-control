@@ -10,6 +10,7 @@ labels:
     - feature
     - vue
     - test
+release: May2026
 ---
 
 # Graph Show Tests Toggle
