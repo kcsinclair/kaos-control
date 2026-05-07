@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Directed Release Chain Graph Endpoint'
 type: plan-backend
-status: in-development
+status: done
 lineage: roadmap-graph-release-connections
 created: "2026-05-07"
 priority: high
