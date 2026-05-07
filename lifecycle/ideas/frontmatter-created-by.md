@@ -10,6 +10,7 @@ labels:
     - artefacts
     - workflow
     - backend
+release: May2026
 ---
 
 # Include Created-By Authorship in Artifact Frontmatter
