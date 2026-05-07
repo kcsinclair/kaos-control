@@ -260,7 +260,6 @@ function summaryBadge(release: Release): string {
           :key="bar.release.id"
           class="gantt-row"
         >
-          <div class="row-label">{{ bar.release.name }}</div>
           <div class="row-track">
             <!-- Column grid lines -->
             <div
@@ -392,21 +391,6 @@ function summaryBadge(release: Release): string {
   min-height: 40px;
 }
 .gantt-row:last-child { border-bottom: none; }
-
-.row-label {
-  width: 140px;
-  flex-shrink: 0;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text);
-  border-right: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 .row-track {
   flex: 1;
