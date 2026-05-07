@@ -10,6 +10,7 @@ labels:
     - usability
     - agent
     - vue
+release: April2026
 ---
 
 # Move Running Agents Indicator to Menu Bar
