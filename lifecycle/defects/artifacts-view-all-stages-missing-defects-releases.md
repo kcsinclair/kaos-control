@@ -9,6 +9,7 @@ labels:
     - artefacts
     - frontend
     - vue
+release: April2026
 ---
 
 # Artifacts View 'All Stages' Control Missing Defects and Releases Stages

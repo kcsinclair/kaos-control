@@ -10,6 +10,7 @@ labels:
     - agent
     - frontend
     - artefacts
+release: April2026
 ---
 
 # Agent Launcher Panel Does Not Show Available Artefacts for Planning-Analysis

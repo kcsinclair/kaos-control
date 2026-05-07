@@ -8,6 +8,7 @@ labels:
     - defect
     - frontend
     - vue
+release: April2026
 ---
 
 # Frontmatter Editor: Incorrect Ordering of Priority and Status Dropdowns

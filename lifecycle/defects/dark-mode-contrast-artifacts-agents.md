@@ -9,6 +9,7 @@ labels:
     - frontend
     - usability
     - vue
+release: April2026
 ---
 
 # Dark Mode: Unreadable Black Text on Dark Backgrounds and Low-Contrast Stage Pills

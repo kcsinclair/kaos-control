@@ -9,6 +9,7 @@ labels:
     - defect
     - frontend
     - vue
+release: April2026
 ---
 
 # POSSIBLY REDUNDANT

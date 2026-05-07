@@ -10,6 +10,7 @@ labels:
     - agent
     - qa
     - frontend
+release: April2026
 ---
 
 # QA Agent Launcher Panel Shows No Ready Work Despite Approved Tests

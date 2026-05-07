@@ -10,6 +10,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
+release: April2026
 ---
 
 # Kanban config API returns empty columns and card_fields due to missing JSON struct tags

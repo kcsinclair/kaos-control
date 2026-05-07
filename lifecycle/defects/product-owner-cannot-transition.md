@@ -7,6 +7,7 @@ priority: normal
 labels:
     - defect
     - frontend
+release: April2026
 ---
 
 As the product-owner I was not able to change something from in-progress to done.  The error message was 'role(s) [product-owner analyst reviewer approver] cannot transition "in-progress" → "done"'

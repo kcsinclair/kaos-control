@@ -13,6 +13,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
+release: April2026
 ---
 
 # Project Open Takes ~44s Due to Unconditional Full File Scan

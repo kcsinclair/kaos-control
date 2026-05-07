@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: backend-developer
     who: agent
+release: April2026
 ---
 
 # PUT /artifacts accepts assignee with empty `who` field (no 400 returned)
