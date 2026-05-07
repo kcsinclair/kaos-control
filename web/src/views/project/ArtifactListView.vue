@@ -235,6 +235,8 @@ onMounted(async () => {
             <SortHeader label="Path" column="title" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Stage" column="stage" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Status" column="status" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
+            <SortHeader label="Priority" column="priority" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
+            <SortHeader label="Release" column="release" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Type" column="type" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Created" column="created" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Modified" column="mtime" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
@@ -255,6 +257,15 @@ onMounted(async () => {
             </td>
             <td><span class="stage-tag">{{ row.stage }}</span></td>
             <td><span class="badge" :data-status="row.status">{{ row.status }}</span></td>
+            <td class="cell-priority">
+              <span
+                v-if="row.frontmatter?.priority"
+                class="priority-pill"
+                :class="`priority-${row.frontmatter.priority}`"
+              >{{ row.frontmatter.priority }}</span>
+              <span v-else class="muted">—</span>
+            </td>
+            <td class="cell-release muted">{{ row.frontmatter?.release || '—' }}</td>
             <td class="muted">{{ row.type }}</td>
             <td class="muted cell-date">
               <span :title="formatFullDateTime(row.created)">{{ formatShortDate(row.created) }}</span>
@@ -465,6 +476,21 @@ onMounted(async () => {
 .badge[data-status="planning"]     { background: var(--badge-planning-bg);      color: var(--badge-planning-text); }
 .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
 .cell-date { white-space: nowrap; }
+.priority-pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.priority-critical { background: #fee2e2; color: #b91c1c; }
+.priority-high     { background: #ffedd5; color: #c2410c; }
+.priority-normal   { background: #dbeafe; color: #1d4ed8; }
+.priority-low      { background: var(--color-surface); color: var(--color-text-muted); border: 1px solid var(--color-border); }
+.cell-priority { white-space: nowrap; }
+.cell-release  { white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 .btn-check-status {
   display: inline-flex;
   align-items: center;
