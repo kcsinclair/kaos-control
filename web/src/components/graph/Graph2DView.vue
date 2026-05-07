@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import type { GraphNode, GraphEdge } from '@/types/api'
-import { NODE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS, APPROVED_TEST_RING_COLOR, EDGE_COLORS } from './graphConstants'
+import { NODE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS, APPROVED_TEST_RING_COLOR } from './graphConstants'
+import { LAYOUT_CONFIGS } from './layoutConfigs'
+import { useGraphStore } from '@/stores/graph'
 
 const props = defineProps<{
   nodes: GraphNode[]
   edges: GraphEdge[]
   onNodeClick: (node: GraphNode) => void
   matchedNodeIds?: Set<string>
-  /** Use left-to-right breadthfirst layout instead of fcose (for directed chains) */
-  directed?: boolean
 }>()
 
+const graphStore = useGraphStore()
+
 const container = ref<HTMLDivElement | null>(null)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cy: any = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Cy: any = null
 let pulseInterval: ReturnType<typeof setInterval> | null = null
 let pulseTick = false
+const registeredPlugins = new Set<string>()
 
 function nodeColor(type: string, synthetic?: boolean): string {
   if (type === 'release') {
@@ -53,14 +59,51 @@ function buildElements() {
   return [...nodes, ...edges]
 }
 
+async function runLayout(animate = true) {
+  if (!cy || !Cy) return
+  if (cy.elements().length === 0) return
+
+  const layoutKey = graphStore.activeLayout
+  const config = LAYOUT_CONFIGS[layoutKey] ?? LAYOUT_CONFIGS['fcose']
+
+  // Register plugin if needed (idempotent — registered once per plugin)
+  if (config.plugin && !registeredPlugins.has(layoutKey)) {
+    const pluginModule = await config.plugin()
+    Cy.use(pluginModule.default)
+    registeredPlugins.add(layoutKey)
+  }
+
+  // Merge config options
+  const options: Record<string, unknown> = { ...config.options }
+
+  // Apply directed toggle for layouts that support it (have 'directed' in their defaults)
+  if ('directed' in config.options) {
+    options.directed = graphStore.directed
+  }
+
+  // Override animation for initial render
+  if (!animate) {
+    options.animate = false
+    delete options.animationDuration
+  }
+
+  // Stop any in-progress layout animation before starting a new one
+  cy.stop()
+
+  cy.layout(options).run()
+}
+
 async function init() {
   if (!container.value) return
+
+  // Load cytoscape — fcose is the default layout, so pre-register it
   const [cytoscape, fcose] = await Promise.all([
     import('cytoscape'),
     import('cytoscape-fcose'),
   ])
-  const Cy = cytoscape.default
+  Cy = cytoscape.default
   Cy.use(fcose.default)
+  registeredPlugins.add('fcose')
 
   cy = Cy({
     container: container.value,
@@ -209,23 +252,8 @@ async function init() {
         },
       },
     ],
-    layout: props.directed
-      ? {
-          name: 'breadthfirst',
-          directed: true,
-          padding: 40,
-          spacingFactor: 1.6,
-          avoidOverlap: true,
-          animate: false,
-        } as any
-      : {
-          name: 'fcose',
-          quality: 'proof',
-          randomize: true,
-          animate: false,
-          nodeSeparation: 120,
-          idealEdgeLength: () => 80,
-        } as any,
+    // Start with null layout; runLayout() applies the actual algorithm
+    layout: { name: 'null' },
     userZoomingEnabled: true,
     userPanningEnabled: true,
     boxSelectionEnabled: false,
@@ -235,6 +263,9 @@ async function init() {
     const raw = evt.target.data('_raw') as GraphNode
     props.onNodeClick(raw)
   })
+
+  // Apply initial layout without animation
+  await runLayout(false)
 
   pulseInterval = setInterval(() => {
     pulseTick = !pulseTick
@@ -278,20 +309,21 @@ function applySearchHighlight() {
   }
 }
 
-function update() {
+async function update() {
   if (!cy) return
   cy.elements().remove()
   cy.add(buildElements())
-  const layoutOpts = props.directed
-    ? { name: 'breadthfirst', directed: true, padding: 40, spacingFactor: 1.6, avoidOverlap: true, animate: false } as any
-    : { name: 'fcose', quality: 'proof', randomize: false, animate: false } as any
-  cy.layout(layoutOpts).run()
+  await runLayout(false)
   nextTick(applySearchHighlight)
 }
 
 watch(() => [props.nodes, props.edges], update, { deep: false })
 
 watch(() => props.matchedNodeIds, applySearchHighlight)
+
+// Re-run layout when the user changes the active layout or directed toggle
+watch(() => graphStore.activeLayout, () => runLayout())
+watch(() => graphStore.directed, () => runLayout())
 
 onMounted(init)
 onUnmounted(() => {
