@@ -9,6 +9,7 @@ labels:
     - feature
     - frontend
     - architecture
+release: June2026
 ---
 
 # Lineage Visibility Controls
