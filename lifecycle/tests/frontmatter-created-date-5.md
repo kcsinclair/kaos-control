@@ -1,7 +1,7 @@
 ---
 title: "Tests: Frontmatter Created Date"
 type: test
-status: draft
+status: approved
 lineage: frontmatter-created-date
 parent: lifecycle/test-plans/frontmatter-created-date-4-test.md
 ---
