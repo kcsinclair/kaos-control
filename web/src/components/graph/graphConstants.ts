@@ -75,6 +75,8 @@ const DARK_PALETTE: GraphPalette = {
     blocks:     '#ef4444',  // red-500
     related_to: '#64748b',  // slate-500
     label:      '#a855f7',  // purple-500
+    timeline:   '#3b82f6',  // blue-500 — matches timelineEdgeColor
+    assigned:   '#334155',  // slate-700 — matches assignedEdgeColor
   },
   approvedTestRingColor: '#2563eb',  // blue-600
   canvasBg:             '#0f172a',
@@ -130,6 +132,8 @@ const LIGHT_PALETTE: GraphPalette = {
     blocks:     '#dc2626',  // red-600
     related_to: '#475569',  // slate-600
     label:      '#7c3aed',  // violet-600
+    timeline:   '#2563eb',  // blue-600 — matches timelineEdgeColor
+    assigned:   '#94a3b8',  // slate-400 — matches assignedEdgeColor
   },
   approvedTestRingColor: '#1d4ed8',  // blue-700
   canvasBg:             '#ffffff',
