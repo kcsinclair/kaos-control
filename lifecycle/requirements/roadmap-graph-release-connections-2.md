@@ -1,7 +1,7 @@
 ---
 title: 'Roadmap Graph: Directed Release Chain with Backlog Root and Unscheduled Leaves'
 type: requirement
-status: approved
+status: planning
 lineage: roadmap-graph-release-connections
 created: "2026-05-07"
 priority: high
