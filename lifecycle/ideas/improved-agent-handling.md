@@ -9,6 +9,7 @@ labels:
     - workflow
     - process
     - enhancement
+release: May2026-2
 ---
 
 NOTE: This is an example of an Epic idea, many requests related to agents in a single artefact.
