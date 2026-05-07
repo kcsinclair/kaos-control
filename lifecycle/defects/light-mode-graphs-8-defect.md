@@ -1,7 +1,7 @@
 ---
 title: ForceGraph3D.vue dimColor() contains theme-dependent hex literals outside graphConstants.ts
 type: defect
-status: approved
+status: in-development
 lineage: light-mode-graphs
 parent: lifecycle/tests/light-mode-graphs-6-test.md
 labels: [defect]
