@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Frontmatter Editor Dropdowns'
 type: plan-test
-status: in-development
+status: done
 lineage: frontmatter-editor-dropdowns
 parent: requirements/frontmatter-editor-dropdowns-2.md
 assignees:

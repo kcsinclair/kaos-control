@@ -86,26 +86,30 @@ func TestPriorityPatchUnset(t *testing.T) {
 	}
 }
 
-// TestPriorityPatchInvalidValue verifies that PATCH with an unrecognised
-// priority value returns 400 bad_request.
-func TestPriorityPatchInvalidValue(t *testing.T) {
+// TestPriorityPatchUnknownValue verifies that PATCH with an unrecognised
+// priority value succeeds (priority is stored as-is; no vocabulary enforcement).
+func TestPriorityPatchUnknownValue(t *testing.T) {
 	seeds := []seedArtifact{
 		{
-			relPath: "lifecycle/ideas/prio-invalid.md",
-			content: makeArtifact("Priority Invalid", "idea", "draft", "prio-invalid", "", "Body."),
+			relPath: "lifecycle/ideas/prio-unknown.md",
+			content: makeArtifact("Priority Unknown", "idea", "draft", "prio-unknown", "", "Body."),
 		},
 	}
 	env := newTestEnv(t, seeds)
 	env.login("admin@test.local", "admin-pass-123")
 
-	resp := env.doRequest("PATCH", "/api/p/testproject/artifacts/lifecycle/ideas/prio-invalid.md/priority", map[string]any{
+	const path = "lifecycle/ideas/prio-unknown.md"
+
+	resp := env.doRequest("PATCH", "/api/p/testproject/artifacts/"+path+"/priority", map[string]any{
 		"priority": "critical",
 	})
-	requireStatus(t, resp, 400)
+	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
-	errData, _ := data["error"].(map[string]any)
-	if code, _ := errData["code"].(string); code != "bad_request" {
-		t.Errorf("expected error code 'bad_request', got %q", code)
+
+	artifact, _ := data["artifact"].(map[string]any)
+	fm, _ := artifact["frontmatter"].(map[string]any)
+	if priority, _ := fm["priority"].(string); priority != "critical" {
+		t.Errorf("PATCH unknown priority: want %q, got %q", "critical", priority)
 	}
 }
 

@@ -40,43 +40,37 @@ func TestPutArtifactValidPriority(t *testing.T) {
 	}
 }
 
-// TestPutArtifactInvalidPriority verifies that PUT with an unrecognised
-// priority value returns 400 and the error message lists allowed values.
-func TestPutArtifactInvalidPriority(t *testing.T) {
+// TestPutArtifactUnknownPriority verifies that PUT with an unrecognised
+// priority value succeeds (priority is stored as-is; no vocabulary enforcement).
+func TestPutArtifactUnknownPriority(t *testing.T) {
 	seeds := []seedArtifact{
 		{
-			relPath: "lifecycle/ideas/put-invalid-prio.md",
-			content: makeArtifact("PUT Invalid Priority", "idea", "draft", "put-invalid-prio", "", "Body."),
+			relPath: "lifecycle/ideas/put-unknown-prio.md",
+			content: makeArtifact("PUT Unknown Priority", "idea", "draft", "put-unknown-prio", "", "Body."),
 		},
 	}
 	env := newTestEnv(t, seeds)
 	env.login("admin@test.local", "admin-pass-123")
 
-	const path = "lifecycle/ideas/put-invalid-prio.md"
+	const path = "lifecycle/ideas/put-unknown-prio.md"
 
 	resp := env.doRequest("PUT", "/api/p/testproject/artifacts/"+path, map[string]any{
 		"frontmatter": map[string]any{
-			"title":   "PUT Invalid Priority",
-			"type":    "idea",
-			"status":  "draft",
-			"lineage": "put-invalid-prio",
+			"title":    "PUT Unknown Priority",
+			"type":     "idea",
+			"status":   "draft",
+			"lineage":  "put-unknown-prio",
 			"priority": "urgent",
 		},
 		"body": "Body.",
 	})
-	requireStatus(t, resp, 400)
+	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 
-	errData, _ := data["error"].(map[string]any)
-	if code, _ := errData["code"].(string); code != "bad_request" {
-		t.Errorf("expected error code 'bad_request', got %q", code)
-	}
-	// The error message should mention allowed values.
-	msg, _ := errData["message"].(string)
-	for _, want := range []string{"high", "medium", "normal", "low"} {
-		if !containsSubstring(msg, want) {
-			t.Errorf("error message %q should mention allowed value %q", msg, want)
-		}
+	artifact, _ := data["artifact"].(map[string]any)
+	fm, _ := artifact["frontmatter"].(map[string]any)
+	if priority, _ := fm["priority"].(string); priority != "urgent" {
+		t.Errorf("PUT unknown priority: want %q, got %q", "urgent", priority)
 	}
 }
 
