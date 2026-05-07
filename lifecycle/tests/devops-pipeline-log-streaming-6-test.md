@@ -1,7 +1,7 @@
 ---
 title: "Tests — Pipeline Log Streaming View"
 type: test
-status: draft
+status: approved
 lineage: devops-pipeline-log-streaming
 parent: lifecycle/test-plans/devops-pipeline-log-streaming-5-test.md
 ---
