@@ -1,7 +1,7 @@
 ---
 title: Tests — Light Mode Colour Scheme for Graphs
 type: test
-status: draft
+status: approved
 lineage: light-mode-graphs
 parent: lifecycle/test-plans/light-mode-graphs-5-test.md
 ---
