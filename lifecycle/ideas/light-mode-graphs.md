@@ -4,12 +4,13 @@ type: idea
 status: approved
 lineage: light-mode-graphs
 created: "2026-05-07T15:44:31+10:00"
-priority: normal
+priority: medium
 labels:
     - enhancement
     - frontend
     - usability
     - vue
+release: May2026
 ---
 
 # Light Mode Support for Graphs
