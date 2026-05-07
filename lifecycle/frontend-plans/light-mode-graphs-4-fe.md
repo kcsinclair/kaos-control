@@ -1,7 +1,7 @@
 ---
 title: Frontend Plan — Light Mode Colour Scheme for Graphs
 type: plan-frontend
-status: approved
+status: in-development
 lineage: light-mode-graphs
 priority: medium
 parent: lifecycle/requirements/light-mode-graphs-2.md
