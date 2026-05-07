@@ -1,7 +1,7 @@
 ---
 title: 2D Graph Layout Selector — Frontend Plan
 type: plan-frontend
-status: approved
+status: in-development
 lineage: 2d-graph-layout-selector
 parent: lifecycle/requirements/2d-graph-layout-selector-2.md
 release: May2026
