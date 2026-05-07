@@ -299,6 +299,10 @@ func (s *Server) handleDeleteRelease(w http.ResponseWriter, r *http.Request) {
 
 	deletedName, orphaned, err := store.Delete(p.Entry.Name, id)
 	if err != nil {
+		if err == release.ErrNotFound {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
+			return
+		}
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
 	}
