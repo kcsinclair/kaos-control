@@ -1,9 +1,9 @@
 ---
 title: Light Mode Colour Scheme for 2D and 3D Graphs
 type: requirement
-status: planning
+status: done
 lineage: light-mode-graphs
-created: "2026-05-07"
+created: "2026-05-07T00:00:00+10:00"
 priority: medium
 parent: lifecycle/ideas/light-mode-graphs.md
 labels:
