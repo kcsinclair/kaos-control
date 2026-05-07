@@ -213,6 +213,8 @@ const unscheduled = computed(() =>
   props.releases.filter((r) => !r.start_date || !r.end_date)
 )
 
+const hasUnscheduled = computed(() => unscheduled.value.length > 0)
+
 const todayPct = computed(() => pct(TODAY))
 
 function statusColor(status: string): string {
@@ -244,12 +246,15 @@ function summaryBadge(release: Release): string {
     <template v-else>
       <!-- Time axis header -->
       <div class="gantt-header">
-        <div
-          v-for="col in columns"
-          :key="col.label"
-          class="col-header"
-          :style="{ width: colWidthPct() + '%' }"
-        >{{ col.label }}</div>
+        <div class="header-date-area">
+          <div
+            v-for="col in columns"
+            :key="col.label"
+            class="col-header"
+            :style="{ width: colWidthPct() + '%' }"
+          >{{ col.label }}</div>
+        </div>
+        <div v-if="hasUnscheduled" class="col-header col-header--unscheduled">Unscheduled</div>
       </div>
 
       <!-- Chart body -->
@@ -290,24 +295,9 @@ function summaryBadge(release: Release): string {
               <span v-if="summaryBadge(bar.release)" class="bar-badge">{{ summaryBadge(bar.release) }}</span>
             </button>
           </div>
+          <!-- Placeholder cell to maintain grid alignment -->
+          <div v-if="hasUnscheduled" class="unscheduled-cell"></div>
         </div>
-
-        <!-- Unscheduled section -->
-        <template v-if="unscheduled.length > 0">
-          <div class="unscheduled-heading">Unscheduled</div>
-          <div class="unscheduled-cards">
-            <button
-              v-for="r in unscheduled"
-              :key="r.id"
-              class="unscheduled-card"
-              :style="{ borderLeftColor: statusColor(r.status) }"
-              @click="emit('clickRelease', r.id)"
-            >
-              <span class="card-name">{{ r.name }}</span>
-              <span class="card-status" :class="`status--${r.status}`">{{ r.status }}</span>
-            </button>
-          </div>
-        </template>
       </div>
     </template>
   </div>
@@ -355,8 +345,12 @@ function summaryBadge(release: Release): string {
   border: 1px solid var(--color-border);
   border-bottom: none;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  overflow: hidden;
   flex-shrink: 0;
+}
+.header-date-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 .col-header {
   flex-shrink: 0;
@@ -374,13 +368,22 @@ function summaryBadge(release: Release): string {
 }
 .col-header:last-child { border-right: none; }
 
+.col-header--unscheduled {
+  flex: 0 0 120px;
+  position: sticky;
+  right: 0;
+  border-left: 2px dashed var(--color-border);
+  border-right: none;
+  background: var(--color-surface);
+  z-index: 10;
+}
+
 /* Body */
 .gantt-body {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border);
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-  overflow: hidden;
   flex-shrink: 0;
 }
 
@@ -398,6 +401,16 @@ function summaryBadge(release: Release): string {
   display: flex;
   align-items: center;
   overflow: hidden;
+}
+
+/* Sticky placeholder cell in scheduled rows (maintains grid when unscheduled column is visible) */
+.unscheduled-cell {
+  flex: 0 0 120px;
+  position: sticky;
+  right: 0;
+  background: var(--color-bg);
+  border-left: 2px dashed var(--color-border);
+  z-index: 4;
 }
 
 .col-grid {
@@ -467,51 +480,4 @@ function summaryBadge(release: Release): string {
   white-space: nowrap;
   flex-shrink: 0;
 }
-
-/* Unscheduled section */
-.unscheduled-heading {
-  padding: var(--space-2) var(--space-3);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-muted);
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-}
-.unscheduled-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--color-surface);
-}
-.unscheduled-card {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-left-width: 3px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-family: inherit;
-  text-align: left;
-  transition: border-color 0.12s, background 0.12s;
-  min-width: 140px;
-}
-.unscheduled-card:hover { background: var(--color-surface); }
-.card-name {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text);
-}
-.card-status {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--color-text-muted);
-}
-.status--active  { color: var(--color-accent); }
-.status--shipped { color: #16a34a; }
 </style>
