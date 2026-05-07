@@ -160,10 +160,3 @@ export function useGraphTheme() {
   return { palette, isDark }
 }
 
-// ─── Backward-compatible re-exports (dark palette) — removed in Milestone 5 ──
-
-export const NODE_COLORS: Record<string, string>          = DARK_PALETTE.nodeColors
-export const PRIORITY_COLORS: Record<string, string>      = DARK_PALETTE.priorityColors
-export const ACTIVE_STATUS_COLORS: Record<string, string> = DARK_PALETTE.activeStatusColors
-export const EDGE_COLORS: Record<string, string>          = DARK_PALETTE.edgeColors
-export const APPROVED_TEST_RING_COLOR: string             = DARK_PALETTE.approvedTestRingColor

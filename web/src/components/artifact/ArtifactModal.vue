@@ -9,9 +9,11 @@ import TransitionDialog from './TransitionDialog.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
-import { PRIORITY_COLORS } from '@/components/graph/graphConstants'
+import { useGraphTheme } from '@/components/graph/graphConstants'
 import StatusCheckPanel from './StatusCheckPanel.vue'
 import type { GraphNode, ArtifactDetail, GraphEdge } from '@/types/api'
+
+const { palette } = useGraphTheme()
 
 const props = defineProps<{
   node: GraphNode | null
@@ -165,7 +167,7 @@ const STATUS_TEXT: Record<string, string> = {
               <span
                 v-if="detail?.frontmatter?.priority"
                 class="meta-priority-badge"
-                :style="{ background: PRIORITY_COLORS[detail.frontmatter.priority] + '33', color: PRIORITY_COLORS[detail.frontmatter.priority], borderColor: PRIORITY_COLORS[detail.frontmatter.priority] + '66' }"
+                :style="{ background: palette.priorityColors[detail.frontmatter.priority] + '33', color: palette.priorityColors[detail.frontmatter.priority], borderColor: palette.priorityColors[detail.frontmatter.priority] + '66' }"
                 title="Click to edit priority"
                 role="button"
                 tabindex="0"
