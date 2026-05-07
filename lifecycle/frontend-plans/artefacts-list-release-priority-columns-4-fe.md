@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: Artefacts List Release & Priority Columns'
 type: plan-frontend
-status: draft
+status: approved
 lineage: artefacts-list-release-priority-columns
 parent: requirements/artefacts-list-release-priority-columns-2.md
 ---
