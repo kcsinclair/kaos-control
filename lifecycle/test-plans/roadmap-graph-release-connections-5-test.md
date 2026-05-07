@@ -1,9 +1,9 @@
 ---
 title: 'Test Plan: Directed Release Chain Graph'
 type: plan-test
-status: approved
+status: in-development
 lineage: roadmap-graph-release-connections
-created: "2026-05-07"
+created: "2026-05-07T00:00:00+10:00"
 priority: high
 parent: lifecycle/requirements/roadmap-graph-release-connections-2.md
 release: May2026
