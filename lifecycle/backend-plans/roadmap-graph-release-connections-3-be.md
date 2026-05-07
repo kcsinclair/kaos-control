@@ -1,10 +1,12 @@
 ---
 title: 'Backend Plan: Directed Release Chain Graph Endpoint'
 type: plan-backend
-status: draft
+status: approved
 lineage: roadmap-graph-release-connections
-parent: lifecycle/requirements/roadmap-graph-release-connections-2.md
 created: "2026-05-07"
+priority: high
+parent: lifecycle/requirements/roadmap-graph-release-connections-2.md
+release: May2026
 ---
 
 # Backend Plan: Directed Release Chain Graph Endpoint
