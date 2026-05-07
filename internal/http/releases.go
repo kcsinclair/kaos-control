@@ -455,6 +455,23 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 		prevID = nodeID
 	}
 
+	// Unscheduled releases are terminal leaves appended after the last scheduled.
+	// prevID is the tail of the scheduled chain (or backlogID if none scheduled).
+	for _, rel := range unscheduled {
+		nodeID := fmt.Sprintf("release:%d", rel.ID)
+		if err := addReleaseNode(rel); err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
+		}
+		edges = append(edges, map[string]any{
+			"source": prevID,
+			"target": nodeID,
+			"kind":   "timeline",
+			"label":  "",
+		})
+		prevID = nodeID
+	}
+
 	// Add existing depends_on / blocks edges between included artifact nodes.
 	graphData, err := p.Idx.Graph(index.Filter{Unlimited: true})
 	if err != nil {
