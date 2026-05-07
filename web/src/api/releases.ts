@@ -6,28 +6,39 @@ import type { ArtifactRow, GraphData } from '@/types/api'
 // or {release: {...}}) — same convention as the rest of the kaos-control API.
 // These functions unwrap the envelope so callers receive the bare value.
 
+// The backend uses `omitempty` on start_date and end_date, so nil dates are
+// absent from JSON rather than null. Normalise them to null here so the rest
+// of the frontend can rely on the Release type contract (string | null).
+function normaliseDates<T extends Release>(r: T): T {
+  return {
+    ...r,
+    start_date: (r.start_date as string | null | undefined) ?? null,
+    end_date: (r.end_date as string | null | undefined) ?? null,
+  }
+}
+
 export function listReleases(project: string): Promise<Release[]> {
   return api
     .get<{ releases: Release[] | null }>(`/p/${encodeURIComponent(project)}/releases`)
-    .then((r) => r.releases ?? [])
+    .then((r) => (r.releases ?? []).map(normaliseDates))
 }
 
 export function createRelease(project: string, data: CreateReleasePayload): Promise<Release> {
   return api
     .post<{ release: Release }>(`/p/${encodeURIComponent(project)}/releases`, data)
-    .then((r) => r.release)
+    .then((r) => normaliseDates(r.release))
 }
 
 export function getRelease(project: string, id: number): Promise<ReleaseDetail> {
   return api
     .get<{ release: ReleaseDetail }>(`/p/${encodeURIComponent(project)}/releases/${id}`)
-    .then((r) => r.release)
+    .then((r) => normaliseDates(r.release))
 }
 
 export function updateRelease(project: string, id: number, data: UpdateReleasePayload): Promise<Release> {
   return api
     .put<{ release: Release }>(`/p/${encodeURIComponent(project)}/releases/${id}`, data)
-    .then((r) => r.release)
+    .then((r) => normaliseDates(r.release))
 }
 
 export function deleteRelease(project: string, id: number, reassignTo?: number): Promise<{ orphaned_artifact_count: number }> {

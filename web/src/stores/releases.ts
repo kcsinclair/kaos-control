@@ -12,7 +12,7 @@ export const useReleasesStore = defineStore('releases', () => {
 
   const scheduled = computed(() =>
     releases.value
-      .filter((r) => r.start_date !== null && r.end_date !== null)
+      .filter((r) => r.start_date != null && r.end_date != null)
       .slice()
       .sort((a, b) => {
         const ad = a.start_date ?? ''
@@ -22,7 +22,7 @@ export const useReleasesStore = defineStore('releases', () => {
   )
 
   const unscheduled = computed(() =>
-    releases.value.filter((r) => r.start_date === null || r.end_date === null)
+    releases.value.filter((r) => r.start_date == null || r.end_date == null)
   )
 
   function byId(id: number): Release | undefined {
