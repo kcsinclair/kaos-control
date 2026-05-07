@@ -4,12 +4,13 @@ type: idea
 status: approved
 lineage: roadmap-graph-release-connections
 created: "2026-05-07T12:19:49+10:00"
-priority: normal
+priority: high
 labels:
     - frontend
     - roadmaps
     - feature
     - vue
+release: May2026
 ---
 
 # Roadmap Graph: Directed Release Connections with Backlog Root and Unscheduled Leaves
