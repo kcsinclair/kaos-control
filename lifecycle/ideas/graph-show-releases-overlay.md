@@ -10,7 +10,7 @@ labels:
     - frontend
     - releases
     - vue
-release: May2026-2
+release: May2026
 ---
 
 # Graph: Show Releases Overlay
