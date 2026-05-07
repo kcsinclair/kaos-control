@@ -1,12 +1,13 @@
 ---
-title: "Kanban View"
-priority: normal
+title: Kanban View
 type: idea
 status: done
 lineage: kanban-view
+priority: normal
 labels:
     - artefacts
     - workflow
+release: April2026
 ---
 
 Rename artifacts to artefacts.
