@@ -1,9 +1,11 @@
 ---
-title: "Test Plan — Roadmap Backlog Panel and Unscheduled Column"
+title: Test Plan — Roadmap Backlog Panel and Unscheduled Column
 type: plan-test
-status: draft
+status: approved
 lineage: roadmap-backlog-panel-and-unscheduled-column
+priority: high
 parent: lifecycle/requirements/roadmap-backlog-panel-and-unscheduled-column-2.md
+release: May2026
 ---
 
 # Test Plan — Roadmap Backlog Panel and Unscheduled Column
