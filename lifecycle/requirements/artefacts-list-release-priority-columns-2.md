@@ -1,7 +1,7 @@
 ---
 title: 'Artefacts List: Release & Priority Columns with Releases Filter'
 type: requirement
-status: blocked
+status: approved
 lineage: artefacts-list-release-priority-columns
 created: "2026-05-07T00:00:00+10:00"
 priority: normal
@@ -89,8 +89,16 @@ The artifact list view displays rows without any indication of which release an 
 - [ ] The release filter and new columns do not introduce horizontal overflow at 1280 px viewport width.
 - [ ] No new runtime dependencies are added.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the Priority column use coloured badges or icons (similar to status pills) to improve scannability, or plain text?
+
+> Yes coloured pills would be great.
+
 2. Should the Release column link to a release artifact (if one exists), or remain plain text?
+
+> Plain text is good.
+
 3. Is there a defined ordering for releases beyond alphabetical (e.g. chronological by target date) that should be used for sorting?
+
+> Sort Alphabetical will be OK.
