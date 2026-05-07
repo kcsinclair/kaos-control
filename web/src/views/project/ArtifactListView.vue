@@ -530,8 +530,15 @@ onMounted(async () => {
 .priority-high     { background: #ffedd5; color: #c2410c; }
 .priority-normal   { background: #dbeafe; color: #1d4ed8; }
 .priority-low      { background: var(--color-surface); color: var(--color-text-muted); border: 1px solid var(--color-border); }
-.cell-priority { white-space: nowrap; }
-.cell-release  { white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.cell-priority { white-space: nowrap; min-width: 72px; }
+.cell-release  { white-space: nowrap; min-width: 80px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+/* Priority = 4th column, Release = 5th column — hide on narrow viewports */
+@media (max-width: 1023px) {
+  .artifact-table thead tr th:nth-child(4),
+  .artifact-table thead tr th:nth-child(5),
+  .cell-priority,
+  .cell-release { display: none; }
+}
 .btn-check-status {
   display: inline-flex;
   align-items: center;
