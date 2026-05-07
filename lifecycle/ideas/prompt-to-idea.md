@@ -1,14 +1,15 @@
 ---
-title: "Prompt to Idea"
-priority: normal
+title: Prompt to Idea
 type: idea
 status: done
 lineage: prompt-to-idea
+priority: normal
 labels:
     - artefacts
     - workflow
     - usability
     - agent
+release: April2026
 ---
 
 # prompt to idea
