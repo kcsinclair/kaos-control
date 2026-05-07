@@ -1,7 +1,7 @@
 ---
 title: Light Mode Colour Scheme for 2D and 3D Graphs
 type: requirement
-status: approved
+status: planning
 lineage: light-mode-graphs
 created: "2026-05-07"
 priority: medium
