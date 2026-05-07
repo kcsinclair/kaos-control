@@ -261,6 +261,7 @@ agents:
     timeout_minutes: 0
     allowed_write_paths:
       - tests
+      - web/src
       - lifecycle/tests
       - lifecycle/test-plans
     git_identity:
