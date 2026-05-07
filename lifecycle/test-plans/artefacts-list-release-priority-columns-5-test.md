@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Artefacts List Release & Priority Columns'
 type: plan-test
-status: approved
+status: in-development
 lineage: artefacts-list-release-priority-columns
 priority: high
 parent: requirements/artefacts-list-release-priority-columns-2.md
