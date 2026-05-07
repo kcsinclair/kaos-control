@@ -472,6 +472,35 @@ func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 		prevID = nodeID
 	}
 
+	// Artifacts with no release assignment attach as "assigned" edges from the Backlog node.
+	unassigned, _, err := p.Idx.List(index.Filter{Release: "__unassigned__", Unlimited: true})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+	for _, a := range unassigned {
+		if a.Type != "idea" && a.Type != "defect" {
+			continue
+		}
+		artifactNodeSet[a.Path] = true
+		nodes = append(nodes, map[string]any{
+			"id":      a.Path,
+			"title":   a.Title,
+			"type":    a.Type,
+			"status":  a.Status,
+			"stage":   a.Stage,
+			"lineage": a.Lineage,
+			"slug":    a.Slug,
+			"index":   a.Index,
+			"labels":  a.FM.Labels,
+		})
+		edges = append(edges, map[string]any{
+			"source": backlogID,
+			"target": a.Path,
+			"kind":   "assigned",
+		})
+	}
+
 	// Add existing depends_on / blocks edges between included artifact nodes.
 	graphData, err := p.Idx.Graph(index.Filter{Unlimited: true})
 	if err != nil {
