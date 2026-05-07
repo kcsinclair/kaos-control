@@ -1,21 +1,41 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useReleasesStore } from '@/stores/releases'
+import { useArtifactsStore } from '@/stores/artifacts'
 import GanttChart from '@/components/releases/GanttChart.vue'
+import BacklogPanel from '@/components/releases/BacklogPanel.vue'
 import ReleaseFormModal from '@/components/releases/ReleaseFormModal.vue'
 import ReleaseDeleteModal from '@/components/releases/ReleaseDeleteModal.vue'
 import ReleaseDetailModal from '@/components/releases/ReleaseDetailModal.vue'
 import RoadmapGraphView from '@/components/releases/RoadmapGraphView.vue'
 import ArtifactModal from '@/components/artifact/ArtifactModal.vue'
 import * as releasesApi from '@/api/releases'
+import { getProjectWs } from '@/api/ws'
 import type { Release, ReleaseDetail } from '@/types/release'
 import type { GraphNode, GraphEdge } from '@/types/api'
 
 const route = useRoute()
+const router = useRouter()
 const project = route.params.project as string
 
 const store = useReleasesStore()
+const artifactsStore = useArtifactsStore()
+
+// ── Backlog artifacts ────────────────────────────────────────────────────────
+// All artifacts with no release assignment, excluding release and sprint types.
+const backlogArtifacts = computed(() =>
+  artifactsStore.items.filter(
+    (a) => !a.frontmatter?.release && a.type !== 'release' && a.type !== 'sprint'
+  )
+)
+
+function onOpenBacklogArtifact(path: string) {
+  router.push(`/p/${project}/artifacts/${path}`)
+}
+
+// ── WebSocket: re-fetch backlog on artifact.indexed events ─────────────────
+let unsubArtifactWs: (() => void) | null = null
 
 type Granularity = 'week' | 'month' | 'quarter' | 'half-year' | 'year'
 const granularity = ref<Granularity>('month')
@@ -51,10 +71,24 @@ onMounted(async () => {
   await store.fetch(project)
   store.connectWs(project)
   loadDetails()
+
+  // Load backlog artifacts
+  await artifactsStore.fetchList(project, { limit: 500 })
+
+  // Subscribe to artifact.indexed WS events to keep backlog reactive.
+  // Reuse the singleton WsClient (already connected by releasesStore.connectWs).
+  const ws = getProjectWs(project)
+  unsubArtifactWs = ws.onType('artifact.indexed', () => {
+    artifactsStore.fetchList(project, { limit: 500 })
+  })
 })
 
 onUnmounted(() => {
   store.disconnectWs()
+  if (unsubArtifactWs) {
+    unsubArtifactWs()
+    unsubArtifactWs = null
+  }
 })
 
 function onReleaseCreated(release: Release) {
@@ -130,16 +164,22 @@ function openEdit(releaseId: number) {
     <!-- Loading -->
     <div v-if="store.loading" class="state-msg">Loading releases…</div>
 
-    <!-- Gantt view -->
-    <GanttChart
-      v-else-if="viewMode === 'gantt'"
-      :releases="store.releases"
-      :granularity="granularity"
-      :project="project"
-      :release-details="releaseDetails"
-      @click-release="detailReleaseId = $event"
-      @create="showCreateModal = true"
-    />
+    <!-- Gantt view + Backlog panel -->
+    <template v-else-if="viewMode === 'gantt'">
+      <GanttChart
+        :releases="store.releases"
+        :granularity="granularity"
+        :project="project"
+        :release-details="releaseDetails"
+        @click-release="detailReleaseId = $event"
+        @create="showCreateModal = true"
+      />
+      <BacklogPanel
+        :project="project"
+        :artifacts="backlogArtifacts"
+        @open-artifact="onOpenBacklogArtifact"
+      />
+    </template>
 
     <!-- Graph view -->
     <RoadmapGraphView
