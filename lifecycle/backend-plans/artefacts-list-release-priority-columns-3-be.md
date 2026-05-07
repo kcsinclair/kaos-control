@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Artefacts List Release & Priority Columns'
 type: plan-backend
-status: in-development
+status: done
 lineage: artefacts-list-release-priority-columns
 priority: high
 parent: requirements/artefacts-list-release-priority-columns-2.md
