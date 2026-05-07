@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import ForceGraph3D from '3d-force-graph'
 import * as THREE from 'three'
 import type { GraphNode, GraphEdge } from '@/types/api'
-import { NODE_COLORS, EDGE_COLORS, PRIORITY_COLORS, ACTIVE_STATUS_COLORS, APPROVED_TEST_RING_COLOR } from './graphConstants'
+import { useGraphTheme } from './graphConstants'
 
 const props = defineProps<{
   nodes: GraphNode[]
@@ -18,21 +18,27 @@ const emit = defineEmits<{
 }>()
 
 const container = ref<HTMLElement>()
+const { palette, isDark } = useGraphTheme()
+
+// Dim-blend target for unmatched nodes: matches the canvas background per theme
+function dimColor(): string {
+  return isDark.value ? '#1e2535' : '#d1d5db'
+}
 
 function nodeColor(n: GraphNode): string {
   const matched = props.matchedNodeIds
   if (matched && matched.size > 0 && !matched.has(n.id)) {
-    // Dim unmatched nodes to ~0.15 opacity by blending towards the background (#0f172a)
-    return '#1e2535'
+    return dimColor()
   }
+  const p = palette.value
   if (n.type === 'release') {
-    return n.synthetic ? NODE_COLORS['backlog'] : NODE_COLORS['release']
+    return n.synthetic ? p.nodeColors['backlog'] : p.nodeColors['release']
   }
-  return NODE_COLORS[n.type] ?? '#6b7280'
+  return p.nodeColors[n.type] ?? '#6b7280'
 }
 
 function edgeColor(e: GraphEdge): string {
-  return EDGE_COLORS[e.kind] ?? '#64748b'
+  return palette.value.edgeColors[e.kind] ?? palette.value.edgeColors['related_to'] ?? '#64748b'
 }
 
 function nodeVal(n: GraphNode): number {
@@ -64,7 +70,9 @@ function textSprite(text: string, color = '#e9d5ff'): THREE.Sprite {
 // 3d-force-graph uses Math.cbrt(nodeVal) * 4 as the sphere radius.
 function priorityRing(n: GraphNode): THREE.Mesh | null {
   if (!n.priority && n.status !== 'done') return null
-  const color = n.status === 'done' ? '#6b7280' : (PRIORITY_COLORS[n.priority!] ?? '#6b7280')
+  const color = n.status === 'done'
+    ? '#6b7280'
+    : (palette.value.priorityColors[n.priority!] ?? '#6b7280')
   const sphereR = Math.cbrt(nodeVal(n)) * 4
   const torusR = sphereR * 1.45
   const tubeR = sphereR * 0.18
@@ -77,7 +85,8 @@ function priorityRing(n: GraphNode): THREE.Mesh | null {
 function buildReleaseObject(n: GraphNode): THREE.Object3D {
   const group = new THREE.Group()
   const size = 7  // consistent with ~nodeVal 4 sphere (radius ≈ Math.cbrt(4)*4 ≈ 6.3)
-  const color = n.synthetic ? NODE_COLORS['backlog'] : NODE_COLORS['release']
+  const p = palette.value
+  const color = n.synthetic ? p.nodeColors['backlog'] : p.nodeColors['release']
 
   if (n.synthetic) {
     // Backlog: octahedron for visual distinction
@@ -92,7 +101,11 @@ function buildReleaseObject(n: GraphNode): THREE.Object3D {
   }
 
   // Always show name label for release nodes
-  group.add(textSprite(n.title || n.slug, n.synthetic ? '#d1d5db' : '#bfdbfe'))
+  const labelText = n.synthetic ? p.backlogText : p.releaseText
+  // Use a light color against the node background; for dark the palette releaseText
+  // is dark-blue (#1e3a5f) which contrasts on the light-blue node — keep it.
+  // For the synthetic backlog node use the backlogText colour.
+  group.add(textSprite(n.title || n.slug, n.synthetic ? p.backlogText : '#bfdbfe'))
   return group
 }
 
@@ -101,9 +114,10 @@ function buildNodeObject(n: GraphNode): THREE.Object3D {
   // Release nodes use custom geometry (this function is only called when
   // nodeThreeObjectExtend returns true, i.e. for non-release nodes).
   const group = new THREE.Group()
+  const p = palette.value
   const ring = priorityRing(n)
   if (ring) group.add(ring)
-  // Static blue ring for approved test artifacts
+  // Static ring for approved test artifacts
   if (n.type === 'test' && n.status === 'approved') {
     const sphereR = Math.cbrt(nodeVal(n)) * 4
     // Use a larger radius when a priority ring is also present so both are visible
@@ -111,10 +125,10 @@ function buildNodeObject(n: GraphNode): THREE.Object3D {
     const torusR = hasPriority ? sphereR * 1.75 : sphereR * 1.45
     const tubeR = sphereR * 0.18
     const geo = new THREE.TorusGeometry(torusR, tubeR, 8, 20)
-    const mat = new THREE.MeshLambertMaterial({ color: APPROVED_TEST_RING_COLOR })
+    const mat = new THREE.MeshLambertMaterial({ color: p.approvedTestRingColor })
     group.add(new THREE.Mesh(geo, mat))
   }
-  const activeColor = ACTIVE_STATUS_COLORS[n.status]
+  const activeColor = p.activeStatusColors[n.status]
   if (activeColor) {
     const r = Math.cbrt(nodeVal(n)) * 4
     const geo = new THREE.TorusGeometry(r * 1.85, r * 0.15, 8, 24)
@@ -123,13 +137,13 @@ function buildNodeObject(n: GraphNode): THREE.Object3D {
     activeRings.set(n.id, mesh)
     group.add(mesh)
   }
-  if (n.type === 'label') group.add(textSprite(n.title || n.slug))
+  if (n.type === 'label') group.add(textSprite(n.title || n.slug, p.labelNodeText))
   // Highlight ring for text-filter matches
   const matched = props.matchedNodeIds
   if (matched && matched.size > 0 && matched.has(n.id)) {
     const r = Math.cbrt(nodeVal(n)) * 4
     const geo = new THREE.TorusGeometry(r * 2.1, r * 0.2, 8, 24)
-    const mat = new THREE.MeshLambertMaterial({ color: '#facc15', transparent: true, opacity: 0.85 })
+    const mat = new THREE.MeshLambertMaterial({ color: p.searchHighlight, transparent: true, opacity: 0.85 })
     group.add(new THREE.Mesh(geo, mat))
   }
   return group
@@ -149,21 +163,35 @@ function buildGraphData() {
   }
 }
 
+function tooltipHtml(node: GraphNode): string {
+  const p = palette.value
+  const bg = p.edgeLabelBg
+  const text = p.labelColor
+  if (node.type === 'release') {
+    const dateInfo = (node as any).start_date
+      ? `<br/><span style="opacity:.6">${(node as any).start_date}</span>`
+      : ''
+    return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:${bg};border-radius:4px;color:${text}">${node.title}<br/><span style="opacity:.6">${node.status || 'backlog'}</span>${dateInfo}</div>`
+  }
+  return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:${bg};border-radius:4px;color:${text}">${node.title || node.slug}<br/><span style="opacity:.6">${node.type} · ${node.status}</span></div>`
+}
+
+function timelineLinkLabel(edge: GraphEdge): string {
+  if (edge.kind === 'timeline' && edge.label) {
+    const p = palette.value
+    return `<div style="font:11px sans-serif;padding:2px 6px;background:${p.edgeLabelBg};border-radius:3px;color:${p.timelineEdgeTextColor}">${edge.label}</div>`
+  }
+  return ''
+}
+
 onMounted(() => {
   if (!container.value) return
 
+  const p = palette.value
+
   graph = ForceGraph3D()(container.value)
     .nodeId('id')
-    .nodeLabel((n: object) => {
-      const node = n as GraphNode
-      if (node.type === 'release') {
-        const dateInfo = (node as any).start_date
-          ? `<br/><span style="opacity:.6">${(node as any).start_date}</span>`
-          : ''
-        return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:#1e293b;border-radius:4px;color:#f1f5f9">${node.title}<br/><span style="opacity:.6">${node.status || 'backlog'}</span>${dateInfo}</div>`
-      }
-      return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:#1e293b;border-radius:4px;color:#f1f5f9">${node.title || node.slug}<br/><span style="opacity:.6">${node.type} · ${node.status}</span></div>`
-    })
+    .nodeLabel((n: object) => tooltipHtml(n as GraphNode))
     .nodeColor((n: object) => nodeColor(n as GraphNode))
     .nodeVal((n: object) => nodeVal(n as GraphNode))
     .nodeThreeObjectExtend((n: object) => (n as GraphNode).type !== 'release')
@@ -174,18 +202,12 @@ onMounted(() => {
     .linkSource('source')
     .linkTarget('target')
     .linkColor((l: object) => edgeColor(l as GraphEdge))
-    .linkLabel((l: object) => {
-      const edge = l as GraphEdge
-      if (edge.kind === 'timeline' && edge.label) {
-        return `<div style="font:11px sans-serif;padding:2px 6px;background:#1e293b;border-radius:3px;color:#93c5fd">${edge.label}</div>`
-      }
-      return ''
-    })
+    .linkLabel((l: object) => timelineLinkLabel(l as GraphEdge))
     .linkWidth((l: object) => (l as GraphEdge).kind === 'timeline' ? 1.5 : 0.5)
     .linkDirectionalArrowLength(3)
     .linkDirectionalArrowRelPos(1)
     .linkCurvature(0.1)
-    .backgroundColor('#0f172a')
+    .backgroundColor(p.canvasBg)
     .showNavInfo(false)
     .onNodeClick((n: object, _event: MouseEvent) => emit('nodeClick', n as GraphNode))
     .graphData(buildGraphData())
@@ -238,6 +260,27 @@ watch(
     graph.cameraPosition({ x: cx, y: cy, z: cz + 200 }, { x: cx, y: cy, z: cz }, 600)
   },
 )
+
+// Reactively update Three.js scene when theme changes — no force layout rebuild
+watch(isDark, () => {
+  if (!graph) return
+  const p = palette.value
+  // Update scene background
+  graph.backgroundColor(p.canvasBg)
+  // Refresh sphere colours (Three.js materials don't bind reactively)
+  graph.nodeColor((n: object) => nodeColor(n as GraphNode))
+  // Rebuild Three.js objects (sprites + rings) with new palette colours.
+  // nodeThreeObject is O(n) with lightweight geometry and does NOT restart the force simulation.
+  graph.nodeThreeObject((n: object) => {
+    const node = n as GraphNode
+    return node.type === 'release' ? buildReleaseObject(node) : buildNodeObject(node)
+  })
+  // Refresh link colours
+  graph.linkColor((l: object) => edgeColor(l as GraphEdge))
+  // Refresh tooltip and link label callbacks so subsequent hovers use new palette
+  graph.nodeLabel((n: object) => tooltipHtml(n as GraphNode))
+  graph.linkLabel((l: object) => timelineLinkLabel(l as GraphEdge))
+})
 </script>
 
 <template>
