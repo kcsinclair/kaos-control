@@ -4,12 +4,13 @@ type: idea
 status: approved
 lineage: testing-board-text-filter
 created: "2026-05-07T11:45:54+10:00"
-priority: normal
+priority: high
 labels:
     - feature
     - frontend
     - testing
     - usability
+release: May2026
 ---
 
 # Testing Board Text Search Filter
