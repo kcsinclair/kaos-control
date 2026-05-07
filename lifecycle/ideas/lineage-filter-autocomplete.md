@@ -9,6 +9,7 @@ labels:
     - feature
     - frontend
     - artefacts
+release: May2026
 ---
 
 # Lineage Filter with Autocomplete for Artifact List and Board
