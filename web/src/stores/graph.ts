@@ -23,6 +23,13 @@ export const useGraphStore = defineStore('graph', () => {
 
   const showLabelNodes = ref(false)
 
+  // Release overlay — off by default; toggling fetches release-augmented data.
+  const showReleases = ref(false)
+  // True once rawNodes has been fetched with include_releases=true.
+  const releaseDataFetched = ref(false)
+  // Tracks the most-recently-fetched project so toggleShowReleases can call fetchGraph.
+  const currentProject = ref('')
+
   // When true, nodes with terminal statuses are excluded (unless the user has
   // explicitly filtered by status, in which case we honour their selection).
   const hideTerminal = ref(true)
@@ -46,6 +53,8 @@ export const useGraphStore = defineStore('graph', () => {
     const noStatusFilter = !(f.statuses?.length)
     const noTypeFilter = !(f.types?.length)
     return rawNodes.value.filter((n) => {
+      // Release nodes are managed by the overlay (releaseNodes computed) — always excluded here.
+      if (n.type === 'release') return false
       if (hideTerminal.value && noStatusFilter && (TERMINAL_STATUSES as readonly string[]).includes(n.status)) return false
       if (hideTests.value && noTypeFilter && n.type === 'test') return false
       if (f.types?.length && !f.types.includes(n.type)) return false
@@ -99,21 +108,37 @@ export const useGraphStore = defineStore('graph', () => {
     return edges
   })
 
-  const augmentedNodes = computed<GraphNode[]>(() =>
-    showLabelNodes.value ? [...filteredNodes.value, ...labelNodes.value] : filteredNodes.value
+  // Release overlay: release nodes and their connecting edges (timeline spine + assigned).
+  const releaseNodes = computed<GraphNode[]>(() =>
+    rawNodes.value.filter((n) => n.type === 'release')
   )
 
-  const augmentedEdges = computed<GraphEdge[]>(() =>
-    showLabelNodes.value ? [...filteredEdges.value, ...labelEdges.value] : filteredEdges.value
+  const releaseEdges = computed<GraphEdge[]>(() =>
+    rawEdges.value.filter((e) => e.kind === 'timeline' || e.kind === 'assigned')
   )
 
-  async function fetchGraph(project: string): Promise<void> {
+  const augmentedNodes = computed<GraphNode[]>(() => {
+    const base = showLabelNodes.value ? [...filteredNodes.value, ...labelNodes.value] : filteredNodes.value
+    return showReleases.value ? [...base, ...releaseNodes.value] : base
+  })
+
+  const augmentedEdges = computed<GraphEdge[]>(() => {
+    const base = showLabelNodes.value ? [...filteredEdges.value, ...labelEdges.value] : filteredEdges.value
+    return showReleases.value ? [...base, ...releaseEdges.value] : base
+  })
+
+  async function fetchGraph(project: string, includeReleases?: boolean): Promise<void> {
     loading.value = true
     error.value = null
+    currentProject.value = project
+    // If the overlay is already on and caller didn't specify, always include releases
+    // so live WebSocket refreshes don't silently drop the release data.
+    const withReleases = includeReleases ?? showReleases.value
     try {
-      const data = await graphApi.getGraph(project)
+      const data = await graphApi.getGraph(project, withReleases)
       rawNodes.value = data.nodes ?? []
       rawEdges.value = data.edges ?? []
+      if (withReleases) releaseDataFetched.value = true
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Failed to load graph'
     } finally {
@@ -135,6 +160,14 @@ export const useGraphStore = defineStore('graph', () => {
 
   function toggleShowLabelNodes(): void {
     showLabelNodes.value = !showLabelNodes.value
+  }
+
+  async function toggleShowReleases(project?: string): Promise<void> {
+    showReleases.value = !showReleases.value
+    if (showReleases.value && !releaseDataFetched.value) {
+      const p = project ?? currentProject.value
+      if (p) await fetchGraph(p, true)
+    }
   }
 
   function toggleHideTerminal(): void {
@@ -175,6 +208,8 @@ export const useGraphStore = defineStore('graph', () => {
     searchText,
     matchedNodeIds,
     showLabelNodes,
+    showReleases,
+    releaseDataFetched,
     hideTerminal,
     hideTests,
     activeLayout,
@@ -189,12 +224,15 @@ export const useGraphStore = defineStore('graph', () => {
     filteredEdges,
     labelNodes,
     labelEdges,
+    releaseNodes,
+    releaseEdges,
     augmentedNodes,
     augmentedEdges,
     fetchGraph,
     setFilter,
     toggleFilterValue,
     toggleShowLabelNodes,
+    toggleShowReleases,
     toggleHideTerminal,
     toggleHideTests,
     setLayout,

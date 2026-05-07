@@ -1,7 +1,7 @@
 ---
 title: Test Plan — Light Mode Colour Scheme for Graphs
 type: plan-test
-status: in-development
+status: done
 lineage: light-mode-graphs
 priority: medium
 parent: lifecycle/requirements/light-mode-graphs-2.md
