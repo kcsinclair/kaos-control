@@ -11,6 +11,7 @@ labels:
     - agent-runner
     - backend
     - frontend
+release: May2026
 ---
 
 # Ollama Agent Support
