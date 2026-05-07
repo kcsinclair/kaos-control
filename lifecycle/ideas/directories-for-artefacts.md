@@ -1,12 +1,13 @@
 ---
-title: "Directories for Artefacts"
-priority: normal
+title: Directories for Artefacts
 type: idea
 status: done
 lineage: directories-for-artefacts
+priority: normal
 labels:
     - artefacts
     - enhancement
+release: April2026
 ---
 
 # directories for artefacts
