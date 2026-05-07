@@ -11,6 +11,7 @@ labels:
     - watcher
     - usability
     - vue
+release: May2026
 ---
 
 # Auto-Refresh Editor on Disk Change
