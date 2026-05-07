@@ -215,6 +215,10 @@ const unscheduled = computed(() =>
 
 const hasUnscheduled = computed(() => unscheduled.value.length > 0)
 
+const unscheduledSorted = computed(() =>
+  [...unscheduled.value].sort((a, b) => a.name.localeCompare(b.name))
+)
+
 const todayPct = computed(() => pct(TODAY))
 
 function statusColor(status: string): string {
@@ -297,6 +301,34 @@ function summaryBadge(release: Release): string {
           </div>
           <!-- Placeholder cell to maintain grid alignment -->
           <div v-if="hasUnscheduled" class="unscheduled-cell"></div>
+        </div>
+
+        <!-- Unscheduled release rows — bar sits inside the sticky column -->
+        <div
+          v-for="r in unscheduledSorted"
+          :key="r.id"
+          class="gantt-row"
+        >
+          <div class="row-track">
+            <!-- Column grid lines (keeps visual alignment with scheduled rows) -->
+            <div
+              v-for="col in columns"
+              :key="col.label"
+              class="col-grid"
+              :style="{ width: colWidthPct() + '%' }"
+            />
+          </div>
+          <div class="unscheduled-cell unscheduled-cell--bar">
+            <button
+              class="release-bar release-bar--unscheduled"
+              :style="{ background: statusColor(r.status) }"
+              :title="r.name"
+              @click="emit('clickRelease', r.id)"
+            >
+              <span class="bar-name">{{ r.name }}</span>
+              <span v-if="summaryBadge(r)" class="bar-badge">{{ summaryBadge(r) }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </template>
@@ -411,6 +443,29 @@ function summaryBadge(release: Release): string {
   background: var(--color-bg);
   border-left: 2px dashed var(--color-border);
   z-index: 4;
+}
+
+/* Unscheduled bar cell — contains the release bar button */
+.unscheduled-cell--bar {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1);
+}
+
+/* Release bar variant for unscheduled releases — hatched overlay, same statusColor base */
+.release-bar--unscheduled {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  width: 100%;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.18) 4px,
+    rgba(255, 255, 255, 0.18) 8px
+  ) !important;
 }
 
 .col-grid {
