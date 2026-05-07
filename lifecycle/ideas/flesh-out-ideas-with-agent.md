@@ -9,7 +9,6 @@ labels:
     - workflow
     - process
     - feature
-release: Unscheduled
 ---
 
 # flesh out ideas with agent
