@@ -1,7 +1,7 @@
 ---
 title: Devops Screen Log Button Throws 'null is not an object' Error
 type: defect
-status: in-development
+status: done
 lineage: devops-log-button-null-object-error
 created: "2026-05-08T15:09:02+10:00"
 priority: high
