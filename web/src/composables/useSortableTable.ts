@@ -97,6 +97,14 @@ export function useSortableTable<T extends Record<string, unknown>>(
     return [...rows.value].sort((a, b) => {
       const aVal = extractValue(a, col)
       const bVal = extractValue(b, col)
+
+      // Pin nulls and empty strings to end regardless of sort direction
+      const aIsEmpty = aVal == null || aVal === ''
+      const bIsEmpty = bVal == null || bVal === ''
+      if (aIsEmpty && bIsEmpty) return 0
+      if (aIsEmpty) return 1
+      if (bIsEmpty) return -1
+
       const cmp = compareValues(aVal, bVal, def.type)
       return dir === 'asc' ? cmp : -cmp
     })
