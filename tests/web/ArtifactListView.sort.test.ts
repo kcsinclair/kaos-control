@@ -41,6 +41,13 @@ vi.mock('@/api/ws', () => ({
   })),
 }))
 
+// ArtifactListView mounts useReleasesStore() and calls releasesStore.fetch();
+// without this mock the call leaks a real fetch and shows up as an unhandled
+// rejection (ECONNREFUSED in tests).
+vi.mock('@/api/releases', () => ({
+  listReleases: vi.fn().mockResolvedValue([]),
+}))
+
 vi.mock('vue-router', async (importActual) => {
   const actual = await importActual<typeof import('vue-router')>()
   return {

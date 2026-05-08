@@ -6,6 +6,13 @@ export default defineConfig({
   plugins: [vue()],
   test: {
     environment: 'happy-dom',
+    // Set a real origin so window.location.origin is not 'null'. The API client
+    // uses relative URLs ('/api/…') which fetch must resolve against an origin;
+    // happy-dom defaults to 'about:blank' which causes ERR_INVALID_URL on every
+    // un-mocked fetch leaking out of component onMounted/watch callbacks.
+    environmentOptions: {
+      happyDOM: { url: 'http://localhost:8080' },
+    },
     globals: true,
     // Run *.perf.test.ts / *.perf.spec.ts files in isolated forked processes
     // so they don't compete for CPU with component-mounting tests.  Without

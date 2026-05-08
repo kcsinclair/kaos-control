@@ -29,6 +29,12 @@ vi.mock('@/api/agents', () => ({
   getRunLog:  vi.fn().mockResolvedValue(''),
 }))
 
+// AgentsRunsView mounts useProjectConfigStore() which calls getRoles();
+// without this mock the call leaks a real fetch (ECONNREFUSED in tests).
+vi.mock('@/api/config', () => ({
+  getRoles: vi.fn().mockResolvedValue({ roles: [] }),
+}))
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------

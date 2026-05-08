@@ -16,6 +16,21 @@ function getCsrfToken(): string {
   return match ? decodeURIComponent(match[1]) : ''
 }
 
+// buildUrl returns an absolute URL for the given API path. Browser fetch
+// resolves relative URLs against window.location, but Node's undici (used by
+// vitest) requires an absolute URL — so build one explicitly. In production,
+// origin is always the page origin; in tests, fall back to a placeholder so
+// URL parsing succeeds even when happy-dom's window.location is 'about:blank'.
+function buildUrl(path: string): string {
+  const origin =
+    typeof window !== 'undefined' &&
+    window.location?.origin &&
+    window.location.origin !== 'null'
+      ? window.location.origin
+      : 'http://localhost'
+  return `${origin}/api${path}`
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {}
 
@@ -27,7 +42,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     if (csrf) headers['X-CSRF-Token'] = csrf
   }
 
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(buildUrl(path), {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -47,7 +62,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 }
 
 async function getText(path: string): Promise<string> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(buildUrl(path), {
     method: 'GET',
     credentials: 'same-origin',
   })
