@@ -1,7 +1,7 @@
 ---
 title: "ArtifactListView TC6: listArtifacts not called after text input — TypeError on mock.calls"
 type: defect
-status: draft
+status: approved
 lineage: releases-and-roadmaps
 parent: lifecycle/tests/releases-and-roadmaps-6-test.md
 labels: [defect]
