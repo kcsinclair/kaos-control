@@ -1,7 +1,7 @@
 ---
 title: Innovation Maker — Making Releases from Ideas
 type: idea
-status: draft
+status: done
 lineage: innovation-maker
 priority: normal
 labels:
