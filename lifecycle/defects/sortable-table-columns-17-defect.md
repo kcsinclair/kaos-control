@@ -1,7 +1,7 @@
 ---
 title: Empty strings not sorted to end in useSortableTable (ascending)
 type: defect
-status: in-development
+status: done
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-6-test.md
 labels: [defect]
