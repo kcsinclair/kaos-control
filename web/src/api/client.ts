@@ -46,8 +46,24 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T
 }
 
+async function getText(path: string): Promise<string> {
+  const res = await fetch(`/api${path}`, {
+    method: 'GET',
+    credentials: 'same-origin',
+  })
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    const err: ApiErrorBody = data?.error ?? { code: 'unknown', message: res.statusText }
+    throw new ApiError(err.code, err.message, res.status)
+  }
+
+  return res.text()
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
+  getText: (path: string) => getText(path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),

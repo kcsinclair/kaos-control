@@ -34,14 +34,15 @@ export function cancelPipeline(project: string, slug: string): Promise<void> {
 }
 
 export function getRunLog(project: string, runId: string): Promise<string> {
-  return api.get<string>(`/p/${encodeURIComponent(project)}/devops/runs/${encodeURIComponent(runId)}`)
+  return api.getText(`/p/${encodeURIComponent(project)}/devops/runs/${encodeURIComponent(runId)}`)
 }
 
 /**
  * Parse a raw NDJSON run log (as returned by getRunLog) into LogLine objects
  * that PipelineLogPane can render identically to the live WebSocket stream.
  */
-export function parseRunLog(raw: string): LogLine[] {
+export function parseRunLog(raw: string | null | undefined): LogLine[] {
+  if (!raw) return []
   const lines: LogLine[] = []
   for (const rawLine of raw.split('\n')) {
     const trimmed = rawLine.trim()
