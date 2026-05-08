@@ -1,7 +1,7 @@
 ---
 title: ParseErrorsView sort tests — useRoute mock query fix
 type: test
-status: draft
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/defects/sortable-table-columns-14-defect.md
 ---
