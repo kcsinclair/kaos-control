@@ -1,7 +1,7 @@
 ---
 title: ParseErrorsView sort tests crash — useRoute mock missing query property
 type: defect
-status: draft
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-10-test.md
 labels: [defect]
