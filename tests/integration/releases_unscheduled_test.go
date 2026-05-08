@@ -149,34 +149,47 @@ func TestReleaseUnscheduled_RoadmapGraphDisconnected(t *testing.T) {
 	nodes, _ := data["nodes"].([]any)
 	edges, _ := data["edges"].([]any)
 
-	// Both releases must appear as nodes.
+	// Both real releases (one dated, one undated) must appear as their own
+	// nodes — exclude synthetic anchors like Backlog and the Unscheduled
+	// terminus from the count.
 	releaseNodeIDs := map[string]bool{}
 	for _, raw := range nodes {
 		node, _ := raw.(map[string]any)
-		if typ, _ := node["type"].(string); typ == "release" {
+		typ, _ := node["type"].(string)
+		synthetic, _ := node["synthetic"].(bool)
+		if typ == "release" && !synthetic {
 			id, _ := node["id"].(string)
 			releaseNodeIDs[id] = true
 		}
 	}
 	if len(releaseNodeIDs) != 2 {
-		t.Errorf("roadmap graph: want 2 release nodes, got %d", len(releaseNodeIDs))
+		t.Errorf("roadmap graph: want 2 real release nodes, got %d", len(releaseNodeIDs))
 	}
 
-	// The unscheduled release node must exist.
+	// The unscheduled release's own node must exist.
 	unschedExpectedID := strings.Join([]string{"release", releasePath2(unschedID)}, ":")
 	if !releaseNodeIDs[unschedExpectedID] {
 		t.Errorf("roadmap graph: unscheduled release node %q not found; nodes: %v", unschedExpectedID, releaseNodeIDs)
 	}
 
-	// No timeline edge should involve the unscheduled release.
+	// Per the synthetic-terminus spec, the unscheduled release connects on the
+	// timeline only via a single outbound edge to the "release:unscheduled"
+	// terminus — never directly to another scheduled release.
+	const unschedTerminusID = "release:unscheduled"
 	for _, raw := range edges {
 		edge, _ := raw.(map[string]any)
-		if kind, _ := edge["kind"].(string); kind == "timeline" {
-			src, _ := edge["source"].(string)
-			tgt, _ := edge["target"].(string)
-			if src == unschedExpectedID || tgt == unschedExpectedID {
-				t.Errorf("unscheduled release should not participate in timeline edges; got edge %q→%q", src, tgt)
-			}
+		if kind, _ := edge["kind"].(string); kind != "timeline" {
+			continue
+		}
+		src, _ := edge["source"].(string)
+		tgt, _ := edge["target"].(string)
+		if src == unschedExpectedID && tgt != unschedTerminusID {
+			t.Errorf("unscheduled release should only emit an edge to %q; got edge %q→%q",
+				unschedTerminusID, src, tgt)
+		}
+		if tgt == unschedExpectedID {
+			t.Errorf("unscheduled release should have no incoming timeline edges; got edge %q→%q",
+				src, tgt)
 		}
 	}
 }

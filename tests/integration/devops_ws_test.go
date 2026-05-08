@@ -92,8 +92,8 @@ func TestDevopsWS_RunStartedIsFirst(t *testing.T) {
 	if runID, _ := first.Payload["run_id"].(string); runID == "" {
 		t.Error("run.started: missing run_id in payload")
 	}
-	if pipeline, _ := first.Payload["pipeline"].(string); pipeline != "quick-pass" {
-		t.Errorf("run.started: pipeline = %q, want %q", pipeline, "quick-pass")
+	if pipeline, _ := first.Payload["pipeline_slug"].(string); pipeline != "quick-pass" {
+		t.Errorf("run.started: pipeline_slug = %q, want %q", pipeline, "quick-pass")
 	}
 	if project, _ := first.Payload["project"].(string); project != "testproject" {
 		t.Errorf("run.started: project = %q, want %q", project, "testproject")

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -17,6 +18,25 @@ import (
 	"github.com/kaos-control/kaos-control/internal/sandbox"
 	"github.com/kaos-control/kaos-control/internal/workflow"
 )
+
+// transitionLocks serialises concurrent applyTransition calls per artifact
+// path so the read-check-write sequence inside applyTransition cannot be
+// interleaved by another goroutine. Without it, two simultaneous calls (e.g.
+// two parallel /status-check/advance requests) can both read the same
+// pre-state, both pass the optimistic-concurrency guard, and both write —
+// producing two "advanced" outcomes for what should have been one.
+//
+// Single-binary, single-host deployment, so a process-local mutex map is
+// sufficient. Keyed by absolute path; safe across projects.
+var transitionLocks sync.Map // map[string]*sync.Mutex
+
+func transitionLockFor(absPath string) *sync.Mutex {
+	if mu, ok := transitionLocks.Load(absPath); ok {
+		return mu.(*sync.Mutex)
+	}
+	mu, _ := transitionLocks.LoadOrStore(absPath, &sync.Mutex{})
+	return mu.(*sync.Mutex)
+}
 
 // handleAllowedTargets handles GET /api/p/:project/artifacts/*path/allowed-targets
 func (s *Server) handleAllowedTargets(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +62,9 @@ func (s *Server) handleAllowedTargets(w http.ResponseWriter, r *http.Request) {
 
 	userRoles := p.Cfg.RolesFor(user.Email)
 	targets := p.Workflow.AllowedTargets(row.Status, userRoles, row.Type)
+	if targets == nil {
+		targets = []string{}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"targets": targets})
 }
 
@@ -145,9 +168,22 @@ func applyTransition(p *project.Project, row *index.ArtifactRow, relPath, toStat
 	if err != nil {
 		return fmt.Errorf("invalid path: %w", err)
 	}
+	// Serialise concurrent transitions on the same path so the read → guard →
+	// write sequence is atomic. Combined with the from-status check below,
+	// this turns an optimistic-concurrency check into a tested-and-set guard:
+	// only the first caller for a given pre-state advances; concurrent losers
+	// see the new on-disk status and bail out with an error.
+	mu := transitionLockFor(absPath)
+	mu.Lock()
+	defer mu.Unlock()
+
 	raw, err := os.ReadFile(absPath)
 	if err != nil {
 		return fmt.Errorf("read file: %w", err)
+	}
+	current := artifact.Parse(raw, relPath, time.Time{})
+	if current.FM.Status != row.Status {
+		return fmt.Errorf("from-status changed: expected %q, on disk %q", row.Status, current.FM.Status)
 	}
 	patched, ok := patchFrontmatterField(raw, "status", toStatus)
 	if !ok {

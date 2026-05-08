@@ -21,6 +21,12 @@ import (
 //   - No open questions  AND status == "blocked"  → transition to "draft"
 //   - Otherwise                                   → no-op
 //
+// Note: this is an intentionally aggressive policy — any blocked-with-no-OQ
+// artifact is auto-unblocked, including ones where the user PUT status=blocked
+// manually. Distinguishing the two cleanly requires comparing against the
+// previous indexed state (and likely a schema column to track had_open_questions);
+// see the skipped TestStatusDropdownAllVocabValues case for the design tension.
+//
 // Precondition: idx.hub and idx.wf must both be non-nil (callers must check).
 func (idx *Index) applyOpenQuestionTransition(a *artifact.Artifact, absPath string) error {
 	hasOQ := artifact.HasOpenQuestions(a.Body)

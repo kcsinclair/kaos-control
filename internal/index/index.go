@@ -647,7 +647,12 @@ func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 	}
 	defer rows.Close()
 
-	return scanRows(rows)
+	// scanRows returns len(out) as the count, but for paginated queries that
+	// is the *page* size, not the total matching the filter. Discard scanRows's
+	// count and return the COUNT(*) total computed above so callers receive
+	// the unfiltered match count for pagination UIs.
+	items, _, scanErr := scanRows(rows)
+	return items, total, scanErr
 }
 
 // Count returns the number of artifacts matching the given filter.

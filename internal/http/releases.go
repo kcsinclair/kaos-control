@@ -480,11 +480,22 @@ func buildRoadmapGraph(p *project.Project) (*index.GraphData, error) {
 		prevID = nodeID
 	}
 
-	// Unscheduled releases are appended to the chain in alphabetical order by name.
-	// Each undated release gets one timeline edge from the previous node (no label).
+	// Unscheduled releases each get their own node and a timeline edge to a
+	// synthetic "release:unscheduled" terminus. They do NOT chain to each other,
+	// and the terminus has no outgoing timeline edges — it is purely a sink for
+	// undated releases on the roadmap.
 	if len(unscheduled) > 0 {
 		sort.Slice(unscheduled, func(i, j int) bool {
 			return unscheduled[i].Name < unscheduled[j].Name
+		})
+		const unschedID = "release:unscheduled"
+		nodes = append(nodes, &index.GraphNode{
+			ID:        unschedID,
+			Title:     "Unscheduled",
+			Type:      "release",
+			Status:    "planned",
+			Labels:    []string{},
+			Synthetic: true,
 		})
 		for _, rel := range unscheduled {
 			nodeID := fmt.Sprintf("release:%d", rel.ID)
@@ -492,11 +503,10 @@ func buildRoadmapGraph(p *project.Project) (*index.GraphData, error) {
 				return nil, err
 			}
 			edges = append(edges, &index.GraphEdge{
-				Source: prevID,
-				Target: nodeID,
+				Source: nodeID,
+				Target: unschedID,
 				Kind:   "timeline",
 			})
-			prevID = nodeID
 		}
 	}
 

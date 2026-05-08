@@ -171,10 +171,13 @@ func PatchFrontmatterField(raw []byte, key, value string) ([]byte, bool) {
 	fmEnd := 3 + closeIdx
 	fmSection := s[3:fmEnd]
 	lineRe := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(key) + `:\s*.*$`)
-	replaced := lineRe.ReplaceAllLiteralString(fmSection, key+": "+value)
-	if replaced == fmSection {
+	if !lineRe.MatchString(fmSection) {
+		// Field is genuinely absent — distinct from "field present, same value".
 		return raw, false
 	}
+	replaced := lineRe.ReplaceAllLiteralString(fmSection, key+": "+value)
+	// replaced may equal fmSection here when the field is already at `value` —
+	// that's a successful no-op patch, not a missing field, so still return true.
 	return []byte("---" + replaced + s[fmEnd:]), true
 }
 

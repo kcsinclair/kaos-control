@@ -210,7 +210,13 @@ func newTestEnvFull(t *testing.T, seeds []seedArtifact, frontendFS fs.FS, cfgYAM
 		Path:        root,
 		Description: "integration test project",
 	}
-	proj, err := project.Open(entry, dataDir, project.OpenOptions{MaxConcurrentAgents: 2})
+	// In tests, dataDir is the t.TempDir() — pass it explicitly as DevopsLogDir
+	// so devops run logs land inside the temp dir (not in its parent, where the
+	// production default would put them when dataDir == appHome/data).
+	proj, err := project.Open(entry, dataDir, project.OpenOptions{
+		MaxConcurrentAgents: 2,
+		DevopsLogDir:        dataDir,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

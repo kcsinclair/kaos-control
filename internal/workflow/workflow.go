@@ -2,6 +2,7 @@
 package workflow
 
 import (
+	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/config"
 	"github.com/kaos-control/kaos-control/internal/index"
 )
@@ -123,6 +124,20 @@ func ruleMatchesType(r rule, artifactType string) bool {
 // Pass an empty string when the type is unknown; in that case type-restricted
 // rules are not considered.
 func (e *Engine) CanTransition(from, to string, userRoles []string, artifactType string) bool {
+	// Self-transitions are no-ops and never permitted, even for product-owner.
+	// (Both for correctness — a transition that doesn't change anything is a
+	// bug — and to keep the API behaviour sensible: the handler would write
+	// the same value back to disk and emit a confusing "X → X" event.)
+	if from == to {
+		return false
+	}
+	// Targets outside the documented status vocabulary are never permitted —
+	// product-owner included. This stops typos and stray automation from
+	// putting an artifact into a status the rest of the system can't reason
+	// about.
+	if !artifact.KnownStatuses[to] {
+		return false
+	}
 	if HasProductOwner(userRoles) {
 		return true
 	}

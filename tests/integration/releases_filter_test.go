@@ -211,12 +211,14 @@ func TestReleaseFilter_RoadmapGraph(t *testing.T) {
 	nodes, _ := data["nodes"].([]any)
 	edges, _ := data["edges"].([]any)
 
-	// Count release nodes and artifact child nodes.
+	// Count "real" release nodes (exclude synthetic anchors like Backlog and
+	// the Unscheduled terminus, which also carry type=release).
 	releaseNodeCount := 0
 	for _, raw := range nodes {
 		node, _ := raw.(map[string]any)
 		typ, _ := node["type"].(string)
-		if typ == "release" {
+		synthetic, _ := node["synthetic"].(bool)
+		if typ == "release" && !synthetic {
 			releaseNodeCount++
 		}
 		// plan-backend must not appear.
@@ -226,7 +228,7 @@ func TestReleaseFilter_RoadmapGraph(t *testing.T) {
 	}
 
 	if releaseNodeCount != 2 {
-		t.Errorf("roadmap graph: want 2 release nodes, got %d", releaseNodeCount)
+		t.Errorf("roadmap graph: want 2 real release nodes, got %d", releaseNodeCount)
 	}
 
 	// There should be a timeline edge between the two scheduled releases.
