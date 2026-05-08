@@ -1,7 +1,7 @@
 ---
 title: "useSortableTable perf: text sort for 1,000 rows intermittently exceeds 100 ms under full-suite load"
 type: defect
-status: in-development
+status: done
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-6-test.md
 labels: [defect]
