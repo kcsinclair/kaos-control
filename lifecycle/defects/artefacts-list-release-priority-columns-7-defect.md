@@ -1,7 +1,7 @@
 ---
 title: Release sort pins empty release to tail in both directions instead of first-in-ascending
 type: defect
-status: approved
+status: in-development
 lineage: artefacts-list-release-priority-columns
 parent: lifecycle/tests/artefacts-list-release-priority-columns-6-test.md
 labels: [defect]
