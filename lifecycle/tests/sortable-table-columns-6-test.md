@@ -1,7 +1,7 @@
 ---
 title: Sortable Table Columns — Integration Tests
 type: test
-status: done
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/test-plans/sortable-table-columns-5-test.md
 ---
