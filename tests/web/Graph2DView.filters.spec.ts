@@ -64,13 +64,19 @@ const { mockCyConstructor, mockCyInstance, layoutCallOptions, setCyNodes } = vi.
     nodes: vi.fn(() => ({
       length: _cyNodes.length,
       forEach: (cb: (n: any) => void) => _cyNodes.forEach(cb),
-      filter: vi.fn(() => ({ length: 0 })),
+      map: (cb: (n: any) => any) => _cyNodes.map(cb),
+      filter: vi.fn(() => ({ length: 0, forEach: vi.fn() })),
       style: vi.fn(),
     })),
     edges: vi.fn(() => ({
       forEach: vi.fn(),
       style: vi.fn(),
     })),
+    getElementById: vi.fn(() => ({
+      data: vi.fn(() => null),
+      remove: vi.fn(),
+    })),
+    style: vi.fn(() => ({ fromJson: vi.fn(() => ({ update: vi.fn() })) })),
     destroy: vi.fn(),
     fit: vi.fn(),
   }
