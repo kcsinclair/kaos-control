@@ -1,7 +1,7 @@
 ---
 title: "Tests: Auto-block on open questions"
 type: test
-status: in-qa
+status: approved
 lineage: artefact-status-blocked-on-questions
 parent: lifecycle/test-plans/artefact-status-blocked-on-questions-4-test.md
 ---

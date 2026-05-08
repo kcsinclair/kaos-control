@@ -1,7 +1,7 @@
 ---
 title: ArtifactListView and AgentsRunsView sort tests — useRoute mock query fix
 type: test
-status: in-qa
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/defects/sortable-table-columns-8-defect.md
 ---

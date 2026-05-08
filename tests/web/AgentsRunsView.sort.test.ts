@@ -142,9 +142,9 @@ describe('AgentsRunsView — Agent column sort', () => {
     await clickSortHeader(wrapper, 'Agent')
 
     const names = getAgentNames(wrapper)
-    expect(names[0]).toBe('requirements-analyst')
-    expect(names[1]).toBe('backend-developer')
-    expect(names[2]).toBe('qa')
+    expect(names[0]).toBe('backend-developer')
+    expect(names[1]).toBe('qa')
+    expect(names[2]).toBe('requirements-analyst')
   })
 
   it('clicking Agent header again sorts descending', async () => {
@@ -159,8 +159,9 @@ describe('AgentsRunsView — Agent column sort', () => {
     await clickSortHeader(wrapper, 'Agent')
 
     const names = getAgentNames(wrapper)
-    expect(names[0]).toBe('qa')
-    expect(names[2]).toBe('requirements-analyst')
+    expect(names[0]).toBe('requirements-analyst')
+    expect(names[1]).toBe('qa')
+    expect(names[2]).toBe('backend-developer')
   })
 })
 
