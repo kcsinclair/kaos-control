@@ -7,6 +7,24 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
+    // Run *.perf.test.ts / *.perf.spec.ts files in isolated forked processes
+    // so they don't compete for CPU with component-mounting tests.  Without
+    // this, wall-clock timings measured by performance.now() absorb OS
+    // scheduler jitter introduced by the concurrent worker-thread pool and
+    // cause intermittent threshold failures (see defect
+    // sortable-table-columns-19-defect.md).
+    poolMatchGlobs: [
+      ['**/*.perf.test.ts', 'forks'],
+      ['**/*.perf.spec.ts', 'forks'],
+    ],
+    poolOptions: {
+      forks: {
+        // Each perf file runs in its own dedicated fork — no sharing between
+        // perf suites — so a slow sort in one file cannot inflate timings in
+        // another.
+        singleFork: false,
+      },
+    },
   },
   resolve: {
     alias: {
