@@ -1,7 +1,7 @@
 ---
 title: Moderate Dependency Vulnerabilities (Deferred — See Vitest Upgrade Plan)
 type: defect
-status: draft
+status: approved
 lineage: moderate-dependency-vulnerabilities-deferred
 created: "2026-05-09T09:53:43+10:00"
 priority: normal
@@ -9,6 +9,7 @@ labels:
     - defect
     - security
     - testing
+release: June2026
 ---
 
 # Moderate Dependency Vulnerabilities (Deferred — See Vitest Upgrade Plan)
