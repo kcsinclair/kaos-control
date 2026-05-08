@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
+release: May2026
 ---
 
 # ParseErrorsView sort tests crash — useRoute mock missing query property

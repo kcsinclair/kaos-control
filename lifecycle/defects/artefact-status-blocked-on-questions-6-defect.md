@@ -9,6 +9,7 @@ labels:
 assignees:
   - role: frontend-developer
     who: agent
+release: May2026
 ---
 
 # Blocked-questions banner uses wrong CSS class name in ArtifactEditorView

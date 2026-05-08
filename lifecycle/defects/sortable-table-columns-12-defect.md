@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
+release: May2026
 ---
 
 # AgentsRunsView agent-name sort tests have incorrect expected order

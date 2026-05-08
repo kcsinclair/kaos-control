@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
+release: May2026
 ---
 
 # AgentsRunsView sort tests — missing @/api/config mock causes 9 unhandled rejections

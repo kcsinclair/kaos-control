@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: frontend-developer
     who: agent
+release: May2026
 ---
 
 # ArtifactListView TC6: listArtifacts not called after text input — TypeError on mock.calls

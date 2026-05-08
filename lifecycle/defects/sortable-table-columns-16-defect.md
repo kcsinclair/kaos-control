@@ -8,6 +8,7 @@ labels: [defect]
 assignees:
   - role: frontend-developer
     who: agent
+release: May2026
 ---
 
 # useSortableTable: empty strings and nulls not sorted to end
