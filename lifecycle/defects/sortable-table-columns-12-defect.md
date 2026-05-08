@@ -1,7 +1,7 @@
 ---
 title: AgentsRunsView agent-name sort tests have incorrect expected order
 type: defect
-status: in-development
+status: done
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-11-test.md
 labels: [defect]
