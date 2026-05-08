@@ -37,6 +37,10 @@ vi.mock('@/api/agents', () => ({
   getRunLog:   vi.fn().mockResolvedValue(''),
 }))
 
+vi.mock('@/api/config', () => ({
+  getRoles: vi.fn().mockResolvedValue({ roles: [] }),
+}))
+
 vi.mock('vue-router', async (importActual) => {
   const actual = await importActual<typeof import('vue-router')>()
   return {
