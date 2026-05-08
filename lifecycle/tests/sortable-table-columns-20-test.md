@@ -1,7 +1,7 @@
 ---
 title: "ArtifactListView Release sort: TC1/TC3 corrected for empty-string-to-end behaviour"
 type: test
-status: approved
+status: in-qa
 lineage: sortable-table-columns
 parent: lifecycle/defects/sortable-table-columns-18-defect.md
 ---
