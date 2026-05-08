@@ -10,7 +10,7 @@ labels:
     - frontend
     - testing
     - usability
-release: May2026-2
+release: KC-Release1
 ---
 
 # Testing Board Text Search Filter

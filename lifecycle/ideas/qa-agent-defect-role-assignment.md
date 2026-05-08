@@ -10,7 +10,7 @@ labels:
     - defect
     - workflow
     - agent
-release: May2026-2
+release: KC-Release1
 ---
 
 # QA Agent Should Assign Defects to the Correct Role
