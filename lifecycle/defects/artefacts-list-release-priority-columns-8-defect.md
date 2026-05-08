@@ -1,7 +1,7 @@
 ---
 title: TC6 release-filter + text-search test fails because TextFilter debounce is not advanced
 type: defect
-status: in-development
+status: done
 lineage: artefacts-list-release-priority-columns
 parent: lifecycle/tests/artefacts-list-release-priority-columns-6-test.md
 labels: [defect]

@@ -1,7 +1,7 @@
 ---
 title: DevOps Log Steps Show Empty Output
 type: defect
-status: in-development
+status: done
 lineage: devops-log-steps-empty-output
 created: "2026-05-08T15:56:34+10:00"
 priority: normal
