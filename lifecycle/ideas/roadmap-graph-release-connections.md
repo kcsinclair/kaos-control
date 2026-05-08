@@ -1,7 +1,7 @@
 ---
 title: 'Roadmap Graph: Directed Release Connections with Backlog Root and Unscheduled Leaves'
 type: idea
-status: clarifying
+status: done
 lineage: roadmap-graph-release-connections
 created: "2026-05-07T12:19:49+10:00"
 priority: high
