@@ -98,11 +98,9 @@ export function useSortableTable<T extends Record<string, unknown>>(
       const aVal = extractValue(a, col)
       const bVal = extractValue(b, col)
 
-      // Pin nulls to end regardless of sort direction.
-      // Empty strings are NOT pinned — they sort naturally ('' < any non-empty
-      // string), so they appear first in ascending and last in descending.
-      const aIsNull = aVal == null
-      const bIsNull = bVal == null
+      // Pin nulls and empty strings to end regardless of sort direction.
+      const aIsNull = aVal == null || aVal === ''
+      const bIsNull = bVal == null || bVal === ''
       if (aIsNull && bIsNull) return 0
       if (aIsNull) return 1
       if (bIsNull) return -1
