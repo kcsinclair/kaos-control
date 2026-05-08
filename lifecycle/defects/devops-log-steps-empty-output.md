@@ -10,6 +10,9 @@ labels:
     - frontend
     - vue
     - operability
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # DevOps Log Steps Show Empty Output
