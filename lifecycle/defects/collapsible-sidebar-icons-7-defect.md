@@ -1,7 +1,7 @@
 ---
 title: "AppSidebar tests hardcode 6 nav items but sidebar now has 12 — tests need updating"
 type: defect
-status: in-development
+status: done
 lineage: collapsible-sidebar-icons
 parent: lifecycle/tests/collapsible-sidebar-icons-6-test.md
 labels: [defect]
