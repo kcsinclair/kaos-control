@@ -308,7 +308,7 @@ onMounted(() => {
     <div v-else-if="!editing" class="editor-body">
       <div class="editor-content">
         <h1 class="artifact-title">{{ artifact.title || artifact.slug }}</h1>
-        <div v-if="artifact.status === 'blocked' && hasOpenQuestions" class="open-questions-banner">
+        <div v-if="artifact.status === 'blocked' && hasOpenQuestions" class="blocked-questions-banner">
           This artifact is blocked pending answers to open questions below.
           <a href="#open-questions" class="oq-link" @click.prevent="scrollToOpenQuestions">Jump to questions ↓</a>
         </div>
@@ -488,7 +488,7 @@ onMounted(() => {
 }
 
 /* Blocked-on-questions banner */
-.open-questions-banner {
+.blocked-questions-banner {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -503,7 +503,7 @@ onMounted(() => {
   font-weight: 500;
 }
 @media (prefers-color-scheme: dark) {
-  .open-questions-banner { background: #422006; color: #fcd34d; border-color: #92400e; }
+  .blocked-questions-banner { background: #422006; color: #fcd34d; border-color: #92400e; }
 }
 .oq-link {
   color: inherit;
