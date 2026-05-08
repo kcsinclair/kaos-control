@@ -24,6 +24,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import ArtifactListView from '../../web/src/views/project/ArtifactListView.vue'
+import TextFilter from '../../web/src/components/TextFilter.vue'
 import { useArtifactsStore } from '../../web/src/stores/artifacts'
 import { useReleasesStore } from '../../web/src/stores/releases'
 import type { ArtifactRow } from '../../web/src/types/api'
@@ -271,21 +272,17 @@ describe('ArtifactListView — Release filter dropdown', () => {
 
     vi.mocked(artifactsApi.listArtifacts).mockClear()
 
-    // Type into the text search (TextFilter component is the first input)
-    const textInput = wrapper.find('input[type="text"], input:not([type])')
-    if (textInput.exists()) {
-      await textInput.setValue('login')
-      await textInput.trigger('input')
-      await flushPromises()
+    // Emit update:modelValue directly on the TextFilter sub-component to bypass
+    // its 200 ms debounce (flushPromises only drains microtasks, not setTimeout).
+    const textFilterWrapper = wrapper.findComponent(TextFilter)
+    expect(textFilterWrapper.exists(), 'TextFilter component must be present').toBe(true)
+    textFilterWrapper.vm.$emit('update:modelValue', 'login')
+    await flushPromises()
 
-      const lastCall = vi.mocked(artifactsApi.listArtifacts).mock.calls.at(-1)!
-      const filter = lastCall[1] as Record<string, unknown>
-      expect(filter.release).toBe('v1.0')
-      expect(filter.q).toBe('login')
-    } else {
-      // TextFilter may use a custom event; verify release filter still applies
-      expect(true).toBe(true) // covered in TC2
-    }
+    const lastCall = vi.mocked(artifactsApi.listArtifacts).mock.calls.at(-1)!
+    const filter = lastCall[1] as Record<string, unknown>
+    expect(filter.release).toBe('v1.0')
+    expect(filter.q).toBe('login')
   })
 
   it('TC7: changing the release filter resets the active sort state', async () => {
