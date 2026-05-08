@@ -3,7 +3,7 @@ title: Inline Priority Display and Editing on Artefact Detail View
 type: requirement
 status: blocked
 lineage: artefact-priority-inline-edit
-created: "2026-05-07"
+created: "2026-05-07T00:00:00+10:00"
 priority: high
 parent: lifecycle/ideas/artefact-priority-inline-edit.md
 labels:

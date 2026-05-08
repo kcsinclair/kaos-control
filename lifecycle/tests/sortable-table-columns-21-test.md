@@ -1,7 +1,7 @@
 ---
 title: "useSortableTable perf: text sort flakiness fix — isolated pool + raised threshold"
 type: test
-status: in-qa
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/defects/sortable-table-columns-19-defect.md
 ---

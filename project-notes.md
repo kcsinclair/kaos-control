@@ -178,12 +178,12 @@ Its about getting things done, its about idea capture and innovating rapidly.
 You don't have a dev team now, use bots, as you grow, add more people and keep using the same workflow.
 
 
-
-# Blog prompt
-
-I would like to write a blog about the work on kaos-control, I have a couple of files, project-notes.md and project-planning.md along with all the idea files and all the great work you have done.  Can you please think about a good angle for a blog article, I have been thinking its about my long history with software development and that I have software still in production after 20 years.  I have learnt how to get ideas from people and get them into running code.  This process encapsulates that and has the benefit of using humans or robots to get the work done.  I would like to introduce kaos-control in the blog, but maybe name to be finalised, and I will be including some screenshots.  The earlier idea I had before "Innovation Maker - Making Releases from Ideas.md" was how to organise my ideas about the kaos-core software and figure out which features to do first and which to wait on, and how to get coding agents working better for me.  That idea evolved into kaos-control.
-
-
 ## additional thoughts.
 
-* having ideas isn't hard, staying on track, avoiding perfection and rabbit holes and making things work is.
+I have been thinking its about my long history with software development and that I have software still in production after 20 years.  
+
+kaos-control translates what I have learned, how to get ideas from people and get them into running code.  This process encapsulates that and has the benefit of using humans or robots to get the work done.  
+
+The earlier idea I had before "Innovation Maker - Making Releases from Ideas.md" was how to organise my ideas about the kaos-core software and figure out which features to do first and which to wait on, and how to get coding agents working better for me.  That idea evolved into kaos-control.
+
+**Having ideas isn't hard, staying on track, avoiding perfection and rabbit holes and making things work is hard.**

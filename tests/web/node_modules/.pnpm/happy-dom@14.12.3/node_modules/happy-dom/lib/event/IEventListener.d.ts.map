@@ -1,1 +1,0 @@
-{"version":3,"file":"IEventListener.d.ts","sourceRoot":"","sources":["../../src/event/IEventListener.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,YAAY,CAAC;AAE/B;;GAEG;AACH,MAAM,CAAC,OAAO,WAAW,cAAc;IACtC;;;;OAIG;IACH,WAAW,CAAC,KAAK,EAAE,KAAK,GAAG,IAAI,CAAC;CAChC"}
