@@ -57,28 +57,28 @@ export function parseRunLog(raw: string | null | undefined): LogLine[] {
         case 'pipeline.step.started':
           lines.push({
             kind: 'step-start',
-            stepName: obj['step_name'] as string | undefined,
+            stepName: obj['step'] as string | undefined,
             stepIndex: obj['step_index'] as number | undefined,
             timestamp: ts,
-            text: (obj['step_name'] as string | undefined) ?? `Step ${String(obj['step_index'] ?? '')}`,
+            text: (obj['step'] as string | undefined) ?? `Step ${String(obj['step_index'] ?? '')}`,
           })
           break
         case 'pipeline.step.output':
           lines.push({
             kind: 'output',
-            stepName: obj['step_name'] as string | undefined,
+            stepName: obj['step'] as string | undefined,
             stepIndex: obj['step_index'] as number | undefined,
             timestamp: ts,
-            text: (obj['output'] as string | undefined) ?? '',
+            text: (obj['text'] as string | undefined) ?? '',
           })
           break
         case 'pipeline.step.completed':
           lines.push({
             kind: 'step-end',
-            stepName: obj['step_name'] as string | undefined,
+            stepName: obj['step'] as string | undefined,
             stepIndex: obj['step_index'] as number | undefined,
             timestamp: ts,
-            text: (obj['step_name'] as string | undefined) ?? `Step ${String(obj['step_index'] ?? '')}`,
+            text: (obj['step'] as string | undefined) ?? `Step ${String(obj['step_index'] ?? '')}`,
             status: obj['status'] as string | undefined,
             durationMs: obj['duration_ms'] as number | undefined,
           })

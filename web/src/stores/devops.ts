@@ -184,7 +184,7 @@ export const useDevOpsStore = defineStore('devops', () => {
   function handleStepOutput(payload: Record<string, unknown>): void {
     const slug = payload['pipeline_slug'] as string
     const stepIndex = payload['step_index'] as number
-    const line = payload['output'] as string
+    const line = payload['text'] as string
     if (!slug || line == null) return
     const run = activeRuns.value.get(slug)
     if (!run || stepIndex == null || stepIndex >= run.steps.length) return
