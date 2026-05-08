@@ -1,14 +1,15 @@
 ---
 title: Devops Screen Log Button Throws 'null is not an object' Error
 type: defect
-status: draft
+status: approved
 lineage: devops-log-button-null-object-error
 created: "2026-05-08T15:09:02+10:00"
-priority: normal
+priority: high
 labels:
     - defect
     - frontend
     - vue
+release: May2026
 ---
 
 # Devops Screen Log Button Throws 'null is not an object' Error
