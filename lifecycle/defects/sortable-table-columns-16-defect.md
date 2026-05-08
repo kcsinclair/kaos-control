@@ -1,7 +1,7 @@
 ---
 title: "useSortableTable: empty strings and nulls not sorted to end"
 type: defect
-status: draft
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-13-test.md
 labels: [defect]
