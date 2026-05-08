@@ -10,6 +10,9 @@ labels:
     - frontend
     - vue
 release: May2026
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Devops Screen Log Button Throws 'null is not an object' Error
