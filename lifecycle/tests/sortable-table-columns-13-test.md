@@ -1,7 +1,7 @@
 ---
 title: AgentsRunsView agent-name sort — corrected ascending/descending expectations
 type: test
-status: draft
+status: approved
 lineage: sortable-table-columns
 parent: lifecycle/defects/sortable-table-columns-12-defect.md
 ---
