@@ -1,7 +1,7 @@
 ---
 title: AgentsRunsView sort tests — @/api/config mock eliminates unhandled rejections
 type: test
-status: approved
+status: in-qa
 lineage: sortable-table-columns
 parent: lifecycle/defects/sortable-table-columns-15-defect.md
 ---
