@@ -1,7 +1,7 @@
 ---
 title: "ArtifactListView Release sort: TC1/TC3 expect empty values first in ascending (stale after empty-string-to-end fix)"
 type: defect
-status: approved
+status: in-development
 lineage: sortable-table-columns
 parent: lifecycle/tests/sortable-table-columns-6-test.md
 labels: [defect]
