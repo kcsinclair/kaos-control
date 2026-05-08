@@ -1,7 +1,7 @@
 ---
 title: "Blocked-questions banner uses wrong CSS class name in ArtifactEditorView"
 type: defect
-status: draft
+status: approved
 lineage: artefact-status-blocked-on-questions
 parent: lifecycle/tests/artefact-status-blocked-on-questions-5.md
 labels:
