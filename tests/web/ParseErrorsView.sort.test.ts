@@ -39,7 +39,7 @@ vi.mock('vue-router', async (importActual) => {
   const actual = await importActual<typeof import('vue-router')>()
   return {
     ...actual,
-    useRoute: vi.fn(() => ({ params: { project: 'testproject' } })),
+    useRoute: vi.fn(() => ({ params: { project: 'testproject' }, query: {} })),
   }
 })
 
@@ -50,9 +50,9 @@ vi.mock('vue-router', async (importActual) => {
 function makeErrors(): ParseErrorRow[] {
   return [
     { path: 'lifecycle/requirements/zebra.md',  message: 'Missing required field: type' },
-    { path: 'lifecycle/ideas/apple.md',         message: 'Unknown status value: invalid' },
-    { path: 'lifecycle/defects/mango.md',       message: 'Frontmatter parse error: bad YAML' },
-    { path: 'lifecycle/tests/banana.md',        message: 'Duplicate lineage detected' },
+    { path: 'lifecycle/requirements/apple.md',  message: 'Unknown status value: invalid' },
+    { path: 'lifecycle/requirements/mango.md',  message: 'Frontmatter parse error: bad YAML' },
+    { path: 'lifecycle/requirements/banana.md', message: 'Duplicate lineage detected' },
   ]
 }
 
