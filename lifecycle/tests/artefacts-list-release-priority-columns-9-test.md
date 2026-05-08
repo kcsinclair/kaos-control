@@ -1,7 +1,7 @@
 ---
 title: 'Fix: TC6 TextFilter debounce bypass in release-filter test suite'
 type: test
-status: draft
+status: approved
 lineage: artefacts-list-release-priority-columns
 parent: lifecycle/defects/artefacts-list-release-priority-columns-8-defect.md
 ---
