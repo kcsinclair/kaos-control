@@ -8,8 +8,8 @@
  *   release: { type: 'string', getValue: row => row.frontmatter?.release ?? '' }
  *
  * Notes on implementation behaviour:
- *  - Missing release maps to '' (empty string, not null), so it sorts at the
- *    start of ascending and end of descending via string ordering.
+ *  - Missing release maps to '' (empty string, not null), but useSortableTable
+ *    pins empty strings to the END of the sorted list in both directions.
  *  - localeCompare with sensitivity:'base' treats 'Alpha' === 'alpha'.
  *  - Sort cycle: asc → desc → null (reset).
  */
@@ -146,7 +146,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('ArtifactListView — Release column sort', () => {
-  it('TC1: ascending sort orders rows alphabetically: (empty), alpha, v1.0, v2.0', async () => {
+  it('TC1: ascending sort orders rows alphabetically: alpha, v1.0, v2.0, (empty)', async () => {
     const fixtures = makeReleaseFixtures()
     const wrapper = mountView()
     await flushPromises()
@@ -159,11 +159,11 @@ describe('ArtifactListView — Release column sort', () => {
 
     const values = getReleaseValues(wrapper)
     expect(values.length).toBe(4)
-    // '' (empty string) < 'alpha' < 'v1.0' < 'v2.0' in localeCompare
-    expect(values[0]).toBe('—')      // missing release renders as '—' in cell
-    expect(values[1]).toBe('alpha')
-    expect(values[2]).toBe('v1.0')
-    expect(values[3]).toBe('v2.0')
+    // 'alpha' < 'v1.0' < 'v2.0', missing release (empty string) pinned to end
+    expect(values[0]).toBe('alpha')
+    expect(values[1]).toBe('v1.0')
+    expect(values[2]).toBe('v2.0')
+    expect(values[3]).toBe('—')      // missing release renders as '—' in cell, sorted last
   })
 
   it('TC2: descending sort orders rows: v2.0, v1.0, alpha, (empty)', async () => {
@@ -187,7 +187,7 @@ describe('ArtifactListView — Release column sort', () => {
     expect(values[3]).toBe('—')      // empty string is last in descending
   })
 
-  it('TC3: artifact with no release appears first in ascending and last in descending', async () => {
+  it('TC3: artifact with no release appears last in both ascending and descending', async () => {
     const fixtures = makeReleaseFixtures()
     const wrapper = mountView()
     await flushPromises()
@@ -196,10 +196,10 @@ describe('ArtifactListView — Release column sort', () => {
     store.$patch({ items: fixtures, total: fixtures.length })
     await flushPromises()
 
-    // Ascending: no-release first
+    // Ascending: no-release last (pinned to end by useSortableTable)
     await clickSortHeader(wrapper, 'Release')
     let values = getReleaseValues(wrapper)
-    expect(values[0]).toBe('—')
+    expect(values[values.length - 1]).toBe('—')
 
     // Descending: no-release last
     await clickSortHeader(wrapper, 'Release')
