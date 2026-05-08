@@ -1,7 +1,7 @@
 ---
 title: Collapsible Sidebar Icons — Integration Tests
 type: test
-status: draft
+status: approved
 lineage: collapsible-sidebar-icons
 parent: lifecycle/test-plans/collapsible-sidebar-icons-5-test.md
 ---
