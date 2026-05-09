@@ -1,7 +1,7 @@
 ---
 title: Velocity Widget Auto-Scaling Columns and Minimum Periods
 type: requirement
-status: planning
+status: done
 lineage: dashboard-velocity-auto-scale
 created: "2026-05-09T00:00:00+10:00"
 priority: high
