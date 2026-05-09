@@ -9,6 +9,7 @@ labels:
     - defect
     - frontend
     - vue
+release: KC-Release0
 assignees:
     - role: frontend-developer
       who: agent
