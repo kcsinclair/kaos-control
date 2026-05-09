@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { use, init } from 'echarts/core'
 import { PieChart } from 'echarts/charts'
@@ -10,6 +11,7 @@ import type { ECharts } from 'echarts/core'
 use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const props = defineProps<{ project: string }>()
+const router = useRouter()
 
 interface StatusDistributionItem {
   status: string
@@ -23,7 +25,6 @@ interface StatusDistributionResponse {
 const chartEl = ref<HTMLDivElement | null>(null)
 let chart: ECharts | null = null
 const isEmpty = ref(false)
-const ariaLabel = ref('Status distribution chart loading')
 
 // WCAG 2.1 AA compliant palette against dark/light backgrounds
 const STATUS_COLORS: Record<string, string> = {
@@ -57,9 +58,6 @@ async function fetchAndRender() {
       itemStyle: { color: colorForStatus(i.status) },
     }))
 
-    const total = items.reduce((s, i) => s + i.count, 0)
-    ariaLabel.value = `Status distribution: ${items.map((i) => `${i.status} ${i.count} of ${total}`).join(', ')}`
-
     chart.setOption({
       tooltip: {
         trigger: 'item',
@@ -76,6 +74,7 @@ async function fetchAndRender() {
           type: 'pie',
           radius: ['40%', '70%'],
           avoidLabelOverlap: true,
+          cursor: 'pointer',
           label: { show: false },
           emphasis: { label: { show: false } },
           data: seriesData,
@@ -90,6 +89,12 @@ async function fetchAndRender() {
 function initChart() {
   if (!chartEl.value) return
   chart = init(chartEl.value)
+  chart.on('click', (params: { name?: string }) => {
+    const status = params.name
+    if (status) {
+      router.push({ name: 'artifacts', params: { project: props.project }, query: { status } })
+    }
+  })
   void fetchAndRender()
 }
 
@@ -121,7 +126,7 @@ watch(() => props.project, () => {
       ref="chartEl"
       class="status-dist-chart"
       role="img"
-      :aria-label="ariaLabel"
+      aria-label="Status distribution chart — click a segment to filter artifacts by status"
     />
     <div v-else class="widget-empty">No tickets yet</div>
   </div>
