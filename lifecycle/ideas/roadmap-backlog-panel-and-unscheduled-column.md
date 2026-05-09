@@ -1,7 +1,7 @@
 ---
 title: Roadmap Backlog Panel and Unscheduled Column Placement
 type: idea
-status: clarifying
+status: done
 lineage: roadmap-backlog-panel-and-unscheduled-column
 created: "2026-05-07T11:20:30+10:00"
 priority: high
