@@ -4,12 +4,13 @@ type: idea
 status: approved
 lineage: roadmap-release-filter-ideas-defects
 created: "2026-05-09T16:15:27+10:00"
-priority: normal
+priority: high
 labels:
     - frontend
     - roadmaps
     - enhancement
     - usability
+release: KC-Release0
 ---
 
 # Roadmap Gantt Release Drill-Down: Show Only Ideas and Defects
