@@ -1,7 +1,7 @@
 ---
 title: Dashboard Recent Ideas and Defects Widget
 type: idea
-status: clarifying
+status: done
 lineage: dashboard-recent-ideas-defects-widget
 created: "2026-05-09T16:27:26+10:00"
 priority: high
