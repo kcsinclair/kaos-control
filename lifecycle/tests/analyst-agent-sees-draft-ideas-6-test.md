@@ -1,7 +1,7 @@
 ---
 title: "Agent Launcher Input Status Filtering — Tests"
 type: test
-status: draft
+status: approved
 lineage: analyst-agent-sees-draft-ideas
 parent: lifecycle/test-plans/analyst-agent-sees-draft-ideas-5-test.md
 ---
