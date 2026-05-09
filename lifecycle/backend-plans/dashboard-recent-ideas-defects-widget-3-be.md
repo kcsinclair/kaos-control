@@ -1,10 +1,10 @@
 ---
 title: "Backend Plan: Recent Ideas and Defects Widget API Support"
 type: plan-backend
-status: approved
+status: in-development
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/requirements/dashboard-recent-ideas-defects-widget-2.md
-created: "2026-05-09"
+created: "2026-05-09T00:00:00+10:00"
 ---
 
 # Backend Plan: Recent Ideas and Defects Widget API Support
