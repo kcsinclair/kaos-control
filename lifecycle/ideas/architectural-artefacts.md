@@ -18,4 +18,6 @@ These may be determined during development or defined up front.
 
 e.g. programming language, frameworks, database, operating system, decisions.
 
+Maintain ADR's
+
 Some of these may also be documents and diagrams for humans, and/or the robots.
