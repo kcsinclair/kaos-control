@@ -10,6 +10,7 @@ labels:
     - enhancement
     - usability
     - vue
+release: KC-Release0
 ---
 
 # Dashboard Items as Clickable Filters
