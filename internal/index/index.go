@@ -1728,6 +1728,41 @@ func (idx *Index) StatusDistribution(trackedTypes []string) ([]StatusCount, erro
 	return out, rows.Err()
 }
 
+// StageCount holds one stage and its artifact count for the distribution endpoint.
+type StageCount struct {
+	Stage string `json:"stage"`
+	Count int    `json:"count"`
+}
+
+// StageDistribution returns artifact counts grouped by lifecycle stage, excluding
+// items with status "done" or "abandoned". trackedTypes selects which artifact
+// types are counted (defaults to ["ticket"] when empty).
+// Returns an empty (non-nil) slice when no matching items exist.
+func (idx *Index) StageDistribution(trackedTypes []string) ([]StageCount, error) {
+	typesIn, typeArgs := trackedTypesClause(trackedTypes)
+	rows, err := idx.db.Query(
+		`SELECT stage, COUNT(*) FROM artifacts
+		 WHERE type IN `+typesIn+` AND status NOT IN ('done','abandoned')
+		 GROUP BY stage
+		 ORDER BY stage`,
+		typeArgs...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying stage distribution: %w", err)
+	}
+	defer rows.Close()
+
+	out := []StageCount{}
+	for rows.Next() {
+		var sc StageCount
+		if err := rows.Scan(&sc.Stage, &sc.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, sc)
+	}
+	return out, rows.Err()
+}
+
 // VelocityBucket holds a time period label and the count of completions in it.
 type VelocityBucket struct {
 	Period string `json:"period"`
