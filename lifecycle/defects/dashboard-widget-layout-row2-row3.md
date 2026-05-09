@@ -1,14 +1,18 @@
 ---
 title: Incorrect Dashboard Widget Layout in Rows 2 and 3
 type: defect
-status: draft
+status: approved
 lineage: dashboard-widget-layout-row2-row3
 created: "2026-05-09T18:14:16+10:00"
-priority: normal
+priority: high
 labels:
     - defect
     - frontend
     - vue
+release: KC-Release0
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Incorrect Dashboard Widget Layout in Rows 2 and 3
