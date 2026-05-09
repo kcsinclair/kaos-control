@@ -39,7 +39,7 @@ import SummaryCountsWidget from '../../web/src/components/dashboard/widgets/Summ
 vi.mock('@/api/client', () => ({
   api: {
     get: vi.fn().mockResolvedValue({
-      total: 0,
+      total_tickets: 0,
       in_progress: 0,
       blocked: 0,
       completed_this_week: 0,
@@ -234,7 +234,7 @@ describe('SummaryCountsWidget — summary counts after API response', () => {
     })
     await flushPromises()
 
-    const cards = wrapper.findAll('[role="figure"]')
+    const cards = wrapper.findAll('.summary-card')
     expect(cards).toHaveLength(4)
   })
 
@@ -244,7 +244,7 @@ describe('SummaryCountsWidget — summary counts after API response', () => {
       props: { project: 'testproject' },
     })
 
-    const cards = wrapper.findAll('[role="figure"]')
+    const cards = wrapper.findAll('.summary-card')
     const values = cards.map(c => c.find('.summary-card-value').text())
     expect(values).toEqual(['0', '0', '0', '0'])
   })
@@ -252,7 +252,7 @@ describe('SummaryCountsWidget — summary counts after API response', () => {
   it('displays counts returned by the API after the response resolves', async () => {
     const { api } = await import('@/api/client' as any)
     vi.mocked(api.get).mockResolvedValueOnce({
-      total: 12,
+      total_tickets: 12,
       in_progress: 3,
       blocked: 1,
       completed_this_week: 5,
@@ -263,7 +263,7 @@ describe('SummaryCountsWidget — summary counts after API response', () => {
     })
     await flushPromises()
 
-    const cards = wrapper.findAll('[role="figure"]')
+    const cards = wrapper.findAll('.summary-card')
     // Card order: Lifecycle Total, In Progress, Blocked, Completed This Week
     expect(cards[0].find('.summary-card-value').text()).toBe('12')
     expect(cards[1].find('.summary-card-value').text()).toBe('3')
@@ -280,7 +280,7 @@ describe('SummaryCountsWidget — summary counts after API response', () => {
     })
     await flushPromises()
 
-    const values = wrapper.findAll('[role="figure"]').map(c =>
+    const values = wrapper.findAll('.summary-card').map(c =>
       c.find('.summary-card-value').text()
     )
     expect(values).toEqual(['0', '0', '0', '0'])
