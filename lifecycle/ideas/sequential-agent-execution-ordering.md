@@ -10,7 +10,7 @@ labels:
     - agent-runner
     - architecture
     - workflow
-release: KC-Release2
+release: KC-Release1
 ---
 
 # Sequential Agent Execution Ordering to Prevent Race Conditions
