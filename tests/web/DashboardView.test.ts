@@ -318,3 +318,122 @@ describe('SummaryCountsWidget — summary counts after API response', () => {
 // @media rules. This was the resolution to Q4 in the test plan (option b).
 // Those tests should be added to a tests/e2e/ Playwright suite.
 // ===========================================================================
+
+// ===========================================================================
+// Milestone 5 — End-to-end dashboard integration (StagesDistributionWidget)
+//
+// Tests the widget in the context of the full DashboardGrid, verifying that
+// it renders alongside existing widgets and participates correctly in the
+// dashboard slot system.
+//
+// Back-navigation (M5-TC4) and CSS-dependent URL assertions require a real
+// browser; those are deferred to a Playwright E2E suite (same resolution as
+// the viewport layout tests above).
+// ===========================================================================
+
+describe('DashboardGrid — Milestone 5: StagesDistributionWidget integration', () => {
+  it('TC1: "Stages Distribution" widget title is visible on the dashboard', async () => {
+    // Register a stub for stages-distribution alongside the other widgets.
+    const StagesStub = markRaw(defineComponent({
+      name: 'StagesDistributionStub',
+      template: '<div class="stub-stages"><h3 class="widget-title">Stages Distribution</h3></div>',
+    }))
+    registerWidget('stages-distribution', StagesStub, { slot: 'chart', order: 1 })
+
+    const wrapper = mount(DashboardGrid, {
+      props: { project: 'testproject' },
+      global: { plugins: [makeRouter()] },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Stages Distribution')
+  })
+
+  it('TC1b: stages-distribution widget renders in the Charts section', async () => {
+    const StagesStub = markRaw(defineComponent({
+      name: 'StagesDistributionStub',
+      template: '<div class="stub-stages-dist" />',
+    }))
+    registerWidget('stages-distribution', StagesStub, { slot: 'chart', order: 1 })
+
+    const wrapper = mount(DashboardGrid, {
+      props: { project: 'testproject' },
+      global: { plugins: [makeRouter()] },
+    })
+    await flushPromises()
+
+    const chartsSection = wrapper.find('section[aria-label="Charts"]')
+    expect(chartsSection.exists()).toBe(true)
+    expect(chartsSection.find('.stub-stages-dist').exists()).toBe(true)
+  })
+
+  it('TC6: existing widgets (status-distribution, velocity-chart) still render alongside stages-distribution', async () => {
+    const StatusStub  = markRaw(defineComponent({ name: 'StatusStub',  template: '<div class="stub-status-dist" />' }))
+    const StagesStub  = markRaw(defineComponent({ name: 'StagesStub',  template: '<div class="stub-stages-dist2" />' }))
+    const VelocityStub = markRaw(defineComponent({ name: 'VelocityStub', template: '<div class="stub-velocity-chart" />' }))
+
+    registerWidget('status-distribution', StatusStub,   { slot: 'chart', order: 0 })
+    registerWidget('stages-distribution', StagesStub,   { slot: 'chart', order: 1 })
+    registerWidget('velocity-chart',      VelocityStub, { slot: 'chart', order: 2 })
+
+    const wrapper = mount(DashboardGrid, {
+      props: { project: 'testproject' },
+      global: { plugins: [makeRouter()] },
+    })
+    await flushPromises()
+
+    const chartsSection = wrapper.find('section[aria-label="Charts"]')
+    expect(chartsSection.find('.stub-status-dist').exists()).toBe(true)
+    expect(chartsSection.find('.stub-stages-dist2').exists()).toBe(true)
+    expect(chartsSection.find('.stub-velocity-chart').exists()).toBe(true)
+  })
+
+  it('TC6b: chart-slot widgets appear in correct order (status → stages → velocity)', async () => {
+    const StatusStub   = markRaw(defineComponent({ name: 'StatusStub',   template: '<div class="ord-status" />' }))
+    const StagesStub   = markRaw(defineComponent({ name: 'StagesStub',   template: '<div class="ord-stages" />' }))
+    const VelocityStub = markRaw(defineComponent({ name: 'VelocityStub', template: '<div class="ord-velocity" />' }))
+
+    // Register in reverse order — DashboardGrid renders by sorted order.
+    registerWidget('velocity-chart',      VelocityStub, { slot: 'chart', order: 2 })
+    registerWidget('stages-distribution', StagesStub,   { slot: 'chart', order: 1 })
+    registerWidget('status-distribution', StatusStub,   { slot: 'chart', order: 0 })
+
+    const wrapper = mount(DashboardGrid, {
+      props: { project: 'testproject' },
+      global: { plugins: [makeRouter()] },
+    })
+    await flushPromises()
+
+    const html = wrapper.find('section[aria-label="Charts"]').html()
+    expect(html.indexOf('ord-status')).toBeLessThan(html.indexOf('ord-stages'))
+    expect(html.indexOf('ord-stages')).toBeLessThan(html.indexOf('ord-velocity'))
+  })
+
+  it('TC5: bookmarkable URL — project prop is passed down so the widget can build the correct API URL', async () => {
+    // Verify that DashboardGrid passes the project prop to each chart widget.
+    // This ensures that if the page is loaded from a bookmarked URL, the
+    // widget receives the correct project to fetch its data from.
+    const PropEchoStages = markRaw(defineComponent({
+      props: ['project'],
+      template: '<div class="stages-prop-echo" :data-project="project" />',
+    }))
+    registerWidget('stages-distribution', PropEchoStages, { slot: 'chart', order: 1 })
+
+    const wrapper = mount(DashboardGrid, {
+      props: { project: 'bookmarked-project' },
+      global: { plugins: [makeRouter('/p/bookmarked-project/dashboard')] },
+    })
+    await flushPromises()
+
+    const echo = wrapper.find('.stages-prop-echo')
+    expect(echo.exists()).toBe(true)
+    expect(echo.attributes('data-project')).toBe('bookmarked-project')
+  })
+})
+
+// NOTE: M5-TC2 (click-through URL) and M5-TC3 (filtered list contents) are
+// covered directly in tests/web/StagesDistributionWidget.test.ts (TC4) where
+// the echarts click handler and router.push are tested in widget isolation.
+//
+// M5-TC4 (back navigation restores dashboard) requires real browser history
+// evaluation and is deferred to a Playwright E2E suite.

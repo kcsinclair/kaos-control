@@ -199,3 +199,70 @@ describe('widgetRegistry — all three slot types', () => {
     expect(widgetList.filter(w => w.slot === 'panel')).toHaveLength(1)
   })
 })
+
+// ===========================================================================
+// Milestone 4 — stages-distribution widget registration contract
+//
+// These tests verify the expected registration arguments that registerWidgets.ts
+// uses for the stages-distribution widget. They call registerWidget directly
+// (mirroring what registerWidgets.ts does) in a clean widgetList so each test
+// is self-contained and does not depend on module load order.
+// ===========================================================================
+
+describe('widgetRegistry — stages-distribution registration (Milestone 4)', () => {
+  it('TC1: stages-distribution is registered in the chart slot with order 1', () => {
+    registerWidget('stages-distribution', StubA, { slot: 'chart', order: 1 })
+
+    const entry = widgetList.find(w => w.id === 'stages-distribution')
+    expect(entry).toBeDefined()
+    expect(entry?.slot).toBe('chart')
+    expect(entry?.order).toBe(1)
+  })
+
+  it('TC2: chart-slot widgets are ordered status-distribution(0) → stages-distribution(1) → velocity-chart(2)', () => {
+    // Register all three chart-slot widgets in arbitrary order.
+    registerWidget('velocity-chart',      StubC, { slot: 'chart', order: 2 })
+    registerWidget('stages-distribution', StubB, { slot: 'chart', order: 1 })
+    registerWidget('status-distribution', StubA, { slot: 'chart', order: 0 })
+
+    const chartIds = widgetList
+      .filter(w => w.slot === 'chart')
+      .map(w => w.id)
+
+    expect(chartIds).toEqual(['status-distribution', 'stages-distribution', 'velocity-chart'])
+  })
+
+  it('TC3: registering stages-distribution twice does not create a duplicate entry', () => {
+    registerWidget('stages-distribution', StubA, { slot: 'chart', order: 1 })
+    registerWidget('stages-distribution', StubB, { slot: 'chart', order: 99 })
+
+    expect(widgetList.filter(w => w.id === 'stages-distribution')).toHaveLength(1)
+  })
+
+  it('TC3b: first registration is preserved on duplicate (not overwritten)', () => {
+    registerWidget('stages-distribution', StubA, { slot: 'chart', order: 1 })
+    registerWidget('stages-distribution', StubB, { slot: 'panel', order: 99 })
+
+    const entry = widgetList.find(w => w.id === 'stages-distribution')
+    expect(entry?.slot).toBe('chart')
+    expect(entry?.order).toBe(1)
+    expect(entry?.component).toBe(StubA)
+  })
+
+  it('status-distribution retains order 0 (unchanged by stages-distribution addition)', () => {
+    registerWidget('status-distribution', StubA, { slot: 'chart', order: 0 })
+    registerWidget('stages-distribution', StubB, { slot: 'chart', order: 1 })
+
+    const statusEntry = widgetList.find(w => w.id === 'status-distribution')
+    expect(statusEntry?.order).toBe(0)
+  })
+
+  it('velocity-chart retains order 2 (updated slot position with stages-distribution at 1)', () => {
+    registerWidget('status-distribution', StubA, { slot: 'chart', order: 0 })
+    registerWidget('stages-distribution', StubB, { slot: 'chart', order: 1 })
+    registerWidget('velocity-chart',      StubC, { slot: 'chart', order: 2 })
+
+    const velocityEntry = widgetList.find(w => w.id === 'velocity-chart')
+    expect(velocityEntry?.order).toBe(2)
+  })
+})
