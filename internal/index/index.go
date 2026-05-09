@@ -1851,7 +1851,14 @@ func (idx *Index) CompletionVelocity(granularity string, days int, trackedTypes 
 	}
 
 	typesIn, typeArgs := trackedTypesClause(trackedTypes)
-	since := time.Now().AddDate(0, 0, -days)
+	// All date bucketing is done in the server's local timezone so that period
+	// labels (e.g. "2026-05-09") match the wall-clock date on which each
+	// transition occurred locally. Using time.Local explicitly here — rather
+	// than relying on the zero-value location of time.Unix — makes the intent
+	// clear and keeps period generation and timestamp conversion consistent.
+	loc := time.Local
+	now := time.Now().In(loc)
+	since := now.AddDate(0, 0, -days)
 	args := append([]any{since.Unix()}, typeArgs...)
 	rows, err := idx.db.Query(
 		`SELECT timestamp FROM events
@@ -1873,14 +1880,20 @@ func (idx *Index) CompletionVelocity(granularity string, days int, trackedTypes 
 		if err := rows.Scan(&ts); err != nil {
 			return nil, err
 		}
-		timestamps = append(timestamps, time.Unix(ts, 0))
+		// Convert the stored UTC epoch to local time so that the period key
+		// (e.g. "2026-05-09") reflects the local wall-clock date of the
+		// transition, not the UTC date. Without .In(loc), a server running in
+		// UTC would bucket a transition at 00:30 AEST (= 14:30 UTC the day
+		// before) into the preceding UTC date, producing a zero count for the
+		// correct local date.
+		timestamps = append(timestamps, time.Unix(ts, 0).In(loc))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
 	// Build all period keys in range, then count events per period.
-	periods := velocityPeriods(granularity, since, time.Now())
+	periods := velocityPeriods(granularity, since, now)
 	counts := make(map[string]int, len(periods))
 	for _, p := range periods {
 		counts[p] = 0
