@@ -346,3 +346,261 @@ func velocityBucketCount(buckets []velocityBucket, period string) int {
 	}
 	return 0
 }
+
+// ── Milestone 1 — days parameter behaviour ────────────────────────────────────
+
+// TestVelocityDaysParam_Explicit verifies that days=14 with daily granularity
+// returns a window of approximately 14 days (at least 14 buckets).
+func TestVelocityDaysParam_Explicit(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=daily&days=14", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	gran, _ := data["granularity"].(string)
+	if gran != "daily" {
+		t.Errorf("granularity: want %q, got %q", "daily", gran)
+	}
+
+	buckets := decodeVelocityBuckets(t, data)
+	// days=14 produces buckets from 14 days ago through today inclusive (≥14).
+	if len(buckets) < 14 {
+		t.Errorf("days=14 daily: expected ≥14 buckets, got %d", len(buckets))
+	}
+	// Must not span the full 90-day default window.
+	if len(buckets) > 20 {
+		t.Errorf("days=14 daily: expected ≤20 buckets (not default 90-day window), got %d", len(buckets))
+	}
+}
+
+// TestVelocityDaysParam_Zero verifies that days=0 falls back to the 90-day
+// default window (HTTP handler requires n > 0).
+func TestVelocityDaysParam_Zero(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=weekly&days=0", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	buckets := decodeVelocityBuckets(t, data)
+	// Default 90-day window with weekly granularity → at least 12 ISO-week buckets.
+	if len(buckets) < 12 {
+		t.Errorf("days=0 (fallback to 90) weekly: expected ≥12 buckets, got %d", len(buckets))
+	}
+}
+
+// TestVelocityDaysParam_Negative verifies that days=-5 falls back to the 90-day
+// default window.
+func TestVelocityDaysParam_Negative(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=weekly&days=-5", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	buckets := decodeVelocityBuckets(t, data)
+	// Negative days falls back to default 90-day window.
+	if len(buckets) < 12 {
+		t.Errorf("days=-5 (fallback to 90) weekly: expected ≥12 buckets, got %d", len(buckets))
+	}
+}
+
+// TestVelocityDaysParam_OverMax verifies that days=400 is clamped to the 365-day
+// maximum and returns the same bucket count as days=365.
+func TestVelocityDaysParam_OverMax(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp365 := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=weekly&days=365", nil)
+	requireStatus(t, resp365, 200)
+	data365 := readJSON(t, resp365)
+	buckets365 := decodeVelocityBuckets(t, data365)
+
+	resp400 := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=weekly&days=400", nil)
+	requireStatus(t, resp400, 200)
+	data400 := readJSON(t, resp400)
+	buckets400 := decodeVelocityBuckets(t, data400)
+
+	// days=400 must be clamped: same bucket count as days=365.
+	if len(buckets400) != len(buckets365) {
+		t.Errorf("days=400 should be clamped to 365: buckets365=%d, buckets400=%d",
+			len(buckets365), len(buckets400))
+	}
+}
+
+// TestVelocityDaysParam_NonNumeric verifies that a non-numeric days value falls
+// back to the 90-day default window.
+func TestVelocityDaysParam_NonNumeric(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=weekly&days=abc", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	buckets := decodeVelocityBuckets(t, data)
+	// Non-numeric falls back to default 90-day window.
+	if len(buckets) < 12 {
+		t.Errorf("days=abc (fallback to 90) weekly: expected ≥12 buckets, got %d", len(buckets))
+	}
+}
+
+// TestVelocityDaysParam_Omitted verifies that omitting the days parameter
+// returns the 90-day default window.
+func TestVelocityDaysParam_Omitted(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	// No days param — must match the explicit days=90 response.
+	respOmit := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=weekly", nil)
+	requireStatus(t, respOmit, 200)
+	dataOmit := readJSON(t, respOmit)
+	bucketsOmit := decodeVelocityBuckets(t, dataOmit)
+
+	resp90 := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=weekly&days=90", nil)
+	requireStatus(t, resp90, 200)
+	data90 := readJSON(t, resp90)
+	buckets90 := decodeVelocityBuckets(t, data90)
+
+	if len(bucketsOmit) != len(buckets90) {
+		t.Errorf("omitted days should equal days=90: omit=%d, explicit90=%d",
+			len(bucketsOmit), len(buckets90))
+	}
+}
+
+// ── Milestone 2 — zero-fill coverage ─────────────────────────────────────────
+
+// TestVelocityZeroFill_Daily7 verifies that an empty project with daily&days=7
+// returns at least 7 contiguous buckets all with count=0.
+func TestVelocityZeroFill_Daily7(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=daily&days=7", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	buckets := decodeVelocityBuckets(t, data)
+	if len(buckets) < 7 {
+		t.Errorf("daily days=7 empty project: expected ≥7 buckets, got %d", len(buckets))
+	}
+
+	for _, b := range buckets {
+		if b.count != 0 {
+			t.Errorf("bucket %s: expected count=0 (empty project), got %d", b.period, b.count)
+		}
+	}
+}
+
+// TestVelocityZeroFill_Weekly28 verifies that an empty project with weekly&days=28
+// returns at least 4 buckets all with count=0.
+func TestVelocityZeroFill_Weekly28(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=weekly&days=28", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	buckets := decodeVelocityBuckets(t, data)
+	if len(buckets) < 4 {
+		t.Errorf("weekly days=28 empty project: expected ≥4 buckets, got %d", len(buckets))
+	}
+
+	for _, b := range buckets {
+		if b.count != 0 {
+			t.Errorf("bucket %s: expected count=0 (empty project), got %d", b.period, b.count)
+		}
+	}
+}
+
+// TestVelocityZeroFill_Monthly90 verifies that an empty project with monthly&days=90
+// returns at least 2 monthly buckets all with count=0.
+func TestVelocityZeroFill_Monthly90(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=monthly&days=90", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	buckets := decodeVelocityBuckets(t, data)
+	if len(buckets) < 2 {
+		t.Errorf("monthly days=90 empty project: expected ≥2 buckets, got %d", len(buckets))
+	}
+
+	// Verify all are zero-count.
+	for _, b := range buckets {
+		if b.count != 0 {
+			t.Errorf("bucket %s: expected count=0 (empty project), got %d", b.period, b.count)
+		}
+	}
+
+	// Verify YYYY-MM format.
+	for _, b := range buckets {
+		if len(b.period) != 7 || b.period[4] != '-' {
+			t.Errorf("monthly bucket period has unexpected format: %q", b.period)
+		}
+	}
+}
+
+// TestVelocityZeroFill_Contiguous verifies that a 14-day daily window with a
+// single event placed in the middle produces contiguous date-keyed buckets with
+// exactly one non-zero count and all others zero, and no gaps in the date sequence.
+func TestVelocityZeroFill_Contiguous(t *testing.T) {
+	seeds := []seedArtifact{
+		{relPath: "lifecycle/requirements/vel-contiguous-1.md",
+			content: makeArtifact("Vel Contiguous 1", "ticket", "done", "vel-contiguous-1", "", "Body.")},
+	}
+	env := newTestEnv(t, seeds)
+	env.login("admin@test.local", "admin-pass-123")
+
+	// Place the single event 7 days ago — midpoint of a 14-day window.
+	seedVelocityEvent(t, env, "lifecycle/requirements/vel-contiguous-1.md", daysAgo(7))
+
+	resp := env.doRequest("GET", "/api/p/testproject/dashboard/velocity?granularity=daily&days=14", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	buckets := decodeVelocityBuckets(t, data)
+	if len(buckets) < 14 {
+		t.Errorf("daily days=14: expected ≥14 buckets, got %d", len(buckets))
+	}
+
+	// Exactly one bucket must have count=1; all others must be count=0.
+	nonZero := 0
+	for _, b := range buckets {
+		if b.count > 0 {
+			nonZero++
+			if b.count != 1 {
+				t.Errorf("bucket %s: expected count=1, got %d", b.period, b.count)
+			}
+		}
+	}
+	if nonZero != 1 {
+		t.Errorf("expected exactly 1 non-zero bucket, got %d", nonZero)
+	}
+
+	// The 7-days-ago bucket must be the non-zero one.
+	key7 := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
+	if c := velocityBucketCount(buckets, key7); c != 1 {
+		t.Errorf("bucket %s (7 days ago): want count=1, got %d", key7, c)
+	}
+
+	// Verify date contiguity: each period key must be exactly one day after the previous.
+	for i := 1; i < len(buckets); i++ {
+		prev, err1 := time.Parse("2006-01-02", buckets[i-1].period)
+		curr, err2 := time.Parse("2006-01-02", buckets[i].period)
+		if err1 != nil || err2 != nil {
+			t.Errorf("failed to parse bucket periods: %q, %q", buckets[i-1].period, buckets[i].period)
+			continue
+		}
+		if curr.Sub(prev) != 24*time.Hour {
+			t.Errorf("gap between buckets: %q → %q (expected 1 day)", buckets[i-1].period, buckets[i].period)
+		}
+	}
+}
