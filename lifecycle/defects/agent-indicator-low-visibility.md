@@ -10,6 +10,10 @@ labels:
     - frontend
     - usability
     - agent
+release: KC-Release0
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Running Agent Indicator Has Insufficient Visual Contrast
