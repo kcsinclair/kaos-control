@@ -1,7 +1,7 @@
 ---
 title: Incorrect Dashboard Widget Layout in Rows 2 and 3
 type: defect
-status: approved
+status: in-development
 lineage: dashboard-widget-layout-row2-row3
 created: "2026-05-09T18:14:16+10:00"
 priority: high
