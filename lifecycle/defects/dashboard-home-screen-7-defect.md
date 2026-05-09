@@ -1,13 +1,15 @@
 ---
-title: "Dashboard stats/distribution tests fail: blocked artifacts auto-transitioned to draft on index"
+title: 'Dashboard stats/distribution tests fail: blocked artifacts auto-transitioned to draft on index'
 type: defect
 status: done
 lineage: dashboard-home-screen
 parent: lifecycle/tests/dashboard-home-screen-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: May2026
 assignees:
-  - role: test-developer
-    who: agent
+    - role: test-developer
+      who: agent
 ---
 
 # Dashboard stats/distribution tests fail: blocked artifacts auto-transitioned to draft on index
