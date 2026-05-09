@@ -10,7 +10,7 @@ labels:
     - enhancement
     - workflow
     - artefacts
-release: June2026
+release: KC-AgentHandling
 ---
 
 relates-to: [[ideas/improved-agent-handling]]
