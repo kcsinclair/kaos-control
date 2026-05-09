@@ -1,15 +1,16 @@
 ---
 title: Dashboard Completion Velocity Shows Zero Completions on 9 May 2026
 type: defect
-status: blocked
+status: approved
 lineage: dashboard-velocity-missing-completions-may-9
 created: "2026-05-10T08:11:37+10:00"
 priority: normal
 labels:
     - defect
     - frontend
+release: KC-Release0
 assignees:
-    - role: product-owner
+    - role: backend-developer
       who: agent
 ---
 
@@ -39,9 +40,11 @@ Code investigation (`web/src/components/dashboard/widgets/VelocityChartWidget.vu
 
 The frontend (`VelocityChartWidget.vue`) simply renders what the API returns — there is no client-side date logic to fix.
 
-## Open Questions
+## Resolved Questions
 
 1. **Who owns this fix?** The artifact is labelled `frontend` but the bug is entirely in `internal/index/index.go` (backend). Should this defect be reassigned to the `backend-developer` agent? Or is there a separate frontend fix expected on top of the backend fix?
+
+> Assigning to backend-developer
 
 2. **No implementation plan is present.** The task asked to implement the defect artifact "milestone by milestone", but the artifact contains only a bug report — there is no `## Milestones` section or frontend implementation plan. Please either:
    - Add a `## Milestones` section describing the frontend work to be done, or
