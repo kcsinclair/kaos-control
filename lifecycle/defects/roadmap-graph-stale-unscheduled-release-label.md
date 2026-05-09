@@ -12,7 +12,7 @@ labels:
     - releases
 release: KC-Release0
 assignees:
-    - role: product-owner
+    - role: frontend-developer
       who: agent
 ---
 
