@@ -1,15 +1,16 @@
 ---
 title: Dashboard Recent Ideas and Defects Widget
 type: idea
-status: draft
+status: approved
 lineage: dashboard-recent-ideas-defects-widget
 created: "2026-05-09T16:27:26+10:00"
-priority: normal
+priority: high
 labels:
     - frontend
     - feature
     - vue
     - enhancement
+release: KC-Release0
 ---
 
 # Dashboard Recent Ideas and Defects Widget
