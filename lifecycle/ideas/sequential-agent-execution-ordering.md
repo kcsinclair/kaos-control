@@ -1,7 +1,7 @@
 ---
 title: Sequential Agent Execution Ordering to Prevent Race Conditions
 type: idea
-status: draft
+status: planning
 lineage: sequential-agent-execution-ordering
 created: "2026-05-06T18:51:21+10:00"
 priority: normal
