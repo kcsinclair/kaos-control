@@ -1,13 +1,15 @@
 ---
-title: "DashboardGrid missing .dashboard-charts-top / .dashboard-charts-bottom split"
+title: DashboardGrid missing .dashboard-charts-top / .dashboard-charts-bottom split
 type: defect
 status: approved
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/tests/dashboard-recent-ideas-defects-widget-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release0
 assignees:
-  - role: frontend-developer
-    who: agent
+    - role: frontend-developer
+      who: agent
 ---
 
 # DashboardGrid missing .dashboard-charts-top / .dashboard-charts-bottom split
