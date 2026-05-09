@@ -1,7 +1,7 @@
 ---
 title: Recent Ideas and Defects Dashboard Widget
 type: requirement
-status: approved
+status: planning
 lineage: dashboard-recent-ideas-defects-widget
 created: "2026-05-09"
 priority: high
