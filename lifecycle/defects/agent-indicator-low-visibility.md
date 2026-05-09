@@ -1,7 +1,7 @@
 ---
 title: Running Agent Indicator Has Insufficient Visual Contrast
 type: defect
-status: approved
+status: in-development
 lineage: agent-indicator-low-visibility
 created: "2026-05-09T17:51:30+10:00"
 priority: normal
