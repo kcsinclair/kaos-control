@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { api } from '@/api/client'
 import { use, init } from 'echarts/core'
 import { BarChart } from 'echarts/charts'
@@ -99,6 +99,7 @@ const MAX_BAR_WIDTH = 60  // px — cap to avoid excessively wide bars
 const granularity = ref<Granularity>('daily')
 const chartEl = ref<HTMLDivElement | null>(null)
 const containerWidth = ref(0)
+const chartHeight = ref(240)  // increases by 30px when DataZoom slider is shown
 let chart: ECharts | null = null
 const isEmpty = ref(false)
 const ariaLabel = ref('Completion velocity chart loading')
@@ -126,6 +127,17 @@ async function fetchAndRender() {
     const maxVisibleBars = containerWidth.value > 0
       ? Math.floor(containerWidth.value / MIN_BAR_WIDTH)
       : periods.length
+    const needsScroll = periods.length > maxVisibleBars
+
+    // Adjust chart height to accommodate DataZoom slider
+    chartHeight.value = needsScroll ? 270 : 240
+    await nextTick()
+
+    // DataZoom: show rightmost bars by default
+    const dzStart = needsScroll
+      ? Math.max(0, (1 - maxVisibleBars / periods.length) * 100)
+      : 0
+    const baseBottom = granularity.value === 'daily' ? 60 : 40
 
     chart.setOption({
       tooltip: {
@@ -135,7 +147,7 @@ async function fetchAndRender() {
           return `${p.name}: ${p.value} completed`
         },
       },
-      grid: { left: 40, right: 16, top: 16, bottom: granularity.value === 'daily' ? 60 : 40 },
+      grid: { left: 40, right: 16, top: 16, bottom: needsScroll ? baseBottom + 40 : baseBottom },
       xAxis: {
         type: 'category',
         data: periods,
@@ -149,6 +161,12 @@ async function fetchAndRender() {
         minInterval: 1,
         axisLabel: { fontSize: 11 },
       },
+      dataZoom: needsScroll
+        ? [
+            { type: 'inside', xAxisIndex: 0, start: dzStart, end: 100 },
+            { type: 'slider', xAxisIndex: 0, start: dzStart, end: 100, height: 20 },
+          ]
+        : [],
       series: [
         {
           name: 'Completed',
@@ -160,7 +178,7 @@ async function fetchAndRender() {
         },
       ],
     })
-    void maxVisibleBars // used in M4
+    chart.resize()
   } catch {
     isEmpty.value = true
   }
@@ -231,6 +249,7 @@ const GRANULARITIES: { value: Granularity; label: string }[] = [
       class="velocity-chart"
       role="img"
       :aria-label="ariaLabel"
+      :style="{ height: chartHeight + 'px' }"
     />
     <div v-else class="widget-empty">No completions in this period</div>
   </div>
