@@ -3,7 +3,7 @@ title: Parsing Errors can Trigger an Agent to resolve
 type: idea
 status: draft
 lineage: parsing-errors-trigger-agent
-priority: normal
+priority: low
 labels:
     - artefacts
     - workflow
