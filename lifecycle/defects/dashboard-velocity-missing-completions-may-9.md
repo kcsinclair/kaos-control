@@ -1,7 +1,7 @@
 ---
 title: Dashboard Completion Velocity Shows Zero Completions on 9 May 2026
 type: defect
-status: approved
+status: in-development
 lineage: dashboard-velocity-missing-completions-may-9
 created: "2026-05-10T08:11:37+10:00"
 priority: normal
