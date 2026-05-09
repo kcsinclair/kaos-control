@@ -10,7 +10,7 @@ labels:
     - feature
     - workflow
     - artefacts
-release: April2026
+release: June2026
 ---
 
 # Associate Defects with an Existing Lineage
