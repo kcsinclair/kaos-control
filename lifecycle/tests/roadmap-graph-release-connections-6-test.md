@@ -1,7 +1,7 @@
 ---
 title: Integration Tests — Directed Release Chain Graph
 type: test
-status: approved
+status: done
 lineage: roadmap-graph-release-connections
 parent: lifecycle/test-plans/roadmap-graph-release-connections-5-test.md
 ---
