@@ -122,6 +122,7 @@ export interface ArtifactFilter {
   priority?: string
   release?: string
   q?: string
+  sort?: string
   limit?: number
   offset?: number
 }

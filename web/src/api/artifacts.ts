@@ -11,6 +11,7 @@ function filterParams(f: ArtifactFilter): string {
   if (f.priority) p.set('priority', f.priority)
   if (f.release)  p.set('release', f.release)
   if (f.q)        p.set('q', f.q)
+  if (f.sort)      p.set('sort', f.sort)
   if (f.limit !== undefined) p.set('limit', String(f.limit))
   if (f.offset)   p.set('offset', String(f.offset))
   const s = p.toString()
