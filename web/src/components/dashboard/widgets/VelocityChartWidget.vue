@@ -23,7 +23,7 @@ interface VelocityResponse {
   granularity: Granularity
 }
 
-const granularity = ref<Granularity>('weekly')
+const granularity = ref<Granularity>('daily')
 const chartEl = ref<HTMLDivElement | null>(null)
 let chart: ECharts | null = null
 const isEmpty = ref(false)
@@ -32,7 +32,7 @@ const ariaLabel = ref('Completion velocity chart loading')
 async function fetchAndRender() {
   try {
     const data = await api.get<VelocityResponse>(
-      `/p/${encodeURIComponent(props.project)}/dashboard/velocity?granularity=${granularity.value}`
+      `/p/${encodeURIComponent(props.project)}/dashboard/velocity?granularity=${granularity.value}&days=90`
     )
     const items = data.buckets ?? []
     isEmpty.value = items.length === 0 || items.every((i) => i.count === 0)
