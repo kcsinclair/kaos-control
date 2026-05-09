@@ -10,6 +10,7 @@ labels:
     - integration
     - agent
     - backend
+release: KC-MoreLLMS
 ---
 
 # OpenRouter LLM Integration
