@@ -4,7 +4,7 @@ type: defect
 status: draft
 lineage: artefact-list-text-filter-excludes-labels
 created: "2026-05-09T16:32:20+10:00"
-priority: normal
+priority: low
 labels:
     - defect
     - artefacts
