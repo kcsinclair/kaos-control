@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { use, init } from 'echarts/core'
 import { PieChart } from 'echarts/charts'
@@ -10,6 +11,7 @@ import type { ECharts } from 'echarts/core'
 use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const props = defineProps<{ project: string }>()
+const router = useRouter()
 
 interface StageDistributionItem {
   stage: string
@@ -89,6 +91,12 @@ async function fetchAndRender() {
 function initChart() {
   if (!chartEl.value) return
   chart = init(chartEl.value)
+  chart.on('click', (params: { name?: string }) => {
+    const stage = params.name
+    if (stage) {
+      router.push({ name: 'artifacts', params: { project: props.project }, query: { stage } })
+    }
+  })
   void fetchAndRender()
 }
 
