@@ -1,7 +1,7 @@
 ---
 title: kaos-control CLI Init Command
 type: idea
-status: approved
+status: clarifying
 lineage: cli-init-scaffold
 created: "2026-05-08T17:55:01+10:00"
 priority: high
