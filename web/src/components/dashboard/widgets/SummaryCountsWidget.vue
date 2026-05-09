@@ -36,8 +36,28 @@ useWebSocket(props.project, 'artifact.indexed', (_e: WsEvent) => {
 </script>
 
 <template>
-  <SummaryCountCard label="Total Tickets"       :value="stats.total_tickets"       :icon="Ticket" />
-  <SummaryCountCard label="In Progress"          :value="stats.in_progress"         :icon="Play" />
-  <SummaryCountCard label="Blocked"              :value="stats.blocked"             :icon="AlertOctagon" />
-  <SummaryCountCard label="Completed This Week"  :value="stats.completed_this_week" :icon="CheckCircle" />
+  <SummaryCountCard
+    label="Lifecycle Total"
+    :value="stats.total_tickets"
+    :icon="Ticket"
+    :to="{ name: 'artifacts', params: { project: props.project }, query: {} }"
+  />
+  <SummaryCountCard
+    label="In Progress"
+    :value="stats.in_progress"
+    :icon="Play"
+    :to="null"
+  />
+  <SummaryCountCard
+    label="Blocked"
+    :value="stats.blocked"
+    :icon="AlertOctagon"
+    :to="{ name: 'artifacts', params: { project: props.project }, query: { status: 'blocked' } }"
+  />
+  <SummaryCountCard
+    label="Completed This Week"
+    :value="stats.completed_this_week"
+    :icon="CheckCircle"
+    :to="null"
+  />
 </template>

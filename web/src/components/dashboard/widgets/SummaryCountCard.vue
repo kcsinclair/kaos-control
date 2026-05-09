@@ -1,15 +1,41 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { computed } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   label: string
   value: number | string
   icon?: Component
+  to?: RouteLocationRaw | null
 }>()
+
+const router = useRouter()
+const isInteractive = computed(() => props.to != null)
+
+const ariaLabel = computed(() =>
+  isInteractive.value
+    ? `View ${props.value} ${props.label.toLowerCase()} artifacts`
+    : `${props.label}: ${props.value}`
+)
+
+function navigate() {
+  if (props.to) router.push(props.to)
+}
 </script>
 
 <template>
-  <div class="summary-card" role="figure" :aria-label="`${label}: ${value}`" tabindex="0">
+  <div
+    class="summary-card"
+    :class="{ 'summary-card--interactive': isInteractive }"
+    :role="isInteractive ? 'link' : 'figure'"
+    :aria-label="ariaLabel"
+    :tabindex="isInteractive ? 0 : undefined"
+    @click="isInteractive && navigate()"
+    @keydown.enter="isInteractive && navigate()"
+    @keydown.space.prevent="isInteractive && navigate()"
+  >
     <div class="summary-card-icon" aria-hidden="true">
       <component :is="icon" v-if="icon" :size="20" />
     </div>
