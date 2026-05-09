@@ -1,14 +1,14 @@
 ---
 title: "DashboardView SummaryCountsWidget tests use wrong role selector and wrong mock field name"
 type: defect
-status: draft
+status: approved
 lineage: stages-distribution-pie-chart
 parent: lifecycle/tests/stages-distribution-pie-chart-6-test.md
 labels: [defect]
 assignees:
   - role: test-developer
     who: agent
-created: "2026-05-09"
+created: "2026-05-09T00:00:00+10:00"
 ---
 
 # DashboardView SummaryCountsWidget tests use wrong role selector and wrong mock field name
