@@ -19,19 +19,88 @@ A single-binary lifecycle management tool that turns ideas into shipped releases
 - **Backend**: Go 1.25, `chi`, `goldmark`, `modernc.org/sqlite` (pure-Go), `go-git`, `coder/websocket`, `fsnotify`.
 - **Frontend**: Vue 3, Vite 5, TypeScript, Pinia, `markdown-it`, `3d-force-graph` + three.js, Cytoscape.js + fcose, CodeMirror 6.
 
-## Quick start
+## Getting started
+
+### Prerequisites
+
+| | Why |
+|---|---|
+| **Go 1.25+** | Builds the server binary. |
+| **Node.js 20+ & pnpm** | Builds the embedded SPA. |
+| **Git 2.30+** | The server commits artifact changes to your project's git repo. |
+| **Claude Code CLI** *(optional)* | Required only if you want to run agents. `npm install -g @anthropic-ai/claude-code` and `claude auth login`. |
+
+### 1. Build the binary
 
 ```sh
-# Build everything (frontend + backend)
-make all
-
-# Run in dev mode (default config at ~/.kaos-control/config.yaml)
-make run
+git clone https://github.com/kcsinclair/kaos-control.git
+cd kaos-control
+make all          # builds web/dist + ./dist/kaos-control
 ```
 
-App config: `~/.kaos-control/config.yaml`. Projects are registered as YAML files in `~/.kaos-control/projects/*.yaml`. Per-project config (roles, agents, plan gates) lives at `<project>/lifecycle/config.yaml`. DevOps pipelines live at `<project>/lifecycle/devops/*.yaml`; their run logs are written to `~/.kaos-control/devops/<project>/`.
+The Go binary embeds the SPA via `embed.FS`, so `./dist/kaos-control` is a single self-contained executable.
 
-Open <http://localhost:8080> to see the project picker.
+### 2. First run
+
+```sh
+./dist/kaos-control
+```
+
+On first launch, kaos-control writes a default `~/.kaos-control/config.yaml` and starts listening on `:8042`. Open <http://localhost:8042>.
+
+The first user can be created without authentication (bootstrap). Use the in-app sign-up form, or:
+
+```sh
+curl -X POST http://localhost:8042/api/admin/users \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","display_name":"You","password":"choose-a-strong-password"}'
+```
+
+After the first account exists, this endpoint requires authentication.
+
+### 3. Bootstrap a project
+
+The fastest path is the CLI scaffolder:
+
+```sh
+cd /path/to/your/project        # any directory; an existing git repo or a fresh one
+kaos-control init               # creates lifecycle/, lifecycle/config.yaml, CLAUDE.md
+```
+
+`kaos-control init` creates the standard `lifecycle/` directory tree (`ideas/`, `requirements/`, `backend-plans/`, `frontend-plans/`, `test-plans/`, `tests/`, `defects/`, `releases/`, `sprints/`, `prototypes/`), a skeleton `lifecycle/config.yaml` with the standard role and agent definitions, and a `CLAUDE.md` to guide agent runs in this project.
+
+Then register the project with kaos-control:
+
+```sh
+mkdir -p ~/.kaos-control/projects
+cat > ~/.kaos-control/projects/myproject.yaml <<EOF
+name: myproject
+path: /path/to/your/project
+description: <one-line description>
+owner: you@example.com
+EOF
+```
+
+Restart the server (or wait for it to pick up the new entry on the next scan) and the project will appear in the picker.
+
+### 4. Use it
+
+- Open <http://localhost:8042>, sign in, choose your project.
+- Create an idea, work it through `clarifying → planning → in-development → in-qa → approved → done`.
+- Configure agents per-role in `<project>/lifecycle/config.yaml` to have them produce the next artifact in the lineage.
+- Wire DevOps pipelines into `<project>/lifecycle/devops/*.yaml` to trigger build/test/release from the UI.
+
+## Where things live
+
+| Path | Purpose |
+|---|---|
+| `~/.kaos-control/config.yaml` | App-level config (server, auth, agents, ollama) |
+| `~/.kaos-control/projects/*.yaml` | One file per registered project |
+| `~/.kaos-control/data/<project>/index.db` | Per-project SQLite cache (rebuilt from disk on startup) |
+| `~/.kaos-control/devops/<project>/<run_id>.log` | DevOps pipeline run logs |
+| `<project>/lifecycle/config.yaml` | Per-project: roles, agents, plan gates, dashboard tracked types |
+| `<project>/lifecycle/devops/*.yaml` | DevOps pipeline definitions for this project |
+| `<project>/lifecycle/{ideas,requirements,…}/` | Artifacts (markdown + YAML frontmatter) |
 
 ## Repository layout
 
