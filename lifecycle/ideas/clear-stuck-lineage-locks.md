@@ -1,7 +1,7 @@
 ---
 title: Clear stuck lineage locks from the UI
 type: idea
-status: approved
+status: draft
 lineage: clear-stuck-lineage-locks
 created: "2026-04-28T16:00:00+10:00"
 priority: normal
