@@ -1,7 +1,7 @@
 ---
 title: "Test Suite: Stages Distribution Pie Chart"
 type: test
-status: draft
+status: approved
 lineage: stages-distribution-pie-chart
 parent: lifecycle/test-plans/stages-distribution-pie-chart-5-test.md
 created: "2026-05-09"
