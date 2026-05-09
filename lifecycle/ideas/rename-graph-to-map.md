@@ -1,15 +1,16 @@
 ---
 title: Rename Graph to Map in UI and Routing
 type: idea
-status: draft
+status: approved
 lineage: rename-graph-to-map
 created: "2026-05-10T09:02:57+10:00"
-priority: normal
+priority: medium
 labels:
     - frontend
     - usability
     - enhancement
     - vue
+release: KC-Release0
 ---
 
 # Rename Graph to Map in UI and Routing
