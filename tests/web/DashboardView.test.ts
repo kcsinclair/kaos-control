@@ -264,7 +264,7 @@ describe('SummaryCountsWidget — summary counts after API response', () => {
     await flushPromises()
 
     const cards = wrapper.findAll('[role="figure"]')
-    // Card order: Total Tickets, In Progress, Blocked, Completed This Week
+    // Card order: Lifecycle Total, In Progress, Blocked, Completed This Week
     expect(cards[0].find('.summary-card-value').text()).toBe('12')
     expect(cards[1].find('.summary-card-value').text()).toBe('3')
     expect(cards[2].find('.summary-card-value').text()).toBe('1')
@@ -305,7 +305,7 @@ describe('SummaryCountsWidget — summary counts after API response', () => {
     await flushPromises()
 
     const labels = wrapper.findAll('.summary-card-label').map(el => el.text())
-    expect(labels).toContain('Total Tickets')
+    expect(labels).toContain('Lifecycle Total')
     expect(labels).toContain('In Progress')
     expect(labels).toContain('Blocked')
     expect(labels).toContain('Completed This Week')
@@ -437,3 +437,130 @@ describe('DashboardGrid — Milestone 5: StagesDistributionWidget integration', 
 //
 // M5-TC4 (back navigation restores dashboard) requires real browser history
 // evaluation and is deferred to a Playwright E2E suite.
+
+// ===========================================================================
+// Milestone 5 — Dashboard layout regression: recent-ideas-defects widget
+//
+// Verifies that the DashboardGrid correctly places widgets into the
+// .dashboard-charts-top container (first 3 chart-slot widgets) and the
+// .dashboard-charts-bottom container (chart-slot widgets 4+).
+//
+// The production registration order is:
+//   chart order 0   → status-distribution
+//   chart order 1   → stages-distribution
+//   chart order 1.5 → recent-ideas-defects   (new widget)
+//   chart order 2   → velocity-chart
+//
+// TC5 (responsive single-column collapse at <1024 px) requires Playwright
+// because happy-dom does not evaluate CSS @media rules.
+// ===========================================================================
+
+describe('DashboardGrid — Milestone 5: layout with recent-ideas-defects widget', () => {
+  it('TC1: all 6 named widgets can be registered across the three slots', async () => {
+    const SummaryStub  = markRaw(defineComponent({ name: 'SummaryStub',  template: '<div class="stub-summary-counts" />' }))
+    const StatusStub   = markRaw(defineComponent({ name: 'StatusStub',   template: '<div class="stub-status-dist" />' }))
+    const StagesStub   = markRaw(defineComponent({ name: 'StagesStub',   template: '<div class="stub-stages-dist" />' }))
+    const RecentStub   = markRaw(defineComponent({ name: 'RecentStub',   template: '<div class="stub-recent-ideas" />' }))
+    const VelocityStub = markRaw(defineComponent({ name: 'VelocityStub', template: '<div class="stub-velocity" />' }))
+    const FeedStub     = markRaw(defineComponent({ name: 'FeedStub',     template: '<div class="stub-activity-feed" />' }))
+
+    registerWidget('summary-counts',      SummaryStub,  { slot: 'summary', order: 0   })
+    registerWidget('status-distribution', StatusStub,   { slot: 'chart',   order: 0   })
+    registerWidget('stages-distribution', StagesStub,   { slot: 'chart',   order: 1   })
+    registerWidget('recent-ideas-defects', RecentStub,  { slot: 'chart',   order: 1.5 })
+    registerWidget('velocity-chart',      VelocityStub, { slot: 'chart',   order: 2   })
+    registerWidget('activity-feed',       FeedStub,     { slot: 'panel',   order: 0   })
+
+    const wrapper = mount(DashboardGrid, {
+      props: { project: 'testproject' },
+      global: { plugins: [makeRouter()] },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('.stub-summary-counts').exists()).toBe(true)
+    expect(wrapper.find('.stub-status-dist').exists()).toBe(true)
+    expect(wrapper.find('.stub-stages-dist').exists()).toBe(true)
+    expect(wrapper.find('.stub-recent-ideas').exists()).toBe(true)
+    expect(wrapper.find('.stub-velocity').exists()).toBe(true)
+    expect(wrapper.find('.stub-activity-feed').exists()).toBe(true)
+  })
+
+  it('TC2: summary-counts is in summary slot; activity-feed is in panel slot', async () => {
+    const SummaryStub = markRaw(defineComponent({ name: 'SummaryStub', template: '<div class="tc2-summary" />' }))
+    const FeedStub    = markRaw(defineComponent({ name: 'FeedStub',    template: '<div class="tc2-feed" />' }))
+
+    registerWidget('summary-counts', SummaryStub, { slot: 'summary', order: 0 })
+    registerWidget('activity-feed',  FeedStub,    { slot: 'panel',   order: 0 })
+
+    const wrapper = mount(DashboardGrid, {
+      props: { project: 'testproject' },
+      global: { plugins: [makeRouter()] },
+    })
+    await flushPromises()
+
+    const summarySection = wrapper.find('section[aria-label="Summary statistics"]')
+    const panelSection   = wrapper.find('section[aria-label="Panels"]')
+
+    expect(summarySection.find('.tc2-summary').exists()).toBe(true)
+    expect(panelSection.find('.tc2-feed').exists()).toBe(true)
+  })
+
+  it('TC3: first 3 chart-slot widgets render inside .dashboard-charts-top', async () => {
+    const StatusStub  = markRaw(defineComponent({ name: 'StatusStub',  template: '<div class="tc3-status" />' }))
+    const StagesStub  = markRaw(defineComponent({ name: 'StagesStub',  template: '<div class="tc3-stages" />' }))
+    const RecentStub  = markRaw(defineComponent({ name: 'RecentStub',  template: '<div class="tc3-recent" />' }))
+    const VeloStub    = markRaw(defineComponent({ name: 'VeloStub',    template: '<div class="tc3-velo" />' }))
+
+    registerWidget('status-distribution',  StatusStub, { slot: 'chart', order: 0   })
+    registerWidget('stages-distribution',  StagesStub, { slot: 'chart', order: 1   })
+    registerWidget('recent-ideas-defects', RecentStub, { slot: 'chart', order: 1.5 })
+    registerWidget('velocity-chart',       VeloStub,   { slot: 'chart', order: 2   })
+
+    const wrapper = mount(DashboardGrid, {
+      props: { project: 'testproject' },
+      global: { plugins: [makeRouter()] },
+    })
+    await flushPromises()
+
+    const top = wrapper.find('.dashboard-charts-top')
+    expect(top.exists()).toBe(true)
+    // The first 3 chart widgets (order 0, 1, 1.5) must be inside .dashboard-charts-top.
+    expect(top.find('.tc3-status').exists()).toBe(true)
+    expect(top.find('.tc3-stages').exists()).toBe(true)
+    expect(top.find('.tc3-recent').exists()).toBe(true)
+    // velocity-chart (4th chart widget) must NOT be inside .dashboard-charts-top.
+    expect(top.find('.tc3-velo').exists()).toBe(false)
+  })
+
+  it('TC4: velocity-chart renders inside .dashboard-charts-bottom', async () => {
+    const StatusStub  = markRaw(defineComponent({ name: 'StatusStub',  template: '<div class="tc4-status" />' }))
+    const StagesStub  = markRaw(defineComponent({ name: 'StagesStub',  template: '<div class="tc4-stages" />' }))
+    const RecentStub  = markRaw(defineComponent({ name: 'RecentStub',  template: '<div class="tc4-recent" />' }))
+    const VeloStub    = markRaw(defineComponent({ name: 'VeloStub',    template: '<div class="tc4-velo" />' }))
+
+    registerWidget('status-distribution',  StatusStub, { slot: 'chart', order: 0   })
+    registerWidget('stages-distribution',  StagesStub, { slot: 'chart', order: 1   })
+    registerWidget('recent-ideas-defects', RecentStub, { slot: 'chart', order: 1.5 })
+    registerWidget('velocity-chart',       VeloStub,   { slot: 'chart', order: 2   })
+
+    const wrapper = mount(DashboardGrid, {
+      props: { project: 'testproject' },
+      global: { plugins: [makeRouter()] },
+    })
+    await flushPromises()
+
+    const bottom = wrapper.find('.dashboard-charts-bottom')
+    expect(bottom.exists()).toBe(true)
+    expect(bottom.find('.tc4-velo').exists()).toBe(true)
+    // The first three chart widgets must NOT be inside .dashboard-charts-bottom.
+    expect(bottom.find('.tc4-status').exists()).toBe(false)
+    expect(bottom.find('.tc4-stages').exists()).toBe(false)
+    expect(bottom.find('.tc4-recent').exists()).toBe(false)
+  })
+
+  it('TC5 note: responsive single-column collapse at <1024px deferred to Playwright', () => {
+    // happy-dom does not evaluate CSS @media rules. This test is a placeholder
+    // that documents the deferral decision.
+    expect(true).toBe(true)
+  })
+})

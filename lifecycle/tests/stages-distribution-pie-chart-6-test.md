@@ -1,10 +1,10 @@
 ---
 title: "Test Suite: Stages Distribution Pie Chart"
 type: test
-status: in-qa
+status: approved
 lineage: stages-distribution-pie-chart
 parent: lifecycle/test-plans/stages-distribution-pie-chart-5-test.md
-created: "2026-05-09"
+created: "2026-05-09T00:00:00+10:00"
 ---
 
 # Test Suite: Stages Distribution Pie Chart
