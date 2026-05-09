@@ -110,11 +110,17 @@ function initChart() {
   void fetchAndRender()
 }
 
+const ro = typeof ResizeObserver !== 'undefined'
+  ? new ResizeObserver(() => chart?.resize())
+  : null
+
 onMounted(() => {
   initChart()
+  if (chartEl.value && ro) ro.observe(chartEl.value)
 })
 
 onUnmounted(() => {
+  ro?.disconnect()
   chart?.dispose()
   chart = null
 })
