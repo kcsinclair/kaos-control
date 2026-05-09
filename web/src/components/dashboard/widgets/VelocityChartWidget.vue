@@ -104,6 +104,76 @@ let chart: ECharts | null = null
 const isEmpty = ref(false)
 const ariaLabel = ref('Completion velocity chart loading')
 
+// Cached data for re-render without re-fetch
+let cachedPeriods: string[] = []
+let cachedCounts: number[] = []
+let cachedGranularity: Granularity = 'daily'
+
+async function renderChart() {
+  if (!chart || isEmpty.value) {
+    if (isEmpty.value) chart?.clear()
+    return
+  }
+
+  const periods = cachedPeriods
+  const counts = cachedCounts
+  const gran = cachedGranularity
+
+  const maxVisibleBars = containerWidth.value > 0
+    ? Math.floor(containerWidth.value / MIN_BAR_WIDTH)
+    : periods.length
+  const needsScroll = periods.length > maxVisibleBars
+
+  chartHeight.value = needsScroll ? 270 : 240
+  await nextTick()
+
+  const dzStart = needsScroll
+    ? Math.max(0, (1 - maxVisibleBars / periods.length) * 100)
+    : 0
+  const baseBottom = gran === 'daily' ? 60 : 40
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: unknown) => {
+        const p = (params as Array<{ name: string; value: number }>)[0]
+        return `${p.name}: ${p.value} completed`
+      },
+    },
+    grid: { left: 40, right: 16, top: 16, bottom: needsScroll ? baseBottom + 40 : baseBottom },
+    xAxis: {
+      type: 'category',
+      data: periods,
+      axisLabel: {
+        rotate: gran === 'daily' ? 45 : 0,
+        fontSize: 11,
+      },
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      axisLabel: { fontSize: 11 },
+    },
+    dataZoom: needsScroll
+      ? [
+          { type: 'inside', xAxisIndex: 0, start: dzStart, end: 100 },
+          { type: 'slider', xAxisIndex: 0, start: dzStart, end: 100, height: 20 },
+        ]
+      : [],
+    series: [
+      {
+        name: 'Completed',
+        type: 'bar',
+        data: counts,
+        barMaxWidth: MAX_BAR_WIDTH,
+        itemStyle: { color: '#6366f1', borderRadius: [3, 3, 0, 0] },
+        emphasis: { itemStyle: { color: '#4f46e5' } },
+      },
+    ],
+  })
+  chart.resize()
+}
+
 async function fetchAndRender() {
   try {
     const data = await api.get<VelocityResponse>(
@@ -113,72 +183,14 @@ async function fetchAndRender() {
     isEmpty.value = rawItems.length === 0 || rawItems.every((i) => i.count === 0)
     const items = padBuckets(rawItems, granularity.value)
 
-    if (!chart) return
-    if (isEmpty.value) {
-      chart.clear()
-      return
-    }
+    cachedGranularity = granularity.value
+    cachedPeriods = items.map((i) => i.period)
+    cachedCounts = items.map((i) => i.count)
 
-    const periods = items.map((i) => i.period)
-    const counts = items.map((i) => i.count)
     const realTotal = rawItems.reduce((s, i) => s + i.count, 0)
     ariaLabel.value = `Completion velocity ${granularity.value}: ${realTotal} completions over ${items.length} periods`
 
-    const maxVisibleBars = containerWidth.value > 0
-      ? Math.floor(containerWidth.value / MIN_BAR_WIDTH)
-      : periods.length
-    const needsScroll = periods.length > maxVisibleBars
-
-    // Adjust chart height to accommodate DataZoom slider
-    chartHeight.value = needsScroll ? 270 : 240
-    await nextTick()
-
-    // DataZoom: show rightmost bars by default
-    const dzStart = needsScroll
-      ? Math.max(0, (1 - maxVisibleBars / periods.length) * 100)
-      : 0
-    const baseBottom = granularity.value === 'daily' ? 60 : 40
-
-    chart.setOption({
-      tooltip: {
-        trigger: 'axis',
-        formatter: (params: unknown) => {
-          const p = (params as Array<{ name: string; value: number }>)[0]
-          return `${p.name}: ${p.value} completed`
-        },
-      },
-      grid: { left: 40, right: 16, top: 16, bottom: needsScroll ? baseBottom + 40 : baseBottom },
-      xAxis: {
-        type: 'category',
-        data: periods,
-        axisLabel: {
-          rotate: granularity.value === 'daily' ? 45 : 0,
-          fontSize: 11,
-        },
-      },
-      yAxis: {
-        type: 'value',
-        minInterval: 1,
-        axisLabel: { fontSize: 11 },
-      },
-      dataZoom: needsScroll
-        ? [
-            { type: 'inside', xAxisIndex: 0, start: dzStart, end: 100 },
-            { type: 'slider', xAxisIndex: 0, start: dzStart, end: 100, height: 20 },
-          ]
-        : [],
-      series: [
-        {
-          name: 'Completed',
-          type: 'bar',
-          data: counts,
-          barMaxWidth: MAX_BAR_WIDTH,
-          itemStyle: { color: '#6366f1', borderRadius: [3, 3, 0, 0] },
-          emphasis: { itemStyle: { color: '#4f46e5' } },
-        },
-      ],
-    })
-    chart.resize()
+    await renderChart()
   } catch {
     isEmpty.value = true
   }
@@ -191,10 +203,21 @@ function initChart() {
   void fetchAndRender()
 }
 
+// Inline 150ms debounce for resize callbacks
+let resizeTimer: ReturnType<typeof setTimeout> | null = null
+function debouncedResize(width: number) {
+  if (resizeTimer !== null) clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    resizeTimer = null
+    containerWidth.value = width
+    void renderChart()
+  }, 150)
+}
+
 const ro = typeof ResizeObserver !== 'undefined'
   ? new ResizeObserver((entries) => {
-      if (entries[0]) containerWidth.value = entries[0].contentRect.width
-      chart?.resize()
+      const width = entries[0]?.contentRect.width ?? containerWidth.value
+      debouncedResize(width)
     })
   : null
 
