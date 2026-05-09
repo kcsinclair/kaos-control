@@ -1,7 +1,7 @@
 ---
 title: 'Roadmap Gantt Release Drill-Down: Show Only Ideas and Defects'
 type: idea
-status: clarifying
+status: planning
 lineage: roadmap-release-filter-ideas-defects
 created: "2026-05-09T16:15:27+10:00"
 priority: high
