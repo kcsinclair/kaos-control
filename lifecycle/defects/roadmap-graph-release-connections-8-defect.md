@@ -4,10 +4,12 @@ type: defect
 status: done
 lineage: roadmap-graph-release-connections
 parent: lifecycle/tests/roadmap-graph-release-connections-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: May2026
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # 7-day gap between releases labelled "7 days" instead of "1 week"
