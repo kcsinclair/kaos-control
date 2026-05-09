@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Recent Ideas and Defects Dashboard Widget"
 type: plan-test
-status: draft
+status: approved
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/requirements/dashboard-recent-ideas-defects-widget-2.md
 created: "2026-05-09"
