@@ -1,7 +1,7 @@
 ---
 title: Testing Board Text Search Filter
 type: idea
-status: approved
+status: draft
 lineage: testing-board-text-filter
 created: "2026-05-07T11:45:54+10:00"
 priority: high
