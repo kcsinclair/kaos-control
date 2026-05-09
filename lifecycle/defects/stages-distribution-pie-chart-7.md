@@ -1,7 +1,7 @@
 ---
 title: "SummaryCountsWidget first card label is 'Lifecycle Total' instead of 'Total Tickets'"
 type: defect
-status: approved
+status: rejected
 lineage: stages-distribution-pie-chart
 parent: lifecycle/tests/stages-distribution-pie-chart-6-test.md
 labels: [defect]
