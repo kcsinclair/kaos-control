@@ -210,6 +210,7 @@ func (s *Server) buildRouter() chi.Router {
 			r.Route("/dashboard", func(r chi.Router) {
 				r.Get("/stats", s.handleGetDashboardStats)
 				r.Get("/status-distribution", s.handleGetStatusDistribution)
+				r.Get("/stage-distribution", s.handleGetStageDistribution)
 				r.Get("/velocity", s.handleGetVelocity)
 			})
 

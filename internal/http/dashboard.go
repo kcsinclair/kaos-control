@@ -52,6 +52,23 @@ func (s *Server) handleGetStatusDistribution(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, map[string]any{"distribution": distribution})
 }
 
+// handleGetStageDistribution handles GET /api/p/:project/dashboard/stage-distribution
+func (s *Server) handleGetStageDistribution(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	distribution, err := p.Idx.StageDistribution(p.Cfg.Dashboard.TrackedTypes)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"distribution": distribution})
+}
+
 // handleGetVelocity handles GET /api/p/:project/dashboard/velocity
 // Query params:
 //   - granularity  string  daily|weekly|monthly  (default: weekly)
