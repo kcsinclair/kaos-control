@@ -71,6 +71,48 @@ they can be merged.
   test, write the plan/test artifact under `lifecycle/` and link it from the
   PR. The project's own development uses the same lifecycle it enforces.
 
+## Licence headers on new source files
+
+Every Go, TypeScript, and Vue source file in this repository carries an
+[SPDX](https://spdx.dev/) licence-identifier comment near the top:
+
+```go
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+package foo
+```
+
+```ts
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { …
+```
+
+```vue
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
+<script setup lang="ts">
+…
+</script>
+```
+
+When you add a new `.go`, `.ts`, or `.vue` file, please include the matching
+SPDX header. The CI lint pass (once enabled) will check for it; reviewers
+will ask you to add it before merge. No copyright line is needed — your
+ownership of your contribution is recorded by `git log` and your DCO
+sign-off (see [NOTICE](NOTICE)).
+
+For Go files with `//go:build` constraints, place the SPDX line *above* the
+build tag:
+
+```go
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+//go:build integration
+
+package integration
+```
+
 ## What you are agreeing to by contributing
 
 - Your contribution will be distributed under the project's **AGPLv3**
