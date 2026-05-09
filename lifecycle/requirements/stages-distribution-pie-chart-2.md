@@ -1,7 +1,7 @@
 ---
 title: Stages Distribution Pie Chart Widget
 type: requirement
-status: planning
+status: done
 lineage: stages-distribution-pie-chart
 created: "2026-05-09T00:00:00+10:00"
 priority: high
