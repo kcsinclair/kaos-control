@@ -21,9 +21,15 @@ registerWidget(
 )
 
 registerWidget(
+  'stages-distribution',
+  defineAsyncComponent(() => import('./widgets/StagesDistributionWidget.vue')),
+  { slot: 'chart', order: 1 },
+)
+
+registerWidget(
   'velocity-chart',
   defineAsyncComponent(() => import('./widgets/VelocityChartWidget.vue')),
-  { slot: 'chart', order: 1 },
+  { slot: 'chart', order: 2 },
 )
 
 registerWidget(
