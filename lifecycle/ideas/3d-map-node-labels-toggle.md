@@ -1,7 +1,7 @@
 ---
 title: Toggleable Node Titles and Lineage in 3D Maps
 type: idea
-status: draft
+status: approved
 lineage: 3d-map-node-labels-toggle
 created: "2026-05-10T09:09:43+10:00"
 priority: normal
@@ -11,6 +11,7 @@ labels:
     - roadmaps
     - vue
     - usability
+release: KC-Release0
 ---
 
 # Toggleable Node Titles and Lineage in 3D Maps
