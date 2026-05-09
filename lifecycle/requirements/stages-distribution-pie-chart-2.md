@@ -1,7 +1,7 @@
 ---
 title: Stages Distribution Pie Chart Widget
 type: requirement
-status: blocked
+status: approved
 lineage: stages-distribution-pie-chart
 created: "2026-05-09"
 priority: high
@@ -145,8 +145,12 @@ Each pie slice must be clickable. Clicking a slice navigates to:
 - [ ] The widget is lazy-loaded (does not appear in the initial JS bundle).
 - [ ] Existing dashboard widgets (Status Distribution, Velocity Chart, Summary Counts, Activity Feed) are unaffected.
 
-## Open Questions
+## Resolved Questions
 
 1. **Should done/abandoned artifacts be included in the stage distribution?** The Status Distribution widget excludes them. For stage distribution, including all artifacts gives a truer picture of where work has accumulated historically. This requirement specifies including all statuses, but the product owner may want to align with the Status Distribution's exclusion behaviour.
 
+> Exclude done/abandoned artifacts
+
 2. **Widget ordering mechanism** — The current `registerWidget` order field is an integer. Placing this widget between order 0 (Status Distribution) and order 1 (Velocity Chart) requires either fractional ordering or renumbering. The implementation should choose whichever approach the widget registry supports.
+
+> Renumber
