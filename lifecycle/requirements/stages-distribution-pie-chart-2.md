@@ -3,7 +3,7 @@ title: Stages Distribution Pie Chart Widget
 type: requirement
 status: planning
 lineage: stages-distribution-pie-chart
-created: "2026-05-09"
+created: "2026-05-09T00:00:00+10:00"
 priority: high
 parent: lifecycle/ideas/stages-distribution-pie-chart.md
 labels:

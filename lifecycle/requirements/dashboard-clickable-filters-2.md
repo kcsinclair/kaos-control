@@ -3,7 +3,7 @@ title: Dashboard Items as Clickable Filters
 type: requirement
 status: planning
 lineage: dashboard-clickable-filters
-created: "2026-05-09"
+created: "2026-05-09T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/dashboard-clickable-filters.md
 labels:
