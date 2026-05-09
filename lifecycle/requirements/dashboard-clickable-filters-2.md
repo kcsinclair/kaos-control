@@ -1,7 +1,7 @@
 ---
 title: Dashboard Items as Clickable Filters
 type: requirement
-status: approved
+status: planning
 lineage: dashboard-clickable-filters
 created: "2026-05-09"
 priority: normal
