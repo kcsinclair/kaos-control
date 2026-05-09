@@ -11,7 +11,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Watcher tests flaky under full test-suite load: external-edit events not delivered within 2 s window

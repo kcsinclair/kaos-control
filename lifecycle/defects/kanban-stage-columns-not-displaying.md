@@ -9,7 +9,7 @@ labels:
     - defect
     - frontend
     - vue
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # POSSIBLY REDUNDANT

@@ -7,7 +7,7 @@ priority: high
 labels:
     - enhancement
     - frontend
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Labels are Nodes

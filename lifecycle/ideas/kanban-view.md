@@ -7,7 +7,7 @@ priority: normal
 labels:
     - artefacts
     - workflow
-release: April2026
+release: KC-OG-Sprint
 ---
 
 Rename artifacts to artefacts.

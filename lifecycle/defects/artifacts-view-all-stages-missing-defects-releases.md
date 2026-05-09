@@ -9,7 +9,7 @@ labels:
     - artefacts
     - frontend
     - vue
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Artifacts View 'All Stages' Control Missing Defects and Releases Stages

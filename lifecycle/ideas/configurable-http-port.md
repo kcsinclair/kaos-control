@@ -8,7 +8,7 @@ labels:
     - backend
     - feature
     - go
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Configurable HTTP Port via YAML Config

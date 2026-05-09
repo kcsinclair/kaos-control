@@ -9,7 +9,7 @@ labels:
     - frontend
     - vue
     - usability
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Table Pagination Controls

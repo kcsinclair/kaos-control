@@ -9,7 +9,7 @@ labels:
     - feature
     - frontend
     - workflow
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Frontmatter Editor Role-Based Assignment

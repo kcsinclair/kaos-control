@@ -9,7 +9,7 @@ labels:
     - backend
     - watcher
     - artefacts
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Lifecycle indexer does not ignore README.md files; no configurable ignore patterns in YAML config

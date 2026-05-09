@@ -9,7 +9,7 @@ labels:
     - feature
     - artefacts
     - workflow
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Status Checker Button

@@ -9,7 +9,7 @@ labels:
     - agent
     - workflow
     - artefacts
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Analyst Agent Does Not Set In-Progress Status During Execution

@@ -8,7 +8,7 @@ labels:
     - artefacts
     - backend
     - feature
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Frontmatter Created Date for Artifacts

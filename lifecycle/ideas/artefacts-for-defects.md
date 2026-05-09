@@ -7,7 +7,7 @@ priority: normal
 labels:
     - artefacts
     - enhancement
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # artefacts for defects 

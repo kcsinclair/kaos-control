@@ -10,7 +10,7 @@ labels:
     - agent
     - frontend
     - artefacts
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Agent Launcher Panel Shows No Eligible Artifacts for Backend-Developer Despite Approved Artifacts Existing

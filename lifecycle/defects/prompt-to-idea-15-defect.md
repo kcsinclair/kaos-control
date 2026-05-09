@@ -10,7 +10,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Generate endpoint returns 500 instead of 400 for short input when agent is not configured

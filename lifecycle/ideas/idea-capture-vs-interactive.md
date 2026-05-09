@@ -9,7 +9,7 @@ labels:
     - workflow
     - process
     - enhancement
-release: April2026
+release: KC-OG-Sprint
 ---
 
 relates-to: [[ideas/prompt-to-idea]]

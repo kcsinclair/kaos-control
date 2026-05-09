@@ -8,7 +8,7 @@ labels:
     - defect
     - frontend
     - vue
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Frontmatter Editor: Incorrect Ordering of Priority and Status Dropdowns

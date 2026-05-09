@@ -8,7 +8,7 @@ labels:
     - artefacts
     - og
     - feature
-release: April2026
+release: KC-OG-Sprint
 ---
 
 File was high-level-requirements.md

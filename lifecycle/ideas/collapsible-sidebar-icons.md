@@ -10,7 +10,7 @@ labels:
     - feature
     - usability
     - vue
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Collapsible Left Menu with Icon-Only Mode

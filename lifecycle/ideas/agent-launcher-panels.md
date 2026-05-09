@@ -10,7 +10,7 @@ labels:
     - frontend
     - agent
     - vue
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Agent Launcher Panels on Agents Screen

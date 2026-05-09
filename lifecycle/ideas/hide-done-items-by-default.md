@@ -9,7 +9,7 @@ labels:
     - feature
     - frontend
     - usability
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Hide Done Items by Default Across All Screens

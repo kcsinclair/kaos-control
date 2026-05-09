@@ -9,7 +9,7 @@ labels:
     - artefacts
     - og
     - feature
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Requirements Clarification Questions

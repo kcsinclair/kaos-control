@@ -11,7 +11,7 @@ labels:
     - feature
     - frontend
     - backend
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Artifact Agent Run History

@@ -10,7 +10,7 @@ labels:
     - frontend
     - usability
     - vue
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Sortable Table Columns

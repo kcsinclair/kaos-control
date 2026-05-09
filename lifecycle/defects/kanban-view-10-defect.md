@@ -11,7 +11,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # GET /api/p/:project/config/kanban missing requireAuth middleware — returns 200 unauthenticated

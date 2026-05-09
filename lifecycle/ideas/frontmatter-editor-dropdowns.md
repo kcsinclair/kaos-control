@@ -9,7 +9,7 @@ labels:
     - frontend
     - usability
     - vue
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Frontmatter Editor: Add Priority Dropdown and Convert Status to Dropdown

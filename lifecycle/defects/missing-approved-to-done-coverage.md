@@ -9,7 +9,7 @@ labels:
 assignees:
     - role: test-developer
       who: agent
-release: April2026
+release: KC-OG-Sprint
 ---
 
 ## Reproduction Steps

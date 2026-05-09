@@ -10,7 +10,7 @@ labels:
     - usability
     - agent
     - vue
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Move Running Agents Indicator to Menu Bar

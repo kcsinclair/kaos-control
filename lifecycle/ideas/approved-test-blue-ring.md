@@ -9,7 +9,7 @@ labels:
     - frontend
     - feature
     - vue
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Blue Ring Indicator for Approved Tests in 2D and 3D Maps

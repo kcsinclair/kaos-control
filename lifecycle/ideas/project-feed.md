@@ -9,7 +9,7 @@ labels:
     - frontend
     - workflow
     - artefacts
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # Project Feed

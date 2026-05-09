@@ -10,7 +10,7 @@ labels:
 assignees:
     - role: test-developer
       who: agent
-release: April2026
+release: KC-OG-Sprint
 ---
 
 # SPA routing integration tests fail because test server has no embedded frontend
