@@ -1,7 +1,7 @@
 ---
 title: Velocity Widget Auto-Scaling Columns and Minimum Periods
 type: requirement
-status: blocked
+status: approved
 lineage: dashboard-velocity-auto-scale
 created: "2026-05-09"
 priority: high
@@ -88,7 +88,12 @@ The scroll position must default to the most recent period (right-most).
 - [ ] `pnpm build` and `pnpm exec vue-tsc --noEmit` pass with zero errors.
 - [ ] Related: [[dashboard-velocity-auto-scale]]
 
-## Open Questions
+## Resolved Questions
 
 1. Should the backend enforce the minimum-periods guarantee (always return >= N buckets, padding empty periods with `count: 0`), or should the frontend pad missing periods client-side? — Current assumption: backend already returns the full range; frontend simply renders what it receives.
+
+> Frontend should pad.
+
 2. Is ECharts' built-in `dataZoom` slider the preferred scroll UX, or should a native CSS `overflow-x: auto` container wrap the chart canvas? — Current assumption: use ECharts `dataZoom` since it is already imported.
+
+> Use the ECharts' built-in `dataZoom` slider
