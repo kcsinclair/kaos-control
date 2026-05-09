@@ -11,6 +11,7 @@ labels:
     - frontend
     - enhancement
     - releases
+release: KC-Feature-Sprint
 assignees:
     - role: product-owner
       who: agent
