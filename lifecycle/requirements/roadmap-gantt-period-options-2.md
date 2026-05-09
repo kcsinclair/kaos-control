@@ -1,7 +1,7 @@
 ---
 title: Roadmap Gantt Period Display Options
 type: requirement
-status: blocked
+status: approved
 lineage: roadmap-gantt-period-options
 created: "2026-05-09T00:00:00+10:00"
 priority: high
@@ -109,8 +109,16 @@ All new controls must be keyboard-navigable and include appropriate ARIA labels.
 
 Related: [[roadmap-gantt-period-options]]
 
-## Open Questions
+## Resolved Questions
 
 1. Should the fixed-period window anchor be configurable (e.g., "this quarter" vs. "next quarter"), or is the current period always sufficient for the initial implementation?
+
+> Current period for initial implementation.
+
 2. When a release bar is clipped at the window boundary, should there be a visual indicator (e.g., arrow or fade) to signal that the bar extends beyond the visible area?
+
+> Yes a visual indicator when clipped is good.
+
 3. Should the period-mode default be configurable in `lifecycle/config.yaml`, or is hardcoding Autoscale acceptable?
+
+> Yes, make it configurable.
