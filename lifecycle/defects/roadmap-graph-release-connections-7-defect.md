@@ -4,10 +4,12 @@ type: defect
 status: done
 lineage: roadmap-graph-release-connections
 parent: lifecycle/tests/roadmap-graph-release-connections-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: May2026
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # Unscheduled releases collapse to shared terminus instead of forming individual chain
