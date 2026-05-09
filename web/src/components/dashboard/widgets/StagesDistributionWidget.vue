@@ -131,6 +131,8 @@ watch(() => props.project, () => {
       v-if="!isEmpty"
       ref="chartEl"
       class="stages-dist-chart"
+      role="img"
+      :aria-label="chartAriaLabel"
     />
     <div v-else class="widget-empty">No artifacts yet</div>
   </div>
