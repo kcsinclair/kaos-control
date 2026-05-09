@@ -27,7 +27,51 @@ const error = ref<string | null>(null)
 const rawData = ref<GraphData>({ nodes: [], edges: [] })
 
 const allNodes = computed<GraphNode[]>(() => rawData.value.nodes)
-const allEdges = computed<GraphEdge[]>(() => rawData.value.edges)
+
+/**
+ * Augmented edge list: if the graph contains a synthetic `release:unscheduled`
+ * terminus, add a `timeline` edge from the last node in the main scheduled
+ * chain (Backlog → … → scheduledN) to `release:unscheduled` so the terminus
+ * is visually attached to the end of the timeline rather than floating.
+ *
+ * The backend emits edges from each unscheduled release *to* the terminus but
+ * does not connect the last scheduled release to it; we fill that gap here.
+ */
+const allEdges = computed<GraphEdge[]>(() => {
+  const edges = rawData.value.edges
+  const nodes = rawData.value.nodes
+
+  const UNSCHEDULED_ID = 'release:unscheduled'
+
+  // Only augment when the synthetic terminus exists.
+  if (!nodes.some((n) => n.id === UNSCHEDULED_ID && n.synthetic)) return edges
+
+  // Find the last node in the main timeline chain by looking at timeline edges
+  // that do NOT target the unscheduled terminus.  The last node is one that
+  // appears as a target but never as a source (it has no outgoing timeline
+  // edge to another scheduled/backlog node).
+  const chainSources = new Set<string>()
+  const chainTargets = new Set<string>()
+  for (const e of edges) {
+    if (e.kind === 'timeline' && e.target !== UNSCHEDULED_ID) {
+      chainSources.add(e.source)
+      chainTargets.add(e.target)
+    }
+  }
+
+  // Determine the tail: a chain target that is not itself a chain source.
+  // If no scheduled releases exist the tail falls back to the Backlog root.
+  const BACKLOG_ID = 'release:backlog'
+  const tails = [...chainTargets].filter((id) => !chainSources.has(id))
+  const lastChainNode = tails.length > 0 ? tails[0] : BACKLOG_ID
+
+  // Skip augmentation if the edge already exists (defensive).
+  if (edges.some((e) => e.source === lastChainNode && e.target === UNSCHEDULED_ID && e.kind === 'timeline')) {
+    return edges
+  }
+
+  return [...edges, { source: lastChainNode, target: UNSCHEDULED_ID, kind: 'timeline' }]
+})
 
 async function load() {
   loading.value = true
