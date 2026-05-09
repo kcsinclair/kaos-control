@@ -4,12 +4,13 @@ type: idea
 status: approved
 lineage: dashboard-velocity-auto-scale
 created: "2026-05-09T16:30:53+10:00"
-priority: normal
+priority: high
 labels:
     - enhancement
     - frontend
     - vue
     - usability
+release: KC-Release0
 ---
 
 # Dashboard Completion Velocity Improvements
