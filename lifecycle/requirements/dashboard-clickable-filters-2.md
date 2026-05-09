@@ -1,7 +1,7 @@
 ---
 title: Dashboard Items as Clickable Filters
 type: requirement
-status: blocked
+status: approved
 lineage: dashboard-clickable-filters
 created: "2026-05-09"
 priority: normal
@@ -111,8 +111,12 @@ Filter mappings (card → query params, chart segment → query params) should b
 - [ ] No new backend API endpoints or modifications are required.
 - [ ] Existing dashboard widget functionality (real-time WebSocket updates, responsive layout) is unaffected.
 
-## Open Questions
+## Resolved Questions
 
 1. **"Completed This Week" scope mismatch** — The Summary Counts widget's "Completed This Week" card counts artifacts completed in the current week (server-side), but the artifacts list `status=done` filter shows _all_ done artifacts regardless of completion date. Should we (a) add a date-range filter parameter to the list view to scope to the current week, (b) accept the mismatch and link to all `done` artifacts, or (c) omit the click-through on this card until date filtering exists?
 
+> Exclude Completed this week and Completion Velocity
+
 2. **Multiple-status filters** — The "In Progress" card currently maps to `status=in-development`. Should it also include `status=in-qa` and `status=in-progress`, or is `in-development` the sole intended status? If multiple statuses are desired, the list view's filter interface would need to support multi-value status parameters (e.g., `status=in-development&status=in-qa`).
+
+> Skip In Progress for now.
