@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Tests for BacklogPanel — Backlog Panel UI, A11y, and Filter behaviour
  *

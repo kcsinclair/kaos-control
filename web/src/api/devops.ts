@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { api } from '@/api/client'
 import type { LogLine } from '@/stores/devops'
 

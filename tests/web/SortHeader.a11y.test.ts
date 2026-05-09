@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Milestone 5b — Accessibility tests for `SortHeader` component
  *

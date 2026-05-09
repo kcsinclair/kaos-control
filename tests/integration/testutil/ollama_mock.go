@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //go:build integration
 
 // Package testutil provides shared test helpers for Ollama integration tests.

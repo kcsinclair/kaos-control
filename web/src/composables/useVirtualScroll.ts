@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { ref, computed, onMounted, onUnmounted, type Ref } from 'vue'
 
 export const VIRTUAL_SCROLL_ROW_HEIGHT = 20 // px — monospace line height

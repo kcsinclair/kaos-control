@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Milestone 4 — Integration tests: filter + layout interaction in Graph2DView
  *

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Milestone 6 — Performance tests for Graph2DView layout computation
  *

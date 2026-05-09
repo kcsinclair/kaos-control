@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Package git wraps go-git for kaos-control artifact commits and branch management.
 package git
 

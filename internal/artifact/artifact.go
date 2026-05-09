@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Package artifact parses kaos-control lifecycle markdown files.
 package artifact
 

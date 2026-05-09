@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Mock agents store helper for AppHeader run-indicator tests.
  *

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Package index manages the SQLite artifact index (a cache; disk is authoritative).
 package index
 

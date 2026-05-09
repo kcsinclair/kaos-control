@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 package index
 
 // Milestone 2 — Unit tests for the StageDistribution index method.

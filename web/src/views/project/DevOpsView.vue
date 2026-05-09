@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch, ref } from 'vue'
 import { useRoute } from 'vue-router'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Seed helpers — factory functions that produce typed fake objects for use
  * in Vitest unit tests. No network calls are made; all data is in-memory.

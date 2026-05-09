@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { api } from './client'
 import type { Release, ReleaseDetail, CreateReleasePayload, UpdateReleasePayload } from '@/types/release'
 import type { ArtifactRow, GraphData } from '@/types/api'

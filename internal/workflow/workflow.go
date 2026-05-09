@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Package workflow implements the artifact state machine from §6 of the spec.
 package workflow
 

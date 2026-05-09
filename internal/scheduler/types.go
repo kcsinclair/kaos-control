@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Package scheduler implements a tick-based job scheduler with SQLite persistence,
 // precondition evaluation, priority queuing, and concurrency control.
 package scheduler

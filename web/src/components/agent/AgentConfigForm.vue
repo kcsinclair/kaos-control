@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useOllamaInstancesStore } from '@/stores/ollamaInstances'

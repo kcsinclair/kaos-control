@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as graphApi from '@/api/graph'

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { computed, ref, type Ref } from 'vue'
 
 export type SortType = 'string' | 'date' | 'number' | 'text'

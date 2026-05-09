@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
 <script setup lang="ts">
 import { X } from 'lucide-vue-next'
 import type { ArtifactAssignee } from '@/types/api'

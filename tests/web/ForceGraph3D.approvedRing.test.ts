@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Milestone 3 — Component tests for ForceGraph3D.vue — approved-test blue ring
  *

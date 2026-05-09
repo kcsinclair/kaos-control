@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Milestone 2 — Store unit tests for layout state in useGraphStore
  *

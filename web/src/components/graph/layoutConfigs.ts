@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Layout configuration registry for Cytoscape 2D graph.
 // Adding a new layout requires only appending an entry here.
 

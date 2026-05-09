@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { WsEvent, WsEventType } from '@/types/api'
 
 type WsHandler = (event: WsEvent) => void

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { ref, onUnmounted } from 'vue'
 import { ApiError } from '@/api/client'
 import * as locksApi from '@/api/locks'

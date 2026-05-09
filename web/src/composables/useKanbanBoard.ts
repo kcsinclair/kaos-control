@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { ref, computed, reactive } from 'vue'
 import { api } from '@/api/client'
 import * as artifactsApi from '@/api/artifacts'

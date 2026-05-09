@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Package agent implements the agent runner: driver interface, claude-code-cli
 // driver, run lifecycle management, and scope enforcement.
 package agent

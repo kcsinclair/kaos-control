@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Component-level tests for PipelineLogPane and SplitPane
  * devops-pipeline-log-streaming — Milestones 3 & 4

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Milestone 2 — Component tests for Graph2DView.vue — approved-test blue ring
  *

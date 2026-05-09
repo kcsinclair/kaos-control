@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+
 <script setup lang="ts">
 import type { Component } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'

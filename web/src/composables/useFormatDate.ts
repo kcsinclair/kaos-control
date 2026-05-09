@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Parse an artifact date string robustly.
 // Plain date strings like "2026-04-27" are interpreted as local midnight
 // rather than UTC midnight (which is what new Date("YYYY-MM-DD") would do,

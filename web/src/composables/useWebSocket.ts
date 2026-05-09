@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { onMounted, onUnmounted } from 'vue'
 import { getProjectWs } from '@/api/ws'
 import type { WsEvent, WsEventType } from '@/types/api'

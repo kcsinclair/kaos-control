@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Package lock manages per-lineage editor/agent locks with SQLite persistence.
 package lock
 

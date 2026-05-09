@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Package statuscheck implements the lineage staleness detection algorithm.
 // Given a set of artifacts sharing a lineage, it walks from parent to child
 // and identifies artifacts whose status lags behind all their actively-progressing children.

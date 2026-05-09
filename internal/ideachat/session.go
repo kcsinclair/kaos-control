@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Package ideachat implements the conversational idea-capture session store
 // and LLM conversation logic.
 package ideachat

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Central widget registration.
  * Import this file once (in main.ts) to register all dashboard widgets.

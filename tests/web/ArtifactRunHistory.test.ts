@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Milestones 4 & 6 — Unit tests for the ArtifactRunHistory component
  *

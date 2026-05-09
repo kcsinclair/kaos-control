@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 package devops
 
 // WebSocket event type constants for pipeline execution.
