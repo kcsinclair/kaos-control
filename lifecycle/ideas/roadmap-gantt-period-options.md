@@ -1,15 +1,16 @@
 ---
 title: Roadmap Gantt Period Display Options
 type: idea
-status: draft
+status: approved
 lineage: roadmap-gantt-period-options
 created: "2026-05-09T16:16:52+10:00"
-priority: normal
+priority: high
 labels:
     - roadmaps
     - frontend
     - enhancement
     - usability
+release: KC-Release0
 ---
 
 # Roadmap Gantt Period Display Options
