@@ -1,7 +1,7 @@
 ---
 title: 'Release Drill-Down: Filter to Ideas and Defects Only'
 type: requirement
-status: planning
+status: approved
 lineage: roadmap-release-filter-ideas-defects
 created: "2026-05-09T00:00:00+10:00"
 priority: high
