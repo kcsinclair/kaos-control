@@ -9,8 +9,10 @@ labels:
     - workflow
     - process
     - enhancement
-release: KC-Release1
+release: KC-AgentHandling
 ---
+
+**this should be split to multiple ideas**
 
 NOTE: This is an example of an Epic idea, many requests related to agents in a single artefact.
 
