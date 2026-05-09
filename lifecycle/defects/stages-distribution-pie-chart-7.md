@@ -1,17 +1,20 @@
 ---
-title: "SummaryCountsWidget first card label is 'Lifecycle Total' instead of 'Total Tickets'"
+title: SummaryCountsWidget first card label is 'Lifecycle Total' instead of 'Total Tickets'
 type: defect
 status: rejected
 lineage: stages-distribution-pie-chart
-parent: lifecycle/tests/stages-distribution-pie-chart-6-test.md
-labels: [defect]
-assignees:
-  - role: frontend-developer
-    who: agent
 created: "2026-05-09"
+parent: lifecycle/tests/stages-distribution-pie-chart-6-test.md
+labels:
+    - defect
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # SummaryCountsWidget first card label is "Lifecycle Total" instead of "Total Tickets"
+
+**Keith had manually changed the name of the widget and did not update the test, test now updated.**
 
 ## Reproduction Steps
 
