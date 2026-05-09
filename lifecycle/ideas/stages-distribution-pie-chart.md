@@ -1,7 +1,7 @@
 ---
 title: Stages Distribution Pie Chart
 type: idea
-status: planning
+status: done
 lineage: stages-distribution-pie-chart
 created: "2026-05-09T16:21:25+10:00"
 priority: high
