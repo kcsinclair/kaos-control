@@ -16,7 +16,7 @@ release: KC-AgentHandling
 
 **this idea needs to be verified, may not be required now**
 
-relates-to: [[ideas/prompt-to-idea]]
+relates-to: ideas/prompt-to-idea
 
 When triggered the agent reviews and idea and can flesh it out with you, the result would be a better defined idea, NOT a detailed requirement.
 
