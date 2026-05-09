@@ -1,7 +1,7 @@
 ---
 title: Dashboard Items as Clickable Filters
 type: idea
-status: approved
+status: clarifying
 lineage: dashboard-clickable-filters
 created: "2026-05-09T16:08:35+10:00"
 priority: normal
