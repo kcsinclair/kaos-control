@@ -1,7 +1,7 @@
 ---
 title: Releases and Roadmaps
 type: idea
-status: clarifying
+status: done
 lineage: releases-and-roadmaps
 created: "2026-05-06T11:13:00+10:00"
 priority: high
