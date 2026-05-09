@@ -3,10 +3,11 @@ title: SummaryCountsWidget first card label is 'Lifecycle Total' instead of 'Tot
 type: defect
 status: rejected
 lineage: stages-distribution-pie-chart
-created: "2026-05-09"
+created: "2026-05-09T00:00:00+10:00"
 parent: lifecycle/tests/stages-distribution-pie-chart-6-test.md
 labels:
     - defect
+release: KC-Release0
 assignees:
     - role: frontend-developer
       who: agent
