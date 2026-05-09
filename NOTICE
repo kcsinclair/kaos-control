@@ -1,0 +1,50 @@
+kaos-control
+Copyright (c) 2026 Keith Sinclair <keith@sinclair.org.au>
+
+Licensed under the GNU Affero General Public License, version 3.0 or
+later (AGPL-3.0-or-later). See LICENSE for the full licence text.
+
+Source files in this repository carry an SPDX licence identifier
+comment near the top:
+
+  // SPDX-License-Identifier: AGPL-3.0-or-later
+
+A file without that identifier should still be assumed to fall under
+this licence; the SPDX comment is a redundant explicit signal for
+licence-scanning tools and downstream redistribution clarity.
+
+────────────────────────────────────────────────────────────────────────
+
+Contribution model
+
+Outside contributions are accepted under the Developer Certificate of
+Origin (DCO) — see CONTRIBUTING.md. Contributors retain copyright in
+their own contributions; the project does not require copyright
+assignment. The authoritative record of "who wrote what" is the git
+log.
+
+The maintainer (Keith Sinclair) holds copyright in:
+
+  - Code authored by the maintainer directly.
+  - Code committed by automated agents configured and operated by the
+    maintainer (e.g. backend-developer, frontend-developer,
+    test-developer, qa, requirements-analyst, planning-analyst —
+    see lifecycle/config.yaml). These agents act as work-for-hire
+    contributors under the maintainer's direction.
+
+Other contributors hold copyright in their own contributions, signed
+off via DCO.
+
+────────────────────────────────────────────────────────────────────────
+
+Third-party components
+
+The full list of third-party Go and JavaScript dependencies, with
+their respective licences, can be reproduced via:
+
+  go mod download -json all          # for Go modules
+  pnpm licenses list                 # for pnpm-managed JS packages
+
+No third-party licence text is bundled in this repository directly;
+licences are governed by the upstream packages and downloaded as part
+of the build.
