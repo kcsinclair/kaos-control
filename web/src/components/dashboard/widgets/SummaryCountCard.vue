@@ -92,4 +92,19 @@ function navigate() {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.summary-card--interactive {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.summary-card--interactive:hover {
+  background: var(--color-surface-elevated, color-mix(in srgb, var(--color-surface) 85%, var(--color-text) 15%));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.summary-card--interactive:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
 </style>
