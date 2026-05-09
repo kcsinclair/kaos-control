@@ -1,7 +1,7 @@
 ---
 title: Roadmap Graph Shows Stale 'Unscheduled' Release Instead of KC-AgentHandling
 type: defect
-status: draft
+status: approved
 lineage: roadmap-graph-stale-unscheduled-release-label
 created: "2026-05-09T17:40:44+10:00"
 priority: normal
