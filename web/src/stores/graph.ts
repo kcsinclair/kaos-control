@@ -120,7 +120,7 @@ export const useGraphStore = defineStore('graph', () => {
   const releaseEdges = computed<GraphEdge[]>(() => {
     const artifactIds = new Set(filteredNodes.value.map((n) => n.id))
     const releaseIds = new Set(releaseNodes.value.map((n) => n.id))
-    return rawEdges.value.filter((e) => {
+    const filtered = rawEdges.value.filter((e) => {
       if (e.kind === 'timeline') {
         // Timeline edges connect two release nodes — both must exist.
         return releaseIds.has(e.source) && releaseIds.has(e.target)
@@ -136,6 +136,34 @@ export const useGraphStore = defineStore('graph', () => {
       }
       return false
     })
+
+    // Augment: if a synthetic `release:unscheduled` terminus exists, connect the
+    // last node in the main scheduled timeline chain to it.  The backend emits
+    // edges from each unscheduled artifact *to* the terminus but does not connect
+    // the last scheduled release to it; we fill that gap here so the node is
+    // visually attached to the end of the timeline in both 2D and 3D views.
+    const UNSCHEDULED_ID = 'release:unscheduled'
+    const BACKLOG_ID = 'release:backlog'
+    if (releaseIds.has(UNSCHEDULED_ID) && releaseNodes.value.some((n) => n.id === UNSCHEDULED_ID && n.synthetic)) {
+      const chainSources = new Set<string>()
+      const chainTargets = new Set<string>()
+      for (const e of filtered) {
+        if (e.kind === 'timeline' && e.target !== UNSCHEDULED_ID) {
+          chainSources.add(e.source)
+          chainTargets.add(e.target)
+        }
+      }
+      const tails = [...chainTargets].filter((id) => !chainSources.has(id))
+      const lastChainNode = tails.length > 0 ? tails[0] : BACKLOG_ID
+      const alreadyExists = filtered.some(
+        (e) => e.source === lastChainNode && e.target === UNSCHEDULED_ID && e.kind === 'timeline'
+      )
+      if (!alreadyExists) {
+        return [...filtered, { source: lastChainNode, target: UNSCHEDULED_ID, kind: 'timeline' }]
+      }
+    }
+
+    return filtered
   })
 
   const augmentedNodes = computed<GraphNode[]>(() => {
