@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Velocity Widget Auto-Scaling (days param support)"
 type: plan-backend
-status: draft
+status: approved
 lineage: dashboard-velocity-auto-scale
 parent: lifecycle/requirements/dashboard-velocity-auto-scale-2.md
 created: "2026-05-09"
