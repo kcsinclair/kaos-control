@@ -45,7 +45,7 @@ import type { Release } from '@/types/release'
 const sample: Release = {
   id: 1,
   project_id: 'kaos-control',
-  name: 'May2026',
+  name: 'test-release',
   status: 'planned',
   start_date: null,
   end_date: null,
@@ -74,14 +74,14 @@ describe('releases API client unwraps the envelope', () => {
 
   it('createRelease returns a bare release, not the {release} wrapper', async () => {
     apiPost.mockResolvedValueOnce({ release: sample })
-    const result = await releasesApi.createRelease('kaos-control', { name: 'May2026' } as never)
+    const result = await releasesApi.createRelease('kaos-control', { name: 'test-release' } as never)
     expect(result).toEqual(sample)
     expect((result as unknown as { release?: Release }).release).toBeUndefined()
   })
 
   it('updateRelease returns a bare release', async () => {
     apiPut.mockResolvedValueOnce({ release: sample, artifacts_renamed: 0 })
-    const result = await releasesApi.updateRelease('kaos-control', 1, { name: 'May2026' } as never)
+    const result = await releasesApi.updateRelease('kaos-control', 1, { name: 'test-release' } as never)
     expect(result).toEqual(sample)
   })
 
@@ -118,7 +118,7 @@ describe('releases store stays array-shaped through the fetch+create flow', () =
     apiPost.mockResolvedValueOnce({ release: sample })
     const store = useReleasesStore()
     await store.fetch('kaos-control')
-    const result = await store.create('kaos-control', { name: 'May2026' } as never)
+    const result = await store.create('kaos-control', { name: 'test-release' } as never)
     expect(result).toEqual(sample)
     expect(store.releases).toHaveLength(1)
     expect(store.releases[0]).toEqual(sample)
