@@ -1,7 +1,7 @@
 ---
 title: Lineage Visibility Controls
 type: idea
-status: draft
+status: planning
 lineage: lineage-visibility-controls
 created: "2026-04-28T09:27:07+10:00"
 priority: normal
