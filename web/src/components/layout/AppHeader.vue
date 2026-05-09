@@ -137,18 +137,19 @@ async function handleLogout() {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-border-dark);
+  border: 1px solid #22c55e;
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  color: var(--color-sidebar-text-muted);
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
   text-decoration: none;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .header-run-indicator:hover {
   color: #fff;
-  border-color: var(--color-sidebar-text);
-  background: rgba(255,255,255,0.08);
+  border-color: #4ade80;
+  background: rgba(34, 197, 94, 0.25);
 }
 .run-dot {
   width: 8px;
