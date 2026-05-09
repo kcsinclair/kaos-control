@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import * as releasesApi from '@/api/releases'
 import type { ReleaseDetail } from '@/types/release'
@@ -69,6 +69,10 @@ function openArtifact(artifact: ArtifactRow) {
   emit('close')
 }
 
+const filteredArtifacts = computed(() =>
+  artifacts.value.filter(a => a.type === 'idea' || a.type === 'defect')
+)
+
 onMounted(load)
 </script>
 
@@ -111,11 +115,11 @@ onMounted(load)
           </div>
 
           <div class="artifacts-section">
-            <h4 class="artifacts-heading">Assigned Artifacts</h4>
-            <div v-if="artifacts.length === 0" class="state-msg">No artifacts assigned.</div>
+            <h4 class="artifacts-heading">Assigned Artifacts ({{ filteredArtifacts.length }})</h4>
+            <div v-if="filteredArtifacts.length === 0" class="state-msg">No artifacts assigned.</div>
             <div v-else class="artifact-list">
               <button
-                v-for="artifact in artifacts"
+                v-for="artifact in filteredArtifacts"
                 :key="artifact.path"
                 class="artifact-card"
                 @click="openArtifact(artifact)"
