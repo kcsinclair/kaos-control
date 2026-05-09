@@ -1,7 +1,7 @@
 ---
 title: ParseErrorsView sort tests — vi.mock hoisting fix
 type: test
-status: approved
+status: done
 lineage: sortable-table-columns
 parent: lifecycle/defects/sortable-table-columns-9-defect.md
 ---
