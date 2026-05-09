@@ -1,7 +1,7 @@
 ---
 title: Recent Ideas and Defects Dashboard Widget
 type: requirement
-status: blocked
+status: approved
 lineage: dashboard-recent-ideas-defects-widget
 created: "2026-05-09"
 priority: high
@@ -85,9 +85,20 @@ The dashboard currently provides no at-a-glance visibility into the most recent 
 - [ ] Widget data loads within 300 ms and renders within 200 ms on a dataset of 500 artifacts.
 - [ ] Related lineage: [[dashboard-recent-ideas-defects-widget]]
 
-## Open Questions
+## Resolved Questions
 
 1. **Stages Pie Chart**: The idea references a "Stages Pie Chart" as one of the three widgets in the top row. No such widget currently exists in the widget registry — only Status Distribution and Completion Velocity are registered chart widgets. Should a new Stages Pie Chart widget be created as part of this work, or should the top row contain only two pie charts (Status Distribution + the new widget) with Completion Velocity below?
+
+> The Stages Pie Chart will be added before this work.
+
 2. **API endpoint**: Should the backend expose a dedicated endpoint for recent ideas/defects, or should the existing artifacts list endpoint be extended with `type` and `sort` query parameters? The latter is more general-purpose.
+
+> Extend the endpoint with query parameters
+
 3. **Empty state**: What should the widget display when there are no ideas or defects in the project? A simple "No recent ideas or defects" message, or should the widget be hidden entirely?
+
+> Yes, display "No recent ideas or defects"
+
 4. **Column width ratio**: The idea says the charts column should be "wider" but does not specify an exact ratio. Should the two-column split change from `1fr 340px` to something like `2fr 340px`, or should the panels column also become flexible (e.g. `2fr 1fr`)?
+
+> each column should be one third wide, flexible panels is a good option.
