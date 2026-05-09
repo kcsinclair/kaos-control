@@ -11,7 +11,7 @@ labels:
     - qa
     - workflow
     - artefacts
-release: KC-Feature-Sprint
+release: KC-Release1
 ---
 
 # Test Artifact Status Lifecycle
