@@ -27,6 +27,12 @@ registerWidget(
 )
 
 registerWidget(
+  'recent-ideas-defects',
+  defineAsyncComponent(() => import('./widgets/RecentIdeasDefectsWidget.vue')),
+  { slot: 'chart', order: 1.5 },
+)
+
+registerWidget(
   'velocity-chart',
   defineAsyncComponent(() => import('./widgets/VelocityChartWidget.vue')),
   { slot: 'chart', order: 2 },
