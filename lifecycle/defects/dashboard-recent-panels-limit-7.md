@@ -1,7 +1,7 @@
 ---
 title: Dashboard Recent Panels Should Show 7 Most Recent Items
 type: defect
-status: draft
+status: approved
 lineage: dashboard-recent-panels-limit-7
 created: "2026-05-10T08:50:35+10:00"
 priority: normal
@@ -9,6 +9,9 @@ labels:
     - defect
     - frontend
     - vue
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Dashboard Recent Panels Should Show 7 Most Recent Items
