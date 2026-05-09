@@ -1,7 +1,7 @@
 ---
 title: "Velocity Widget Auto-Scaling Columns and Minimum Periods — Test Suite"
 type: test
-status: draft
+status: approved
 lineage: dashboard-velocity-auto-scale
 parent: lifecycle/test-plans/dashboard-velocity-auto-scale-5-test.md
 created: "2026-05-09T00:00:00+10:00"
