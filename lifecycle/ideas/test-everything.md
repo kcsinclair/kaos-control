@@ -11,8 +11,9 @@ labels:
     - qa
     - workflow
     - artefacts
-release: KC-Feature-Sprint
+release: KC-Release1
 ---
+
 Every X period of time (daily) or before a release this can be run to prepare and ensure all tests have passed and if not get things fixed.
 
 A small extension to the existing `qa` agent (or a sibling `qa-release` agent if you want to keep them separate):
