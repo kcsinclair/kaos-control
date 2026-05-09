@@ -47,6 +47,12 @@ export default defineConfig({
       'cytoscape-dagre': fileURLToPath(new URL('../../web/node_modules/cytoscape-dagre/cytoscape-dagre.js', import.meta.url)),
       '3d-force-graph': fileURLToPath(new URL('../../web/node_modules/3d-force-graph/dist/3d-force-graph.mjs', import.meta.url)),
       'three': fileURLToPath(new URL('../../web/node_modules/three/build/three.module.js', import.meta.url)),
+      // echarts lives in web/node_modules. Canonical aliases ensure vi.mock('echarts/core')
+      // and the component's own import resolve to the same file, so mocks are intercepted.
+      'echarts/core': fileURLToPath(new URL('../../web/node_modules/echarts/core.js', import.meta.url)),
+      'echarts/charts': fileURLToPath(new URL('../../web/node_modules/echarts/charts.js', import.meta.url)),
+      'echarts/components': fileURLToPath(new URL('../../web/node_modules/echarts/components.js', import.meta.url)),
+      'echarts/renderers': fileURLToPath(new URL('../../web/node_modules/echarts/renderers.js', import.meta.url)),
     },
     // Force a single copy of pinia and vue so that the global `activePinia`
     // singleton is shared between store source files (resolved from web/src)

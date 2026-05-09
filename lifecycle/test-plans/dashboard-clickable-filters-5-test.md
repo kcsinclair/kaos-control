@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Dashboard Clickable Filters"
 type: plan-test
-status: in-development
+status: done
 lineage: dashboard-clickable-filters
 parent: lifecycle/requirements/dashboard-clickable-filters-2.md
 created: "2026-05-09"

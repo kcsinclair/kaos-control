@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { use, init } from 'echarts/core'
@@ -25,6 +25,15 @@ interface StageDistributionResponse {
 const chartEl = ref<HTMLDivElement | null>(null)
 let chart: ECharts | null = null
 const isEmpty = ref(false)
+const stageItems = ref<StageDistributionItem[]>([])
+
+const chartAriaLabel = computed(() => {
+  if (isEmpty.value || stageItems.value.length === 0) {
+    return 'Stages distribution: no artifacts'
+  }
+  const parts = stageItems.value.map((i) => `${i.stage} ${i.count}`).join(', ')
+  return `Stages distribution: ${parts} — click a segment to filter artifacts by stage`
+})
 
 // WCAG 2.1 AA compliant palette, visually distinct from the status palette
 const STAGE_COLORS: Record<string, string> = {
@@ -51,6 +60,7 @@ async function fetchAndRender() {
     )
     const items = data.distribution ?? []
     isEmpty.value = items.length === 0 || items.every((i) => i.count === 0)
+    stageItems.value = isEmpty.value ? [] : items
 
     if (isEmpty.value || !chart) return
 
