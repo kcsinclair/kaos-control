@@ -1,7 +1,7 @@
 ---
 title: Dashboard Completion Velocity Improvements
 type: idea
-status: clarifying
+status: planning
 lineage: dashboard-velocity-auto-scale
 created: "2026-05-09T16:30:53+10:00"
 priority: high
