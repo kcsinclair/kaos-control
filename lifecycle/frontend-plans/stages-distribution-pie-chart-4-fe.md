@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Stages Distribution Pie Chart"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: stages-distribution-pie-chart
 parent: lifecycle/requirements/stages-distribution-pie-chart-2.md
 created: "2026-05-09"
