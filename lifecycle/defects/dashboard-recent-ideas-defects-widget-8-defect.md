@@ -1,7 +1,7 @@
 ---
 title: DashboardGrid missing .dashboard-charts-top / .dashboard-charts-bottom split
 type: defect
-status: approved
+status: in-development
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/tests/dashboard-recent-ideas-defects-widget-6-test.md
 labels:
