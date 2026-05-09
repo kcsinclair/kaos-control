@@ -78,6 +78,8 @@ function relativeTime(iso: string): string {
   flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
+  /* match the total visual height of the adjacent pie chart widgets */
+  min-height: 320px;
 }
 
 .widget-header {
