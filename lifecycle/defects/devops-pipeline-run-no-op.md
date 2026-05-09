@@ -12,7 +12,7 @@ labels:
 assignees:
     - role: product-owner
       who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # DevOps Pipeline Run Does Nothing; Directory Not Auto-Created

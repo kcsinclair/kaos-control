@@ -5,7 +5,7 @@ status: done
 lineage: light-mode-graphs
 priority: medium
 parent: lifecycle/requirements/light-mode-graphs-2.md
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Test Plan — Light Mode Colour Scheme for Graphs

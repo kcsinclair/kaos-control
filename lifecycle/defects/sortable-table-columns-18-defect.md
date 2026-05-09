@@ -8,7 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # ArtifactListView Release sort: TC1/TC3 expect empty values first in ascending (stale after empty-string-to-end fix)

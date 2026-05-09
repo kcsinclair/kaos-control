@@ -9,7 +9,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # GET /allowed-targets returns 404 — endpoint not implemented

@@ -9,7 +9,7 @@ labels:
     - feature
     - frontend
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Dashboard Home Screen

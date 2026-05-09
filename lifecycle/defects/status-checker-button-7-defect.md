@@ -6,7 +6,7 @@ lineage: status-checker-button
 parent: lifecycle/tests/status-checker-button-6-test.md
 labels:
     - defect
-release: May2026
+release: KC-Feature-Sprint
 assignees:
     - role: backend-developer
       who: agent

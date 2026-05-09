@@ -11,7 +11,7 @@ labels:
     - artefacts
     - usability
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Inline Priority Display and Editing on Artefact View

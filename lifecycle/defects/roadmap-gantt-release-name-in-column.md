@@ -10,7 +10,7 @@ labels:
     - frontend
     - roadmaps
     - vue
-release: May2026
+release: KC-Feature-Sprint
 assignees:
     - role: frontend-developer
       who: agent

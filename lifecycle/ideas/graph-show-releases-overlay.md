@@ -10,7 +10,7 @@ labels:
     - frontend
     - releases
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Graph: Show Releases Overlay

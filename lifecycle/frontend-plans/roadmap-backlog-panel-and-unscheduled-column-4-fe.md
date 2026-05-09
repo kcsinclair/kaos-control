@@ -5,7 +5,7 @@ status: done
 lineage: roadmap-backlog-panel-and-unscheduled-column
 priority: high
 parent: lifecycle/requirements/roadmap-backlog-panel-and-unscheduled-column-2.md
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Frontend Plan — Roadmap Backlog Panel and Unscheduled Column

@@ -11,7 +11,7 @@ labels:
     - usability
     - enhancement
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Inline Status Change on Artefact View

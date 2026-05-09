@@ -10,7 +10,7 @@ labels:
     - frontend
     - enhancement
     - releases
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Artefacts List: Release & Priority Columns with Releases Filter

@@ -11,7 +11,7 @@ labels:
     - qa
     - workflow
     - artefacts
-release: May2026
+release: KC-Feature-Sprint
 ---
 Every X period of time (daily) or before a release this can be run to prepare and ensure all tests have passed and if not get things fixed.
 

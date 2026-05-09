@@ -9,7 +9,7 @@ labels:
     - artefacts
     - backend
     - agent-runner
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 When the analyst is creating requirements, the date in the created field in the Frontmatter is not in the correct format, see lifecycle/requirements/artifact-breadcrumb-remove-broken-links-2.md as example.  They are 

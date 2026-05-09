@@ -10,7 +10,7 @@ labels:
     - frontend
     - agent-runner
     - usability
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # DevOps Pipeline Log Streaming View

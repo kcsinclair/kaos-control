@@ -6,7 +6,7 @@ lineage: light-mode-graphs
 parent: lifecycle/tests/light-mode-graphs-6-test.md
 labels:
     - defect
-release: May2026
+release: KC-Feature-Sprint
 assignees:
     - role: test-developer
       who: agent

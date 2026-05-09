@@ -9,7 +9,7 @@ labels:
     - defect
     - agent
     - workflow
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Requirements Analyst Agent Surfaces Draft Ideas in Agent Launcher Panel

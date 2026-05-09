@@ -10,7 +10,7 @@ labels:
     - roadmaps
     - feature
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Roadmap Graph: Directed Release Connections with Backlog Root and Unscheduled Leaves

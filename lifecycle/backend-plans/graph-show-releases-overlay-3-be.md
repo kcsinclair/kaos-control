@@ -4,7 +4,7 @@ type: plan-backend
 status: done
 lineage: graph-show-releases-overlay
 parent: lifecycle/requirements/graph-show-releases-overlay-2.md
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Backend Plan: Graph Releases Overlay

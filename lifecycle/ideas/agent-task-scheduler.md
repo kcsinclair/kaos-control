@@ -10,7 +10,7 @@ labels:
     - agent
     - backend
     - workflow
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Agent and Task Scheduler

@@ -10,7 +10,7 @@ labels:
     - frontend
     - usability
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Light Mode Support for Graphs

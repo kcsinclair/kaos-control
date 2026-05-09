@@ -10,7 +10,7 @@ labels:
     - frontend
     - usability
     - enhancement
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Universal Text Filter Across All Views

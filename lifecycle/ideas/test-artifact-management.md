@@ -14,7 +14,7 @@ labels:
     - agent
     - artefacts
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Test Artifact Management and Test Runner

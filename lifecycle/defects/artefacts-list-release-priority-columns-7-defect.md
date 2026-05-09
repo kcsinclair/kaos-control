@@ -8,7 +8,7 @@ labels: [defect]
 assignees:
   - role: frontend-developer
     who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Release sort pins empty release to tail in both directions instead of first-in-ascending

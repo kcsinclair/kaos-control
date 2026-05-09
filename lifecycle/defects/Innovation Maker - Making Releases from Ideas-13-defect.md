@@ -9,7 +9,7 @@ labels:
 assignees:
     - role: test-developer
       who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # TestRequiredPlansGateBlocks uses product-owner user — gate bypass prevents expected 409

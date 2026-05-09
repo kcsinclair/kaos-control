@@ -10,7 +10,7 @@ labels:
     - artefacts
     - workflow
     - backend
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Include Created-By Authorship in Artifact Frontmatter

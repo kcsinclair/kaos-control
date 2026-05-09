@@ -8,7 +8,7 @@ labels: [defect]
 assignees:
   - role: frontend-developer
     who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # SortHeader.vue uses slot for label text but test plan specifies a label prop

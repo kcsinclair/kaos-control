@@ -13,7 +13,7 @@ labels:
 assignees:
     - role: frontend-developer
       who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # DevOps Log Steps Show Empty Output

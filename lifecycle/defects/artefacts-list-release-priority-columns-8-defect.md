@@ -8,7 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # TC6 release-filter + text-search test fails because TextFilter debounce is not advanced

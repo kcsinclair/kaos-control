@@ -8,7 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # AppSidebar tests hardcode 6 nav items but sidebar now has 12 — tests need updating

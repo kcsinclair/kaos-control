@@ -11,7 +11,7 @@ labels:
     - defect-fix
     - usability
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Remove Non-Functional Hyperlinks from Artifact Breadcrumb Path

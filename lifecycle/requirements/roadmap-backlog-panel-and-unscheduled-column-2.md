@@ -11,7 +11,7 @@ labels:
     - roadmaps
     - usability
     - vue
-release: May2026
+release: KC-Feature-Sprint
 assignees:
     - role: product-owner
       who: agent

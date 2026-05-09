@@ -11,7 +11,7 @@ labels:
     - agent-runner
     - backend
     - frontend
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Ollama Agent Support

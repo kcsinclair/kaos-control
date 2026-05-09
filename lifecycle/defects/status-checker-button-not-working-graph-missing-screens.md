@@ -9,7 +9,7 @@ labels:
     - defect
     - frontend
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Status-Checker Button Non-Functional on Graph Views and Missing from Artifacts/Kanban Screens

@@ -10,7 +10,7 @@ labels:
     - releases
     - frontend
     - backend
-release: May2026
+release: KC-Feature-Sprint
 assignees:
     - role: frontend-developer
       who: agent

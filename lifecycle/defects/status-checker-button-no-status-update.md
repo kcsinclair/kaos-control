@@ -11,7 +11,7 @@ labels:
     - backend
     - workflow
     - artefacts
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Status Checker Button Does Not Update Artifact Statuses

@@ -10,7 +10,7 @@ labels:
     - feature
     - usability
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # 2D Graph Layout Selector

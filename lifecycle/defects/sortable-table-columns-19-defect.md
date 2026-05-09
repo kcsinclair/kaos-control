@@ -8,7 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # useSortableTable perf: text sort for 1,000 rows intermittently exceeds 100 ms under full-suite load

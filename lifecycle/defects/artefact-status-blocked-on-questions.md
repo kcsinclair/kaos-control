@@ -9,7 +9,7 @@ labels:
     - defect
     - workflow
     - artefacts
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Artefact Status Should Be 'blocked' (Not 'draft') When Questions Are Added

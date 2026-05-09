@@ -11,7 +11,7 @@ labels:
     - qa
     - workflow
     - artefacts
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Test Artifact Status Lifecycle

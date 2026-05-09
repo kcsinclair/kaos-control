@@ -8,7 +8,7 @@ labels: [defect]
 assignees:
   - role: frontend-developer
     who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Empty strings not sorted to end in useSortableTable (ascending)

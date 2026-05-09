@@ -10,7 +10,7 @@ labels:
     - frontend
     - artefacts
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Agent Run Not Visible at Bottom of Artifact Details Panel

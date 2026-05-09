@@ -10,7 +10,7 @@ labels:
     - feature
     - vue
     - test
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Graph Show Tests Toggle

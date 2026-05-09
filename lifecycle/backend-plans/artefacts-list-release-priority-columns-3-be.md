@@ -5,7 +5,7 @@ status: done
 lineage: artefacts-list-release-priority-columns
 priority: high
 parent: requirements/artefacts-list-release-priority-columns-2.md
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Backend Plan: Artefacts List Release & Priority Columns

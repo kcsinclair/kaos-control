@@ -11,7 +11,7 @@ labels:
     - frontend
     - workflow
     - v1
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # DevOps Pipeline Management

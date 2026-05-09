@@ -8,7 +8,7 @@ labels: [defect]
 assignees:
   - role: test-developer
     who: agent
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # AgentsRunsView sort tests — missing @/api/config mock causes 9 unhandled rejections

@@ -8,7 +8,7 @@ priority: normal
 labels:
     - agent
     - process
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Rename Analyst Agents for Consistency

@@ -11,7 +11,7 @@ labels:
     - watcher
     - usability
     - vue
-release: May2026
+release: KC-Feature-Sprint
 ---
 
 # Auto-Refresh Editor on Disk Change
