@@ -261,3 +261,104 @@ func TestVelocityZeroFill_DefaultedDays(t *testing.T) {
 	}
 	assertAllZero(t, buckets)
 }
+
+// ----- Milestone 3: timezone-consistent bucketing regression tests -----
+
+// TestVelocityPeriodKey_LocalTimezone verifies that velocityPeriodKey uses the
+// timezone embedded in the time.Time value, so that a UTC epoch representing
+// an AEST midnight event is bucketed into the correct local date when the
+// time is explicitly converted to a non-UTC location.
+//
+// This is the regression test for the fix that changed CompletionVelocity to
+// call time.Unix(ts, 0).In(loc) rather than relying on the implicit local
+// timezone.  The test is location-independent: it constructs times with
+// explicit locations and verifies the period keys, without relying on the
+// process TZ environment variable.
+func TestVelocityPeriodKey_LocalTimezone(t *testing.T) {
+	aest, err := time.LoadLocation("Australia/Sydney")
+	if err != nil {
+		t.Skip("Australia/Sydney timezone not available:", err)
+	}
+
+	// A transition that occurred at 00:30 on 2026-05-09 AEST.
+	// In UTC this is 2026-05-08 14:30:00 UTC — the previous calendar day.
+	epoch := time.Date(2026, 5, 9, 0, 30, 0, 0, aest).Unix()
+
+	// When interpreted in AEST the event belongs to 2026-05-09.
+	tsLocal := time.Unix(epoch, 0).In(aest)
+	keyLocal := velocityPeriodKey("daily", tsLocal)
+	if keyLocal != "2026-05-09" {
+		t.Errorf("AEST bucketing: want 2026-05-09, got %s", keyLocal)
+	}
+
+	// When interpreted in UTC the same epoch belongs to 2026-05-08 — this
+	// demonstrates the bug that the fix addresses.
+	tsUTC := time.Unix(epoch, 0).UTC()
+	keyUTC := velocityPeriodKey("daily", tsUTC)
+	if keyUTC != "2026-05-08" {
+		t.Errorf("UTC bucketing: want 2026-05-08, got %s", keyUTC)
+	}
+}
+
+// TestVelocityBucketing_EventCountedInLocalDate verifies end-to-end that a
+// status_transition event stored with a UTC epoch representing an early-morning
+// AEST transition is counted in the correct local-date bucket when
+// CompletionVelocity is called on a server whose local timezone is AEST.
+//
+// Because time.Local cannot be overridden in-process, this test exercises the
+// helper functions directly with an explicit location instead of calling
+// CompletionVelocity.  It asserts that:
+//   - velocityPeriods generates the expected AEST-based period keys
+//   - velocityPeriodKey maps the stored epoch to the correct AEST date
+//   - the resulting counts would be non-zero for 2026-05-09 AEST
+func TestVelocityBucketing_EventCountedInLocalDate(t *testing.T) {
+	aest, err := time.LoadLocation("Australia/Sydney")
+	if err != nil {
+		t.Skip("Australia/Sydney timezone not available:", err)
+	}
+
+	// Simulate: server local timezone = AEST.
+	loc := aest
+
+	// A transition at 09:30 AEST on 2026-05-09 (= 2026-05-08 23:30 UTC).
+	epoch := time.Date(2026, 5, 9, 9, 30, 0, 0, aest).Unix()
+
+	// Reproduce the CompletionVelocity logic with loc = AEST.
+	now := time.Date(2026, 5, 10, 12, 0, 0, 0, loc) // "current time" in AEST
+	since := now.AddDate(0, 0, -30)
+	periods := velocityPeriods("daily", since, now)
+
+	// 2026-05-09 must appear as a period key.
+	found := false
+	for _, p := range periods {
+		if p == "2026-05-09" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("period 2026-05-09 not present in AEST period list: %v", periods)
+	}
+
+	// The event epoch, converted to AEST, must also map to 2026-05-09.
+	ts := time.Unix(epoch, 0).In(loc)
+	key := velocityPeriodKey("daily", ts)
+	if key != "2026-05-09" {
+		t.Errorf("event key: want 2026-05-09, got %s", key)
+	}
+
+	// Simulate the counts map to confirm the event increments the right bucket.
+	counts := make(map[string]int, len(periods))
+	for _, p := range periods {
+		counts[p] = 0
+	}
+	if _, ok := counts[key]; ok {
+		counts[key]++
+	}
+	if counts["2026-05-09"] != 1 {
+		t.Errorf("counts[2026-05-09] = %d, want 1", counts["2026-05-09"])
+	}
+	if counts["2026-05-08"] != 0 {
+		t.Errorf("counts[2026-05-08] = %d, want 0 (event should not appear on UTC date)", counts["2026-05-08"])
+	}
+}
