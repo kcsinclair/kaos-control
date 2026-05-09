@@ -1,14 +1,15 @@
 ---
 title: Stages Distribution Pie Chart
 type: idea
-status: draft
+status: approved
 lineage: stages-distribution-pie-chart
 created: "2026-05-09T16:21:25+10:00"
-priority: normal
+priority: high
 labels:
     - feature
     - frontend
     - vue
+release: KC-Release0
 ---
 
 # Stages Distribution Pie Chart
