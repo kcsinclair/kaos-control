@@ -23,6 +23,76 @@ interface VelocityResponse {
   granularity: Granularity
 }
 
+const MIN_PERIODS: Record<Granularity, number> = {
+  daily: 7,
+  weekly: 4,
+  monthly: 3,
+}
+
+function subtractPeriod(period: string, gran: Granularity, n: number): string {
+  if (gran === 'daily') {
+    // period: "YYYY-MM-DD"
+    const d = new Date(`${period}T00:00:00Z`)
+    d.setUTCDate(d.getUTCDate() - n)
+    return d.toISOString().slice(0, 10)
+  }
+  if (gran === 'weekly') {
+    // period: "YYYY-WNN"
+    const [yearStr, wStr] = period.split('-W')
+    let year = parseInt(yearStr, 10)
+    let week = parseInt(wStr, 10) - n
+    while (week <= 0) {
+      year -= 1
+      week += isoWeeksInYear(year)
+    }
+    return `${String(year).padStart(4, '0')}-W${String(week).padStart(2, '0')}`
+  }
+  // monthly: "YYYY-MM"
+  const [yearStr, monStr] = period.split('-')
+  let year = parseInt(yearStr, 10)
+  let month = parseInt(monStr, 10) - n
+  while (month <= 0) {
+    year -= 1
+    month += 12
+  }
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}`
+}
+
+function isoWeeksInYear(year: number): number {
+  // A year has 53 ISO weeks if Jan 1 or Dec 31 is Thursday (for non-leap: Jan 1 Thu; leap: Jan 1 Wed or Thu)
+  const jan1 = new Date(Date.UTC(year, 0, 1)).getUTCDay() // 0=Sun
+  const dec31 = new Date(Date.UTC(year, 11, 31)).getUTCDay()
+  return jan1 === 4 || dec31 === 4 ? 53 : 52
+}
+
+function todayPeriodKey(gran: Granularity): string {
+  const now = new Date()
+  if (gran === 'daily') return now.toISOString().slice(0, 10)
+  if (gran === 'monthly') {
+    return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+  }
+  // weekly
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  const day = d.getUTCDay() || 7 // Mon=1..Sun=7
+  d.setUTCDate(d.getUTCDate() - day + 1) // move to Monday
+  // ISO week
+  const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4))
+  const week = Math.ceil(((d.getTime() - jan4.getTime()) / 86400000 + (jan4.getUTCDay() || 7) - 1) / 7) + 1
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
+}
+
+function padBuckets(items: VelocityItem[], gran: Granularity): VelocityItem[] {
+  const min = MIN_PERIODS[gran]
+  if (items.length >= min) return items
+  const needed = min - items.length
+  const anchor = items.length > 0 ? items[0].period : todayPeriodKey(gran)
+  const pads: VelocityItem[] = []
+  for (let i = needed; i >= 1; i--) {
+    pads.push({ period: subtractPeriod(anchor, gran, i), count: 0 })
+  }
+  return [...pads, ...items]
+}
+
 const granularity = ref<Granularity>('daily')
 const chartEl = ref<HTMLDivElement | null>(null)
 let chart: ECharts | null = null
@@ -34,8 +104,9 @@ async function fetchAndRender() {
     const data = await api.get<VelocityResponse>(
       `/p/${encodeURIComponent(props.project)}/dashboard/velocity?granularity=${granularity.value}&days=90`
     )
-    const items = data.buckets ?? []
-    isEmpty.value = items.length === 0 || items.every((i) => i.count === 0)
+    const rawItems = data.buckets ?? []
+    isEmpty.value = rawItems.length === 0 || rawItems.every((i) => i.count === 0)
+    const items = padBuckets(rawItems, granularity.value)
 
     if (!chart) return
     if (isEmpty.value) {
@@ -45,8 +116,8 @@ async function fetchAndRender() {
 
     const periods = items.map((i) => i.period)
     const counts = items.map((i) => i.count)
-    const total = counts.reduce((s, c) => s + c, 0)
-    ariaLabel.value = `Completion velocity ${granularity.value}: ${total} completions over ${items.length} periods`
+    const realTotal = rawItems.reduce((s, i) => s + i.count, 0)
+    ariaLabel.value = `Completion velocity ${granularity.value}: ${realTotal} completions over ${items.length} periods`
 
     chart.setOption({
       tooltip: {
