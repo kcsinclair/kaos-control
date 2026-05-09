@@ -176,9 +176,31 @@ useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
   store.fetchList(project, { limit: 0, offset: undefined })
 })
 
+function initFiltersFromQuery() {
+  const q = route.query
+  if (typeof q.status === 'string') selectedStatus.value = q.status
+  if (typeof q.stage === 'string') selectedStage.value = q.stage
+  if (typeof q.type === 'string') selectedType.value = q.type
+  if (typeof q.label === 'string') selectedLabel.value = q.label
+  if (typeof q.priority === 'string') selectedPriority.value = q.priority
+  if (typeof q.release === 'string') selectedRelease.value = q.release
+  if (typeof q.q === 'string') searchText.value = q.q
+}
+
 onMounted(async () => {
+  initFiltersFromQuery()
   await Promise.all([
-    store.fetchList(project, { limit: 0, offset: undefined }),
+    store.fetchList(project, {
+      stage: selectedStage.value || undefined,
+      status: selectedStatus.value || undefined,
+      label: selectedLabel.value || undefined,
+      type: selectedType.value || undefined,
+      priority: selectedPriority.value || undefined,
+      release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
+      q: searchText.value || undefined,
+      limit: 0,
+      offset: undefined,
+    }),
     store.fetchLabels(project),
     store.fetchPriorities(project),
     releasesStore.fetch(project),
