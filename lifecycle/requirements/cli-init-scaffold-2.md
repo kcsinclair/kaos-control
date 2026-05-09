@@ -1,7 +1,7 @@
 ---
 title: CLI Init Scaffold Command
 type: requirement
-status: blocked
+status: approved
 lineage: cli-init-scaffold
 priority: high
 parent: ideas/cli-init-scaffold.md
@@ -167,8 +167,16 @@ Use `filepath.Join` and `os.MkdirAll` for all path construction. The command mus
 - [ ] `make build` succeeds with the new subcommand included.
 - [ ] `make test-unit` passes with tests covering the init logic.
 
-## Open Questions
+## Resolved Questions
 
 - Should the seed `CLAUDE.md` be parameterised (e.g. project name, primary language) or entirely static in v1?
+
+> parameterised, the init process should ask for any information it needs to complete the setup.
+
 - Should `kaos-control init` also create a `.gitignore` entry for the SQLite index file (`lifecycle/.kaos-control.db` or similar)?
+
+> Yes.
+
 - Should the `--force` flag be split into per-file flags (e.g. `--force-config`, `--force-claude-md`) or is a single flag sufficient?
+
+> Separate force is a good idea.
