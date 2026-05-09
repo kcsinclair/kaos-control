@@ -1480,8 +1480,18 @@ func buildWhere(f Filter) (clause string, args []any) {
 		args = append(args, f.Lineage)
 	}
 	if f.Type != "" {
-		conds = append(conds, "type = ?")
-		args = append(args, f.Type)
+		if strings.Contains(f.Type, ",") {
+			parts := strings.Split(f.Type, ",")
+			placeholders := make([]string, len(parts))
+			for i, p := range parts {
+				placeholders[i] = "?"
+				args = append(args, strings.TrimSpace(p))
+			}
+			conds = append(conds, "type IN ("+strings.Join(placeholders, ",")+")")
+		} else {
+			conds = append(conds, "type = ?")
+			args = append(args, f.Type)
+		}
 	}
 	if f.Label != "" {
 		conds = append(conds, "path IN (SELECT artifact FROM labels_index WHERE label = ?)")
