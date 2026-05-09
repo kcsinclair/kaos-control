@@ -586,6 +586,10 @@ type Filter struct {
 	// Release filters to artifacts whose frontmatter release field equals this value.
 	// The special value "__unassigned__" matches artifacts with a null or empty release field.
 	Release   string
+	// Sort specifies the desired sort order as "<column>:<direction>".
+	// Supported columns: created, mtime, title, status, type, lineage.
+	// Direction must be "asc" or "desc". Invalid values fall back to the default order.
+	Sort      string
 	Limit     int
 	Offset    int
 	Unlimited bool // when true, no LIMIT is applied (returns all matching rows)
@@ -634,12 +638,13 @@ func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 
 	const sel = `SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
 		 FROM artifacts`
+	orderBy := buildOrderBy(f)
 	var rows *sql.Rows
 	var err error
 	if f.Unlimited {
-		rows, err = idx.db.Query(sel+where+` ORDER BY lineage, idx, path`, args...)
+		rows, err = idx.db.Query(sel+where+orderBy, args...)
 	} else {
-		rows, err = idx.db.Query(sel+where+` ORDER BY lineage, idx, path LIMIT ? OFFSET ?`,
+		rows, err = idx.db.Query(sel+where+orderBy+` LIMIT ? OFFSET ?`,
 			append(args, f.Limit, f.Offset)...)
 	}
 	if err != nil {
@@ -1452,6 +1457,39 @@ CREATE INDEX idx_artifacts_release ON artifacts(json_extract(frontmatter_json, '
 `
 	_, err := idx.db.Exec(ddl)
 	return err
+}
+
+// buildOrderBy returns an ORDER BY clause derived from f.Sort.
+// The column is validated against an allowlist and mapped to the actual SQL
+// column name; the direction must be "asc" or "desc". Any invalid input falls
+// back to the default ordering (lineage, idx, path). Column names are never
+// interpolated from user input — only mapped values from the allowlist are used.
+func buildOrderBy(f Filter) string {
+	allowlist := map[string]string{
+		"created": "created",
+		"mtime":   "mtime",
+		"title":   "title",
+		"status":  "status",
+		"type":    "type",
+		"lineage": "lineage",
+	}
+	const defaultOrder = " ORDER BY lineage, idx, path"
+	if f.Sort == "" {
+		return defaultOrder
+	}
+	parts := strings.SplitN(f.Sort, ":", 2)
+	if len(parts) != 2 {
+		return defaultOrder
+	}
+	col, dir := parts[0], strings.ToLower(parts[1])
+	mapped, ok := allowlist[col]
+	if !ok {
+		return defaultOrder
+	}
+	if dir != "asc" && dir != "desc" {
+		return defaultOrder
+	}
+	return " ORDER BY " + mapped + " " + strings.ToUpper(dir)
 }
 
 // ----- helpers -----

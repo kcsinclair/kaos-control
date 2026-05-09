@@ -32,6 +32,7 @@ func (s *Server) handleListArtifacts(w http.ResponseWriter, r *http.Request) {
 		Priority: r.URL.Query().Get("priority"),
 		Q:        r.URL.Query().Get("q"),
 		Release:  r.URL.Query().Get("release"),
+		Sort:     r.URL.Query().Get("sort"),
 	}
 	if v := r.URL.Query().Get("limit"); v != "" {
 		n, _ := strconv.Atoi(v)
