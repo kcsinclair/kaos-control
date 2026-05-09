@@ -3,7 +3,7 @@ title: Roadmap Gantt Period Display Options
 type: requirement
 status: blocked
 lineage: roadmap-gantt-period-options
-created: "2026-05-09"
+created: "2026-05-09T00:00:00+10:00"
 priority: high
 parent: lifecycle/ideas/roadmap-gantt-period-options.md
 labels:

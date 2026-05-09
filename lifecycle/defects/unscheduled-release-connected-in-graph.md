@@ -1,7 +1,7 @@
 ---
 title: Unscheduled Release Should be Connected in 2D and 3D Graph
 type: defect
-status: in-development
+status: done
 lineage: unscheduled-release-connected-in-graph
 created: "2026-05-10T08:20:44+10:00"
 priority: high
