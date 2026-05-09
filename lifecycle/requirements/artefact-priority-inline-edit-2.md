@@ -12,7 +12,7 @@ labels:
     - artefacts
     - usability
     - vue
-release: KC-Feature-Sprint
+release: KC-Release0
 assignees:
     - role: product-owner
       who: agent
