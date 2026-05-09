@@ -19,7 +19,7 @@ interface VelocityItem {
 }
 
 interface VelocityResponse {
-  items: VelocityItem[]
+  buckets: VelocityItem[]
   granularity: Granularity
 }
 
@@ -34,7 +34,7 @@ async function fetchAndRender() {
     const data = await api.get<VelocityResponse>(
       `/p/${encodeURIComponent(props.project)}/dashboard/velocity?granularity=${granularity.value}`
     )
-    const items = data.items ?? []
+    const items = data.buckets ?? []
     isEmpty.value = items.length === 0 || items.every((i) => i.count === 0)
 
     if (!chart) return

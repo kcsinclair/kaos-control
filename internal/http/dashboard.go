@@ -26,7 +26,7 @@ func (s *Server) handleGetDashboardStats(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	stats, err := p.Idx.DashboardStats(isoWeekStart())
+	stats, err := p.Idx.DashboardStats(isoWeekStart(), p.Cfg.Dashboard.TrackedTypes)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
@@ -43,7 +43,7 @@ func (s *Server) handleGetStatusDistribution(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	distribution, err := p.Idx.StatusDistribution()
+	distribution, err := p.Idx.StatusDistribution(p.Cfg.Dashboard.TrackedTypes)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
@@ -79,7 +79,7 @@ func (s *Server) handleGetVelocity(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	buckets, err := p.Idx.CompletionVelocity(granularity, days)
+	buckets, err := p.Idx.CompletionVelocity(granularity, days, p.Cfg.Dashboard.TrackedTypes)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return

@@ -289,6 +289,16 @@ type SchedulerConfig struct {
 	DefaultTimeout time.Duration `yaml:"default_timeout"` // default job timeout, e.g. "30m"
 }
 
+// DashboardConfig controls how the dashboard's stat cards, status-distribution,
+// and velocity chart count "work items". The default tracks "ticket" — the
+// spec's canonical work-item type. Projects whose lifecycle uses a different
+// type for tracked work (e.g. "requirement", "defect") should override.
+type DashboardConfig struct {
+	// TrackedTypes is the artifact types counted by dashboard widgets.
+	// Empty falls back to the default (["ticket"]).
+	TrackedTypes []string `yaml:"tracked_types,omitempty"`
+}
+
 // Project is the per-project configuration (lifecycle/config.yaml).
 type Project struct {
 	Stages        []Stage         `yaml:"stages"`
@@ -302,6 +312,7 @@ type Project struct {
 	Kanban        *KanbanConfig   `yaml:"kanban,omitempty"`
 	Feed          FeedConfig      `yaml:"feed"`
 	Scheduler     SchedulerConfig `yaml:"scheduler"`
+	Dashboard     DashboardConfig `yaml:"dashboard"`
 }
 
 // Transition overrides one edge in the state machine.
@@ -345,6 +356,7 @@ func defaultProject() Project {
 		RequiredPlans: RequiredPlans{"requirement": {}},
 		Ignore:        []string{"README.md"},
 		Scheduler:     SchedulerConfig{DefaultTimeout: 30 * time.Minute},
+		Dashboard:     DashboardConfig{TrackedTypes: []string{"ticket"}},
 	}
 }
 

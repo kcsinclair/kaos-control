@@ -476,3 +476,13 @@ required_plans:
     - plan-backend
     - plan-frontend
     - plan-test
+
+# Which artifact types the dashboard counts as work items. The default
+# is ["ticket"] (the spec's canonical work-item type). kaos-control's
+# own bootstrap uses requirement/idea/defect, so the dashboard is
+# scoped to those.
+dashboard:
+  tracked_types:
+    - requirement
+    - idea
+    - defect

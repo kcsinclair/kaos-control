@@ -1633,37 +1633,59 @@ type DashboardStatsRow struct {
 	CompletedThisWeek int `json:"completed_this_week"`
 }
 
-// DashboardStats returns summary ticket counts for the dashboard.
+// trackedTypesClause builds an `IN (?, ?, …)` fragment plus the matching
+// argument slice for a list of artifact types. When the list is empty it
+// falls back to ticket — the spec's canonical work-item type.
+func trackedTypesClause(types []string) (string, []any) {
+	if len(types) == 0 {
+		types = []string{"ticket"}
+	}
+	placeholders := make([]string, len(types))
+	args := make([]any, len(types))
+	for i, t := range types {
+		placeholders[i] = "?"
+		args[i] = t
+	}
+	return "(" + strings.Join(placeholders, ",") + ")", args
+}
+
+// DashboardStats returns summary work-item counts for the dashboard.
 // sinceTime is the start of the current ISO week, used to compute
-// completed_this_week (tickets that had a done-transition since that instant).
-func (idx *Index) DashboardStats(sinceTime time.Time) (*DashboardStatsRow, error) {
+// completed_this_week. trackedTypes selects which artifact types are
+// counted as "tickets" (defaults to ["ticket"] when empty).
+func (idx *Index) DashboardStats(sinceTime time.Time, trackedTypes []string) (*DashboardStatsRow, error) {
 	row := &DashboardStatsRow{}
+	typesIn, typeArgs := trackedTypesClause(trackedTypes)
 
 	if err := idx.db.QueryRow(
-		`SELECT COUNT(*) FROM artifacts WHERE type='ticket' AND status != 'abandoned'`,
+		`SELECT COUNT(*) FROM artifacts WHERE type IN `+typesIn+` AND status != 'abandoned'`,
+		typeArgs...,
 	).Scan(&row.TotalTickets); err != nil {
 		return nil, fmt.Errorf("counting total tickets: %w", err)
 	}
 
 	if err := idx.db.QueryRow(
-		`SELECT COUNT(*) FROM artifacts WHERE type='ticket' AND status = 'in-development'`,
+		`SELECT COUNT(*) FROM artifacts WHERE type IN `+typesIn+` AND status = 'in-development'`,
+		typeArgs...,
 	).Scan(&row.InProgress); err != nil {
 		return nil, fmt.Errorf("counting in-progress tickets: %w", err)
 	}
 
 	if err := idx.db.QueryRow(
-		`SELECT COUNT(*) FROM artifacts WHERE type='ticket' AND status IN ('blocked', 'clarifying')`,
+		`SELECT COUNT(*) FROM artifacts WHERE type IN `+typesIn+` AND status IN ('blocked', 'clarifying')`,
+		typeArgs...,
 	).Scan(&row.Blocked); err != nil {
 		return nil, fmt.Errorf("counting blocked tickets: %w", err)
 	}
 
+	completedArgs := append([]any{sinceTime.Unix()}, typeArgs...)
 	if err := idx.db.QueryRow(
 		`SELECT COUNT(DISTINCT artifact_path) FROM events
 		 WHERE event_type = 'status_transition'
 		 AND summary LIKE '%→ done%'
 		 AND timestamp >= ?
-		 AND artifact_path IN (SELECT path FROM artifacts WHERE type='ticket')`,
-		sinceTime.Unix(),
+		 AND artifact_path IN (SELECT path FROM artifacts WHERE type IN `+typesIn+`)`,
+		completedArgs...,
 	).Scan(&row.CompletedThisWeek); err != nil {
 		return nil, fmt.Errorf("counting completed this week: %w", err)
 	}
@@ -1677,15 +1699,18 @@ type StatusCount struct {
 	Count  int    `json:"count"`
 }
 
-// StatusDistribution returns ticket counts grouped by status, excluding
-// tickets with status "done" or "abandoned". Returns an empty (non-nil)
-// slice when no matching tickets exist.
-func (idx *Index) StatusDistribution() ([]StatusCount, error) {
+// StatusDistribution returns work-item counts grouped by status, excluding
+// items with status "done" or "abandoned". trackedTypes selects which
+// artifact types are counted (defaults to ["ticket"] when empty).
+// Returns an empty (non-nil) slice when no matching items exist.
+func (idx *Index) StatusDistribution(trackedTypes []string) ([]StatusCount, error) {
+	typesIn, typeArgs := trackedTypesClause(trackedTypes)
 	rows, err := idx.db.Query(
 		`SELECT status, COUNT(*) FROM artifacts
-		 WHERE type='ticket' AND status NOT IN ('done','abandoned')
+		 WHERE type IN `+typesIn+` AND status NOT IN ('done','abandoned')
 		 GROUP BY status
 		 ORDER BY status`,
+		typeArgs...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("querying status distribution: %w", err)
@@ -1715,8 +1740,10 @@ type VelocityBucket struct {
 // granularity must be "daily", "weekly", or "monthly"; any other value
 // is coerced to "weekly".
 // days controls the lookback window (default 90, capped at 365).
+// trackedTypes selects which artifact types are counted (defaults to
+// ["ticket"] when empty).
 // All periods within the window are included even when count is zero.
-func (idx *Index) CompletionVelocity(granularity string, days int) ([]VelocityBucket, error) {
+func (idx *Index) CompletionVelocity(granularity string, days int, trackedTypes []string) ([]VelocityBucket, error) {
 	switch granularity {
 	case "daily", "weekly", "monthly":
 	default:
@@ -1729,14 +1756,17 @@ func (idx *Index) CompletionVelocity(granularity string, days int) ([]VelocityBu
 		days = 365
 	}
 
+	typesIn, typeArgs := trackedTypesClause(trackedTypes)
 	since := time.Now().AddDate(0, 0, -days)
+	args := append([]any{since.Unix()}, typeArgs...)
 	rows, err := idx.db.Query(
 		`SELECT timestamp FROM events
 		 WHERE event_type = 'status_transition'
 		 AND summary LIKE '%→ done%'
 		 AND timestamp >= ?
+		 AND artifact_path IN (SELECT path FROM artifacts WHERE type IN `+typesIn+`)
 		 ORDER BY timestamp ASC`,
-		since.Unix(),
+		args...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("querying velocity events: %w", err)
