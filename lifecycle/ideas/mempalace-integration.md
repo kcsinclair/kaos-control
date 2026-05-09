@@ -1,7 +1,7 @@
 ---
 title: Investigate Integration with MemPalace
 type: idea
-status: approved
+status: planning
 lineage: mempalace-integration
 created: "2026-05-10T09:19:22+10:00"
 priority: normal
