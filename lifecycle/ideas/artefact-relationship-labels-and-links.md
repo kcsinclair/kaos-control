@@ -4,12 +4,13 @@ type: idea
 status: draft
 lineage: artefact-relationship-labels-and-links
 created: "2026-05-10T09:35:28+10:00"
-priority: normal
+priority: medium
 labels:
     - artefacts
     - frontend
     - enhancement
     - usability
+release: KC-Release1
 ---
 
 # Artefact Relationship Labels and Clickable Links
