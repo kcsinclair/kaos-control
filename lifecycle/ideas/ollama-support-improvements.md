@@ -11,6 +11,7 @@ labels:
     - backend
     - enhancement
     - operability
+release: KC-MoreLLMS
 ---
 
 # Improve Ollama Support
