@@ -10,6 +10,7 @@ labels:
     - frontend
     - releases
     - roadmaps
+release: May2026
 ---
 
 # Show Releases Corrupts 3D/2D Graph Layout and Renders Phantom Arrow Cones
