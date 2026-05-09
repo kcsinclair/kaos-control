@@ -10,6 +10,7 @@ labels:
     - enhancement
     - usability
     - vue
+release: KC-Release0
 ---
 
 # Improve Edge Line Contrast in 3D Graph
