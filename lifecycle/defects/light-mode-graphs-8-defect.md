@@ -4,10 +4,12 @@ type: defect
 status: done
 lineage: light-mode-graphs
 parent: lifecycle/tests/light-mode-graphs-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: May2026
 assignees:
-  - role: frontend-developer
-    who: agent
+    - role: frontend-developer
+      who: agent
 ---
 
 # ForceGraph3D.vue dimColor() contains theme-dependent hex literals outside graphConstants.ts
