@@ -1,7 +1,7 @@
 ---
 title: "DashboardGrid missing panel slot — activity-feed widget not rendered"
 type: defect
-status: draft
+status: approved
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/tests/dashboard-recent-ideas-defects-widget-6-test.md
 labels: [defect]
