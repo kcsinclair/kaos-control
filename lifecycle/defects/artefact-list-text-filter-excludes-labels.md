@@ -10,6 +10,7 @@ labels:
     - artefacts
     - frontend
     - usability
+release: KC-Release1
 ---
 
 # Artefact List Text Filter Does Not Include Labels
