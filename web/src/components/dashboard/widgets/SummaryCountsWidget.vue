@@ -9,13 +9,13 @@ import { Ticket, Play, AlertOctagon, CheckCircle } from 'lucide-vue-next'
 const props = defineProps<{ project: string }>()
 
 interface DashboardStats {
-  total: number
+  total_tickets: number
   in_progress: number
   blocked: number
   completed_this_week: number
 }
 
-const stats = ref<DashboardStats>({ total: 0, in_progress: 0, blocked: 0, completed_this_week: 0 })
+const stats = ref<DashboardStats>({ total_tickets: 0, in_progress: 0, blocked: 0, completed_this_week: 0 })
 
 async function fetchStats() {
   try {
@@ -36,7 +36,7 @@ useWebSocket(props.project, 'artifact.indexed', (_e: WsEvent) => {
 </script>
 
 <template>
-  <SummaryCountCard label="Total Tickets"       :value="stats.total"               :icon="Ticket" />
+  <SummaryCountCard label="Total Tickets"       :value="stats.total_tickets"       :icon="Ticket" />
   <SummaryCountCard label="In Progress"          :value="stats.in_progress"         :icon="Play" />
   <SummaryCountCard label="Blocked"              :value="stats.blocked"             :icon="AlertOctagon" />
   <SummaryCountCard label="Completed This Week"  :value="stats.completed_this_week" :icon="CheckCircle" />

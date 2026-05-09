@@ -17,7 +17,7 @@ interface StatusDistributionItem {
 }
 
 interface StatusDistributionResponse {
-  items: StatusDistributionItem[]
+  distribution: StatusDistributionItem[]
 }
 
 const chartEl = ref<HTMLDivElement | null>(null)
@@ -46,7 +46,7 @@ async function fetchAndRender() {
     const data = await api.get<StatusDistributionResponse>(
       `/p/${encodeURIComponent(props.project)}/dashboard/status-distribution`
     )
-    const items = data.items ?? []
+    const items = data.distribution ?? []
     isEmpty.value = items.length === 0 || items.every((i) => i.count === 0)
 
     if (isEmpty.value || !chart) return
