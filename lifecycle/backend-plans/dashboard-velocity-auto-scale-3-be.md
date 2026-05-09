@@ -4,7 +4,7 @@ type: plan-backend
 status: approved
 lineage: dashboard-velocity-auto-scale
 parent: lifecycle/requirements/dashboard-velocity-auto-scale-2.md
-created: "2026-05-09"
+created: "2026-05-09T00:00:00+10:00"
 labels:
     - backend
     - go

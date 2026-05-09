@@ -4,7 +4,7 @@ type: plan-backend
 status: done
 lineage: stages-distribution-pie-chart
 parent: lifecycle/requirements/stages-distribution-pie-chart-2.md
-created: "2026-05-09"
+created: "2026-05-09T00:00:00+10:00"
 ---
 
 # Backend Plan: Stages Distribution Pie Chart
