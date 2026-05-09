@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Release Drill-Down Filter to Ideas and Defects'
 type: plan-test
-status: in-development
+status: done
 lineage: roadmap-release-filter-ideas-defects
 parent: lifecycle/requirements/roadmap-release-filter-ideas-defects-2.md
 created: "2026-05-09T00:00:00+10:00"

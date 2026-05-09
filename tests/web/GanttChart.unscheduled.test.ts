@@ -240,3 +240,53 @@ describe('GanttChart — Unscheduled Release Bars (Milestone 3)', () => {
     expect(placeholder.exists()).toBe(true)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Milestone 3 — Regression: Gantt badge counts driven by releaseDetails
+// ---------------------------------------------------------------------------
+
+describe('GanttChart — Badge Counts from releaseDetails (Milestone 3)', () => {
+  it('Gantt bar badges display idea_count and defect_count from releaseDetails, independent of any modal filter', () => {
+    // Provide a scheduled release so we get a regular bar (not --unscheduled).
+    const release = makeScheduledRelease({ id: 5, name: 'v-badge-check' })
+    const releaseDetails = new Map<number, ReleaseDetail>([
+      [5, { ...release, idea_count: 3, defect_count: 2 }],
+    ])
+
+    const wrapper = mountGantt([release], releaseDetails)
+
+    // The badge on the scheduled bar must show the counts from releaseDetails.
+    const badge = wrapper.find('.release-bar .bar-badge')
+    expect(badge.exists()).toBe(true)
+    expect(badge.text()).toContain('3 ideas')
+    expect(badge.text()).toContain('2 defects')
+  })
+
+  it('scheduled bar badge uses releaseDetails counts regardless of artifact types that exist', () => {
+    // Simulate a scenario where many non-idea/non-defect artifacts are assigned;
+    // the badge must still read its numbers solely from releaseDetails counts.
+    const release = makeScheduledRelease({ id: 6, name: 'v-mixed-arts' })
+    const releaseDetails = new Map<number, ReleaseDetail>([
+      [6, { ...release, idea_count: 7, defect_count: 0 }],
+    ])
+
+    const wrapper = mountGantt([release], releaseDetails)
+
+    const badge = wrapper.find('.release-bar .bar-badge')
+    expect(badge.exists()).toBe(true)
+    // 7 ideas should appear; defects badge absent or shows 0.
+    expect(badge.text()).toContain('7 ideas')
+  })
+
+  it('no badge rendered on scheduled bar when releaseDetails reports zero ideas and defects', () => {
+    const release = makeScheduledRelease({ id: 7, name: 'v-zero-counts' })
+    const releaseDetails = new Map<number, ReleaseDetail>([
+      [7, { ...release, idea_count: 0, defect_count: 0 }],
+    ])
+
+    const wrapper = mountGantt([release], releaseDetails)
+
+    const badge = wrapper.find('.release-bar .bar-badge')
+    expect(badge.exists()).toBe(false)
+  })
+})

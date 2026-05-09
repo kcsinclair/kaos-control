@@ -534,6 +534,74 @@ func TestReleases_ListArtifactsEmpty(t *testing.T) {
 	}
 }
 
+// ── Milestone 4: Release artifacts endpoint returns all types (no server-side filter) ──
+
+// TestReleases_ListArtifactsReturnsAllTypes verifies that
+// GET /releases/:id/artifacts returns every artifact type assigned to a
+// release — the filtering to ideas+defects is intentionally client-side only,
+// so the API must not silently drop requirements, plans, or other types.
+func TestReleases_ListArtifactsReturnsAllTypes(t *testing.T) {
+	const releaseName = "v-all-types"
+
+	seeds := []seedArtifact{
+		{
+			relPath: "lifecycle/ideas/all-types-idea.md",
+			content: makeArtifactWithRelease("All Types Idea", "idea", "draft", "all-types-idea", releaseName, "Body."),
+		},
+		{
+			relPath: "lifecycle/defects/all-types-defect.md",
+			content: makeArtifactWithRelease("All Types Defect", "defect", "draft", "all-types-defect", releaseName, "Body."),
+		},
+		{
+			relPath: "lifecycle/requirements/all-types-req.md",
+			content: makeArtifactWithRelease("All Types Requirement", "requirement", "draft", "all-types-req", releaseName, "Body."),
+		},
+		{
+			relPath: "lifecycle/backend-plans/all-types-plan.md",
+			content: makeArtifactWithRelease("All Types Plan", "plan-backend", "draft", "all-types-plan", releaseName, "Body."),
+		},
+	}
+
+	env := newTestEnv(t, seeds)
+	env.login("admin@test.local", "admin-pass-123")
+
+	data := createRelease(t, env, map[string]any{"name": releaseName, "status": "planned"})
+	id := releaseID(t, data)
+
+	resp := env.doRequest("GET", releasePath(id)+"/artifacts", nil)
+	requireStatus(t, resp, http.StatusOK)
+	body := readJSON(t, resp)
+
+	items, _ := body["items"].([]any)
+	if len(items) != 4 {
+		t.Fatalf("want 4 artifacts (all types), got %d", len(items))
+	}
+
+	// total field must match the unfiltered count.
+	total, _ := body["total"].(float64)
+	if int(total) != 4 {
+		t.Errorf("total: want 4, got %d", int(total))
+	}
+
+	// Collect the set of types returned.
+	gotTypes := map[string]bool{}
+	for _, raw := range items {
+		item, _ := raw.(map[string]any)
+		typ, _ := item["type"].(string)
+		if typ == "" {
+			t.Errorf("artifact item missing type field: %v", item)
+			continue
+		}
+		gotTypes[typ] = true
+	}
+
+	for _, want := range []string{"idea", "defect", "requirement", "plan-backend"} {
+		if !gotTypes[want] {
+			t.Errorf("type %q missing from artifacts response; got types: %v", want, gotTypes)
+		}
+	}
+}
+
 // ── Milestone 2: Release status lifecycle ─────────────────────────────────────
 
 // TestReleaseStatus_ValidTransition verifies that a release can be created as
