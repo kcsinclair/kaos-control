@@ -1,7 +1,7 @@
 ---
 title: Inline Priority Display and Editing on Artefact Detail View
 type: requirement
-status: blocked
+status: approved
 lineage: artefact-priority-inline-edit
 created: "2026-05-07T00:00:00+10:00"
 priority: high
@@ -80,7 +80,12 @@ The artefact detail view (`ArtifactEditorView` → `FrontmatterPanel`) displays 
 - [ ] No duplicate API call when re-selecting the current value.
 - [ ] Visual style and interaction feel consistent with the existing [[artefact-priority-inline-edit]] status inline-edit pattern.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the dropdown include a "none" / "unset" option to allow clearing priority, or is priority always required?
+
+> Default prioirity is normal so if not set it should display normal
+
 2. Should there be a visual indicator (e.g. animation or flash) when priority changes via WebSocket to draw the user's attention?
+
+> No
