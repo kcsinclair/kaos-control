@@ -5,7 +5,12 @@ import { widgetList } from './widgetRegistry'
 defineProps<{ project: string }>()
 
 const summaryWidgets = computed(() => widgetList.filter((w) => w.slot === 'summary'))
-const chartWidgets = computed(() => widgetList.filter((w) => w.slot === 'chart'))
+const topChartWidgets = computed(() =>
+  widgetList.filter((w) => w.slot === 'chart' && w.order < 2),
+)
+const bottomChartWidgets = computed(() =>
+  widgetList.filter((w) => w.slot === 'chart' && w.order >= 2),
+)
 const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel'))
 </script>
 
@@ -26,17 +31,35 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
     </section>
 
     <!--
-      Rows 2 & 3: unified 3-column grid.
-        Row 2: Stages Distribution | Status Distribution | Recent Ideas & Defects
-        Row 3: Completion Velocity (span 2)          | Recent Activity
+      Row 2: 3-column grid — orders 0, 1, 1.5
+        Stages Distribution | Status Distribution | Recent Ideas & Defects
     -->
     <section
-      v-if="chartWidgets.length"
-      class="dashboard-charts"
-      aria-label="Charts"
+      v-if="topChartWidgets.length"
+      class="dashboard-charts-top"
+      aria-label="Charts top"
     >
       <div
-        v-for="widget in chartWidgets"
+        v-for="widget in topChartWidgets"
+        :key="widget.id"
+        class="chart-cell"
+        :style="widget.span && widget.span > 1 ? { gridColumn: `span ${widget.span}` } : {}"
+      >
+        <component :is="widget.component" :project="project" />
+      </div>
+    </section>
+
+    <!--
+      Row 3: 3-column grid — orders ≥ 2
+        Completion Velocity (span 2)
+    -->
+    <section
+      v-if="bottomChartWidgets.length"
+      class="dashboard-charts-bottom"
+      aria-label="Charts bottom"
+    >
+      <div
+        v-for="widget in bottomChartWidgets"
         :key="widget.id"
         class="chart-cell"
         :style="widget.span && widget.span > 1 ? { gridColumn: `span ${widget.span}` } : {}"
@@ -78,7 +101,8 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
 }
 
 /* Rows 2 & 3: 3-column grid (stacked on mobile) */
-.dashboard-charts {
+.dashboard-charts-top,
+.dashboard-charts-bottom {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
@@ -86,7 +110,8 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
 }
 
 @media (min-width: 1024px) {
-  .dashboard-charts {
+  .dashboard-charts-top,
+  .dashboard-charts-bottom {
     grid-template-columns: repeat(3, 1fr);
   }
 }
