@@ -10,6 +10,7 @@ labels:
     - integration
     - agent
     - backend
+release: KC-MoreLLMS
 ---
 
 # Add Support for OpenAI-Compatible LLM API
