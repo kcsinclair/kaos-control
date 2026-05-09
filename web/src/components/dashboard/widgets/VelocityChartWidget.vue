@@ -93,8 +93,12 @@ function padBuckets(items: VelocityItem[], gran: Granularity): VelocityItem[] {
   return [...pads, ...items]
 }
 
+const MIN_BAR_WIDTH = 20  // px — threshold below which scrolling is needed
+const MAX_BAR_WIDTH = 60  // px — cap to avoid excessively wide bars
+
 const granularity = ref<Granularity>('daily')
 const chartEl = ref<HTMLDivElement | null>(null)
+const containerWidth = ref(0)
 let chart: ECharts | null = null
 const isEmpty = ref(false)
 const ariaLabel = ref('Completion velocity chart loading')
@@ -118,6 +122,10 @@ async function fetchAndRender() {
     const counts = items.map((i) => i.count)
     const realTotal = rawItems.reduce((s, i) => s + i.count, 0)
     ariaLabel.value = `Completion velocity ${granularity.value}: ${realTotal} completions over ${items.length} periods`
+
+    const maxVisibleBars = containerWidth.value > 0
+      ? Math.floor(containerWidth.value / MIN_BAR_WIDTH)
+      : periods.length
 
     chart.setOption({
       tooltip: {
@@ -146,11 +154,13 @@ async function fetchAndRender() {
           name: 'Completed',
           type: 'bar',
           data: counts,
+          barMaxWidth: MAX_BAR_WIDTH,
           itemStyle: { color: '#6366f1', borderRadius: [3, 3, 0, 0] },
           emphasis: { itemStyle: { color: '#4f46e5' } },
         },
       ],
     })
+    void maxVisibleBars // used in M4
   } catch {
     isEmpty.value = true
   }
@@ -158,12 +168,16 @@ async function fetchAndRender() {
 
 function initChart() {
   if (!chartEl.value) return
+  containerWidth.value = chartEl.value.clientWidth
   chart = init(chartEl.value)
   void fetchAndRender()
 }
 
 const ro = typeof ResizeObserver !== 'undefined'
-  ? new ResizeObserver(() => chart?.resize())
+  ? new ResizeObserver((entries) => {
+      if (entries[0]) containerWidth.value = entries[0].contentRect.width
+      chart?.resize()
+    })
   : null
 
 onMounted(() => {
