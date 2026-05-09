@@ -1,7 +1,7 @@
 ---
 title: 'Release Drill-Down: Filter to Ideas and Defects Only'
 type: requirement
-status: blocked
+status: approved
 lineage: roadmap-release-filter-ideas-defects
 created: "2026-05-09T00:00:00+10:00"
 priority: high
@@ -65,7 +65,12 @@ Currently `listReleaseArtifacts` (`GET /p/{project}/releases/{id}/artifacts`) re
 - [ ] The Roadmap Graph view is unaffected
 - [ ] The `GET /p/{project}/releases/{id}/artifacts` API continues to return all artifact types (no breaking change)
 
-## Open Questions
+## Resolved Questions
 
 - **OQ-1**: Should the modal indicate that other artifact types exist but are hidden (e.g., "3 other artifacts not shown"), or silently omit them? _Recommendation: silently omit — the roadmap view is intentionally high-level._
+
+> silently omit
+
 - **OQ-2**: In the future, should this filter be configurable per-project in `lifecycle/config.yaml`? _Parked for a future enhancement if requested._
+
+> default behaviour
