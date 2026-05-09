@@ -1,7 +1,7 @@
 ---
 title: '3D Map Filter Redesign: Top Menu Bar'
 type: idea
-status: draft
+status: approved
 lineage: 3d-map-filter-redesign-top-menu
 created: "2026-05-10T09:11:27+10:00"
 priority: normal
@@ -10,11 +10,12 @@ labels:
     - frontend
     - usability
     - vue
+release: KC-Release1
 ---
 
-# 3D Map Filter Redesign: Top Menu Bar
+# 2D and 3D Map Filter Redesign: Top Menu Bar
 
-The current 3D map view suffers from visual overload when viewing large lineages — too many nodes are shown simultaneously with insufficient filtering controls, making it difficult to navigate or reason about the graph structure.
+The current 2D and 3D map view suffers from visual overload when viewing large lineages — too many nodes are shown simultaneously with insufficient filtering controls, making it difficult to navigate or reason about the graph structure.
 
 Filters should be moved from their current location into a top menu bar, providing a more prominent and accessible UI pattern. This allows users to quickly scope the visible nodes by type, status, or lineage without the controls competing with the graph canvas itself.
 
