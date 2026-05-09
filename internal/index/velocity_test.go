@@ -1,6 +1,7 @@
 package index
 
 // Milestone 1 — Unit tests for CompletionVelocity days parameter handling.
+// Milestone 2 — Unit tests for zero-filled period coverage.
 //
 // These tests exercise CompletionVelocity and the internal velocityPeriods
 // helper directly (package-internal access). They use an empty in-memory
@@ -164,4 +165,99 @@ func TestVelocityPeriods_MonthlyFixed(t *testing.T) {
 	if periods[2] != "2026-03" {
 		t.Errorf("periods[2] = %q, want 2026-03", periods[2])
 	}
+}
+
+// ----- Milestone 2: zero-fill coverage for an empty project -----
+
+// assertAllZero fails the test if any bucket in bs has a non-zero count.
+func assertAllZero(t *testing.T, bs []VelocityBucket) {
+	t.Helper()
+	for _, b := range bs {
+		if b.Count != 0 {
+			t.Errorf("period %q: want count=0, got %d", b.Period, b.Count)
+		}
+	}
+}
+
+// TestVelocityZeroFill_Daily verifies that an empty project returns a
+// contiguous, zero-valued daily series covering the requested window.
+func TestVelocityZeroFill_Daily(t *testing.T) {
+	idx := openVelocityTestIndex(t)
+
+	const days = 7
+	buckets, err := idx.CompletionVelocity("daily", days, nil)
+	if err != nil {
+		t.Fatalf("CompletionVelocity: %v", err)
+	}
+	// days=7 produces 8 periods (0..7 inclusive, both midnight-truncated).
+	// Allow ±1 for a midnight crossing between the call and our assertion.
+	if len(buckets) < days || len(buckets) > days+2 {
+		t.Errorf("want %d buckets (±1), got %d", days+1, len(buckets))
+	}
+	assertAllZero(t, buckets)
+}
+
+// TestVelocityZeroFill_Weekly verifies that an empty project returns a
+// contiguous, zero-valued weekly series. days=28 (a multiple of 7) always
+// yields exactly 5 ISO-week buckets regardless of the current day of the week.
+func TestVelocityZeroFill_Weekly(t *testing.T) {
+	idx := openVelocityTestIndex(t)
+
+	const days = 28
+	buckets, err := idx.CompletionVelocity("weekly", days, nil)
+	if err != nil {
+		t.Fatalf("CompletionVelocity: %v", err)
+	}
+	// 28 is 4 full weeks. Because since = now-28 always shares the same weekday
+	// as now, isoWeekMonday(since) is exactly 28 days before isoWeekMonday(now),
+	// producing 5 Monday-anchored periods (offsets 0, 7, 14, 21, 28).
+	if len(buckets) != 5 {
+		t.Errorf("days=28 weekly: want 5 buckets, got %d", len(buckets))
+	}
+	assertAllZero(t, buckets)
+}
+
+// TestVelocityZeroFill_Monthly verifies that an empty project returns a
+// contiguous, zero-valued monthly series for a 90-day window.
+func TestVelocityZeroFill_Monthly(t *testing.T) {
+	idx := openVelocityTestIndex(t)
+
+	const days = 90
+	buckets, err := idx.CompletionVelocity("monthly", days, nil)
+	if err != nil {
+		t.Fatalf("CompletionVelocity: %v", err)
+	}
+
+	// Determine expected bucket count using the same logic as CompletionVelocity.
+	now := time.Now()
+	since := now.AddDate(0, 0, -days)
+	expected := velocityPeriods("monthly", since, now)
+
+	// Allow ±1 because time.Now() is called twice.
+	diff := len(buckets) - len(expected)
+	if diff < -1 || diff > 1 {
+		t.Errorf("days=90 monthly: want ~%d buckets (±1), got %d", len(expected), len(buckets))
+	}
+	if len(buckets) < 2 {
+		t.Errorf("days=90 monthly: want at least 2 buckets, got %d", len(buckets))
+	}
+	assertAllZero(t, buckets)
+}
+
+// TestVelocityZeroFill_NoBuckets verifies that days=0 (defaulted to 90)
+// still returns a non-nil, non-empty zero-filled slice.
+func TestVelocityZeroFill_DefaultedDays(t *testing.T) {
+	idx := openVelocityTestIndex(t)
+
+	buckets, err := idx.CompletionVelocity("daily", 0, nil)
+	if err != nil {
+		t.Fatalf("CompletionVelocity: %v", err)
+	}
+	if buckets == nil {
+		t.Fatal("want non-nil slice, got nil")
+	}
+	if len(buckets) == 0 {
+		t.Fatal("want non-empty slice, got empty")
+	}
+	assertAllZero(t, buckets)
 }
