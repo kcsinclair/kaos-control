@@ -1,16 +1,17 @@
 ---
 title: kaos-control CLI Init Command
 type: idea
-status: draft
+status: approved
 lineage: cli-init-scaffold
 created: "2026-05-08T17:55:01+10:00"
-priority: normal
+priority: high
 labels:
     - feature
     - onboarding
     - backend
     - go
     - v1
+release: KC-Release0
 ---
 
 # kaos-control CLI Init Command
