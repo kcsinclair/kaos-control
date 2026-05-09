@@ -1,7 +1,7 @@
 ---
 title: 'Tests: Artefacts List Release & Priority Columns'
 type: test
-status: approved
+status: done
 lineage: artefacts-list-release-priority-columns
 parent: lifecycle/test-plans/artefacts-list-release-priority-columns-5-test.md
 ---
