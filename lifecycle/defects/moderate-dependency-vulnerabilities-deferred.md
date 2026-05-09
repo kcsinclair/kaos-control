@@ -9,7 +9,7 @@ labels:
     - defect
     - security
     - testing
-release: June2026
+release: KC-Release2
 ---
 
 # Moderate Dependency Vulnerabilities (Deferred — See Vitest Upgrade Plan)

@@ -10,7 +10,7 @@ labels:
     - frontend
     - backend
     - enhancement
-release: June2026
+release: KC-Release2
 ---
 
 # Enable the Built-in YAML Editor DevOps Pipelines

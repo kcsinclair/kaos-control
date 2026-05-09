@@ -8,7 +8,7 @@ labels:
     - onboarding
     - usability
     - feature
-release: June2026
+release: KC-Release2
 ---
 
 # Guide Panel on Right with help for current screen

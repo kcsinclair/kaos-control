@@ -9,7 +9,7 @@ labels:
     - feature
     - frontend
     - architecture
-release: June2026
+release: KC-Release2
 ---
 
 # Lineage Visibility Controls
