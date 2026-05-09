@@ -6,6 +6,7 @@ defineProps<{ project: string }>()
 
 const summaryWidgets = computed(() => widgetList.filter((w) => w.slot === 'summary'))
 const chartWidgets = computed(() => widgetList.filter((w) => w.slot === 'chart'))
+const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel'))
 </script>
 
 <template>
@@ -43,6 +44,20 @@ const chartWidgets = computed(() => widgetList.filter((w) => w.slot === 'chart')
         <component :is="widget.component" :project="project" />
       </div>
     </section>
+
+    <!-- Panel row: full-width widgets (e.g. activity feed) -->
+    <section
+      v-if="panelWidgets.length"
+      class="dashboard-panels"
+      aria-label="Panels"
+    >
+      <component
+        :is="widget.component"
+        v-for="widget in panelWidgets"
+        :key="widget.id"
+        :project="project"
+      />
+    </section>
   </div>
 </template>
 
@@ -77,6 +92,14 @@ const chartWidgets = computed(() => widgetList.filter((w) => w.slot === 'chart')
 }
 
 .chart-cell {
+  min-width: 0;
+}
+
+/* Panel row: stacks full-width below the chart grid */
+.dashboard-panels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
   min-width: 0;
 }
 </style>
