@@ -10,6 +10,7 @@ labels:
     - feature
     - vue
     - architecture
+release: KC-Release1
 ---
 
 # YAML-Configurable Panels and Cards
