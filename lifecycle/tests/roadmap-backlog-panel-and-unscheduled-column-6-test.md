@@ -1,7 +1,7 @@
 ---
 title: Tests — Roadmap Backlog Panel and Unscheduled Column
 type: test
-status: in-qa
+status: approved
 lineage: roadmap-backlog-panel-and-unscheduled-column
 parent: lifecycle/test-plans/roadmap-backlog-panel-and-unscheduled-column-5-test.md
 ---

@@ -1,7 +1,7 @@
 ---
 title: "Test Suite: Test Artifact Status Lifecycle"
 type: test
-status: in-qa
+status: approved
 lineage: test-artifact-status-lifecycle
 parent: lifecycle/test-plans/test-artifact-status-lifecycle-5-test.md
 ---

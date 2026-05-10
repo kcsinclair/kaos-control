@@ -77,10 +77,10 @@ const DARK_PALETTE: GraphPalette = {
     parent:     '#94a3b8',  // slate-400
     depends_on: '#f97316',  // orange-500
     blocks:     '#ef4444',  // red-500
-    related_to: '#64748b',  // slate-500
+    related_to: '#94a3b8',  // slate-400 — was slate-500, lifted for ~4.5:1 on #0f172a
     label:      '#a855f7',  // purple-500
     timeline:   '#3b82f6',  // blue-500 — matches timelineEdgeColor
-    assigned:   '#334155',  // slate-700 — matches assignedEdgeColor
+    assigned:   '#475569',  // slate-600 — was slate-700, lifted for ~3.2:1 on #0f172a
   },
   approvedTestRingColor: '#2563eb',  // blue-600
   canvasBg:             '#0f172a',
@@ -95,7 +95,7 @@ const DARK_PALETTE: GraphPalette = {
   edgeLabelText:        '#94a3b8',
   timelineEdgeColor:    '#3b82f6',   // blue-500
   timelineEdgeTextColor:'#93c5fd',   // blue-300
-  assignedEdgeColor:    '#334155',   // slate-700
+  assignedEdgeColor:    '#475569',   // slate-600 — matches edgeColors.assigned
   borderDefault:        'rgba(255,255,255,0.25)',
   selectedBorderColor:  '#ffffff',
   searchHighlight:      '#facc15',   // yellow-400
