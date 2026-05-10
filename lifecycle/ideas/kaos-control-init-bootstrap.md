@@ -1,7 +1,7 @@
 ---
 title: 'kaos-control Init Bootstrap: Config, Agents, and DevOps Screen'
 type: idea
-status: draft
+status: approved
 lineage: kaos-control-init-bootstrap
 created: "2026-05-10T16:12:53+10:00"
 priority: normal
@@ -11,6 +11,7 @@ labels:
     - backend
     - frontend
     - v1
+release: KC-Release0
 ---
 
 # kaos-control Init Bootstrap: Config, Agents, and DevOps Screen
