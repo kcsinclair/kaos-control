@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Init Bootstrap — Config Defaults, DevOps Scaffold, and Pipeline Creation API'
 type: plan-backend
-status: draft
+status: approved
 lineage: kaos-control-init-bootstrap
 parent: lifecycle/requirements/kaos-control-init-bootstrap-2.md
 ---
