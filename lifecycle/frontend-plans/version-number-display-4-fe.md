@@ -1,10 +1,10 @@
 ---
 title: "Frontend Plan — Version Number Display"
 type: plan-frontend
-status: draft
+status: approved
 lineage: version-number-display
 parent: lifecycle/requirements/version-number-display-2.md
-created: "2026-05-10"
+created: "2026-05-10T00:00:00+10:00"
 ---
 
 # Frontend Plan — Version Number Display
