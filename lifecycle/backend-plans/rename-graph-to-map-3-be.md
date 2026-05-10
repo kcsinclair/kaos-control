@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Rename Graph to Map in UI and Routing"
 type: plan-backend
-status: draft
+status: approved
 lineage: rename-graph-to-map
 parent: lifecycle/requirements/rename-graph-to-map-2.md
 ---
