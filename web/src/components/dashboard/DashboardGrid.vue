@@ -182,6 +182,8 @@ const activityFeedWidget = computed(() => widgetList.find((w) => w.id === 'activ
   gap: var(--space-4);
   align-items: start;
   min-width: 0;
+  /* Reserve vertical space while async widget components load (CLS prevention). */
+  min-height: 240px;
 }
 
 @media (max-width: 767px) {

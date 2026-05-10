@@ -290,6 +290,8 @@ const GRANULARITIES: { value: Granularity; label: string }[] = [
   flex-direction: column;
   gap: var(--space-2);
   min-width: 360px;
+  /* Reserve height before chart initialises to prevent CLS. */
+  min-height: 240px;
 }
 
 .velocity-header {

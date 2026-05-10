@@ -118,6 +118,9 @@ function viewAll() {
 .activity-feed-body {
   overflow-y: auto;
   max-height: 560px;
+  /* Match velocity chart min-height to stabilise the side-by-side row height
+     while feed items load asynchronously (CLS prevention). */
+  min-height: 240px;
 }
 
 .feed-list {
