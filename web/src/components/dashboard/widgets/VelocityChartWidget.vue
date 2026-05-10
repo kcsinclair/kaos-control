@@ -289,6 +289,7 @@ const GRANULARITIES: { value: Granularity; label: string }[] = [
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  min-width: 360px;
 }
 
 .velocity-header {

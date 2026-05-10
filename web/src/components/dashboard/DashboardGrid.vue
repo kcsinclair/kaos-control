@@ -171,11 +171,14 @@ const activityFeedWidget = computed(() => widgetList.find((w) => w.id === 'activ
 }
 
 /* Side-by-side row: velocity (left/top) + activity feed (right/bottom).
-   Two equal columns on desktop, single stacked column on mobile.
+   repeat(2, minmax(360px, 1fr)) keeps each column >= 360 px; when the
+   container is too narrow to fit two 360 px columns plus the gap the
+   browser wraps to a single column automatically (auto-fill behaviour).
+   The explicit @media below also collapses to 1fr below 768 px.
    align-items: start keeps widgets top-aligned. */
 .dashboard-side-by-side {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(360px, 1fr));
   gap: var(--space-4);
   align-items: start;
   min-width: 0;
