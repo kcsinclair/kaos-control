@@ -1,7 +1,7 @@
 ---
 title: Update Recent Ideas and Defects Widget Limit from 6 to 7
 type: requirement
-status: blocked
+status: approved
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/defects/dashboard-recent-ideas-defects-widget-9-defect.md
 labels:
@@ -9,6 +9,7 @@ labels:
     - feature
     - vue
     - defect-fix
+release: KC-Release0
 assignees:
     - role: product-owner
       who: agent
@@ -62,6 +63,6 @@ The defect at [[dashboard-recent-ideas-defects-widget-9-defect]] confirms the in
 - [ ] No other existing tests regress as a result of this change.
 - [ ] Related lineage: [[dashboard-recent-ideas-defects-widget]]
 
-## Open Questions
+## Resolved Questions
 
 None -- the defect clearly states the intended limit is 7 and identifies exactly which artifacts need updating.
