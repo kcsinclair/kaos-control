@@ -1,7 +1,7 @@
 ---
 title: CLI Auth User Management and Secured API
 type: requirement
-status: approved
+status: planning
 lineage: cli-auth-user-management
 created: "2026-05-10"
 priority: high
