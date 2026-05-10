@@ -112,15 +112,17 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
-		// Exempt: static SPA assets served by handleFrontend.
-		if path == "/" || path == "/index.html" || path == "/favicon.ico" ||
-			strings.HasPrefix(path, "/assets/") {
+		// Exempt: anything not under /api/. The SPA shell (index.html, assets,
+		// and all client-side routes like /login or /p/<project>/...) is served
+		// by handleFrontend and must always load so the client-side router can
+		// redirect unauthenticated users to /login on its own.
+		if !strings.HasPrefix(path, "/api/") {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Exempt: login and health endpoints.
-		if path == "/api/auth/login" || path == "/api/health" {
+		// Exempt: login, health, and version endpoints.
+		if path == "/api/auth/login" || path == "/api/health" || path == "/api/version" {
 			next.ServeHTTP(w, r)
 			return
 		}

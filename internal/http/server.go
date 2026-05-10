@@ -81,6 +81,7 @@ func (s *Server) buildRouter() chi.Router {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
+		r.Get("/version", s.handleVersion)
 
 		// Auth endpoints
 		r.Post("/auth/login", s.handleLogin)
@@ -282,6 +283,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"ok":      true,
 		"version": Version,
 	})
+}
+
+// handleVersion returns the server version as JSON.
+func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"version": Version})
 }
 
 // handleListProjects returns all registered projects.
