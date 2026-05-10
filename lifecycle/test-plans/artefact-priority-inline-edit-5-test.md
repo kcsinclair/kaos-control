@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Inline Priority Display and Editing"
 type: plan-test
-status: in-development
+status: done
 lineage: artefact-priority-inline-edit
 parent: lifecycle/requirements/artefact-priority-inline-edit-2.md
 ---

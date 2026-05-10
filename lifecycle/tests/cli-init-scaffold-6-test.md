@@ -1,7 +1,7 @@
 ---
 title: "CLI Init Scaffold — Integration Test Suite"
 type: test
-status: in-qa
+status: approved
 lineage: cli-init-scaffold
 parent: lifecycle/test-plans/cli-init-scaffold-5-test.md
 ---
