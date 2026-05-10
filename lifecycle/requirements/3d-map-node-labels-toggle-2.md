@@ -1,7 +1,7 @@
 ---
 title: '3D Map: Toggleable Node Title and Lineage Labels'
 type: requirement
-status: blocked
+status: approved
 lineage: 3d-map-node-labels-toggle
 created: "2026-05-10T00:00:00+10:00"
 priority: normal
@@ -91,6 +91,6 @@ The 3D map and 3D roadmap views currently render nodes as unlabelled spheres (ex
 - [ ] No measurable frame-rate regression on graphs with up to 500 nodes when both labels are enabled.
 - [ ] Related: [[3d-map-node-labels-toggle]]
 
-## Open Questions
+## Resolved Questions
 
 _None — the idea is well-scoped with clear defaults, truncation rules, and implementation guidance._
