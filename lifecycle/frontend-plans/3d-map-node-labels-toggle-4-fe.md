@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: 3D Map Node Labels Toggle'
 type: plan-frontend
-status: in-development
+status: done
 lineage: 3d-map-node-labels-toggle
 parent: lifecycle/requirements/3d-map-node-labels-toggle-2.md
 ---
