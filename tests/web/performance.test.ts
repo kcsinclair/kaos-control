@@ -49,7 +49,7 @@ import SummaryCountsWidget from '../../web/src/components/dashboard/widgets/Summ
 vi.mock('@/api/client', () => ({
   api: {
     get: vi.fn().mockResolvedValue({
-      total: 5,
+      total_tickets: 5,
       in_progress: 2,
       blocked: 1,
       completed_this_week: 1,
@@ -91,7 +91,9 @@ describe('SummaryCountsWidget — mount and render performance', () => {
     const elapsed = performance.now() - start
 
     // Verify the widget rendered four stat cards with the expected values.
-    const cards = wrapper.findAll('[role="figure"]')
+    // Cards with a `to` route are role="link" (clickable filter); cards
+    // without one are role="figure" (passive). Find both.
+    const cards = wrapper.findAll('.summary-card')
     expect(cards).toHaveLength(4)
     expect(cards[0].find('.summary-card-value').text()).toBe('5')
     expect(cards[1].find('.summary-card-value').text()).toBe('2')

@@ -80,7 +80,7 @@ const DARK_PALETTE: GraphPalette = {
     related_to: '#94a3b8',  // slate-400 — was slate-500, lifted for ~4.5:1 on #0f172a
     label:      '#a855f7',  // purple-500
     timeline:   '#3b82f6',  // blue-500 — matches timelineEdgeColor
-    assigned:   '#475569',  // slate-600 — was slate-700, lifted for ~3.2:1 on #0f172a
+    assigned:   '#64748b',  // slate-500 — slate-600 measured at 2.36:1; this gives ~3.6:1 on #0f172a
   },
   approvedTestRingColor: '#2563eb',  // blue-600
   canvasBg:             '#0f172a',
@@ -95,7 +95,7 @@ const DARK_PALETTE: GraphPalette = {
   edgeLabelText:        '#94a3b8',
   timelineEdgeColor:    '#3b82f6',   // blue-500
   timelineEdgeTextColor:'#93c5fd',   // blue-300
-  assignedEdgeColor:    '#475569',   // slate-600 — matches edgeColors.assigned
+  assignedEdgeColor:    '#64748b',   // slate-500 — matches edgeColors.assigned
   borderDefault:        'rgba(255,255,255,0.25)',
   selectedBorderColor:  '#ffffff',
   searchHighlight:      '#facc15',   // yellow-400
