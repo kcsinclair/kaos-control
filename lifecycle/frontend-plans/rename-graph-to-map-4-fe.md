@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Rename Graph to Map in UI and Routing"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: rename-graph-to-map
 parent: lifecycle/requirements/rename-graph-to-map-2.md
 ---
