@@ -213,7 +213,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	if req.DisplayName == "" {
 		req.DisplayName = req.Email
 	}
-	if err := s.cfg.Auth.CreateUser(req.Email, req.DisplayName, req.Password); err != nil {
+	if err := s.cfg.Auth.CreateUser(req.Email, req.DisplayName, req.Password, false); err != nil {
 		writeJSON(w, http.StatusConflict, apiError("conflict", err.Error()))
 		return
 	}
