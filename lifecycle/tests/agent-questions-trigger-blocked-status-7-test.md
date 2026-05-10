@@ -1,7 +1,7 @@
 ---
 title: "Tests: system-role workflow transition permissions (M1)"
 type: test
-status: approved
+status: in-qa
 lineage: agent-questions-trigger-blocked-status
 parent: lifecycle/defects/agent-questions-trigger-blocked-status-m1-tests-missing.md
 ---
