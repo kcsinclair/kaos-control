@@ -1,7 +1,7 @@
 ---
 title: Rename Graph to Map in UI and Routing
 type: requirement
-status: blocked
+status: approved
 lineage: rename-graph-to-map
 created: "2026-05-10"
 priority: medium
@@ -95,7 +95,12 @@ The mismatch between user mental model ("map") and UI label ("Graph") creates un
 - [ ] 3D and 2D visualisations render and behave correctly after the rename
 - [ ] Related artifacts: [[rename-graph-to-map]]
 
-## Open Questions
+## Resolved Questions
 
 - Should the `RoadmapGraphView.vue` component (used in the releases/roadmap context) also be renamed, or does "graph" remain appropriate there since it is not the primary map view?
+
+> Code can refer to graph, called map when users see it
+
 - Should internal developer-facing files (`stores/graph.ts`, `api/graph.ts`, `useGraphData.ts`) be renamed for consistency, or left as-is to minimise churn? The current recommendation is to leave them, but the product owner may prefer full consistency.
+
+> Code can refer to graph, called map when users see it
