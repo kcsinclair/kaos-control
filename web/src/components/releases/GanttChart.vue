@@ -235,20 +235,32 @@ function colWidthPct(): number {
 
 interface BarInfo {
   release: Release
-  left: number   // %
-  width: number  // %
+  left: number        // %
+  width: number       // %
+  clippedLeft: boolean
+  clippedRight: boolean
 }
 
 const scheduledBars = computed<BarInfo[]>(() => {
+  const { start: rangeStart, end: rangeEnd } = timeRange.value
   return props.releases
     .filter((r) => r.start_date && r.end_date)
     .map((r) => {
       const s = new Date(r.start_date!)
       const e = new Date(r.end_date!)
+      // Skip bars entirely outside the visible window.
+      if (addDays(e, 1) <= rangeStart || s >= rangeEnd) return null
       const left = pct(s)
       const right = pct(addDays(e, 1))
-      return { release: r, left, width: Math.max(right - left, 1) }
+      return {
+        release: r,
+        left,
+        width: Math.max(right - left, 1),
+        clippedLeft:  s < rangeStart,
+        clippedRight: addDays(e, 1) > rangeEnd,
+      }
     })
+    .filter((b): b is BarInfo => b !== null)
     .sort((a, b) => a.left - b.left)
 })
 
@@ -330,6 +342,10 @@ function summaryBadge(release: Release): string {
             <!-- Release bar -->
             <button
               class="release-bar"
+              :class="{
+                'release-bar--clipped-left':  bar.clippedLeft,
+                'release-bar--clipped-right': bar.clippedRight,
+              }"
               :style="{
                 left: bar.left + '%',
                 width: bar.width + '%',
@@ -338,8 +354,10 @@ function summaryBadge(release: Release): string {
               :title="bar.release.name"
               @click="emit('clickRelease', bar.release.id)"
             >
+              <span v-if="bar.clippedLeft" class="clip-arrow clip-arrow--left" aria-hidden="true">&#8249;</span>
               <span class="bar-name">{{ bar.release.name }}</span>
               <span v-if="summaryBadge(bar.release)" class="bar-badge">{{ summaryBadge(bar.release) }}</span>
+              <span v-if="bar.clippedRight" class="clip-arrow clip-arrow--right" aria-hidden="true">&#8250;</span>
             </button>
           </div>
           <!-- Placeholder cell to maintain grid alignment -->
@@ -578,4 +596,19 @@ function summaryBadge(release: Release): string {
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* Clip indicators shown when a bar extends beyond the fixed-period window */
+.clip-arrow {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.clip-arrow--left  { margin-right: var(--space-1); }
+.clip-arrow--right { margin-left: auto; }
+
+/* Rounded corners are removed on the clipped edge */
+.release-bar--clipped-left  { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.release-bar--clipped-right { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 </style>
