@@ -1,7 +1,7 @@
 ---
 title: 'Dashboard: Completion Velocity and Recent Activity Side by Side'
 type: idea
-status: draft
+status: approved
 lineage: dashboard-velocity-activity-side-by-side
 created: "2026-05-10T16:06:01+10:00"
 priority: normal
@@ -11,6 +11,7 @@ labels:
     - usability
     - vue
     - testing
+release: KC-Release0
 ---
 
 # Dashboard: Completion Velocity and Recent Activity Side by Side
