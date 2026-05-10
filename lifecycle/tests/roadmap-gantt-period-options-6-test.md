@@ -1,15 +1,14 @@
 ---
-title: "Test Suite: Roadmap Gantt Period Display Options"
+title: 'Test Suite: Roadmap Gantt Period Display Options'
 type: test
-status: draft
+status: approved
 lineage: roadmap-gantt-period-options
-parent: lifecycle/test-plans/roadmap-gantt-period-options-5-test.md
 created: "2026-05-10T00:00:00+10:00"
+parent: lifecycle/test-plans/roadmap-gantt-period-options-5-test.md
 labels:
     - roadmaps
     - frontend
     - enhancement
-release: KC-Release0
 ---
 
 # Test Suite: Roadmap Gantt Period Display Options
