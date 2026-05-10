@@ -10,6 +10,7 @@ labels:
     - frontend
     - agent
     - vue
+release: KC-Release0
 ---
 
 # Agent Panel Ready Count Includes Non-Approved Items
