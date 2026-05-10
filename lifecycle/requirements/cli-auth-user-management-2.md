@@ -1,7 +1,7 @@
 ---
 title: CLI Auth User Management and Secured API
 type: requirement
-status: blocked
+status: approved
 lineage: cli-auth-user-management
 created: "2026-05-10"
 priority: high
@@ -83,8 +83,16 @@ The kaos-control server currently exposes its REST API without requiring authent
 - [ ] Integration tests in `tests/` cover the happy-path and rejection scenarios above.
 - [ ] Related: [[cli-init-scaffold]] (shares CLI subcommand infrastructure).
 
-## Open Questions
+## Resolved Questions
 
 1. Should bearer tokens support scoping (read-only vs read-write) in this iteration, or is a single "full access" scope sufficient for now?
+
+> Full access for now.
+
 2. What is the desired session/token TTL default? (Current `SessionTTL` field exists but its default is not specified in the idea.)
+
+> 1 month
+
 3. Should the `--admin` flag on `create-user` gate any behaviour now, or is it purely a forward-looking field for future RBAC?
+
+> forward-looking.
