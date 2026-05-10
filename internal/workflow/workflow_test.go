@@ -76,6 +76,56 @@ func TestWorkflowPredecessors(t *testing.T) {
 	}
 }
 
+// TestSystemRoleCanBlockFromAnyStatus asserts that the "system" actor may
+// transition an artifact to "blocked" from every non-blocked known status.
+func TestSystemRoleCanBlockFromAnyStatus(t *testing.T) {
+	e := New(nil)
+
+	statuses := []string{
+		"draft", "clarifying", "planning",
+		"in-development", "in-qa", "approved",
+		"rejected", "abandoned", "done",
+	}
+	for _, from := range statuses {
+		if !e.CanTransition(from, "blocked", []string{"system"}, "") {
+			t.Errorf("system should be allowed to transition %s → blocked", from)
+		}
+	}
+}
+
+// TestSystemRoleCanUnblockToDraft asserts that the "system" actor may
+// transition a blocked artifact back to draft.
+func TestSystemRoleCanUnblockToDraft(t *testing.T) {
+	e := New(nil)
+
+	if !e.CanTransition("blocked", "draft", []string{"system"}, "") {
+		t.Error("system should be allowed to transition blocked → draft")
+	}
+}
+
+// TestSystemRoleCannotDoOtherTransitions asserts that the "system" actor is
+// not permitted to make transitions other than any→blocked and blocked→draft.
+func TestSystemRoleCannotDoOtherTransitions(t *testing.T) {
+	e := New(nil)
+
+	cases := []struct{ from, to string }{
+		{"draft", "clarifying"},
+		{"clarifying", "planning"},
+		{"planning", "in-development"},
+		{"in-development", "in-qa"},
+		{"in-qa", "approved"},
+		{"approved", "done"},
+		{"draft", "rejected"},
+		{"draft", "abandoned"},
+		{"draft", "done"},
+	}
+	for _, c := range cases {
+		if e.CanTransition(c.from, c.to, []string{"system"}, "") {
+			t.Errorf("system should NOT be allowed to transition %s → %s", c.from, c.to)
+		}
+	}
+}
+
 func TestAllowedTargetsForProductOwnerCoversAllStatuses(t *testing.T) {
 	e := New(nil)
 	got := e.AllowedTargets("anything", []string{"product-owner"}, "")

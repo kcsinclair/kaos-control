@@ -1,7 +1,7 @@
 ---
 title: "Tests — Version Number Display"
 type: test
-status: in-qa
+status: approved
 lineage: version-number-display
 parent: lifecycle/test-plans/version-number-display-5-test.md
 created: "2026-05-10T00:00:00+10:00"
