@@ -1,4 +1,4 @@
-VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+VERSION   ?= $(shell cat VERSION)
 BINARY    := kaos-control
 MODULE    := github.com/kaos-control/kaos-control
 LDFLAGS   := -ldflags "-X main.version=$(VERSION) -X $(MODULE)/internal/http.Version=$(VERSION)"
