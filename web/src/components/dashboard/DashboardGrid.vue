@@ -7,11 +7,8 @@ import { widgetList } from './widgetRegistry'
 defineProps<{ project: string }>()
 
 const summaryWidgets = computed(() => widgetList.filter((w) => w.slot === 'summary'))
-const topChartWidgets = computed(() =>
-  widgetList.filter((w) => w.slot === 'chart' && w.order < 2),
-)
-const bottomChartWidgets = computed(() =>
-  widgetList.filter((w) => w.slot === 'chart' && w.order >= 2),
+const chartWidgets = computed(() =>
+  widgetList.filter((w) => w.slot === 'chart').sort((a, b) => a.order - b.order),
 )
 const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel'))
 </script>
@@ -32,36 +29,14 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
       />
     </section>
 
-    <!--
-      Row 2: 3-column grid — orders 0, 1, 1.5
-        Stages Distribution | Status Distribution | Recent Ideas & Defects
-    -->
+    <!-- Chart widgets: 3-column grid, sorted by order -->
     <section
-      v-if="topChartWidgets.length"
-      class="dashboard-charts-top"
-      aria-label="Charts top"
+      v-if="chartWidgets.length"
+      class="dashboard-charts"
+      aria-label="Charts"
     >
       <div
-        v-for="widget in topChartWidgets"
-        :key="widget.id"
-        class="chart-cell"
-        :style="widget.span && widget.span > 1 ? { gridColumn: `span ${widget.span}` } : {}"
-      >
-        <component :is="widget.component" :project="project" />
-      </div>
-    </section>
-
-    <!--
-      Row 3: 3-column grid — orders ≥ 2
-        Completion Velocity (span 2)
-    -->
-    <section
-      v-if="bottomChartWidgets.length"
-      class="dashboard-charts-bottom"
-      aria-label="Charts bottom"
-    >
-      <div
-        v-for="widget in bottomChartWidgets"
+        v-for="widget in chartWidgets"
         :key="widget.id"
         class="chart-cell"
         :style="widget.span && widget.span > 1 ? { gridColumn: `span ${widget.span}` } : {}"
@@ -102,9 +77,8 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
   gap: var(--space-3);
 }
 
-/* Rows 2 & 3: 3-column grid (stacked on mobile) */
-.dashboard-charts-top,
-.dashboard-charts-bottom {
+/* Chart grid: 3-column at desktop, single column on mobile */
+.dashboard-charts {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
@@ -112,8 +86,7 @@ const panelWidgets = computed(() => widgetList.filter((w) => w.slot === 'panel')
 }
 
 @media (min-width: 1024px) {
-  .dashboard-charts-top,
-  .dashboard-charts-bottom {
+  .dashboard-charts {
     grid-template-columns: repeat(3, 1fr);
   }
 }
