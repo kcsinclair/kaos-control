@@ -1,7 +1,7 @@
 ---
 title: Inline Priority Display and Editing on Artefact View
 type: idea
-status: clarifying
+status: planning
 lineage: artefact-priority-inline-edit
 created: "2026-05-07T11:48:13+10:00"
 priority: high
