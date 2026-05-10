@@ -210,6 +210,75 @@ func TestKanbanConfig(t *testing.T) {
 	})
 }
 
+// TestRoadmapConfig verifies parsing and validation of the roadmap.default_period_mode field.
+// Run with: go test ./internal/config/ -run Roadmap -v
+func TestRoadmapConfig(t *testing.T) {
+	validModes := []string{"autoscale", "month", "quarter", "half-year", "year"}
+
+	for _, mode := range validModes {
+		mode := mode
+		t.Run("valid mode: "+mode, func(t *testing.T) {
+			dir := writeMinimalProjectConfig(t, "roadmap:\n  default_period_mode: "+mode+"\n")
+			cfg, err := LoadProject(dir)
+			if err != nil {
+				t.Fatalf("LoadProject with mode %q: %v", mode, err)
+			}
+			if cfg.Roadmap.DefaultPeriodMode != mode {
+				t.Errorf("DefaultPeriodMode = %q, want %q", cfg.Roadmap.DefaultPeriodMode, mode)
+			}
+		})
+	}
+
+	t.Run("invalid mode returns descriptive error", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, "roadmap:\n  default_period_mode: weekly\n")
+		_, err := LoadProject(dir)
+		if err == nil {
+			t.Fatal("expected error for invalid mode \"weekly\", got nil")
+		}
+		if !containsString(err.Error(), "weekly") {
+			t.Errorf("error %q does not mention the invalid value \"weekly\"", err.Error())
+		}
+		if !containsString(err.Error(), "default_period_mode") {
+			t.Errorf("error %q does not mention the field name", err.Error())
+		}
+	})
+
+	t.Run("omitted roadmap section defaults to autoscale", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, "")
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if cfg.Roadmap.DefaultPeriodMode != "autoscale" {
+			t.Errorf("DefaultPeriodMode = %q, want \"autoscale\"", cfg.Roadmap.DefaultPeriodMode)
+		}
+	})
+
+	t.Run("empty default_period_mode defaults to autoscale", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, "roadmap:\n  default_period_mode: \"\"\n")
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if cfg.Roadmap.DefaultPeriodMode != "autoscale" {
+			t.Errorf("DefaultPeriodMode = %q, want \"autoscale\"", cfg.Roadmap.DefaultPeriodMode)
+		}
+	})
+}
+
+// containsString is a helper used by TestRoadmapConfig.
+func containsString(s, sub string) bool {
+	return len(s) >= len(sub) && (s == sub || len(sub) == 0 ||
+		func() bool {
+			for i := 0; i+len(sub) <= len(s); i++ {
+				if s[i:i+len(sub)] == sub {
+					return true
+				}
+			}
+			return false
+		}())
+}
+
 // writeMinimalProjectConfig writes a lifecycle/config.yaml with a minimal valid
 // base configuration plus an optional extra YAML snippet (e.g. an ignore: line),
 // and returns the temp project root directory.
