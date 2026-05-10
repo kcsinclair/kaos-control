@@ -285,8 +285,15 @@ watch(isDark, () => {
     const node = n as GraphNode
     return node.type === 'release' ? buildReleaseObject(node) : buildNodeObject(node)
   })
-  // Refresh link colours
+  // Refresh link colours (edgeColor encodes per-link opacity in RGBA alpha)
   graph.linkColor((l: object) => edgeColor(l as GraphEdge))
+  // Re-apply linkWidth so the library picks up any future theme-dependent widths
+  graph.linkWidth((l: object) => {
+    const kind = (l as GraphEdge).kind
+    if (kind === 'timeline') return 2.0
+    if (kind === 'assigned') return 0.8
+    return 1.2
+  })
   // Refresh tooltip and link label callbacks so subsequent hovers use new palette
   graph.nodeLabel((n: object) => tooltipHtml(n as GraphNode))
   graph.linkLabel((l: object) => timelineLinkLabel(l as GraphEdge))
