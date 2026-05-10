@@ -3,15 +3,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Release, ReleaseDetail } from '@/types/release'
+import type { PeriodMode, FixedPeriod } from '@/stores/roadmapSettings'
 
 type Granularity = 'week' | 'month' | 'quarter' | 'half-year' | 'year'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   releases: Release[]
   granularity: Granularity
   project: string
   releaseDetails?: Map<number, ReleaseDetail>
-}>()
+  periodMode?: PeriodMode
+  fixedPeriod?: FixedPeriod
+}>(), {
+  periodMode: 'autoscale',
+  fixedPeriod: 'month',
+})
 
 const emit = defineEmits<{
   clickRelease: [id: number]
@@ -61,57 +67,92 @@ function startOfYear(d: Date): Date {
   return new Date(d.getFullYear(), 0, 1)
 }
 
+/** Snap a date to the start of its granularity period. */
+function startOfGranularity(d: Date, gran: Granularity): Date {
+  switch (gran) {
+    case 'week':      return startOfWeek(d)
+    case 'month':     return startOfMonth(d)
+    case 'quarter':   return startOfQuarter(d)
+    case 'half-year': return startOfHalfYear(d)
+    case 'year':      return startOfYear(d)
+  }
+}
+
+/** Return the last day of the granularity period containing d. */
+function endOfGranularity(d: Date, gran: Granularity): Date {
+  switch (gran) {
+    case 'week':      return addDays(startOfWeek(d), 6)
+    case 'month':     return new Date(d.getFullYear(), d.getMonth() + 1, 0)
+    case 'quarter': {
+      const q = Math.floor(d.getMonth() / 3) * 3
+      return new Date(d.getFullYear(), q + 3, 0)
+    }
+    case 'half-year': {
+      const h = d.getMonth() < 6 ? 0 : 6
+      return new Date(d.getFullYear(), h + 6, 0)
+    }
+    case 'year':      return new Date(d.getFullYear(), 11, 31)
+  }
+}
+
+/** Return the first day of the fixed calendar period containing d. */
+function startOfPeriod(period: FixedPeriod, d: Date): Date {
+  switch (period) {
+    case 'month':     return startOfMonth(d)
+    case 'quarter':   return startOfQuarter(d)
+    case 'half-year': return startOfHalfYear(d)
+    case 'year':      return startOfYear(d)
+  }
+}
+
+/** Return the last day of the fixed calendar period containing d. */
+function endOfPeriod(period: FixedPeriod, d: Date): Date {
+  switch (period) {
+    case 'month':     return new Date(d.getFullYear(), d.getMonth() + 1, 0)
+    case 'quarter': {
+      const q = Math.floor(d.getMonth() / 3) * 3
+      return new Date(d.getFullYear(), q + 3, 0)
+    }
+    case 'half-year': {
+      const h = d.getMonth() < 6 ? 0 : 6
+      return new Date(d.getFullYear(), h + 6, 0)
+    }
+    case 'year':      return new Date(d.getFullYear(), 11, 31)
+  }
+}
+
 /** Given a list of releases, compute a combined time range to display */
 const timeRange = computed<{ start: Date; end: Date }>(() => {
+  const gran = props.granularity
+
+  if (props.periodMode === 'fixed') {
+    // Fixed-period: anchor to the current calendar period containing today.
+    return {
+      start: startOfPeriod(props.fixedPeriod, TODAY),
+      end:   endOfPeriod(props.fixedPeriod, TODAY),
+    }
+  }
+
+  // Autoscale: cover exactly the release span snapped to granularity boundaries.
   const scheduled = props.releases.filter((r) => r.start_date && r.end_date)
 
-  let earliest = new Date(TODAY)
-  let latest = addDays(TODAY, 90)
-
-  if (scheduled.length > 0) {
-    const starts = scheduled.map((r) => new Date(r.start_date!))
-    const ends = scheduled.map((r) => new Date(r.end_date!))
-    const minStart = starts.reduce((a, b) => (a < b ? a : b))
-    const maxEnd = ends.reduce((a, b) => (a > b ? a : b))
-
-    // Pad by one column unit on each side
-    earliest = minStart < TODAY ? minStart : TODAY
-    latest = maxEnd > latest ? maxEnd : latest
+  if (scheduled.length === 0) {
+    // No releases: show a single column containing today.
+    return {
+      start: startOfGranularity(TODAY, gran),
+      end:   endOfGranularity(TODAY, gran),
+    }
   }
 
-  // Snap to column boundaries
-  let start: Date
-  let end: Date
+  const starts = scheduled.map((r) => new Date(r.start_date!))
+  const ends   = scheduled.map((r) => new Date(r.end_date!))
+  const minStart = starts.reduce((a, b) => (a < b ? a : b))
+  const maxEnd   = ends.reduce((a, b) => (a > b ? a : b))
 
-  switch (props.granularity) {
-    case 'week':
-      start = startOfWeek(addDays(earliest, -7))
-      end = addDays(startOfWeek(addDays(latest, 7)), 6)
-      break
-    case 'month':
-      start = startOfMonth(new Date(earliest.getFullYear(), earliest.getMonth() - 1, 1))
-      end = new Date(latest.getFullYear(), latest.getMonth() + 2, 0)
-      break
-    case 'quarter':
-      start = startOfQuarter(new Date(earliest.getFullYear(), earliest.getMonth() - 3, 1))
-      end = new Date(startOfQuarter(new Date(latest.getFullYear(), latest.getMonth() + 3, 1)))
-      end = new Date(end.getFullYear(), end.getMonth() + 3, 0)
-      break
-    case 'half-year':
-      start = startOfHalfYear(new Date(earliest.getFullYear(), earliest.getMonth() - 6, 1))
-      end = new Date(startOfHalfYear(new Date(latest.getFullYear(), latest.getMonth() + 6, 1)))
-      end = new Date(end.getFullYear(), end.getMonth() + 6, 0)
-      break
-    case 'year':
-      start = startOfYear(new Date(earliest.getFullYear() - 1, 0, 1))
-      end = new Date(latest.getFullYear() + 1, 11, 31)
-      break
-    default:
-      start = earliest
-      end = latest
+  return {
+    start: startOfGranularity(minStart, gran),
+    end:   endOfGranularity(maxEnd, gran),
   }
-
-  return { start, end }
 })
 
 const columns = computed<Column[]>(() => {
