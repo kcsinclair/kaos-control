@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Update Recent Ideas and Defects Widget Limit to 7"
 type: plan-backend
-status: draft
+status: approved
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/requirements/dashboard-recent-ideas-defects-widget-10.md
 ---
