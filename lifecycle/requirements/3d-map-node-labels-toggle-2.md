@@ -1,7 +1,7 @@
 ---
 title: '3D Map: Toggleable Node Title and Lineage Labels'
 type: requirement
-status: approved
+status: planning
 lineage: 3d-map-node-labels-toggle
 created: "2026-05-10T00:00:00+10:00"
 priority: normal
