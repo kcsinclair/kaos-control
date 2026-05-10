@@ -1,7 +1,7 @@
 ---
 title: Version Number Display in UI
 type: idea
-status: clarifying
+status: done
 lineage: version-number-display
 created: "2026-05-10T09:15:21+10:00"
 priority: normal
