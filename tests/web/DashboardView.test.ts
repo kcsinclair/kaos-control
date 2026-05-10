@@ -487,7 +487,7 @@ describe('DashboardGrid — Milestone 5: layout with recent-ideas-defects widget
     expect(wrapper.find('.stub-activity-feed').exists()).toBe(true)
   })
 
-  it('TC2: summary-counts is in summary slot; activity-feed is in panel slot', async () => {
+  it('TC2: summary-counts is in summary slot; activity-feed is in the side-by-side row', async () => {
     const SummaryStub = markRaw(defineComponent({ name: 'SummaryStub', template: '<div class="tc2-summary" />' }))
     const FeedStub    = markRaw(defineComponent({ name: 'FeedStub',    template: '<div class="tc2-feed" />' }))
 
@@ -501,10 +501,12 @@ describe('DashboardGrid — Milestone 5: layout with recent-ideas-defects widget
     await flushPromises()
 
     const summarySection = wrapper.find('section[aria-label="Summary statistics"]')
-    const panelSection   = wrapper.find('section[aria-label="Panels"]')
+    const sideBySide     = wrapper.find('section[aria-label="Velocity and activity"]')
 
     expect(summarySection.find('.tc2-summary').exists()).toBe(true)
-    expect(panelSection.find('.tc2-feed').exists()).toBe(true)
+    // activity-feed is special-cased into the side-by-side row by SIDE_BY_SIDE_IDS,
+    // so it does NOT appear in the generic Panels section.
+    expect(sideBySide.find('.tc2-feed').exists()).toBe(true)
   })
 
   it('TC3: first 3 chart-slot widgets render inside .dashboard-charts-top', async () => {
@@ -534,7 +536,7 @@ describe('DashboardGrid — Milestone 5: layout with recent-ideas-defects widget
     expect(top.find('.tc3-velo').exists()).toBe(false)
   })
 
-  it('TC4: velocity-chart renders inside .dashboard-charts-bottom', async () => {
+  it('TC4: velocity-chart renders inside the side-by-side row, not .dashboard-charts-bottom', async () => {
     const StatusStub  = markRaw(defineComponent({ name: 'StatusStub',  template: '<div class="tc4-status" />' }))
     const StagesStub  = markRaw(defineComponent({ name: 'StagesStub',  template: '<div class="tc4-stages" />' }))
     const RecentStub  = markRaw(defineComponent({ name: 'RecentStub',  template: '<div class="tc4-recent" />' }))
@@ -551,13 +553,22 @@ describe('DashboardGrid — Milestone 5: layout with recent-ideas-defects widget
     })
     await flushPromises()
 
-    const bottom = wrapper.find('.dashboard-charts-bottom')
-    expect(bottom.exists()).toBe(true)
-    expect(bottom.find('.tc4-velo').exists()).toBe(true)
-    // The first three chart widgets must NOT be inside .dashboard-charts-bottom.
-    expect(bottom.find('.tc4-status').exists()).toBe(false)
-    expect(bottom.find('.tc4-stages').exists()).toBe(false)
-    expect(bottom.find('.tc4-recent').exists()).toBe(false)
+    // velocity-chart is special-cased into the side-by-side row by SIDE_BY_SIDE_IDS.
+    const sideBySide = wrapper.find('section[aria-label="Velocity and activity"]')
+    expect(sideBySide.exists()).toBe(true)
+    expect(sideBySide.find('.tc4-velo').exists()).toBe(true)
+
+    // With this widget set, .dashboard-charts-bottom has no widgets to render
+    // (velocity is the only 4+ chart widget and it's filtered out), so the
+    // container does not exist at all.
+    expect(wrapper.find('.dashboard-charts-bottom').exists()).toBe(false)
+
+    // The first three chart widgets must be inside .dashboard-charts-top, not bottom.
+    const top = wrapper.find('.dashboard-charts-top')
+    expect(top.find('.tc4-status').exists()).toBe(true)
+    expect(top.find('.tc4-stages').exists()).toBe(true)
+    expect(top.find('.tc4-recent').exists()).toBe(true)
+    expect(top.find('.tc4-velo').exists()).toBe(false)
   })
 
   it('TC5 note: responsive single-column collapse at <1024px deferred to Playwright', () => {
