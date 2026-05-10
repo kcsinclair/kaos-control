@@ -1,7 +1,7 @@
 ---
 title: Inline Priority Display and Editing on Artefact Detail View
 type: requirement
-status: planning
+status: done
 lineage: artefact-priority-inline-edit
 created: "2026-05-07T00:00:00+10:00"
 priority: high
