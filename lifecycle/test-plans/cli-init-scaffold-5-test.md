@@ -1,7 +1,7 @@
 ---
 title: "CLI Init Scaffold — Test Plan"
 type: plan-test
-status: draft
+status: approved
 lineage: cli-init-scaffold
 parent: lifecycle/requirements/cli-init-scaffold-2.md
 ---
