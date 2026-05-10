@@ -350,7 +350,7 @@ func TestWebSocketAuth_Rejected(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, setup.baseURL+"/api/p/dummy/ws", nil)
 	req.Header.Set("Upgrade", "websocket")
 	req.Header.Set("Connection", "Upgrade")
-	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==") // gitleaks:allow — RFC 6455 example nonce
 	req.Header.Set("Sec-WebSocket-Version", "13")
 
 	resp, err := http.DefaultClient.Do(req)
