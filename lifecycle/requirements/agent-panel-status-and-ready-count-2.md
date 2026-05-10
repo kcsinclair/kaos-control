@@ -1,7 +1,7 @@
 ---
 title: 'Agent Panel: Ready Count Badge and Running-State Highlight'
 type: requirement
-status: blocked
+status: approved
 lineage: agent-panel-status-and-ready-count
 created: "2026-05-10"
 priority: normal
@@ -132,8 +132,16 @@ Adding the badge and running highlight must not change the card's dimensions or 
 - [ ] `pnpm build` and `vue-tsc --noEmit` pass with no new errors
 - [ ] `go build ./...` and `go vet ./...` pass with no new errors
 
-## Open Questions
+## Resolved Questions
 
 - **Q1**: Should the ready-count badge be clickable to navigate to a filtered artifact list (e.g. artifacts with that status)? This would add useful drill-down but may be better scoped as a follow-up.
+
+> Yes, great idea.
+
 - **Q2**: Should the running-state highlight differentiate between a single running instance and multiple concurrent runs of the same agent (e.g. show a run count)?
+
+> Yes, show a run count.
+
 - **Q3**: For the Ollama driver, the `active_status` field behaves the same as for Claude Code CLI — confirm there are no driver-specific edge cases for ready-count semantics.
+
+> We need to work on Ollama, focus on Claude for now.
