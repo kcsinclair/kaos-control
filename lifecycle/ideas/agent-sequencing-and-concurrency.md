@@ -10,6 +10,7 @@ labels:
     - agent-runner
     - workflow
     - feature
+release: KC-AgentHandling
 ---
 
 # Agent Sequencing and Concurrency Controls
