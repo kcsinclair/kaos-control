@@ -23,6 +23,7 @@ const LOCK_EVENTS      = new Set(['lock.acquired', 'lock.released'])
 const SCHEDULER_EVENTS = new Set(['scheduler.job.started', 'scheduler.job.completed'])
 
 let wsUnsub: (() => void) | null = null
+let _readyCountDebounce: ReturnType<typeof setTimeout> | null = null
 
 function getProject() { return route.params.project as string }
 
@@ -31,6 +32,14 @@ async function syncProject() {
   if (!projectStore.projects.length) await projectStore.fetchProjects()
   projectStore.setCurrent(name)
   await projectStore.checkInitRequired(name)
+}
+
+function scheduleReadyCountRefresh(project: string) {
+  if (_readyCountDebounce !== null) clearTimeout(_readyCountDebounce)
+  _readyCountDebounce = setTimeout(() => {
+    _readyCountDebounce = null
+    void agentsStore.fetchReadyCounts(project)
+  }, 500)
 }
 
 function subscribeWs(project: string) {
@@ -43,6 +52,8 @@ function subscribeWs(project: string) {
       locksStore.applyEvent(e.type, e.payload as Record<string, unknown>)
     } else if (SCHEDULER_EVENTS.has(e.type)) {
       schedulerStore.onWsEvent(e.type, e.payload as Record<string, unknown>)
+    } else if (e.type === 'artifact.indexed') {
+      scheduleReadyCountRefresh(project)
     }
   })
 }
@@ -59,7 +70,10 @@ watch(() => route.params.project, (newProject) => {
   }
 })
 
-onUnmounted(() => { wsUnsub?.() })
+onUnmounted(() => {
+  wsUnsub?.()
+  if (_readyCountDebounce !== null) clearTimeout(_readyCountDebounce)
+})
 </script>
 
 <template>
