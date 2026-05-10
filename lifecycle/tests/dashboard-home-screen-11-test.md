@@ -1,7 +1,7 @@
 ---
 title: performance.test.ts — correct total_tickets field name in all mocks
 type: test
-status: approved
+status: in-qa
 lineage: dashboard-home-screen
 parent: lifecycle/defects/dashboard-home-screen-10-defect.md
 ---
