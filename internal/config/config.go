@@ -58,7 +58,7 @@ func defaultApp() App {
 		},
 		Auth: AuthConfig{
 			Method:     "local",
-			SessionTTL: 24 * time.Hour,
+			SessionTTL: 30 * 24 * time.Hour,
 		},
 		Limits: LimitsConfig{
 			MaxConcurrentAgents:        4,
