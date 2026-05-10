@@ -1,7 +1,7 @@
 ---
 title: "Tests: Rename Graph to Map in UI and Routing"
 type: test
-status: approved
+status: in-qa
 lineage: rename-graph-to-map
 parent: lifecycle/test-plans/rename-graph-to-map-5-test.md
 ---
