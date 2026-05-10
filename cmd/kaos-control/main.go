@@ -128,6 +128,11 @@ func run() error {
 		slog.Warn("failed to open auth database; authentication will be unavailable", "err", err)
 		authStore = nil
 	}
+	if authStore != nil {
+		if count, cerr := authStore.UserCount(); cerr == nil && count == 0 {
+			slog.Warn("No users found. Create the first admin user with: kaos-control auth create-user --email <email> --name <name> --admin")
+		}
+	}
 
 	srv := khttp.New(khttp.ServerConfig{
 		Listen:     appCfg.Server.Listen,
