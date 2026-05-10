@@ -1,7 +1,7 @@
 ---
 title: Version Number Display
 type: requirement
-status: blocked
+status: approved
 lineage: version-number-display
 created: "2026-05-10"
 priority: normal
@@ -88,8 +88,16 @@ There is also no canonical `VERSION` file in the repository. The version is only
 - [ ] No new Go modules or npm packages are introduced.
 - [ ] [[version-number-display]] lineage artifacts (plans, tests) can reference this requirement.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the `/api/version` endpoint be completely unauthenticated, or should it sit behind the existing auth middleware like other `/api/*` routes? The idea says "operators" which implies authenticated users, but version info is generally harmless to expose publicly and useful for health-check tooling.
+
+> Unauthenticated for this API is OK.
+
 2. Should the `VERSION` file use a leading `v` prefix (e.g. `v0.1.0`) to match git tag convention, or bare semver (e.g. `0.1.0`) with the `v` added only when tagging? The idea implies bare semver.
+
+> bare semver
+
 3. What is the initial version number to seed in the `VERSION` file? Suggested: `0.1.0`.
+
+> 0.1.0 is good.
