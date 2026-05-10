@@ -35,6 +35,28 @@ export function cancelPipeline(project: string, slug: string): Promise<void> {
   return api.post<void>(`/p/${encodeURIComponent(project)}/devops/pipelines/${encodeURIComponent(slug)}/cancel`)
 }
 
+export interface CreatePipelineRequest {
+  slug: string
+  definition: string
+}
+
+export interface CreatePipelineResponse {
+  slug: string
+  name: string
+  type: string
+  step_count: number
+}
+
+export function createPipeline(
+  project: string,
+  body: CreatePipelineRequest,
+): Promise<CreatePipelineResponse> {
+  return api.post<CreatePipelineResponse>(
+    `/p/${encodeURIComponent(project)}/devops/pipelines`,
+    body,
+  )
+}
+
 export function getRunLog(project: string, runId: string): Promise<string> {
   return api.getText(`/p/${encodeURIComponent(project)}/devops/runs/${encodeURIComponent(runId)}`)
 }

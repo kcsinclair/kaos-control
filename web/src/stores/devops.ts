@@ -122,6 +122,13 @@ export const useDevOpsStore = defineStore('devops', () => {
     }
   }
 
+  async function createPipeline(project: string, slug: string, definition: string): Promise<Pipeline> {
+    const res = await devopsApi.createPipeline(project, { slug, definition })
+    // Re-fetch pipelines to get the full pipeline object including steps
+    await fetchPipelines(project)
+    return pipelines.value.find((p) => p.slug === res.slug)!
+  }
+
   async function fetchRunLog(project: string, runId: string): Promise<string> {
     return devopsApi.getRunLog(project, runId)
   }
@@ -272,6 +279,7 @@ export const useDevOpsStore = defineStore('devops', () => {
     pipelinesByType,
     historyForPipeline,
     fetchPipelines,
+    createPipeline,
     runPipeline,
     cancelPipeline,
     fetchRunLog,
