@@ -4,12 +4,19 @@ import type { WsEvent, WsEventType } from '@/types/api'
 
 type WsHandler = (event: WsEvent) => void
 
+// Custom WebSocket close code used by the backend when the session is invalid
+// during the HTTP upgrade handshake.
+const AUTH_FAILURE_CLOSE_CODE = 4401
+
 export class WsClient {
   private ws: WebSocket | null = null
   private handlers = new Set<WsHandler>()
   private timer: ReturnType<typeof setTimeout> | null = null
   private delay = 100
   private closed = false
+
+  /** Called when the server rejects the connection with an auth-failure code. */
+  onAuthFailure?: () => void
 
   constructor(private readonly url: string) {}
 
@@ -28,7 +35,13 @@ export class WsClient {
         // ignore malformed messages
       }
     }
-    this.ws.onclose = () => {
+    this.ws.onclose = (e: CloseEvent) => {
+      if (e.code === AUTH_FAILURE_CLOSE_CODE) {
+        // Mark as closed so scheduleReconnect is never called, then notify.
+        this.closed = true
+        this.onAuthFailure?.()
+        return
+      }
       if (!this.closed) this.scheduleReconnect()
     }
     this.ws.onerror = () => {
@@ -71,6 +84,21 @@ export function getProjectWs(project: string): WsClient {
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
     const url = `${proto}//${location.host}/api/p/${encodeURIComponent(project)}/ws`
     const client = new WsClient(url)
+
+    // Dynamic imports avoid circular deps (router → stores/auth → api/auth → api/client).
+    // On auth failure the client is already marked closed, so no reconnect loop occurs.
+    client.onAuthFailure = async () => {
+      const [{ useAuthStore }, { default: router }] = await Promise.all([
+        import('@/stores/auth'),
+        import('@/router'),
+      ])
+      useAuthStore().clearSession()
+      _clients.delete(project)
+      if (router.currentRoute.value.path !== '/login') {
+        await router.push({ path: '/login', query: { expired: '1' } })
+      }
+    }
+
     client.connect()
     _clients.set(project, client)
   }
