@@ -63,12 +63,12 @@ func Discover(dir string) ([]Pipeline, []error) {
 	return pipelines, warnings
 }
 
-func parsePipelineFile(path string) (*Pipeline, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("reading file: %w", err)
-	}
-
+// ValidateDefinition parses and validates a pipeline definition from raw YAML
+// bytes. It returns the parsed Pipeline (without a slug, since the slug is
+// derived from the filename) or an error describing the first validation
+// failure. The slug field of the returned Pipeline is always empty; callers
+// must set it from the target filename.
+func ValidateDefinition(data []byte) (*Pipeline, error) {
 	var raw pipelineYAML
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("invalid YAML: %w", err)
@@ -83,8 +83,6 @@ func parsePipelineFile(path string) (*Pipeline, error) {
 	if len(raw.Steps) == 0 {
 		return nil, fmt.Errorf("missing required field: steps (must have at least one step)")
 	}
-
-	slug := strings.TrimSuffix(filepath.Base(path), ".yaml")
 
 	steps := make([]Step, 0, len(raw.Steps))
 	for i, s := range raw.Steps {
@@ -111,9 +109,23 @@ func parsePipelineFile(path string) (*Pipeline, error) {
 	}
 
 	return &Pipeline{
-		Slug:  slug,
 		Name:  raw.Name,
 		Type:  raw.Type,
 		Steps: steps,
 	}, nil
+}
+
+func parsePipelineFile(path string) (*Pipeline, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading file: %w", err)
+	}
+
+	p, err := ValidateDefinition(data)
+	if err != nil {
+		return nil, err
+	}
+
+	p.Slug = strings.TrimSuffix(filepath.Base(path), ".yaml")
+	return p, nil
 }

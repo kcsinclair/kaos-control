@@ -3,12 +3,17 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
+	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/devops"
 )
+
+var pipelineSlugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*[a-z0-9]$|^[a-z0-9]$`)
 
 // devopsDir returns the absolute path to the lifecycle/devops/ directory for
 // the given project root.
@@ -183,4 +188,65 @@ func (s *Server) handleGetRunLog(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/x-ndjson")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
+}
+
+// handleCreatePipeline handles POST /api/p/{project}/devops/pipelines.
+// It validates the slug and YAML definition, rejects duplicates, and writes
+// the new pipeline file to devops/{slug}.yaml under the project root.
+func (s *Server) handleCreatePipeline(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	user := userFromCtx(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
+		return
+	}
+
+	roles := p.Cfg.RolesFor(user.Email)
+	if !hasAnyRole(roles, "product-owner", "devops") {
+		writeJSON(w, http.StatusForbidden, apiError("forbidden", "product-owner or devops role required"))
+		return
+	}
+
+	var req struct {
+		Slug       string `json:"slug"`
+		Definition string `json:"definition"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
+		return
+	}
+
+	if !pipelineSlugRe.MatchString(req.Slug) {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "slug must be lowercase alphanumeric with hyphens"))
+		return
+	}
+
+	destPath := filepath.Join(p.Entry.Path, "devops", req.Slug+".yaml")
+	if _, err := os.Stat(destPath); err == nil {
+		writeJSON(w, http.StatusConflict, apiError("conflict", "pipeline already exists: "+req.Slug))
+		return
+	}
+
+	pl, err := devops.ValidateDefinition([]byte(req.Definition))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid pipeline definition: "+err.Error()))
+		return
+	}
+	pl.Slug = req.Slug
+
+	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+	if err := os.WriteFile(destPath, []byte(req.Definition), 0o644); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"slug":       pl.Slug,
+		"name":       pl.Name,
+		"type":       pl.Type,
+		"step_count": len(pl.Steps),
+	})
 }
