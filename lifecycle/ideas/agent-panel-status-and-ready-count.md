@@ -11,6 +11,7 @@ labels:
     - enhancement
     - usability
     - vue
+release: KC-Release0
 ---
 
 # Agent Panel: Show Ready Item Count and Running State
