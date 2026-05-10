@@ -1,7 +1,7 @@
 ---
 title: 'DashboardGrid chart section aria-label changed; tests expect "Charts" but component renders "Charts top"/"Charts bottom"'
 type: defect
-status: in-development
+status: done
 lineage: dashboard-home-screen
 parent: lifecycle/tests/dashboard-home-screen-6-test.md
 labels:
