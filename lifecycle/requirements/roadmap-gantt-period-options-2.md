@@ -1,7 +1,7 @@
 ---
 title: Roadmap Gantt Period Display Options
 type: requirement
-status: in-development
+status: done
 lineage: roadmap-gantt-period-options
 created: "2026-05-09T00:00:00+10:00"
 priority: high
