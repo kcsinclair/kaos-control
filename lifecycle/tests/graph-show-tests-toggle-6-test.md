@@ -1,7 +1,7 @@
 ---
 title: "Tests — Graph Show Tests Toggle"
 type: test
-status: draft
+status: approved
 lineage: graph-show-tests-toggle
 parent: lifecycle/test-plans/graph-show-tests-toggle-5-test.md
 created: "2026-05-06T00:00:00+10:00"
