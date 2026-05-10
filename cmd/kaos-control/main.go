@@ -10,18 +10,51 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
 	khttp "github.com/kaos-control/kaos-control/internal/http"
+	"github.com/kaos-control/kaos-control/internal/initcmd"
 	"github.com/kaos-control/kaos-control/internal/project"
 	"github.com/kaos-control/kaos-control/web"
 )
 
 var version = "dev"
 
+const usage = `Usage:
+  kaos-control [serve] [flags]    start the server
+  kaos-control init [flags] [path]  initialise a new lifecycle project
+
+Subcommands:
+  serve   start the HTTP server (default when no subcommand is given)
+  init    scaffold lifecycle directories and seed files in a project directory
+
+Run 'kaos-control init --help' for init-specific flags.
+`
+
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "init":
+			if err := initcmd.Run(os.Args[2:]); err != nil {
+				fmt.Fprintln(os.Stderr, "error:", err)
+				os.Exit(1)
+			}
+			return
+		case "serve":
+			// Strip "serve" so the server's flag.Parse sees only its own flags.
+			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
+		case "--help", "-help", "-h":
+			// Fall through; flag.Parse will handle --help for the server flags.
+		default:
+			if !strings.HasPrefix(os.Args[1], "-") {
+				fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n%s", os.Args[1], usage)
+				os.Exit(1)
+			}
+		}
+	}
 	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
