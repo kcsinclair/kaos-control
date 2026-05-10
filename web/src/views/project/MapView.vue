@@ -57,7 +57,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="graph-view">
+  <div class="map-view">
     <GraphFilters
       ref="graphFiltersRef"
       :filter="store.filter"
@@ -82,7 +82,7 @@ onMounted(() => {
       @update:search-text="store.searchText = $event"
     />
 
-    <div class="graph-main">
+    <div class="map-main">
       <div class="view-controls">
         <div class="view-toggle" role="group" aria-label="Map view mode">
           <button
