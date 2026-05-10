@@ -301,6 +301,13 @@ type DashboardConfig struct {
 	TrackedTypes []string `yaml:"tracked_types,omitempty"`
 }
 
+// RoadmapConfig holds roadmap display settings for a project.
+type RoadmapConfig struct {
+	// DefaultPeriodMode controls the initial time-axis mode shown in the Gantt view.
+	// Accepted values: "autoscale" (default), "month", "quarter", "half-year", "year".
+	DefaultPeriodMode string `yaml:"default_period_mode" json:"default_period_mode"`
+}
+
 // Project is the per-project configuration (lifecycle/config.yaml).
 type Project struct {
 	Stages        []Stage         `yaml:"stages"`
@@ -315,6 +322,7 @@ type Project struct {
 	Feed          FeedConfig      `yaml:"feed"`
 	Scheduler     SchedulerConfig `yaml:"scheduler"`
 	Dashboard     DashboardConfig `yaml:"dashboard"`
+	Roadmap       RoadmapConfig   `yaml:"roadmap,omitempty" json:"roadmap,omitempty"`
 }
 
 // Transition overrides one edge in the state machine.
@@ -359,6 +367,7 @@ func defaultProject() Project {
 		Ignore:        []string{"README.md"},
 		Scheduler:     SchedulerConfig{DefaultTimeout: 30 * time.Minute},
 		Dashboard:     DashboardConfig{TrackedTypes: []string{"ticket"}},
+		Roadmap:       RoadmapConfig{DefaultPeriodMode: "autoscale"},
 	}
 }
 
@@ -436,6 +445,19 @@ func validateProject(cfg *Project) error {
 	}
 	if cfg.Scheduler.DefaultTimeout <= 0 {
 		cfg.Scheduler.DefaultTimeout = 30 * time.Minute
+	}
+	if cfg.Roadmap.DefaultPeriodMode == "" {
+		cfg.Roadmap.DefaultPeriodMode = "autoscale"
+	}
+	validPeriodModes := map[string]bool{
+		"autoscale": true,
+		"month":     true,
+		"quarter":   true,
+		"half-year": true,
+		"year":      true,
+	}
+	if !validPeriodModes[cfg.Roadmap.DefaultPeriodMode] {
+		return fmt.Errorf("project config: roadmap.default_period_mode %q is not valid; accepted values: autoscale, month, quarter, half-year, year", cfg.Roadmap.DefaultPeriodMode)
 	}
 	return nil
 }

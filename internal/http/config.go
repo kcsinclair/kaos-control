@@ -51,6 +51,22 @@ func (s *Server) handleGetKanbanConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"kanban": cfg.Kanban})
 }
 
+// handleGetRoadmapConfig returns the parsed roadmap section of lifecycle/config.yaml as JSON.
+// It reloads the config from disk on every request so that edits are reflected immediately.
+func (s *Server) handleGetRoadmapConfig(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	cfg, err := config.LoadProject(p.Entry.Path)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("config_error", err.Error()))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"roadmap": cfg.Roadmap})
+}
+
 // handleUpdateConfig validates and writes lifecycle/config.yaml.
 func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
