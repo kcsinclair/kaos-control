@@ -10,6 +10,7 @@ labels:
     - frontend
     - backend
     - operability
+release: KC-Release1
 ---
 
 # DevOps Pipeline Run History
