@@ -3,13 +3,13 @@ title: End-to-end smoke tests for core flows — Requirements
 type: requirement
 status: draft
 lineage: end-to-end-smoke-tests
-parent: lifecycle/ideas/end-to-end-smoke-tests.md
 priority: normal
+parent: lifecycle/ideas/end-to-end-smoke-tests.md
 labels:
     - testing
     - qa
     - feature
-release: KC-Release1
+release: KC-Release0
 ---
 
 # End-to-end smoke tests for core flows — Requirements
