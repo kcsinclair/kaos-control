@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Dashboard Velocity and Activity Side-by-Side Layout"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: dashboard-velocity-activity-side-by-side
 parent: lifecycle/requirements/dashboard-velocity-activity-side-by-side-2.md
 created: "2026-05-10T00:00:00+10:00"
