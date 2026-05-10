@@ -118,7 +118,7 @@ router.beforeEach(async (to) => {
     await auth.fetchMe()
   }
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return '/login'
+    return { name: 'login', query: { redirect: to.fullPath } }
   }
   if (to.path === '/login' && auth.isAuthenticated) {
     return '/projects'

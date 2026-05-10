@@ -2,11 +2,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/api/client'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const email = ref('')
@@ -19,7 +20,8 @@ async function submit() {
   submitting.value = true
   try {
     await auth.login(email.value, password.value)
-    router.push('/projects')
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/projects'
+    router.push(redirect)
   } catch (err) {
     if (err instanceof ApiError) {
       errorMsg.value = err.message
