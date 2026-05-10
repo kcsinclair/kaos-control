@@ -48,9 +48,13 @@ const router = createRouter({
           component: () => import('@/views/project/ArtifactEditorView.vue'),
         },
         {
+          path: 'map',
+          name: 'map',
+          component: () => import('@/views/project/MapView.vue'),
+        },
+        {
           path: 'graph',
-          name: 'graph',
-          component: () => import('@/views/project/GraphView.vue'),
+          redirect: { name: 'map' },
         },
         {
           path: 'roadmap',
