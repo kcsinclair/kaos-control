@@ -4,6 +4,7 @@ type: test
 status: draft
 lineage: test-artifact-management
 parent: lifecycle/test-plans/test-artifact-management-5-test.md
+release: KC-Release1
 ---
 
 # End-to-End Testing Board Workflow — Procedure
