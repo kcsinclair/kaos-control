@@ -18,7 +18,7 @@ const loading = ref(false)
 async function fetchEvents() {
   loading.value = true
   try {
-    const data = await fetchFeed(props.project, { limit: 15 })
+    const data = await fetchFeed(props.project, { limit: 7 })
     events.value = data.events ?? []
   } catch {
     events.value = []
@@ -32,7 +32,7 @@ onMounted(fetchEvents)
 useWebSocket(props.project, 'feed.new', (e: WsEvent) => {
   const event = e.payload as FeedEvent
   events.value.unshift(event)
-  if (events.value.length > 15) events.value.splice(15)
+  if (events.value.length > 7) events.value.splice(7)
   newEventIds.value.add(event.id)
   setTimeout(() => {
     newEventIds.value.delete(event.id)

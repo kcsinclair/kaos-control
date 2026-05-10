@@ -17,7 +17,7 @@ async function fetchItems() {
     const data = await listArtifacts(props.project, {
       type: 'idea,defect',
       sort: 'created:desc',
-      limit: 6,
+      limit: 7,
     })
     items.value = data.items ?? []
   } catch {
