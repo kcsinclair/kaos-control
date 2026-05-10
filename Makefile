@@ -50,7 +50,24 @@ test-integration:
 ## test: run all backend tests
 test: test-unit test-integration
 
-## lint: run go vet and staticcheck
+## lint: run go vet, staticcheck, govulncheck, gosec, and gitleaks
+##       Go security tooling requires GOBIN on PATH (handled by the
+##       `export PATH` near the top of this file).
+##
+##       gosec exclusions (justified in security-plan.md):
+##         G104  unhandled errors — pervasive in defer/_ = patterns
+##         G124  cookie flags — sessionCookie HAS all flags; csrf cookie
+##               must be HttpOnly:false for the double-submit pattern;
+##               Secure tracks the TLSOn flag, which is correct
+##         G201/G202  SQL string formatting/concat — IN(?,?,?) builders
+##         G204  subprocess with variable — agent runner, scheduler shell
+##               jobs, devops pipelines, ollama/ideachat HTTP — every
+##               site is intentional and reviewed in security-plan.md §2.1/§2.2
+##         G301/G302/G306  file/dir perms 0644/0755 — standard for shared content
+##         G304/G703  file inclusion/path traversal via variable —
+##                    every flagged path goes through internal/sandbox/
+##         G705  XSS via taint — only flagged site is NDJSON output
+##               (Content-Type: application/x-ndjson), not HTML
 lint:
 	go vet ./...
 	@if [ -x "$(GOBIN)/staticcheck" ]; then \
@@ -59,6 +76,30 @@ lint:
 	  staticcheck ./...; \
 	else \
 	  echo "staticcheck not installed; install with: go install honnef.co/go/tools/cmd/staticcheck@latest"; \
+	fi
+	@if [ -x "$(GOBIN)/govulncheck" ]; then \
+	  "$(GOBIN)/govulncheck" ./...; \
+	elif command -v govulncheck >/dev/null 2>&1; then \
+	  govulncheck ./...; \
+	else \
+	  echo "govulncheck not installed; install with: go install golang.org/x/vuln/cmd/govulncheck@latest"; \
+	fi
+	@if [ -x "$(GOBIN)/gosec" ]; then \
+	  "$(GOBIN)/gosec" -quiet \
+	    -exclude=G104,G124,G201,G202,G204,G301,G302,G304,G306,G703,G705 \
+	    -exclude-dir=tests/web/node_modules \
+	    -exclude-dir=node_modules \
+	    -exclude-dir=web/node_modules \
+	    ./...; \
+	elif command -v gosec >/dev/null 2>&1; then \
+	  gosec -quiet -exclude=G104,G124,G201,G202,G204,G301,G302,G304,G306,G703,G705 ./...; \
+	else \
+	  echo "gosec not installed; install with: go install github.com/securego/gosec/v2/cmd/gosec@latest"; \
+	fi
+	@if command -v gitleaks >/dev/null 2>&1; then \
+	  gitleaks detect --no-banner --no-color --redact; \
+	else \
+	  echo "gitleaks not installed; install with: brew install gitleaks"; \
 	fi
 
 ## clean: remove build artefacts

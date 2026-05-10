@@ -146,8 +146,18 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie(sessionCookieName); err == nil && s.cfg.Auth != nil {
 		_ = s.cfg.Auth.DeleteSession(cookie.Value)
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookieName, Value: "", Path: "/", MaxAge: -1})
-	http.SetCookie(w, &http.Cookie{Name: csrfCookieName, Value: "", Path: "/", MaxAge: -1})
+	// Even on logout, set the same security attributes the login cookies use.
+	// Browsers honour Secure/SameSite on Set-Cookie deletion and gosec flags
+	// the absence as a CWE-614 issue, so apply for hygiene.
+	secure := s.cfg.TLSOn
+	http.SetCookie(w, &http.Cookie{
+		Name: sessionCookieName, Value: "", Path: "/", MaxAge: -1,
+		HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name: csrfCookieName, Value: "", Path: "/", MaxAge: -1,
+		HttpOnly: false, Secure: secure, SameSite: http.SameSiteLaxMode,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
