@@ -434,6 +434,13 @@ func (s *Server) handlePatchPriority(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Priority is a meaningful workflow signal; require authentication.
+	user := userFromCtx(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
+		return
+	}
+
 	rawParam := chi.URLParam(r, "*")
 	relPath := strings.TrimSuffix(rawParam, "/priority")
 
@@ -468,6 +475,21 @@ func (s *Server) handlePatchPriority(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a := artifact.Parse(raw, relPath, info.ModTime())
+
+	// Lineage lock check: if another user holds the lock, reject with 423 Locked.
+	if p.Locks != nil && a.FM.Lineage != "" {
+		if lockRow, lerr := p.Locks.Get(a.FM.Lineage); lerr == nil && lockRow != nil && lockRow.Holder != user.Email {
+			writeJSON(w, http.StatusLocked, map[string]any{
+				"error": map[string]any{
+					"code":    "locked",
+					"message": "artifact lineage is locked by another user",
+				},
+				"lock": lockRow,
+			})
+			return
+		}
+	}
+
 	a.FM.Priority = req.Priority
 
 	content, err := buildMarkdown(a.FM, a.Body)
