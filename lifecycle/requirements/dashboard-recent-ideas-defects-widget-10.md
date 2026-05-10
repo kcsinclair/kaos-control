@@ -10,9 +10,6 @@ labels:
     - vue
     - defect-fix
 release: KC-Release0
-assignees:
-    - role: product-owner
-      who: agent
 ---
 
 # Update Recent Ideas and Defects Widget Limit from 6 to 7
