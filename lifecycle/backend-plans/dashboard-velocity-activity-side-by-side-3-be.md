@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Dashboard Velocity and Activity Side-by-Side Layout"
 type: plan-backend
-status: in-development
+status: done
 lineage: dashboard-velocity-activity-side-by-side
 parent: lifecycle/requirements/dashboard-velocity-activity-side-by-side-2.md
 created: "2026-05-10T00:00:00+10:00"
