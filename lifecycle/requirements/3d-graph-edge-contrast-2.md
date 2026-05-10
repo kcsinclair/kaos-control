@@ -1,7 +1,7 @@
 ---
 title: Improve Edge Line Contrast in 3D Graph
 type: requirement
-status: blocked
+status: approved
 lineage: 3d-graph-edge-contrast
 created: "2026-05-10"
 priority: normal
@@ -96,7 +96,12 @@ Adding `linkOpacity` must not introduce measurable frame-rate regression on grap
 - [ ] Visual verification on a graph with ≥ 20 nodes and mixed edge kinds (parent, depends_on, related_to, timeline, assigned).
 - [ ] Related: [[3d-graph-edge-contrast]]
 
-## Open Questions
+## Resolved Questions
 
 - Q1: Should edge width increase when the user zooms in (proportional scaling), or remain constant in screen-space? Constant is simpler but very thick at close zoom.
+
+> Yes, proportional scaling.
+
 - Q2: Are there accessibility requirements beyond WCAG AA contrast (e.g. colour-blind–safe edge palettes)?
+
+> No, I will raise an accessibility idea for later.
