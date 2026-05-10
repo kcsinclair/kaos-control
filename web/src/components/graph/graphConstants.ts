@@ -138,7 +138,7 @@ const LIGHT_PALETTE: GraphPalette = {
     related_to: '#475569',  // slate-600
     label:      '#7c3aed',  // violet-600
     timeline:   '#2563eb',  // blue-600 — matches timelineEdgeColor
-    assigned:   '#94a3b8',  // slate-400 — matches assignedEdgeColor
+    assigned:   '#64748b',  // slate-500 — was slate-400, darkened for ~4.6:1 on #ffffff
   },
   approvedTestRingColor: '#1d4ed8',  // blue-700
   canvasBg:             '#ffffff',
@@ -153,7 +153,7 @@ const LIGHT_PALETTE: GraphPalette = {
   edgeLabelText:        '#334155',   // slate-700
   timelineEdgeColor:    '#2563eb',   // blue-600
   timelineEdgeTextColor:'#1d4ed8',   // blue-700
-  assignedEdgeColor:    '#94a3b8',   // slate-400
+  assignedEdgeColor:    '#64748b',   // slate-500 — matches edgeColors.assigned
   borderDefault:        'rgba(0,0,0,0.15)',
   selectedBorderColor:  '#000000',
   searchHighlight:      '#eab308',   // yellow-500 — darker for light bg
