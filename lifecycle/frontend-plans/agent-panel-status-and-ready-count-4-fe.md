@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: Ready-Count Badge and Running-State Highlight'
 type: plan-frontend
-status: in-development
+status: approved
 lineage: agent-panel-status-and-ready-count
 parent: lifecycle/requirements/agent-panel-status-and-ready-count-2.md
 ---
