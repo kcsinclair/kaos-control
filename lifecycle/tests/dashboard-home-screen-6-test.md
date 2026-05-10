@@ -1,7 +1,7 @@
 ---
 title: Dashboard Home Screen — Integration Test Suite
 type: test
-status: approved
+status: done
 lineage: dashboard-home-screen
 parent: lifecycle/test-plans/dashboard-home-screen-5-test.md
 ---
