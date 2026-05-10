@@ -1,10 +1,10 @@
 ---
 title: "Backend Plan — Version Number Display"
 type: plan-backend
-status: draft
+status: approved
 lineage: version-number-display
 parent: lifecycle/requirements/version-number-display-2.md
-created: "2026-05-10"
+created: "2026-05-10T00:00:00+10:00"
 ---
 
 # Backend Plan — Version Number Display
