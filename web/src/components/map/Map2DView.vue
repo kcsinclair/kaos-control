@@ -432,7 +432,7 @@ onUnmounted(() => {
     ref="container"
     class="graph-2d"
     :style="{ background: palette.canvasBg }"
-    aria-label="2D artifact graph"
+    aria-label="2D artifact map"
     role="img"
   />
 </template>

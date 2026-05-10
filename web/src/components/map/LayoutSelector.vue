@@ -16,14 +16,14 @@ function onLayoutChange(e: Event) {
 </script>
 
 <template>
-  <div class="layout-selector" aria-label="2D graph layout controls">
+  <div class="layout-selector" aria-label="2D map layout controls">
     <label class="layout-label" for="layout-select">Layout</label>
     <select
       id="layout-select"
       class="layout-select"
       :value="store.activeLayout"
       :disabled="store.layoutAnimating"
-      aria-label="Select graph layout algorithm"
+      aria-label="Select map layout algorithm"
       @change="onLayoutChange"
     >
       <option v-for="layout in layouts" :key="layout.key" :value="layout.key">
@@ -34,7 +34,7 @@ function onLayoutChange(e: Event) {
       class="directed-btn"
       :class="{ active: store.directed }"
       :aria-pressed="store.directed"
-      aria-label="Toggle directed graph mode"
+      aria-label="Toggle directed map mode"
       :disabled="store.layoutAnimating"
       @click="store.toggleDirected()"
     >

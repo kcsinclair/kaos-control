@@ -84,7 +84,7 @@ onMounted(() => {
 
     <div class="graph-main">
       <div class="view-controls">
-        <div class="view-toggle" role="group" aria-label="Graph view mode">
+        <div class="view-toggle" role="group" aria-label="Map view mode">
           <button
             class="toggle-btn"
             :class="{ active: view === '3d' }"
@@ -104,7 +104,7 @@ onMounted(() => {
         </button>
       </div>
 
-      <div v-if="store.loading" class="graph-state" role="status" aria-live="polite">Loading graph…</div>
+      <div v-if="store.loading" class="graph-state" role="status" aria-live="polite">Loading map…</div>
       <div v-else-if="store.error" class="graph-state error" role="alert">{{ store.error }}</div>
       <div v-else-if="store.rawNodes.length === 0" class="graph-state">
         No artifacts indexed yet.
