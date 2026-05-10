@@ -7,6 +7,7 @@ import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { useTestingStore } from '@/stores/testing'
+import { useAppStore } from '@/stores/app'
 import { api } from '@/api/client'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
@@ -35,6 +36,7 @@ const projectStore = useProjectStore()
 const uiStore = useUiStore()
 const authStore = useAuthStore()
 const testingStore = useTestingStore()
+const appStore = useAppStore()
 
 const faviconSrc = `${import.meta.env.BASE_URL}favicon-32x32.png`
 
@@ -203,6 +205,9 @@ watch(
         </SidebarTooltip>
       </li>
     </ul>
+    <div class="sidebar-version" aria-label="Application version">
+      <span v-if="isVisuallyExpanded()" class="version-label">kaos-control {{ appStore.version }}</span>
+    </div>
     <div class="sidebar-footer">
       <button
         class="sidebar-toggle"
@@ -416,5 +421,19 @@ watch(
 .sidebar-toggle:hover {
   background: var(--color-sidebar-hover);
   color: var(--color-sidebar-text);
+}
+.sidebar-version {
+  padding: var(--space-2) var(--space-4);
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+}
+.version-label {
+  font-size: 0.75rem;
+  color: var(--color-sidebar-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
 }
 </style>
