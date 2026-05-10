@@ -1,7 +1,7 @@
 ---
 title: Toggleable Node Titles and Lineage in 3D Maps
 type: idea
-status: planning
+status: done
 lineage: 3d-map-node-labels-toggle
 created: "2026-05-10T09:09:43+10:00"
 priority: normal
