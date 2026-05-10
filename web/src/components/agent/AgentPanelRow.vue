@@ -1,6 +1,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
+import { useRoute, useRouter } from 'vue-router'
+import { useAgentsStore } from '@/stores/agents'
 import type { AgentSummary } from '@/types/api'
 
 const props = defineProps<{
@@ -11,6 +13,10 @@ const emit = defineEmits<{
   select: [agent: AgentSummary]
   edit: [agent: AgentSummary]
 }>()
+
+const route = useRoute()
+const router = useRouter()
+const agentsStore = useAgentsStore()
 
 function isInline(agent: AgentSummary): boolean {
   return agent.driver === 'inline'
@@ -32,6 +38,21 @@ function handleClick(agent: AgentSummary) {
     emit('select', agent)
   }
 }
+
+function handleBadgeClick(event: MouseEvent, agent: AgentSummary) {
+  event.stopPropagation()
+  if (!agent.active_status) return
+  const project = route.params.project as string
+  void router.push(`/p/${encodeURIComponent(project)}/artifacts?status=${encodeURIComponent(agent.active_status)}`)
+}
+
+function readyCount(agent: AgentSummary): number {
+  return agentsStore.readyCounts[agent.name] ?? 0
+}
+
+function runningCount(agent: AgentSummary): number {
+  return agentsStore.runningCountByAgent[agent.name] ?? 0
+}
 </script>
 
 <template>
@@ -40,25 +61,48 @@ function handleClick(agent: AgentSummary) {
       v-for="agent in props.agents"
       :key="agent.name"
       class="agent-panel"
-      :class="{ 'agent-panel--disabled': isInline(agent) }"
+      :class="{
+        'agent-panel--disabled': isInline(agent),
+        'agent-panel--running': runningCount(agent) > 0,
+      }"
       :disabled="isInline(agent)"
       :aria-disabled="isInline(agent) ? 'true' : undefined"
       @click="handleClick(agent)"
     >
       <div class="panel-header">
         <span class="panel-name">{{ agent.name }}</span>
-        <button
-          v-if="!isInline(agent)"
-          class="panel-edit-btn"
-          title="Edit agent"
-          @click.stop="emit('edit', agent)"
-        >✎</button>
+        <div class="panel-header-badges">
+          <!-- Running count badge -->
+          <span
+            v-if="runningCount(agent) > 0"
+            class="panel-running-badge"
+            :aria-label="`${runningCount(agent)} run${runningCount(agent) === 1 ? '' : 's'} active`"
+          >
+            <span class="run-dot-small" />
+            {{ runningCount(agent) }}
+          </span>
+          <button
+            v-if="!isInline(agent)"
+            class="panel-edit-btn"
+            title="Edit agent"
+            @click.stop="emit('edit', agent)"
+          >✎</button>
+        </div>
       </div>
       <span class="panel-roles">{{ agent.roles.join(', ') }}</span>
       <span v-if="!isInline(agent)" class="panel-driver" :data-driver="agent.driver">{{ driverLabel(agent) }}</span>
       <span v-if="agent.model" class="panel-model">{{ agent.model }}</span>
       <span v-if="isOllama(agent) && agent.ollama_instance" class="panel-model">{{ agent.ollama_instance }}</span>
       <span v-if="isInline(agent)" class="panel-inline-label">Externally driven</span>
+      <!-- Ready-count badge (only for agents with active_status) -->
+      <button
+        v-if="agent.active_status"
+        class="panel-ready-badge"
+        :aria-label="`${readyCount(agent)} artifact${readyCount(agent) === 1 ? '' : 's'} ready`"
+        @click="handleBadgeClick($event, agent)"
+      >
+        {{ readyCount(agent) }} ready
+      </button>
     </button>
   </div>
 </template>
@@ -84,7 +128,7 @@ function handleClick(agent: AgentSummary) {
   text-align: left;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
 
 .agent-panel:hover:not(:disabled) {
@@ -102,6 +146,24 @@ function handleClick(agent: AgentSummary) {
   cursor: not-allowed;
 }
 
+/* Running state: green border + glow + pulse */
+.agent-panel--running {
+  border-color: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+  animation: panel-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes panel-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(34, 197, 94, 0.3); }
+  50%       { box-shadow: 0 0 14px rgba(34, 197, 94, 0.55); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-panel--running {
+    animation: none;
+  }
+}
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -114,6 +176,48 @@ function handleClick(agent: AgentSummary) {
   color: var(--color-text);
   flex: 1;
 }
+
+.panel-header-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.panel-running-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border-radius: 9999px;
+  padding: 2px 7px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  min-width: 2rem;
+  white-space: nowrap;
+}
+
+.run-dot-small {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  animation: panel-pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes panel-pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run-dot-small {
+    animation: none;
+  }
+}
+
 .panel-edit-btn {
   background: none;
   border: none;
@@ -167,5 +271,27 @@ function handleClick(agent: AgentSummary) {
   color: var(--color-text-muted);
   font-style: italic;
   margin-top: var(--space-1);
+}
+
+/* Ready-count badge */
+.panel-ready-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  cursor: pointer;
+  min-width: 4rem;
+  align-self: flex-start;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.panel-ready-badge:hover {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 </style>
