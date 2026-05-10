@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/agent"
+	"github.com/kaos-control/kaos-control/internal/index"
 )
 
 // handleListAgents returns all configured agents for the current project.
@@ -151,6 +152,29 @@ func (s *Server) handleKillAgentRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "run_id": runID})
+}
+
+// handleGetReadyCounts returns per-agent artifact counts based on each agent's active_status.
+// GET /api/p/:project/agents/ready-counts
+func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p.Agents == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"counts": map[string]int{}})
+		return
+	}
+	counts := make(map[string]int)
+	for _, ag := range p.Agents.Agents() {
+		if ag.ActiveStatus == "" {
+			continue
+		}
+		n, err := p.Idx.Count(index.Filter{Status: ag.ActiveStatus})
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
+		}
+		counts[ag.Name] = n
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"counts": counts})
 }
 
 // handleGetAgentRunLog streams the per-run log file as text/plain.

@@ -155,6 +155,7 @@ func (s *Server) buildRouter() chi.Router {
 
 			// Agents
 			r.Get("/agents", s.handleListAgents)
+			r.Get("/agents/ready-counts", s.handleGetReadyCounts)
 			r.Post("/agents/{name}/run", s.handleStartAgentRun)
 			r.Get("/agents/runs", s.handleListAgentRuns)
 			r.Get("/agents/runs/{run_id}", s.handleGetAgentRun)
