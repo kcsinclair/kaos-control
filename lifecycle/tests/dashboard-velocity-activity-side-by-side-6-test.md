@@ -1,7 +1,7 @@
 ---
 title: "Tests: Dashboard Velocity and Activity Side-by-Side Layout"
 type: test
-status: draft
+status: approved
 lineage: dashboard-velocity-activity-side-by-side
 parent: lifecycle/test-plans/dashboard-velocity-activity-side-by-side-5-test.md
 ---
