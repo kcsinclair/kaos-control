@@ -1,9 +1,9 @@
 ---
 title: 'Init Bootstrap: Config Defaults, DevOps Scaffold, and Create-Pipeline UI'
 type: requirement
-status: planning
+status: done
 lineage: kaos-control-init-bootstrap
-created: "2026-05-10"
+created: "2026-05-10T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/kaos-control-init-bootstrap.md
 labels:
