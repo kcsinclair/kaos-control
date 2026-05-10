@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Inline Priority Display and Editing"
 type: plan-frontend
-status: draft
+status: approved
 lineage: artefact-priority-inline-edit
 parent: lifecycle/requirements/artefact-priority-inline-edit-2.md
 ---
