@@ -3,12 +3,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import * as projectsApi from '@/api/projects'
+import { getConfig } from '@/api/config'
 import type { ProjectSummary } from '@/types/api'
 
 export const useProjectStore = defineStore('project', () => {
   const projects = ref<ProjectSummary[]>([])
   const current = ref<ProjectSummary | null>(null)
   const loading = ref(false)
+  const initRequired = ref(false)
 
   async function fetchProjects(): Promise<void> {
     loading.value = true
@@ -21,8 +23,18 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function setCurrent(name: string): void {
+    initRequired.value = false
     current.value = projects.value.find((p) => p.name === name) ?? null
   }
 
-  return { projects, current, loading, fetchProjects, setCurrent }
+  async function checkInitRequired(project: string): Promise<void> {
+    try {
+      const data = await getConfig(project)
+      initRequired.value = data.raw === ''
+    } catch {
+      initRequired.value = false
+    }
+  }
+
+  return { projects, current, loading, initRequired, fetchProjects, setCurrent, checkInitRequired }
 })

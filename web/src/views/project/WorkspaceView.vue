@@ -10,6 +10,7 @@ import { useSchedulerStore } from '@/stores/scheduler'
 import { getProjectWs } from '@/api/ws'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
+import InitRequiredBanner from '@/components/project/InitRequiredBanner.vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -29,6 +30,7 @@ async function syncProject() {
   const name = getProject()
   if (!projectStore.projects.length) await projectStore.fetchProjects()
   projectStore.setCurrent(name)
+  await projectStore.checkInitRequired(name)
 }
 
 function subscribeWs(project: string) {
@@ -66,7 +68,11 @@ onUnmounted(() => { wsUnsub?.() })
     <div class="workspace-body">
       <AppSidebar />
       <main class="workspace-main">
-        <RouterView />
+        <InitRequiredBanner
+          v-if="projectStore.initRequired && projectStore.current"
+          :path="projectStore.current.path"
+        />
+        <RouterView v-else />
       </main>
     </div>
   </div>
