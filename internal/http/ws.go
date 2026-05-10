@@ -29,6 +29,14 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.CloseNow()
 
+	// Auth check after upgrade. The requireAuth middleware exempts /ws so we
+	// can return a WebSocket close code (4401) instead of HTTP 401. The JS
+	// client treats 4401 as a terminal auth failure and stops reconnecting.
+	if userFromCtx(r.Context()) == nil {
+		conn.Close(4401, "unauthorized")
+		return
+	}
+
 	ctx := r.Context()
 	ch := make(chan []byte, 32)
 	p.Hub.Register(ch)

@@ -127,6 +127,16 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		// Exempt: WebSocket upgrades. The handler does its own auth check and
+		// closes the connection with code 4401 if unauthenticated, so the JS
+		// client (which only treats 4401 as auth-failure) stops reconnecting.
+		// A plain HTTP 401 here would surface as close code 1006 and the
+		// client would reconnect forever, spewing requests.
+		if strings.HasPrefix(path, "/api/p/") && strings.HasSuffix(path, "/ws") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		// Exempt: bootstrap — first user creation when no users exist yet.
 		if path == "/api/admin/users" && r.Method == http.MethodPost && s.cfg.Auth != nil {
 			if count, _ := s.cfg.Auth.UserCount(); count == 0 {

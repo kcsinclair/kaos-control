@@ -104,7 +104,7 @@ Full rule: §3.3 and §4.4 of the spec.
 
 ## Frontmatter requirements
 
-Required fields on every artifact: `title`, `type`, `status`, `lineage`. Type vocabulary (§4.2 of spec): `idea`, `ticket`, `epic`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`, `defect`. Status vocabulary: `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`.
+Required fields on every artifact: `title`, `type`, `status`, `lineage`. Type vocabulary (§4.2 of spec): `idea`, `ticket`, `epic`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`, `defect`. Status vocabulary: `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`, `blocked`. The canonical list lives in `KnownStatuses` at [internal/artifact/artifact.go](internal/artifact/artifact.go) — verify there if in doubt.
 
 ## Indexing behaviour
 

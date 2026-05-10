@@ -1,0 +1,4 @@
+# RFC 6455 example WebSocket nonce ("the sample nonce" in base64) used in
+# tests/auth_middleware_test.go to construct a valid WebSocket handshake
+# request. Not a secret — it's the literal example value from the RFC.
+08b871c5aa6eb32fa96b389155f843d3871cb9ae:tests/auth_middleware_test.go:generic-api-key:353

@@ -156,16 +156,19 @@ export function useKanbanBoard(project: string) {
   }
 
   async function fetchAllArtifacts(): Promise<ArtifactRow[]> {
-    // Fetch with a high limit to retrieve all artifacts in one call.
-    // If the project has more than 5000 artifacts, paginate.
-    const PAGE = 5000
-    const first = await artifactsApi.listArtifacts(project, { limit: PAGE, offset: 0 })
-    const items = first.items ?? []
-    let offset = PAGE
-    while (items.length < (first.total ?? 0)) {
+    // Backend caps `limit` at 500 (Filter.withDefaults in internal/index),
+    // so page size must match or smaller pages are silently returned.
+    const PAGE = 500
+    const items: ArtifactRow[] = []
+    let offset = 0
+    let total = Infinity
+    while (items.length < total) {
       const page = await artifactsApi.listArtifacts(project, { limit: PAGE, offset })
-      items.push(...(page.items ?? []))
-      offset += PAGE
+      const got = page.items ?? []
+      total = page.total ?? items.length
+      if (got.length === 0) break // safety: stop if a page returns nothing
+      items.push(...got)
+      offset += got.length
     }
     return items
   }
