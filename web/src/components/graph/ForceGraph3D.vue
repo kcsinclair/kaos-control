@@ -35,7 +35,11 @@ function nodeColor(n: GraphNode): string {
 }
 
 function edgeColor(e: GraphEdge): string {
-  return palette.value.edgeColors[e.kind] ?? palette.value.edgeColors['related_to'] ?? '#64748b'
+  const hex = palette.value.edgeColors[e.kind] ?? palette.value.edgeColors['related_to'] ?? '#64748b'
+  // Encode per-link opacity in the alpha channel: timeline stays fully opaque,
+  // all other edge kinds render at ~0.75 to reduce clutter in dense graphs.
+  // linkOpacity is set to 1.0 so the library reads alpha directly from the colour.
+  return e.kind === 'timeline' ? hex : `${hex}bf`
 }
 
 function nodeVal(n: GraphNode): number {
@@ -206,6 +210,7 @@ onMounted(() => {
       if (kind === 'assigned') return 0.8
       return 1.2  // parent, depends_on, blocks, related_to, label
     })
+    .linkOpacity(1.0)
     .linkDirectionalArrowLength((l: object) => {
       // Assigned edges are undirected membership links — no arrow needed.
       return (l as GraphEdge).kind === 'assigned' ? 0 : 3
