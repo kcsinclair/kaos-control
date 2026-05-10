@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Improve Edge Line Contrast in 3D Graph"
 type: plan-backend
-status: in-development
+status: done
 lineage: 3d-graph-edge-contrast
 parent: lifecycle/requirements/3d-graph-edge-contrast-2.md
 ---
