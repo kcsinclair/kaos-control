@@ -7,6 +7,7 @@ import { useProjectStore } from '@/stores/project'
 import { useLocksStore } from '@/stores/locks'
 import { useAgentsStore } from '@/stores/agents'
 import { useSchedulerStore } from '@/stores/scheduler'
+import { useAppStore } from '@/stores/app'
 import { getProjectWs } from '@/api/ws'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
@@ -17,6 +18,7 @@ const projectStore = useProjectStore()
 const locksStore = useLocksStore()
 const agentsStore = useAgentsStore()
 const schedulerStore = useSchedulerStore()
+const appStore = useAppStore()
 
 const AGENT_EVENTS     = new Set(['agent.started', 'agent.progress', 'agent.finished', 'agent.failed'])
 const LOCK_EVENTS      = new Set(['lock.acquired', 'lock.released'])
@@ -61,6 +63,7 @@ function subscribeWs(project: string) {
 onMounted(() => {
   syncProject()
   subscribeWs(getProject())
+  void appStore.fetchVersion()
 })
 
 watch(() => route.params.project, (newProject) => {
