@@ -1,14 +1,15 @@
 ---
-title: 'performance.test.ts mocks stats API with field "total" but component expects "total_tickets"; renders only 2 of 4 stat cards'
+title: performance.test.ts mocks stats API with field "total" but component expects "total_tickets"; renders only 2 of 4 stat cards
 type: defect
 status: approved
 lineage: dashboard-home-screen
 parent: lifecycle/tests/dashboard-home-screen-6-test.md
 labels:
-  - defect
+    - defect
+release: KC-Release0
 assignees:
-  - role: test-developer
-    who: agent
+    - role: test-developer
+      who: agent
 ---
 
 # performance.test.ts mocks stats API with wrong field name "total"; SummaryCountsWidget renders only 2 stat cards
