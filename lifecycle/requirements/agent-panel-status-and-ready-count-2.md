@@ -3,7 +3,7 @@ title: 'Agent Panel: Ready Count Badge and Running-State Highlight'
 type: requirement
 status: planning
 lineage: agent-panel-status-and-ready-count
-created: "2026-05-10"
+created: "2026-05-10T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/agent-panel-status-and-ready-count.md
 labels:

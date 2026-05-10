@@ -3,7 +3,7 @@ title: Improve Edge Line Contrast in 3D Graph
 type: requirement
 status: planning
 lineage: 3d-graph-edge-contrast
-created: "2026-05-10"
+created: "2026-05-10T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/3d-graph-edge-contrast.md
 labels:

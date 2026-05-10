@@ -3,7 +3,7 @@ title: Rename Graph to Map in UI and Routing
 type: requirement
 status: planning
 lineage: rename-graph-to-map
-created: "2026-05-10"
+created: "2026-05-10T00:00:00+10:00"
 priority: medium
 parent: lifecycle/ideas/rename-graph-to-map.md
 labels:
