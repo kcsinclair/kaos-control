@@ -1,7 +1,7 @@
 ---
 title: Agent Panel Ready Count Includes Non-Approved Items
 type: defect
-status: approved
+status: in-development
 lineage: agent-panel-ready-count-incorrect
 created: "2026-05-10T17:10:11+10:00"
 priority: normal
