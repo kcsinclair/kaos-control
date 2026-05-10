@@ -1,7 +1,7 @@
 ---
 title: "Tests: 3D Graph Edge Contrast"
 type: test
-status: approved
+status: done
 lineage: 3d-graph-edge-contrast
 parent: lifecycle/test-plans/3d-graph-edge-contrast-5-test.md
 created: "2026-05-10T00:00:00+10:00"
