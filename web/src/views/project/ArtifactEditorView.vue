@@ -321,7 +321,9 @@ onMounted(() => {
         :project="project"
         :target-path="artifactPath"
         :edges="graphStore.rawEdges"
+        :readonly="!!conflictLock"
         @transitioned="(s) => { if (artifact) artifact = { ...artifact, status: s }; store.invalidate(artifactPath) }"
+        @priority-changed="store.invalidate(artifactPath)"
         @error="(msg) => ui.error(msg)"
       />
     </div>
