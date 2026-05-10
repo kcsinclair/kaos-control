@@ -75,6 +75,7 @@ onMounted(async () => {
   await store.fetch(project)
   store.connectWs(project)
   loadDetails()
+  roadmapSettings.loadDefaultPeriodMode(project)
 
   // Load backlog artifacts
   await artifactsStore.fetchList(project, { limit: 500 })
@@ -205,6 +206,8 @@ function openEdit(releaseId: number) {
         :granularity="granularity"
         :project="project"
         :release-details="releaseDetails"
+        :period-mode="roadmapSettings.periodMode"
+        :fixed-period="roadmapSettings.fixedPeriod"
         @click-release="detailReleaseId = $event"
         @create="showCreateModal = true"
       />
