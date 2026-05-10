@@ -39,6 +39,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
   }
+  // CSRF double-submit: send the token only on mutating methods and only when
+  // the cookie is present (unauthenticated state has no cookie — the 401
+  // interceptor below handles that case instead of failing on a CSRF error).
   if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
     const csrf = getCsrfToken()
     if (csrf) headers['X-CSRF-Token'] = csrf
