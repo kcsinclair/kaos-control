@@ -162,12 +162,12 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.graph-view {
+.map-view {
   display: flex;
   height: 100%;
   overflow: hidden;
 }
-.graph-main {
+.map-main {
   position: relative;
   flex: 1;
   overflow: hidden;
@@ -204,7 +204,7 @@ onMounted(() => {
   border-color: var(--color-accent);
   color: #fff;
 }
-.graph-status-panel-wrap {
+.map-status-panel-wrap {
   position: absolute;
   top: var(--space-3);
   left: var(--space-3);
@@ -238,7 +238,7 @@ onMounted(() => {
   background: rgba(255,255,255,0.08);
   color: #fff;
 }
-.graph-state {
+.map-state {
   position: absolute;
   inset: 0;
   display: flex;
@@ -247,14 +247,14 @@ onMounted(() => {
   font-size: var(--text-sm);
   color: rgba(241, 245, 249, 0.5);
 }
-.graph-state.error { color: #fca5a5; }
-.graph-legend-wrap {
+.map-state.error { color: #fca5a5; }
+.map-legend-wrap {
   position: absolute;
   bottom: var(--space-4);
   right: var(--space-4);
   pointer-events: none;
 }
-.graph-hint {
+.map-hint {
   position: absolute;
   bottom: var(--space-4);
   left: 50%;
