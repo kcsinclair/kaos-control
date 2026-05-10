@@ -5,7 +5,6 @@
 package integration
 
 import (
-	"net/http"
 	"testing"
 )
 
@@ -27,10 +26,7 @@ func TestParseErrorsForMalformedArtifact(t *testing.T) {
 
 	env := newTestEnv(t, seeds)
 
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/parse-errors")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/parse-errors", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 

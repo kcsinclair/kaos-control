@@ -43,10 +43,7 @@ func isSPAResponse(t *testing.T, resp *http.Response) bool {
 func TestKanbanRouting_BoardRouteServesSPA(t *testing.T) {
 	env := newTestEnvWithFrontend(t, nil, stubSPAFrontend())
 
-	resp, err := http.Get(env.baseURL + "/p/testproject/artifacts/board")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/p/testproject/artifacts/board", nil)
 	requireStatus(t, resp, 200)
 
 	if !isSPAResponse(t, resp) {
@@ -60,10 +57,7 @@ func TestKanbanRouting_BoardRouteServesSPA(t *testing.T) {
 func TestKanbanRouting_ListRouteUnchanged(t *testing.T) {
 	env := newTestEnvWithFrontend(t, nil, stubSPAFrontend())
 
-	resp, err := http.Get(env.baseURL + "/p/testproject/artifacts")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/p/testproject/artifacts", nil)
 	requireStatus(t, resp, 200)
 
 	if !isSPAResponse(t, resp) {
@@ -78,10 +72,7 @@ func TestKanbanRouting_ListRouteUnchanged(t *testing.T) {
 func TestKanbanRouting_ArtifactEditorRouteUnchanged(t *testing.T) {
 	env := newTestEnvWithFrontend(t, nil, stubSPAFrontend())
 
-	resp, err := http.Get(env.baseURL + "/p/testproject/artifacts/requirements/kanban-view-3.md")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/p/testproject/artifacts/requirements/kanban-view-3.md", nil)
 	requireStatus(t, resp, 200)
 
 	if !isSPAResponse(t, resp) {
@@ -94,12 +85,9 @@ func TestKanbanRouting_ArtifactEditorRouteUnchanged(t *testing.T) {
 // Covers Milestone 3, scenario 4.
 func TestKanbanRouting_KanbanConfigRequiresAuth(t *testing.T) {
 	env := newTestEnv(t, nil)
-	// Deliberately do NOT call env.login — no session cookie.
+	env.logout() // newTestEnv auto-logs in; clear the session for this test.
 
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/config/kanban")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/config/kanban", nil)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusUnauthorized {

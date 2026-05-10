@@ -5,7 +5,6 @@
 package integration
 
 import (
-	"net/http"
 	"testing"
 )
 
@@ -104,10 +103,7 @@ func TestGraphLabelsMixedSet(t *testing.T) {
 	}
 	env := newTestEnv(t, seeds)
 
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/graph")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/graph", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 	nodes := decodeGraphNodes(t, data)

@@ -5,7 +5,6 @@
 package integration
 
 import (
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -35,10 +34,7 @@ func repoRoot(t *testing.T) string {
 func TestVersion_Returns200WithJSON(t *testing.T) {
 	env := newTestEnv(t, nil)
 
-	resp, err := http.Get(env.baseURL + "/api/version")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/version", nil)
 	requireStatus(t, resp, 200)
 
 	ct := resp.Header.Get("Content-Type")
@@ -58,12 +54,9 @@ func TestVersion_Returns200WithJSON(t *testing.T) {
 // Covers test plan Milestone 1, scenario 2.
 func TestVersion_Unauthenticated(t *testing.T) {
 	env := newTestEnv(t, nil)
+	env.logout() // newTestEnv auto-logs in; clear so this exercises the public path.
 
-	// Use a plain http.Get so no session cookies are sent.
-	resp, err := http.Get(env.baseURL + "/api/version")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/version", nil)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
@@ -77,10 +70,7 @@ func TestVersion_Unauthenticated(t *testing.T) {
 func TestHealth_IncludesVersion(t *testing.T) {
 	env := newTestEnv(t, nil)
 
-	resp, err := http.Get(env.baseURL + "/api/health")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/health", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 
@@ -96,17 +86,11 @@ func TestHealth_IncludesVersion(t *testing.T) {
 func TestVersion_ParityWithHealth(t *testing.T) {
 	env := newTestEnv(t, nil)
 
-	respV, err := http.Get(env.baseURL + "/api/version")
-	if err != nil {
-		t.Fatal(err)
-	}
+	respV := env.doRequest("GET", "/api/version", nil)
 	requireStatus(t, respV, 200)
 	versionData := readJSON(t, respV)
 
-	respH, err := http.Get(env.baseURL + "/api/health")
-	if err != nil {
-		t.Fatal(err)
-	}
+	respH := env.doRequest("GET", "/api/health", nil)
 	requireStatus(t, respH, 200)
 	healthData := readJSON(t, respH)
 

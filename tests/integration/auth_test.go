@@ -137,9 +137,9 @@ func TestBootstrapFirstUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Should be 403: CSRF middleware fires before auth, so unauthenticated
-	// requests without a CSRF token get 403 (csrf_missing), not 401.
-	requireStatus(t, resp, 403)
+	// 401: unauthenticated mutations skip the CSRF check (an unauth request
+	// has no session to forge against) and fall through to requireAuth.
+	requireStatus(t, resp, 401)
 	resp.Body.Close()
 
 	// With login, it should succeed.
@@ -155,11 +155,9 @@ func TestBootstrapFirstUser(t *testing.T) {
 // TestGetMeWithoutLogin returns 401.
 func TestGetMeWithoutLogin(t *testing.T) {
 	env := newTestEnv(t, nil)
+	env.logout()
 
-	resp, err := http.Get(env.baseURL + "/api/auth/me")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/auth/me", nil)
 	requireStatus(t, resp, 401)
 	resp.Body.Close()
 }

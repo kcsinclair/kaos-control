@@ -6,7 +6,6 @@ package integration
 
 import (
 	"encoding/json"
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -195,10 +194,7 @@ func TestIgnorePatterns_APIExcludesIgnored(t *testing.T) {
 	})
 
 	// ── GET /api/p/testproject/artifacts ──────────────────────────────────────
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/artifacts")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/artifacts", nil)
 	data := readJSON(t, resp)
 
 	items, _ := data["items"].([]any)
@@ -218,10 +214,7 @@ func TestIgnorePatterns_APIExcludesIgnored(t *testing.T) {
 	}
 
 	// ── GET /api/p/testproject/graph ──────────────────────────────────────────
-	resp2, err := http.Get(env.baseURL + "/api/p/testproject/graph")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp2 := env.doRequest("GET", "/api/p/testproject/graph", nil)
 	graph := readJSON(t, resp2)
 
 	nodes, _ := graph["nodes"].([]any)

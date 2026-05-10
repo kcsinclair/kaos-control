@@ -82,6 +82,14 @@ func (s *Server) csrfMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		// Unauthenticated mutations: requireAuth will reject with 401.
+		// CSRF is irrelevant when there is no session to forge against, and
+		// returning 403/csrf_missing here masks the underlying 401, which
+		// makes "session expired" indistinguishable from "missing CSRF".
+		if userFromCtx(r.Context()) == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, "/api/auth/") {
 			next.ServeHTTP(w, r)
 			return

@@ -284,6 +284,12 @@ func newTestEnvFull(t *testing.T, seeds []seedArtifact, frontendFS fs.FS, cfgYAM
 		}
 	})
 
+	// Auto-login as admin so every test starts authenticated. Tests that need
+	// to verify auth-failure behaviour can call e.logout() or e.login(...) to
+	// switch identity. Tests that need anonymous access can clear cookies via
+	// e.cookies = nil.
+	env.login("admin@test.local", "admin-pass-123")
+
 	return env
 }
 
@@ -357,6 +363,14 @@ func findNodeByID(nodes []any, id string) map[string]any {
 		}
 	}
 	return nil
+}
+
+// logout clears any session/CSRF state on the test env so subsequent
+// doRequest calls go out anonymously. Useful in tests that verify the
+// 401 path; pairs with the auto-login in newTestEnvFull.
+func (e *testEnv) logout() {
+	e.cookies = nil
+	e.csrfToken = ""
 }
 
 // login authenticates against the API and saves cookies + CSRF token.

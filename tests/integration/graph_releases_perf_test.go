@@ -59,11 +59,8 @@ func TestGraphReleasesPerf_BackendResponseTime(t *testing.T) {
 	}
 
 	start := time.Now()
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/graph?include_releases=true")
+	resp := env.doRequest("GET", "/api/p/testproject/graph?include_releases=true", nil)
 	elapsed := time.Since(start)
-	if err != nil {
-		t.Fatal(err)
-	}
 	requireStatus(t, resp, http.StatusOK)
 	data := readJSON(t, resp)
 
@@ -117,21 +114,15 @@ func TestGraphReleasesPerf_BaselineComparison(t *testing.T) {
 
 	// Baseline: no overlay.
 	t0 := time.Now()
-	resp0, err := http.Get(env.baseURL + "/api/p/testproject/graph")
+	resp0 := env.doRequest("GET", "/api/p/testproject/graph", nil)
 	baselineElapsed := time.Since(t0)
-	if err != nil {
-		t.Fatal(err)
-	}
 	requireStatus(t, resp0, http.StatusOK)
 	resp0.Body.Close()
 
 	// Overlay: with include_releases=true.
 	t1 := time.Now()
-	resp1, err := http.Get(env.baseURL + "/api/p/testproject/graph?include_releases=true")
+	resp1 := env.doRequest("GET", "/api/p/testproject/graph?include_releases=true", nil)
 	overlayElapsed := time.Since(t1)
-	if err != nil {
-		t.Fatal(err)
-	}
 	requireStatus(t, resp1, http.StatusOK)
 	resp1.Body.Close()
 

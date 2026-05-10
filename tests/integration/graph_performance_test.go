@@ -6,7 +6,6 @@ package integration
 
 import (
 	"fmt"
-	"net/http"
 	"testing"
 	"time"
 )
@@ -70,11 +69,8 @@ func TestGraphPerformance500Artifacts(t *testing.T) {
 	env := newTestEnv(t, seeds)
 
 	start := time.Now()
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/graph")
+	resp := env.doRequest("GET", "/api/p/testproject/graph", nil)
 	elapsed := time.Since(start)
-	if err != nil {
-		t.Fatal(err)
-	}
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 
@@ -138,11 +134,8 @@ func TestGraphLabelDensity(t *testing.T) {
 	env := newTestEnv(t, seeds)
 
 	start := time.Now()
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/graph")
+	resp := env.doRequest("GET", "/api/p/testproject/graph", nil)
 	elapsed := time.Since(start)
-	if err != nil {
-		t.Fatal(err)
-	}
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 

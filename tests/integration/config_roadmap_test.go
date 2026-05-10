@@ -188,7 +188,7 @@ roadmap:
 // returns 401 for unauthenticated requests.
 func TestConfigRoadmap_RequiresAuth(t *testing.T) {
 	env := newTestEnvWithCfgYAML(t, nil, defaultCfgYAML)
-	// Do NOT call env.login — no session cookies.
+	env.logout() // newTestEnv auto-logs in; clear the session for this test.
 
 	resp := env.doRequest("GET", "/api/p/testproject/config/roadmap", nil)
 	requireStatus(t, resp, http.StatusUnauthorized)

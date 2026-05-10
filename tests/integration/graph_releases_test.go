@@ -5,7 +5,6 @@
 package integration
 
 import (
-	"net/http"
 	"testing"
 )
 
@@ -15,10 +14,7 @@ import (
 // and returns decoded nodes and edges.
 func graphWithReleases(t *testing.T, env *testEnv) (nodes []any, edges []any) {
 	t.Helper()
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/graph?include_releases=true")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/graph?include_releases=true", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 	nodes, _ = data["nodes"].([]any)
@@ -166,10 +162,7 @@ func TestGraphReleases_FilterIndependence(t *testing.T) {
 		"name": "gr-fi-v1", "status": "planned", "start_date": "2026-01-01",
 	})
 
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/graph?include_releases=true&type=idea")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/graph?include_releases=true&type=idea", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 	nodes := decodeGraphNodes(t, data)

@@ -173,7 +173,7 @@ func TestGetRoles_EmptyUsers(t *testing.T) {
 // Covers Milestone 1, scenario 3.
 func TestGetRoles_Unauthenticated(t *testing.T) {
 	env := newTestEnv(t, nil)
-	// Deliberately do NOT call env.login() — no session cookie is set.
+	env.logout() // newTestEnv auto-logs in; clear the session for this test.
 
 	resp := env.doRequest("GET", "/api/p/testproject/roles", nil)
 	requireStatus(t, resp, 401)

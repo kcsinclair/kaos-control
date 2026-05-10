@@ -221,7 +221,7 @@ func (s *Server) handleCreatePipeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	destPath := filepath.Join(p.Entry.Path, "devops", req.Slug+".yaml")
+	destPath := filepath.Join(devopsDir(p.Entry.Path), req.Slug+".yaml")
 	if _, err := os.Stat(destPath); err == nil {
 		writeJSON(w, http.StatusConflict, apiError("conflict", "pipeline already exists: "+req.Slug))
 		return

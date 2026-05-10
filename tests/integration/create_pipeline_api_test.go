@@ -47,8 +47,9 @@ func TestCreatePipeline_Success(t *testing.T) {
 		t.Errorf("response slug = %q, want %q", slug, "ci")
 	}
 
-	// The handler writes to devops/{slug}.yaml (at the project root level).
-	destPath := filepath.Join(env.projectRoot, "devops", "ci.yaml")
+	// The handler writes to lifecycle/devops/{slug}.yaml, matching the
+	// directory the list handler reads via devopsDir().
+	destPath := filepath.Join(env.projectRoot, "lifecycle", "devops", "ci.yaml")
 	if _, err := os.Stat(destPath); err != nil {
 		t.Fatalf("expected pipeline file at %s, got error: %v", destPath, err)
 	}

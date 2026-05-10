@@ -5,7 +5,6 @@
 package integration
 
 import (
-	"net/http"
 	"testing"
 )
 
@@ -42,10 +41,7 @@ func TestFullScanIndexing(t *testing.T) {
 	env := newTestEnv(t, seeds)
 
 	// No auth needed for graph (read-only).
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/graph")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/graph", nil)
 	if resp.StatusCode != 200 {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -70,10 +66,7 @@ func TestFullScanIndexing(t *testing.T) {
 	}
 
 	// Verify list endpoint returns all 5 artifacts.
-	resp2, err := http.Get(env.baseURL + "/api/p/testproject/artifacts")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp2 := env.doRequest("GET", "/api/p/testproject/artifacts", nil)
 	list := readJSON(t, resp2)
 	total, _ := list["total"].(float64)
 	if int(total) != 5 {
@@ -81,10 +74,7 @@ func TestFullScanIndexing(t *testing.T) {
 	}
 
 	// Verify filtering by stage.
-	resp3, err := http.Get(env.baseURL + "/api/p/testproject/artifacts?stage=ideas")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp3 := env.doRequest("GET", "/api/p/testproject/artifacts?stage=ideas", nil)
 	filtered := readJSON(t, resp3)
 	filteredTotal, _ := filtered["total"].(float64)
 	if int(filteredTotal) != 2 {
@@ -92,10 +82,7 @@ func TestFullScanIndexing(t *testing.T) {
 	}
 
 	// Verify lineages endpoint.
-	resp4, err := http.Get(env.baseURL + "/api/p/testproject/lineages")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp4 := env.doRequest("GET", "/api/p/testproject/lineages", nil)
 	lineagesData := readJSON(t, resp4)
 	lineages, ok := lineagesData["lineages"].([]any)
 	if !ok {
@@ -126,10 +113,7 @@ func TestScanWithFilterByStatus(t *testing.T) {
 
 	env := newTestEnv(t, seeds)
 
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/artifacts?status=planning")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/artifacts?status=planning", nil)
 	data := readJSON(t, resp)
 	total, _ := data["total"].(float64)
 	if int(total) != 1 {

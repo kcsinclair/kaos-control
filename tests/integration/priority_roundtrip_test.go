@@ -164,9 +164,16 @@ func TestPriorityPatchConcurrentReads(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			resp, err := http.Get(
-				fmt.Sprintf("%s/api/p/testproject/artifacts/%s", env.baseURL, path),
-			)
+			req, err := http.NewRequest("GET",
+				fmt.Sprintf("%s/api/p/testproject/artifacts/%s", env.baseURL, path), nil)
+			if err != nil {
+				results <- readResult{fmt.Sprintf("reader %d: NewRequest error: %v", idx, err)}
+				return
+			}
+			for _, c := range env.cookies {
+				req.AddCookie(c)
+			}
+			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				results <- readResult{fmt.Sprintf("reader %d: HTTP error: %v", idx, err)}
 				return

@@ -227,10 +227,7 @@ func TestTestArtifactFilter_Unauthenticated(t *testing.T) {
 	env := newTestEnv(t, testFilterSeeds())
 	// Deliberately skip env.login.
 
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/artifacts?type=test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/artifacts?type=test", nil)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusUnauthorized {

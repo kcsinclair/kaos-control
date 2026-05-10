@@ -317,10 +317,7 @@ func graphNodeLabels(node map[string]any) []any {
 // decoded JSON map.
 func graphResponseForProject(t *testing.T, env *testEnv) map[string]any {
 	t.Helper()
-	resp, err := http.Get(env.baseURL + "/api/p/testproject/graph")
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp := env.doRequest("GET", "/api/p/testproject/graph", nil)
 	requireStatus(t, resp, 200)
 	return readJSON(t, resp)
 }
