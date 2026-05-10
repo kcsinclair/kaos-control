@@ -1,7 +1,7 @@
 ---
 title: "Test Suite — Inline Priority Display and Editing"
 type: test
-status: draft
+status: approved
 lineage: artefact-priority-inline-edit
 parent: lifecycle/test-plans/artefact-priority-inline-edit-5-test.md
 ---
