@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useReleasesStore } from '@/stores/releases'
 import { useArtifactsStore } from '@/stores/artifacts'
+import { useRoadmapSettingsStore } from '@/stores/roadmapSettings'
 import GanttChart from '@/components/releases/GanttChart.vue'
 import BacklogPanel from '@/components/releases/BacklogPanel.vue'
 import ReleaseFormModal from '@/components/releases/ReleaseFormModal.vue'
@@ -23,6 +24,7 @@ const project = route.params.project as string
 
 const store = useReleasesStore()
 const artifactsStore = useArtifactsStore()
+const roadmapSettings = useRoadmapSettingsStore()
 
 // ── Backlog artifacts ────────────────────────────────────────────────────────
 // All artifacts with no release assignment, excluding release and sprint types.
@@ -143,6 +145,36 @@ function openEdit(releaseId: number) {
             :class="{ 'seg-btn--active': granularity === g }"
             @click="granularity = g"
           >{{ g }}</button>
+        </div>
+
+        <!-- Period-mode toggle (only when Gantt is active) -->
+        <div v-if="viewMode === 'gantt'" class="segmented" role="group" aria-label="Period mode">
+          <button
+            class="seg-btn"
+            :class="{ 'seg-btn--active': roadmapSettings.periodMode === 'autoscale' }"
+            @click="roadmapSettings.periodMode = 'autoscale'"
+          >Autoscale</button>
+          <button
+            class="seg-btn"
+            :class="{ 'seg-btn--active': roadmapSettings.periodMode === 'fixed' }"
+            @click="roadmapSettings.periodMode = 'fixed'"
+          >Fixed Period</button>
+        </div>
+
+        <!-- Fixed-period picker (only when in fixed mode and Gantt is active) -->
+        <div
+          v-if="viewMode === 'gantt' && roadmapSettings.periodMode === 'fixed'"
+          class="segmented"
+          role="group"
+          aria-label="Fixed period"
+        >
+          <button
+            v-for="p in (['month', 'quarter', 'half-year', 'year'] as const)"
+            :key="p"
+            class="seg-btn"
+            :class="{ 'seg-btn--active': roadmapSettings.fixedPeriod === p }"
+            @click="roadmapSettings.fixedPeriod = p"
+          >{{ p === 'half-year' ? 'Half-Year' : p.charAt(0).toUpperCase() + p.slice(1) }}</button>
         </div>
 
         <!-- View toggle -->
