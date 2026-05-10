@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Version Number Display"
 type: plan-test
-status: in-development
+status: done
 lineage: version-number-display
 parent: lifecycle/requirements/version-number-display-2.md
 created: "2026-05-10T00:00:00+10:00"
