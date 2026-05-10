@@ -1,7 +1,7 @@
 ---
 title: CLI Init Scaffold Command
 type: requirement
-status: in-development
+status: done
 lineage: cli-init-scaffold
 priority: high
 parent: ideas/cli-init-scaffold.md
