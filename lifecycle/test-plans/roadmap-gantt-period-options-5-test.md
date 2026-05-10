@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Roadmap Gantt Period Display Options"
 type: plan-test
-status: draft
+status: approved
 lineage: roadmap-gantt-period-options
 parent: lifecycle/requirements/roadmap-gantt-period-options-2.md
 created: "2026-05-10T00:00:00+10:00"
