@@ -202,9 +202,9 @@ onMounted(() => {
     .linkLabel((l: object) => timelineLinkLabel(l as GraphEdge))
     .linkWidth((l: object) => {
       const kind = (l as GraphEdge).kind
-      if (kind === 'timeline') return 1.5
-      if (kind === 'assigned') return 0.8   // membership edge — lighter than timeline
-      return 0.5
+      if (kind === 'timeline') return 2.0
+      if (kind === 'assigned') return 0.8
+      return 1.2  // parent, depends_on, blocks, related_to, label
     })
     .linkDirectionalArrowLength((l: object) => {
       // Assigned edges are undirected membership links — no arrow needed.
