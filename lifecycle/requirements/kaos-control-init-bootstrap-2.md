@@ -1,7 +1,7 @@
 ---
 title: 'Init Bootstrap: Config Defaults, DevOps Scaffold, and Create-Pipeline UI'
 type: requirement
-status: blocked
+status: approved
 lineage: kaos-control-init-bootstrap
 created: "2026-05-10"
 priority: normal
@@ -96,8 +96,16 @@ If no existing endpoint supports creating a new pipeline definition file, add a 
 - [ ] The generated config template passes `go build` and the init integration tests pass.
 - [ ] Related: [[kaos-control-init-bootstrap]]
 
-## Open Questions
+## Resolved Questions
 
 1. **Pipeline definition schema** — Is there a defined schema or required structure for pipeline YAML files in `devops/`? If so, should the create-pipeline form enforce it, or is free-form YAML acceptable for v1?
+
+> There is a schema for the pipeline YAML
+
 2. **Seed pipelines** — Should `kaos-control init` also generate any example/seed pipeline definitions in `devops/`, or should it start empty?
+
+> yes, it should create a sample pipeline, could include "echo hello world"
+
 3. **Config merging on re-init** — When `init` is run on a project that already has a `config.yaml` missing some default blocks (e.g., an older init that didn't include kanban defaults), should init merge in missing defaults or leave the file untouched? Currently `--force-config` overwrites entirely.
+
+> Not required at this stage, only me as a user.
