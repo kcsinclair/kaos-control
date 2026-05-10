@@ -127,7 +127,7 @@ describe('SummaryCountsWidget — mount and render performance', () => {
 
     for (let i = 0; i < RUNS; i++) {
       const { api } = await import('@/api/client' as any)
-      vi.mocked(api.get).mockResolvedValueOnce({ total: i, in_progress: 0, blocked: 0, completed_this_week: 0 })
+      vi.mocked(api.get).mockResolvedValueOnce({ total_tickets: i, in_progress: 0, blocked: 0, completed_this_week: 0 })
 
       const start = performance.now()
       const wrapper = mount(SummaryCountsWidget, { props: { project: 'testproject' } })

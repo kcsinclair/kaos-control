@@ -59,7 +59,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const data = await res.json().catch(() => null)
 
   if (!res.ok) {
-    if (res.status === 401) {
+    // /auth/me is the session probe used by the auth store; the router's
+    // beforeEach guard turns its 401 into a redirect via requiresAuth.
+    // Redirecting from here triggers a recursive beforeEach that re-fetches
+    // /auth/me before initialized=true is set, producing duplicate 401s.
+    if (res.status === 401 && path !== '/auth/me') {
       // Dynamic imports avoid the circular dependency:
       //   router → stores/auth → api/auth → api/client → router
       const [{ default: router }, { useAuthStore }] = await Promise.all([
