@@ -81,7 +81,18 @@ export const useAgentsStore = defineStore('agents', () => {
   // Stores the last project used with fetchRunsByTargetPath so WS events can re-fetch.
   let _lastArtifactProject = ''
 
+  /** Ready-artifact count per agent name, populated by fetchReadyCounts(). */
+  const readyCounts = ref<Record<string, number>>({})
+
   const activeRuns = computed(() => runs.value.filter((r) => r.status === 'running'))
+
+  /** Running-run count per agent name, derived from activeRuns. */
+  const runningCountByAgent = computed(() =>
+    activeRuns.value.reduce<Record<string, number>>((acc, run) => {
+      acc[run.agent_name] = (acc[run.agent_name] ?? 0) + 1
+      return acc
+    }, {}),
+  )
 
   async function fetchRuns(project: string, status?: string, limit = 100): Promise<void> {
     loading.value = true
@@ -96,6 +107,15 @@ export const useAgentsStore = defineStore('agents', () => {
   async function fetchAgents(project: string): Promise<void> {
     const data = await agentsApi.listAgents(project)
     agents.value = data.agents ?? []
+  }
+
+  async function fetchReadyCounts(project: string): Promise<void> {
+    try {
+      const data = await agentsApi.getReadyCounts(project)
+      readyCounts.value = data.counts ?? {}
+    } catch {
+      // Non-fatal: counts remain stale until next successful fetch
+    }
   }
 
   async function startRun(
@@ -182,10 +202,13 @@ export const useAgentsStore = defineStore('agents', () => {
     loading,
     progressLines,
     activeRuns,
+    runningCountByAgent,
+    readyCounts,
     artifactRuns,
     artifactRunsPath,
     fetchRuns,
     fetchAgents,
+    fetchReadyCounts,
     startRun,
     killRun,
     fetchRunsByTargetPath,

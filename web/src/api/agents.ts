@@ -45,6 +45,12 @@ export async function listRunsByTargetPath(project: string, targetPath: string):
   return data.runs ?? []
 }
 
+export function getReadyCounts(project: string) {
+  return api.get<{ counts: Record<string, number> }>(
+    `/p/${encodeURIComponent(project)}/agents/ready-counts`,
+  )
+}
+
 export async function getRunLog(project: string, runId: string): Promise<string> {
   const res = await fetch(
     `/api/p/${encodeURIComponent(project)}/agents/runs/${encodeURIComponent(runId)}/log`,
