@@ -40,6 +40,11 @@ var seedFileSpecs = []seedFileSpec{
 		relPath: ".gitignore",
 		force:   func(f ForceFlags) bool { return f.Gitignore },
 	},
+	{
+		tmpl:    "sample-pipeline.yaml.tmpl",
+		relPath: "devops/sample.yaml",
+		force:   func(f ForceFlags) bool { return f.Config },
+	},
 }
 
 // writeSeedFiles renders and writes each seed file under root. If a file
