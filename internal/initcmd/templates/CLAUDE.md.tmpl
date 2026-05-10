@@ -1,0 +1,81 @@
+# CLAUDE.md — {{.ProjectName}}
+
+Guidance for Claude Code (claude.ai/code) when working in this repository.
+{{if .Language}}
+## Primary Language
+
+This project is primarily written in **{{.Language}}**.
+{{end}}
+## Repository Layout
+
+```
+<project-root>/
+├── lifecycle/              Artifact store (ideas → requirements → plans → releases)
+│   ├── config.yaml         Per-project configuration (roles, agents, stages)
+│   ├── ideas/
+│   ├── requirements/
+│   ├── backend-plans/
+│   ├── frontend-plans/
+│   ├── test-plans/
+│   ├── tests/
+│   ├── prototypes/
+│   ├── releases/
+│   ├── sprints/
+│   └── defects/
+└── tests/                  Integration test code
+```
+
+## Lineage Filename Convention
+
+Artifacts for a single idea share a **slug** and carry a **monotonic index** across stages:
+
+```
+lifecycle/ideas/login.md             (originating idea — no index suffix)
+lifecycle/requirements/login-2.md
+lifecycle/backend-plans/login-3-be.md
+lifecycle/frontend-plans/login-4-fe.md
+lifecycle/test-plans/login-5-test.md
+```
+
+- The first file in a lineage has **no index suffix**. Subsequent indices start at `-2`.
+- The index is monotonic **per lineage, across all stages** — never reused.
+- Rejected-and-replanned artifacts get the **next** index; superseded files stay in place.
+- Every non-originating artifact has `parent:` in its YAML frontmatter pointing to the previous file.
+
+## Frontmatter Requirements
+
+Required fields on every artifact: `title`, `type`, `status`, `lineage`.
+
+**Type vocabulary:** `idea`, `ticket`, `epic`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`, `defect`.
+
+**Status vocabulary:** `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`.
+
+Example:
+
+```yaml
+---
+title: User Login
+type: idea
+status: draft
+lineage: login
+---
+```
+
+## Commit Conventions
+
+- Commits should be small and focused. Don't amend published commits; create new ones.
+- When a plan drove a change, reference the plan's milestone heading in the commit message.
+- Do not skip pre-commit hooks or signing.
+
+## Agent Roles
+
+Roles split by lifecycle phase:
+
+- **Think:** `analyst` — reads ideas → writes requirements; reads requirements → writes plans.
+- **Make:** `backend-developer`, `frontend-developer`, `test-developer` — implement plans in code.
+- **Verify:** `qa` — runs tests, raises defects in `lifecycle/defects/`.
+- **Cross-cutting:** `product-owner`, `reviewer`.
+
+Six agents are pre-configured in `lifecycle/config.yaml`:
+`requirements-analyst`, `planning-analyst`, `backend-developer`, `frontend-developer`,
+`test-developer`, `qa`. Edit their `prompt_templates` to add project-specific context.
