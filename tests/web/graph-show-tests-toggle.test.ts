@@ -174,8 +174,11 @@ describe('GraphFilters — Show tests checkbox (Milestone 2)', () => {
     nodeCount: 0,
     totalCount: 0,
     showLabelNodes: false,
+    showReleases: false,
     hideTerminal: true,
     hideTests: true,
+    showNodeTitles: true,
+    showNodeLineage: false,
     searchText: '',
   }
 
@@ -372,7 +375,7 @@ describe('MapView integration — Show tests toggle (Milestone 3)', () => {
       global: {
         plugins: [pinia, router],
         stubs: {
-          GraphFilters: true,
+          MapFilters: true,
           GraphLegend: true,
           ArtifactModal: true,
           LabelModal: true,
