@@ -1,7 +1,7 @@
 ---
 title: "RecentIdeasDefectsWidget test asserts stale limit=6 after limit was raised to 7"
 type: defect
-status: draft
+status: approved
 lineage: dashboard-recent-panels-limit-7
 parent: lifecycle/defects/dashboard-recent-panels-limit-7.md
 labels:
