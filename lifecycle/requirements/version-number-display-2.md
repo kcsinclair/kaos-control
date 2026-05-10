@@ -1,7 +1,7 @@
 ---
 title: Version Number Display
 type: requirement
-status: approved
+status: planning
 lineage: version-number-display
 created: "2026-05-10"
 priority: normal
