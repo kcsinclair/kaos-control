@@ -43,11 +43,15 @@ function handleBadgeClick(event: MouseEvent, agent: AgentSummary) {
   event.stopPropagation()
   if (!agent.active_status) return
   const project = route.params.project as string
-  void router.push(`/p/${encodeURIComponent(project)}/artifacts?status=${encodeURIComponent(agent.active_status)}`)
+  // Navigate to approved artifacts — consistent with the ready count which
+  // only counts approved items.
+  void router.push(`/p/${encodeURIComponent(project)}/artifacts?status=approved`)
 }
 
 function readyCount(agent: AgentSummary): number {
-  return agentsStore.readyCounts[agent.name] ?? 0
+  // Only approved artifacts are ready for an agent to process.
+  if (!agent.active_status) return 0
+  return agentsStore.approvedCount
 }
 
 function runningCount(agent: AgentSummary): number {
