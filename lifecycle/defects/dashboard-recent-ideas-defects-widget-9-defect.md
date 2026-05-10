@@ -6,6 +6,7 @@ lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/tests/dashboard-recent-ideas-defects-widget-6-test.md
 labels:
     - defect
+release: KC-Release0
 assignees:
     - role: frontend-developer
       who: agent
