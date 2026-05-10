@@ -1,9 +1,9 @@
 ---
 title: Version Number Display
 type: requirement
-status: in-development
+status: done
 lineage: version-number-display
-created: "2026-05-10"
+created: "2026-05-10T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/version-number-display.md
 labels:
