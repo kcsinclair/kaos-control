@@ -1,9 +1,9 @@
 ---
 title: CLI Auth User Management and Secured API
 type: requirement
-status: planning
+status: done
 lineage: cli-auth-user-management
-created: "2026-05-10"
+created: "2026-05-10T00:00:00+10:00"
 priority: high
 parent: lifecycle/ideas/cli-auth-user-management.md
 labels:
