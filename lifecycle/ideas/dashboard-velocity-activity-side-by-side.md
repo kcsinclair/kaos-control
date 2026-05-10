@@ -1,7 +1,7 @@
 ---
 title: 'Dashboard: Completion Velocity and Recent Activity Side by Side'
 type: idea
-status: clarifying
+status: done
 lineage: dashboard-velocity-activity-side-by-side
 created: "2026-05-10T16:06:01+10:00"
 priority: normal
