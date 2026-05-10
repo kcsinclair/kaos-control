@@ -72,18 +72,18 @@ Test the new `sort` query parameter for correctness and safety.
 
 ### Description
 
-Test the exact query the frontend widget will use: `?type=idea,defect&sort=created:desc&limit=6`.
+Test the exact query the frontend widget will use: `?type=idea,defect&sort=created:desc&limit=7`.
 
 ### Files to change
 
 - `tests/api_artifacts_widget_query_test.go` (new or extend existing)
   - **Setup**: Seed 10 ideas and 5 defects with known creation dates, plus 3 requirements.
   - **Test cases**:
-    1. Combined query returns at most 6 items.
+    1. Combined query returns at most 7 items.
     2. All returned items are type `idea` or `defect` (no requirements).
     3. Items are sorted by `created` descending (most recent first).
-    4. `total` in response equals the full count of matching ideas + defects (15), not capped at 6.
-    5. When fewer than 6 ideas+defects exist (e.g. 2 total), returns only 2 items with correct total.
+    4. `total` in response equals the full count of matching ideas + defects (15), not capped at 7.
+    5. When fewer than 7 ideas+defects exist (e.g. 2 total), returns only 2 items with correct total.
     6. When zero ideas+defects exist, returns empty `items` array and `total: 0`.
 
 ### Acceptance criteria
