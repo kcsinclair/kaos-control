@@ -1,7 +1,7 @@
 ---
 title: "MapFilters test fixture missing required props showReleases, showNodeTitles, showNodeLineage"
 type: defect
-status: draft
+status: approved
 lineage: rename-graph-to-map
 parent: lifecycle/tests/rename-graph-to-map-6-test.md
 labels: [defect]
