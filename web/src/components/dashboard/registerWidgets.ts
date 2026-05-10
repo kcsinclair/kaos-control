@@ -5,10 +5,16 @@
  * Import this file once (in main.ts) to register all dashboard widgets.
  * To add a new widget: call registerWidget() here — no other files need editing.
  *
- * Dashboard layout:
- *   Row 1 (summary): SummaryCounts
- *   Row 2 (chart, 3 equal cols): StagesDistribution | StatusDistribution | RecentIdeasDefects
- *   Row 3 (chart, 3-col grid): VelocityChart [span 2] | ActivityFeed [span 1]
+ * Dashboard layout (rendered by DashboardGrid):
+ *   Row 1 (summary slot):                 SummaryCounts (4 stat cards, auto-fit)
+ *   Row 2 (chart slot, top — 3 cols):     StagesDistribution | StatusDistribution | RecentIdeasDefects
+ *   Row 3 (chart slot, bottom — full-w):  VelocityChart
+ *   Row 4 (panel slot, full-w per widget): ActivityFeed
+ *
+ * The chart slot is split by DashboardGrid: the first 3 chart widgets
+ * (sorted by order) render in the top row's 3-column grid; the rest render
+ * full-width in the bottom row. So time-series widgets like VelocityChart
+ * get the horizontal space they need to be readable.
  */
 import { defineAsyncComponent } from 'vue'
 import { registerWidget } from './widgetRegistry'
@@ -21,7 +27,7 @@ registerWidget(
   { slot: 'summary', order: 0 },
 )
 
-// Row 2 — three equal columns
+// Chart top row — three equal columns
 registerWidget(
   'stages-distribution',
   defineAsyncComponent(() => import('./widgets/StagesDistributionWidget.vue')),
@@ -40,15 +46,16 @@ registerWidget(
   { slot: 'chart', order: 2 },
 )
 
-// Row 3 — velocity spans cols 1–2, activity feed in col 3
+// Chart bottom row — full-width
 registerWidget(
   'velocity-chart',
   defineAsyncComponent(() => import('./widgets/VelocityChartWidget.vue')),
-  { slot: 'chart', order: 3, span: 2 },
+  { slot: 'chart', order: 3 },
 )
 
+// Panel row — full-width below the charts
 registerWidget(
   'activity-feed',
   defineAsyncComponent(() => import('./widgets/ActivityFeedWidget.vue')),
-  { slot: 'chart', order: 4 },
+  { slot: 'panel', order: 0 },
 )
