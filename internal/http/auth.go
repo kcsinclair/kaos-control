@@ -29,14 +29,38 @@ func userFromCtx(ctx context.Context) *auth.User {
 	return u
 }
 
+// bearerContextKey marks requests authenticated via bearer token (CSRF exempt).
+type bearerContextKey struct{}
+
+// isBearerAuth reports whether the request was authenticated by a bearer token.
+func isBearerAuth(ctx context.Context) bool {
+	v, _ := ctx.Value(bearerContextKey{}).(bool)
+	return v
+}
+
 // sessionMiddleware reads the session cookie and injects the user into the context.
+// If no valid session cookie is found, it falls back to checking an
+// Authorization: Bearer <token> header. Bearer-authenticated requests are
+// flagged in context so csrfMiddleware can skip CSRF enforcement.
 // It is a no-op when the server has no auth store configured.
 func (s *Server) sessionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.cfg.Auth != nil {
+			// 1. Try session cookie.
 			if cookie, err := r.Cookie(sessionCookieName); err == nil && cookie.Value != "" {
 				if user, _ := s.cfg.Auth.GetSession(cookie.Value); user != nil {
 					ctx := context.WithValue(r.Context(), userContextKey, user)
+					r = r.WithContext(ctx)
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+			// 2. Try Authorization: Bearer <token>.
+			if hdr := r.Header.Get("Authorization"); strings.HasPrefix(hdr, "Bearer ") {
+				token := strings.TrimPrefix(hdr, "Bearer ")
+				if user, _ := s.cfg.Auth.ValidateToken(token); user != nil {
+					ctx := context.WithValue(r.Context(), userContextKey, user)
+					ctx = context.WithValue(ctx, bearerContextKey{}, true)
 					r = r.WithContext(ctx)
 				}
 			}
@@ -46,10 +70,15 @@ func (s *Server) sessionMiddleware(next http.Handler) http.Handler {
 }
 
 // csrfMiddleware enforces the double-submit cookie pattern for non-GET mutations.
-// Auth endpoints and the bootstrap user-creation call are exempt.
+// Auth endpoints, bearer-token requests, and the bootstrap user-creation call are exempt.
 func (s *Server) csrfMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// Bearer-authenticated requests are not vulnerable to CSRF.
+		if isBearerAuth(r.Context()) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -77,11 +106,35 @@ func (s *Server) csrfMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// requireAuth is a middleware that returns 401 if there is no authenticated user.
-func requireAuth(next http.Handler) http.Handler {
+// requireAuth is a global middleware that returns 401 for unauthenticated requests
+// on all paths except the explicitly exempt ones listed below.
+func (s *Server) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+
+		// Exempt: static SPA assets served by handleFrontend.
+		if path == "/" || path == "/index.html" || path == "/favicon.ico" ||
+			strings.HasPrefix(path, "/assets/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Exempt: login and health endpoints.
+		if path == "/api/auth/login" || path == "/api/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Exempt: bootstrap — first user creation when no users exist yet.
+		if path == "/api/admin/users" && r.Method == http.MethodPost && s.cfg.Auth != nil {
+			if count, _ := s.cfg.Auth.UserCount(); count == 0 {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
 		if userFromCtx(r.Context()) == nil {
-			writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			return
 		}
 		next.ServeHTTP(w, r)

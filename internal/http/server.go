@@ -77,6 +77,7 @@ func (s *Server) buildRouter() chi.Router {
 	r.Use(middleware.Recoverer)
 	r.Use(s.sessionMiddleware)
 	r.Use(s.csrfMiddleware)
+	r.Use(s.requireAuth)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
@@ -187,17 +188,17 @@ func (s *Server) buildRouter() chi.Router {
 			r.Get("/parse-errors", s.handleParseErrors)
 
 			// Project config
-			r.With(requireAuth).Get("/config", s.handleGetConfig)
-			r.With(requireAuth).Put("/config", s.handleUpdateConfig)
-			r.With(requireAuth).Get("/config/kanban", s.handleGetKanbanConfig)
-			r.With(requireAuth).Get("/config/roadmap", s.handleGetRoadmapConfig)
+			r.Get("/config", s.handleGetConfig)
+			r.Put("/config", s.handleUpdateConfig)
+			r.Get("/config/kanban", s.handleGetKanbanConfig)
+			r.Get("/config/roadmap", s.handleGetRoadmapConfig)
 
 			// Roles and users
-			r.With(requireAuth).Get("/roles", s.handleGetRoles)
+			r.Get("/roles", s.handleGetRoles)
 
 			// Lineage status checker
-			r.With(requireAuth).Get("/status-check", s.handleStatusCheck)
-			r.With(requireAuth).Post("/status-check/advance", s.handleStatusCheckAdvance)
+			r.Get("/status-check", s.handleStatusCheck)
+			r.Post("/status-check/advance", s.handleStatusCheckAdvance)
 
 			// Releases
 			r.Route("/releases", func(r chi.Router) {
@@ -226,7 +227,7 @@ func (s *Server) buildRouter() chi.Router {
 			r.Get("/devops/runs/{run_id}", s.handleGetRunLog)
 
 			// Scheduler
-			r.With(requireAuth).Route("/scheduler", func(r chi.Router) {
+			r.Route("/scheduler", func(r chi.Router) {
 				r.Get("/jobs", s.handleListSchedulerJobs)
 				r.Post("/jobs", s.handleCreateSchedulerJob)
 				r.Get("/jobs/{name}", s.handleGetSchedulerJob)
