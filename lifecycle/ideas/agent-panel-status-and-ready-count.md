@@ -1,7 +1,7 @@
 ---
 title: 'Agent Panel: Show Ready Item Count and Running State'
 type: idea
-status: clarifying
+status: planning
 lineage: agent-panel-status-and-ready-count
 created: "2026-05-10T10:31:34+10:00"
 priority: normal
