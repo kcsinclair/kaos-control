@@ -1,7 +1,7 @@
 ---
 title: Inherit Priority and Release Through Lineage
 type: idea
-status: draft
+status: planning
 lineage: inherit-priority-and-release
 created: "2026-05-10T10:12:41+10:00"
 priority: normal
@@ -9,6 +9,7 @@ labels:
     - feature
     - workflow
     - artefacts
+release: KC-Release1
 ---
 
 # Inherit Priority and Release Through Lineage
