@@ -1,7 +1,7 @@
 ---
 title: 'Dark assigned edge #475569 fails WCAG 3:1 contrast on dark canvas'
 type: defect
-status: approved
+status: in-development
 lineage: 3d-graph-edge-contrast
 created: "2026-05-10T00:00:00+10:00"
 parent: lifecycle/tests/3d-graph-edge-contrast-6-test.md
