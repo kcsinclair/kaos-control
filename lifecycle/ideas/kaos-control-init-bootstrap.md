@@ -1,7 +1,7 @@
 ---
 title: 'kaos-control Init Bootstrap: Config, Agents, and DevOps Screen'
 type: idea
-status: approved
+status: clarifying
 lineage: kaos-control-init-bootstrap
 created: "2026-05-10T16:12:53+10:00"
 priority: normal
