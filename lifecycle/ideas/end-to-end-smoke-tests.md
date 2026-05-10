@@ -1,7 +1,7 @@
 ---
 title: End-to-end smoke tests for core flows
 type: idea
-status: blocked
+status: draft
 lineage: end-to-end-smoke-tests
 created: "2026-04-28T10:00:00+10:00"
 priority: normal
@@ -16,6 +16,8 @@ assignees:
 ---
 
 # End-to-end smoke tests for core flows
+
+**this was kicked off from mobile**
 
 The existing test suite at `tests/web/` runs ~337 component tests under Vitest + happy-dom. That covers component behaviour but not whole-system flows: nothing currently boots the Go binary, drives a real browser, and asserts that the SPA + server + WebSocket + auth all work together.
 
@@ -40,7 +42,9 @@ Two viable choices:
 
 Recommendation: Playwright, because the flows need to drive both the SPA and the Go server (including auth and WebSocket), and that is an out-of-process E2E job rather than a component test.
 
-## Open Questions
+## Resolved Questions
+
+**questions answered in claude code**
 
 - Should the smoke tests run against a freshly-built `./dist/kaos-control` binary with a temp `~/.kaos-control` config, or against `make run`?
 - Do the smoke tests need their own seeded `lifecycle/` fixture, or can they reuse `tests/fixtures/`?
