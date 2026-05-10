@@ -1,15 +1,15 @@
 ---
 title: End-to-end smoke tests for core flows — Test Plan
 type: plan-test
-status: draft
+status: approved
 lineage: end-to-end-smoke-tests
-parent: lifecycle/requirements/end-to-end-smoke-tests-2.md
 priority: normal
+parent: lifecycle/requirements/end-to-end-smoke-tests-2.md
 labels:
     - testing
     - qa
     - feature
-release: KC-Release1
+release: KC-Release0
 ---
 
 # End-to-end smoke tests for core flows — Test Plan
