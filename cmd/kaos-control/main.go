@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/kaos-control/kaos-control/cmd/kaos-control/authcmd"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
 	khttp "github.com/kaos-control/kaos-control/internal/http"
@@ -23,15 +24,14 @@ import (
 
 var version = "dev"
 
-const usage = `Usage:
-  kaos-control [serve] [flags]    start the server
-  kaos-control init [flags] [path]  initialise a new lifecycle project
+const usage = `Usage: kaos-control <command> [flags]
 
-Subcommands:
-  serve   start the HTTP server (default when no subcommand is given)
-  init    scaffold lifecycle directories and seed files in a project directory
+Commands:
+  serve    Start the HTTP server (default)
+  init     Initialise a new project directory
+  auth     Manage users, passwords, and API tokens
 
-Run 'kaos-control init --help' for init-specific flags.
+Run 'kaos-control <command> --help' for command-specific usage.
 `
 
 func main() {
@@ -43,11 +43,14 @@ func main() {
 				os.Exit(1)
 			}
 			return
+		case "auth":
+			os.Exit(authcmd.Run(os.Args[2:]))
 		case "serve":
 			// Strip "serve" so the server's flag.Parse sees only its own flags.
 			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
 		case "--help", "-help", "-h":
-			// Fall through; flag.Parse will handle --help for the server flags.
+			fmt.Print(usage)
+			os.Exit(0)
 		default:
 			if !strings.HasPrefix(os.Args[1], "-") {
 				fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n%s", os.Args[1], usage)
