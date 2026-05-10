@@ -1,7 +1,7 @@
 ---
 title: Update Recent Ideas and Defects Widget Limit from 6 to 7
 type: requirement
-status: approved
+status: planning
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/defects/dashboard-recent-ideas-defects-widget-9-defect.md
 labels:
