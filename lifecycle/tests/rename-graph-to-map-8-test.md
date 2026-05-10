@@ -1,7 +1,7 @@
 ---
 title: "Fix: MapFilters required props in graph-show-tests-toggle test suite"
 type: test
-status: draft
+status: approved
 lineage: rename-graph-to-map
 parent: lifecycle/defects/rename-graph-to-map-7-defect.md
 ---
