@@ -10,6 +10,7 @@ labels:
     - qa
     - workflow
     - artefacts
+release: KC-Release1
 assignees:
     - role: product-owner
       who: agent
