@@ -24,6 +24,8 @@ const emit = defineEmits<{
 }>()
 
 const view = ref<'3d' | '2d'>('3d')
+const showNodeTitles = ref(false)
+const showNodeLineage = ref(false)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const rawData = ref<GraphData>({ nodes: [], edges: [] })
@@ -126,6 +128,26 @@ useWebSocket(props.project, 'artifact.indexed', load)
           @click="view = '2d'"
         >2D</button>
       </div>
+      <label class="label-toggle" for="roadmap-show-node-titles">
+        <input
+          id="roadmap-show-node-titles"
+          type="checkbox"
+          class="label-toggle__input"
+          :checked="showNodeTitles"
+          @change="showNodeTitles = !showNodeTitles"
+        />
+        <span class="label-toggle__text">Show node titles</span>
+      </label>
+      <label class="label-toggle" for="roadmap-show-node-lineage">
+        <input
+          id="roadmap-show-node-lineage"
+          type="checkbox"
+          class="label-toggle__input"
+          :checked="showNodeLineage"
+          @change="showNodeLineage = !showNodeLineage"
+        />
+        <span class="label-toggle__text">Show node lineage</span>
+      </label>
     </div>
 
     <div v-if="loading" class="state-msg" role="status">Loading graph…</div>
@@ -138,6 +160,8 @@ useWebSocket(props.project, 'artifact.indexed', load)
         :nodes="allNodes"
         :edges="allEdges"
         dag-mode="lr"
+        :show-node-titles="showNodeTitles"
+        :show-node-lineage="showNodeLineage"
         @node-click="handleNodeClick"
       />
       <Graph2DView
@@ -163,6 +187,27 @@ useWebSocket(props.project, 'artifact.indexed', load)
   top: var(--space-3);
   right: var(--space-3);
   z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.label-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  user-select: none;
+}
+.label-toggle__input {
+  accent-color: var(--color-accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.label-toggle__text {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(241,245,249,0.6);
 }
 .view-toggle {
   display: flex;

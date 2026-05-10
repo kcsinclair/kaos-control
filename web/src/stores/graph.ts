@@ -25,6 +25,10 @@ export const useGraphStore = defineStore('graph', () => {
 
   const showLabelNodes = ref(false)
 
+  // Node label overlays — session-scoped (no localStorage persistence)
+  const showNodeTitles = ref(false)
+  const showNodeLineage = ref(false)
+
   // Release overlay — off by default; toggling fetches release-augmented data.
   const showReleases = ref(false)
   // True once rawNodes has been fetched with include_releases=true.
@@ -213,6 +217,14 @@ export const useGraphStore = defineStore('graph', () => {
     showLabelNodes.value = !showLabelNodes.value
   }
 
+  function toggleShowNodeTitles(): void {
+    showNodeTitles.value = !showNodeTitles.value
+  }
+
+  function toggleShowNodeLineage(): void {
+    showNodeLineage.value = !showNodeLineage.value
+  }
+
   async function toggleShowReleases(project?: string): Promise<void> {
     showReleases.value = !showReleases.value
     if (showReleases.value && !releaseDataFetched.value) {
@@ -259,6 +271,8 @@ export const useGraphStore = defineStore('graph', () => {
     searchText,
     matchedNodeIds,
     showLabelNodes,
+    showNodeTitles,
+    showNodeLineage,
     showReleases,
     releaseDataFetched,
     hideTerminal,
@@ -283,6 +297,8 @@ export const useGraphStore = defineStore('graph', () => {
     setFilter,
     toggleFilterValue,
     toggleShowLabelNodes,
+    toggleShowNodeTitles,
+    toggleShowNodeLineage,
     toggleShowReleases,
     toggleHideTerminal,
     toggleHideTests,

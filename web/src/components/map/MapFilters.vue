@@ -18,6 +18,8 @@ const props = defineProps<{
   showReleases: boolean
   hideTerminal: boolean
   hideTests: boolean
+  showNodeTitles: boolean
+  showNodeLineage: boolean
   searchText: string
 }>()
 
@@ -28,6 +30,8 @@ const emit = defineEmits<{
   toggleShowReleases: []
   toggleHideTerminal: []
   toggleHideTests: []
+  toggleShowNodeTitles: []
+  toggleShowNodeLineage: []
   'update:searchText': [value: string]
 }>()
 
@@ -109,6 +113,26 @@ const hasFilters = () =>
           @change="emit('toggleShowReleases')"
         />
         <span class="toggle-text">Show Releases</span>
+      </label>
+      <label class="toggle-label" for="toggle-show-node-titles">
+        <input
+          id="toggle-show-node-titles"
+          type="checkbox"
+          class="toggle-input"
+          :checked="showNodeTitles"
+          @change="emit('toggleShowNodeTitles')"
+        />
+        <span class="toggle-text">Show node titles</span>
+      </label>
+      <label class="toggle-label" for="toggle-show-node-lineage">
+        <input
+          id="toggle-show-node-lineage"
+          type="checkbox"
+          class="toggle-input"
+          :checked="showNodeLineage"
+          @change="emit('toggleShowNodeLineage')"
+        />
+        <span class="toggle-text">Show node lineage</span>
       </label>
     </div>
 

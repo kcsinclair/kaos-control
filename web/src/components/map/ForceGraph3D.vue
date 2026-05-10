@@ -13,6 +13,10 @@ const props = defineProps<{
   matchedNodeIds?: Set<string>
   /** When set, applies a DAG layout mode (e.g. 'lr' for left-to-right chains) */
   dagMode?: string
+  /** When true, renders a truncated title label above each non-release, non-label node */
+  showNodeTitles?: boolean
+  /** When true, renders the lineage slug below the title on each non-release, non-label node */
+  showNodeLineage?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -47,10 +51,14 @@ function nodeVal(n: GraphNode): number {
 }
 
 // Canvas-based text sprite — used for label nodes so their name is always visible.
-function textSprite(text: string, color = '#e9d5ff'): THREE.Sprite {
+function textSprite(
+  text: string,
+  color = '#e9d5ff',
+  options: { y?: number; fontSize?: number } = {},
+): THREE.Sprite {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
-  const fontSize = 26
+  const fontSize = options.fontSize ?? 26
   ctx.font = `${fontSize}px sans-serif`
   const textW = Math.ceil(ctx.measureText(text).width)
   canvas.width = textW + 20
@@ -63,7 +71,7 @@ function textSprite(text: string, color = '#e9d5ff'): THREE.Sprite {
   const mat = new THREE.SpriteMaterial({ map: texture, depthWrite: false })
   const sprite = new THREE.Sprite(mat)
   sprite.scale.set(canvas.width / 5, canvas.height / 5, 1)
-  sprite.position.set(0, 9, 0)
+  sprite.position.set(0, options.y ?? 9, 0)
   return sprite
 }
 
@@ -139,6 +147,20 @@ function buildNodeObject(n: GraphNode): THREE.Object3D {
     group.add(mesh)
   }
   if (n.type === 'label') group.add(textSprite(n.title || n.slug, p.labelNodeText))
+  // Conditional title / lineage label sprites (non-release, non-label nodes only)
+  if (n.type !== 'release' && n.type !== 'label') {
+    const wantTitle = props.showNodeTitles
+    const wantLineage = props.showNodeLineage
+    if (wantTitle) {
+      const raw = n.title || n.slug
+      const truncated = raw.length > 15 ? raw.slice(0, 15) + '\u2026' : raw
+      const titleY = wantLineage ? 12 : 9
+      group.add(textSprite(truncated, p.labelNodeText, { y: titleY }))
+    }
+    if (wantLineage && n.lineage) {
+      group.add(textSprite(n.lineage, '#94a3b8', { y: 5, fontSize: 20 }))
+    }
+  }
   // Highlight ring for text-filter matches
   const matched = props.matchedNodeIds
   if (matched && matched.size > 0 && matched.has(n.id)) {
@@ -268,6 +290,18 @@ watch(
     const cy = hits.reduce((s, n) => s + (n.y ?? 0), 0) / hits.length
     const cz = hits.reduce((s, n) => s + (n.z ?? 0), 0) / hits.length
     graph.cameraPosition({ x: cx, y: cy, z: cz + 200 }, { x: cx, y: cy, z: cz }, 600)
+  },
+)
+
+// Reactively rebuild node objects when label toggle props change — no force layout restart
+watch(
+  () => [props.showNodeTitles, props.showNodeLineage],
+  () => {
+    if (!graph) return
+    graph.nodeThreeObject((n: object) => {
+      const node = n as GraphNode
+      return node.type === 'release' ? buildReleaseObject(node) : buildNodeObject(node)
+    })
   },
 )
 

@@ -72,6 +72,8 @@ onMounted(() => {
       :show-releases="store.showReleases"
       :hide-terminal="store.hideTerminal"
       :hide-tests="store.hideTests"
+      :show-node-titles="store.showNodeTitles"
+      :show-node-lineage="store.showNodeLineage"
       :search-text="store.searchText"
       @toggle="store.toggleFilterValue"
       @reset="store.setFilter({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })"
@@ -79,6 +81,8 @@ onMounted(() => {
       @toggle-show-releases="store.toggleShowReleases(project)"
       @toggle-hide-terminal="store.toggleHideTerminal"
       @toggle-hide-tests="store.toggleHideTests"
+      @toggle-show-node-titles="store.toggleShowNodeTitles"
+      @toggle-show-node-lineage="store.toggleShowNodeLineage"
       @update:search-text="store.searchText = $event"
     />
 
@@ -104,9 +108,9 @@ onMounted(() => {
         </button>
       </div>
 
-      <div v-if="store.loading" class="graph-state" role="status" aria-live="polite">Loading map…</div>
-      <div v-else-if="store.error" class="graph-state error" role="alert">{{ store.error }}</div>
-      <div v-else-if="store.rawNodes.length === 0" class="graph-state">
+      <div v-if="store.loading" class="map-state" role="status" aria-live="polite">Loading map…</div>
+      <div v-else-if="store.error" class="map-state error" role="alert">{{ store.error }}</div>
+      <div v-else-if="store.rawNodes.length === 0" class="map-state">
         No artifacts indexed yet.
       </div>
 
@@ -116,6 +120,8 @@ onMounted(() => {
           :nodes="store.augmentedNodes"
           :edges="store.augmentedEdges"
           :matched-node-ids="store.matchedNodeIds"
+          :show-node-titles="store.showNodeTitles"
+          :show-node-lineage="store.showNodeLineage"
           @node-click="onNodeClick"
         />
         <Graph2DView
@@ -127,16 +133,16 @@ onMounted(() => {
         />
       </template>
 
-      <div class="graph-legend-wrap">
+      <div class="map-legend-wrap">
         <GraphLegend :show-label-nodes="store.showLabelNodes" :show-releases="store.showReleases" />
       </div>
 
-      <div class="graph-hint" v-if="!store.loading && store.rawNodes.length > 0">
+      <div class="map-hint" v-if="!store.loading && store.rawNodes.length > 0">
         <template v-if="view === '3d'">Scroll to zoom · Drag to orbit · Click node to inspect</template>
         <template v-else>Scroll to zoom · Drag to pan · Click node to inspect</template>
       </div>
 
-      <div v-if="showStatusPanel" class="graph-status-panel-wrap">
+      <div v-if="showStatusPanel" class="map-status-panel-wrap">
         <StatusCheckPanel
           :project="project"
           @close="showStatusPanel = false"
