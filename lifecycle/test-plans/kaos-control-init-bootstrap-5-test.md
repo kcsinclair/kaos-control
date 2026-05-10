@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Init Bootstrap — Config Defaults, DevOps Scaffold, and Create Pipeline'
 type: plan-test
-status: in-development
+status: done
 lineage: kaos-control-init-bootstrap
 parent: lifecycle/requirements/kaos-control-init-bootstrap-2.md
 ---
