@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Agent Ready-Count Endpoint'
 type: plan-backend
-status: in-development
+status: done
 lineage: agent-panel-status-and-ready-count
 parent: lifecycle/requirements/agent-panel-status-and-ready-count-2.md
 ---
