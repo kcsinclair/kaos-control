@@ -11,6 +11,8 @@ assignees:
 
 # Backend Plan: Update Recent Ideas and Defects Widget Limit to 7
 
+**need to revisit this problem.....**
+
 This plan covers backend-side changes required by [[dashboard-recent-ideas-defects-widget-10]]. The backend API itself requires no code changes — the `limit` query parameter already accepts arbitrary integers and the widget component already sends `limit: 7`. The work here is limited to updating the Go integration tests that assert the old `limit=6` value.
 
 ---
