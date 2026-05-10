@@ -1,7 +1,7 @@
 ---
 title: Milestone 1 workflow system-role tests not implemented
 type: defect
-status: in-development
+status: done
 lineage: agent-questions-trigger-blocked-status
 parent: lifecycle/tests/agent-questions-trigger-blocked-status-6-test.md
 labels:
