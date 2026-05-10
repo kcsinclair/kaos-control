@@ -5,7 +5,7 @@ import { ref, computed } from 'vue'
 import * as graphApi from '@/api/graph'
 import type { GraphNode, GraphEdge, GraphFilter } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
-import { LAYOUT_CONFIGS } from '@/components/graph/layoutConfigs'
+import { LAYOUT_CONFIGS } from '@/components/map/layoutConfigs'
 
 export const useGraphStore = defineStore('graph', () => {
   const rawNodes = ref<GraphNode[]>([])

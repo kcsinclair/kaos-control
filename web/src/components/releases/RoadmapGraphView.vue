@@ -5,11 +5,11 @@ import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue
 import { useWebSocket } from '@/composables/useWebSocket'
 import * as releasesApi from '@/api/releases'
 import type { GraphNode, GraphEdge, GraphData } from '@/types/api'
-import ForceGraph3D from '@/components/graph/ForceGraph3D.vue'
+import ForceGraph3D from '@/components/map/ForceGraph3D.vue'
 
 // Lazy-load 2D graph to avoid increasing 3D chunk
 const Graph2DView = defineAsyncComponent(
-  () => import('@/components/graph/Graph2DView.vue')
+  () => import('@/components/map/Map2DView.vue')
 )
 
 const props = defineProps<{

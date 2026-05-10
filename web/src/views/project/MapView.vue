@@ -4,11 +4,11 @@
 import { ref, defineAsyncComponent, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGraphData } from '@/composables/useGraphData'
-import ForceGraph3D from '@/components/graph/ForceGraph3D.vue'
-import GraphFilters from '@/components/graph/GraphFilters.vue'
-import GraphLegend from '@/components/graph/GraphLegend.vue'
-import LabelModal from '@/components/graph/LabelModal.vue'
-import LayoutSelector from '@/components/graph/LayoutSelector.vue'
+import ForceGraph3D from '@/components/map/ForceGraph3D.vue'
+import GraphFilters from '@/components/map/MapFilters.vue'
+import GraphLegend from '@/components/map/MapLegend.vue'
+import LabelModal from '@/components/map/LabelModal.vue'
+import LayoutSelector from '@/components/map/LayoutSelector.vue'
 import ArtifactModal from '@/components/artifact/ArtifactModal.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
 import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
@@ -16,7 +16,7 @@ import type { GraphNode } from '@/types/api'
 
 // Lazy-load Cytoscape 2D so it doesn't increase the 3D chunk
 const Graph2DView = defineAsyncComponent(
-  () => import('@/components/graph/Graph2DView.vue')
+  () => import('@/components/map/Map2DView.vue')
 )
 
 const route = useRoute()

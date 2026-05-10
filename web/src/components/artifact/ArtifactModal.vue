@@ -11,7 +11,7 @@ import TransitionDialog from './TransitionDialog.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
-import { useGraphTheme } from '@/components/graph/graphConstants'
+import { useGraphTheme } from '@/components/map/graphConstants'
 import StatusCheckPanel from './StatusCheckPanel.vue'
 import type { GraphNode, ArtifactDetail, GraphEdge } from '@/types/api'
 
