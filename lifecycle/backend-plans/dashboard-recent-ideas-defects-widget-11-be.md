@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Update Recent Ideas and Defects Widget Limit to 7'
 type: plan-backend
-status: blocked
+status: rejected
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/requirements/dashboard-recent-ideas-defects-widget-10.md
 assignees:
@@ -82,7 +82,7 @@ Run the full Go integration test suite to confirm that the limit change does not
 
 ---
 
-## Open Questions
+## Rejected Questions
 
 1. **Scope conflict — no `internal/**` or `cmd/**` changes exist in this plan.** The plan's own preamble states "the backend API itself requires no code changes." All milestones target files outside the backend developer agent's write scope:
    - Milestone 1 writes to `tests/integration/api_artifacts_widget_query_test.go` — `tests/` is out of scope for the backend developer.
