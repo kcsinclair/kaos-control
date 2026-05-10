@@ -1,7 +1,7 @@
 ---
 title: End-to-end smoke tests for core flows
 type: idea
-status: draft
+status: planning
 lineage: end-to-end-smoke-tests
 created: "2026-04-28T10:00:00+10:00"
 priority: normal
