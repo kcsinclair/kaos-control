@@ -133,9 +133,16 @@ function onDragEnd() {
   dragOverIndex.value = null
 }
 
-// Re-fetch artifacts when any artifact is indexed (status may have changed)
+// Re-fetch artifacts when any artifact is indexed (status may have changed).
+// Debounce to coalesce bursts (e.g. an agent run that rewrites many files in
+// rapid succession) — a single refresh after the burst is enough.
+let refreshDebounce: ReturnType<typeof setTimeout> | null = null
 useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
-  refresh()
+  if (refreshDebounce) clearTimeout(refreshDebounce)
+  refreshDebounce = setTimeout(() => {
+    refreshDebounce = null
+    refresh()
+  }, 500)
 })
 
 onMounted(async () => {
