@@ -1,7 +1,7 @@
 ---
 title: 'Dashboard: Velocity and Activity Side-by-Side Layout'
 type: requirement
-status: approved
+status: planning
 lineage: dashboard-velocity-activity-side-by-side
 created: "2026-05-10T00:00:00+10:00"
 priority: normal
