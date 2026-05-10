@@ -1,7 +1,7 @@
 ---
 title: 'Tests: Release Drill-Down Filter to Ideas and Defects'
 type: test
-status: approved
+status: in-qa
 lineage: roadmap-release-filter-ideas-defects
 parent: lifecycle/test-plans/roadmap-release-filter-ideas-defects-5-test.md
 ---
