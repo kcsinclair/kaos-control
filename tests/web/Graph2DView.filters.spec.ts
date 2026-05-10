@@ -22,7 +22,7 @@
  * opacity styles without calling `runLayout()` — so cy.layout() must not be
  * called when only `matchedNodeIds` changes.
  *
- * Component: web/src/components/graph/Graph2DView.vue
+ * Component: web/src/components/map/Map2DView.vue
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -132,7 +132,7 @@ const ALL_EDGES: GraphEdge[] = [makeEdge('n1', 'n2')]
 
 async function mountGraph2D(nodes: GraphNode[], edges: GraphEdge[]) {
   const { default: Graph2DView } = await import(
-    '../../web/src/components/graph/Graph2DView.vue'
+    '../../web/src/components/map/Map2DView.vue'
   )
   const wrapper = mount(Graph2DView, {
     props: {

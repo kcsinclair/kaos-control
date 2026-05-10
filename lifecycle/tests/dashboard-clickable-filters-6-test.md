@@ -1,7 +1,7 @@
 ---
 title: "Tests: Dashboard Clickable Filters"
 type: test
-status: in-qa
+status: approved
 lineage: dashboard-clickable-filters
 parent: lifecycle/test-plans/dashboard-clickable-filters-5-test.md
 created: "2026-05-09T00:00:00+10:00"

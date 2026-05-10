@@ -1,7 +1,7 @@
 ---
 title: Dashboard Home Screen — Defect Fix Tests (blocked artifact auto-transition)
 type: test
-status: in-qa
+status: approved
 lineage: dashboard-home-screen
 parent: lifecycle/defects/dashboard-home-screen-7-defect.md
 ---

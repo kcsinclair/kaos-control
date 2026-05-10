@@ -26,7 +26,7 @@
  *     meaningful (without this entry, the guard is unreachable in the current code
  *     because ACTIVE_STATUS_COLORS['approved'] would be undefined).
  *
- * Component: web/src/components/graph/Graph2DView.vue
+ * Component: web/src/components/map/Map2DView.vue
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -85,7 +85,7 @@ vi.mock('cytoscape-fcose', () => ({ default: {} }))
 // Mock graphConstants so:
 //   - APPROVED_TEST_RING_COLOR has a known value
 //   - activeStatusColors includes 'approved', making the pulse-loop guard testable
-vi.mock('@/components/graph/graphConstants', async () => {
+vi.mock('@/components/map/graphConstants', async () => {
   const { computed, ref } = await import('vue')
   return {
     useGraphTheme: () => ({
@@ -167,7 +167,7 @@ function makeNode(overrides: Partial<GraphNode> = {}): GraphNode {
 // ---------------------------------------------------------------------------
 
 async function mountGraph2D(nodes: GraphNode[] = [], edges: GraphEdge[] = []) {
-  const Graph2DView = (await import('../../web/src/components/graph/Graph2DView.vue')).default
+  const Graph2DView = (await import('../../web/src/components/map/Map2DView.vue')).default
   const wrapper = mount(Graph2DView, {
     props: {
       nodes,

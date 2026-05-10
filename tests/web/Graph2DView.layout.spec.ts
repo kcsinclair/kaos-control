@@ -25,7 +25,7 @@
  * The Pinia store is created fresh per test (setActivePinia) and the graph store
  * is used to drive activeLayout / directed changes.
  *
- * Component: web/src/components/graph/Graph2DView.vue
+ * Component: web/src/components/map/Map2DView.vue
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -127,7 +127,7 @@ const BASE_EDGES: GraphEdge[] = [{ source: 'n1', target: 'n2', kind: 'parent' }]
 
 async function mountGraph2D(nodes = BASE_NODES, edges = BASE_EDGES) {
   const { default: Graph2DView } = await import(
-    '../../web/src/components/graph/Graph2DView.vue'
+    '../../web/src/components/map/Map2DView.vue'
   )
   // Provide a non-null container element (happy-dom)
   const wrapper = mount(Graph2DView, {

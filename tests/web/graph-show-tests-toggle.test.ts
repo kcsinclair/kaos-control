@@ -16,7 +16,7 @@
  *   when the toggle is used, and that GraphView resets state on remount.
  *
  * Component: web/src/stores/graph.ts
- *            web/src/components/graph/GraphFilters.vue
+ *            web/src/components/map/MapFilters.vue
  *            web/src/views/project/GraphView.vue
  */
 
@@ -181,7 +181,7 @@ describe('GraphFilters — Show tests checkbox (Milestone 2)', () => {
 
   async function mountFilters(props: Partial<typeof defaultProps> = {}) {
     const { default: GraphFilters } = await import(
-      '../../web/src/components/graph/GraphFilters.vue'
+      '../../web/src/components/map/MapFilters.vue'
     )
     return mount(GraphFilters, {
       props: { ...defaultProps, ...props },

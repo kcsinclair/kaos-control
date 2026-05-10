@@ -26,7 +26,7 @@
  *      adds negligible overhead regardless of node count.
  *   c) Rapid layout switches do not leave dangling promises or throw errors.
  *
- * Component: web/src/components/graph/Graph2DView.vue
+ * Component: web/src/components/map/Map2DView.vue
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -137,7 +137,7 @@ function generateEdges(nodes: GraphNode[], edgeCount: number): GraphEdge[] {
 
 async function mountGraph2D(nodes: GraphNode[], edges: GraphEdge[]) {
   const { default: Graph2DView } = await import(
-    '../../web/src/components/graph/Graph2DView.vue'
+    '../../web/src/components/map/Map2DView.vue'
   )
   const wrapper = mount(Graph2DView, {
     props: {

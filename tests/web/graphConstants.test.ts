@@ -28,8 +28,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useThemeStore } from '../../web/src/stores/theme'
-import { useGraphTheme } from '../../web/src/components/graph/graphConstants'
-import type { GraphPalette } from '../../web/src/components/graph/graphConstants'
+import { useGraphTheme } from '../../web/src/components/map/graphConstants'
+import type { GraphPalette } from '../../web/src/components/map/graphConstants'
 
 // ---------------------------------------------------------------------------
 // Stub window.matchMedia (not available in happy-dom by default)
@@ -357,32 +357,32 @@ describe('useGraphTheme — WCAG AA contrast', () => {
 
 describe('graphConstants — no stale exports', () => {
   it('does not export NODE_COLORS', async () => {
-    const mod = await import('../../web/src/components/graph/graphConstants')
+    const mod = await import('../../web/src/components/map/graphConstants')
     expect((mod as Record<string, unknown>)['NODE_COLORS']).toBeUndefined()
   })
 
   it('does not export PRIORITY_COLORS', async () => {
-    const mod = await import('../../web/src/components/graph/graphConstants')
+    const mod = await import('../../web/src/components/map/graphConstants')
     expect((mod as Record<string, unknown>)['PRIORITY_COLORS']).toBeUndefined()
   })
 
   it('does not export ACTIVE_STATUS_COLORS', async () => {
-    const mod = await import('../../web/src/components/graph/graphConstants')
+    const mod = await import('../../web/src/components/map/graphConstants')
     expect((mod as Record<string, unknown>)['ACTIVE_STATUS_COLORS']).toBeUndefined()
   })
 
   it('does not export EDGE_COLORS', async () => {
-    const mod = await import('../../web/src/components/graph/graphConstants')
+    const mod = await import('../../web/src/components/map/graphConstants')
     expect((mod as Record<string, unknown>)['EDGE_COLORS']).toBeUndefined()
   })
 
   it('does not export APPROVED_TEST_RING_COLOR', async () => {
-    const mod = await import('../../web/src/components/graph/graphConstants')
+    const mod = await import('../../web/src/components/map/graphConstants')
     expect((mod as Record<string, unknown>)['APPROVED_TEST_RING_COLOR']).toBeUndefined()
   })
 
   it('does export useGraphTheme as a function', async () => {
-    const mod = await import('../../web/src/components/graph/graphConstants')
+    const mod = await import('../../web/src/components/map/graphConstants')
     expect(typeof mod.useGraphTheme).toBe('function')
   })
 })

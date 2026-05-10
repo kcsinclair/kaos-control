@@ -18,7 +18,7 @@
  * fresh pinia via createPinia() / setActivePinia() and seeds initial state by
  * calling store actions or mutating refs directly.
  *
- * Component: web/src/components/graph/LayoutSelector.vue
+ * Component: web/src/components/map/LayoutSelector.vue
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -44,7 +44,7 @@ vi.mock('@/composables/useWebSocket', () => ({
 
 async function mountSelector() {
   const { default: LayoutSelector } = await import(
-    '../../web/src/components/graph/LayoutSelector.vue'
+    '../../web/src/components/map/LayoutSelector.vue'
   )
   return mount(LayoutSelector)
 }

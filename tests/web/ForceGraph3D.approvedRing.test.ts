@@ -43,7 +43,7 @@ const APPROVED_TEST_RING_COLOR = '#2563eb'
 // Mock: graphConstants
 // ---------------------------------------------------------------------------
 
-vi.mock('@/components/graph/graphConstants', async () => {
+vi.mock('@/components/map/graphConstants', async () => {
   const { computed, ref } = await import('vue')
   return {
     useGraphTheme: () => ({
@@ -208,6 +208,7 @@ const { getNodeThreeObjectCallback, getOnEngineTickCallback, mockGraphInstance }
   instance.linkColor = fluent()
   instance.linkLabel = fluent()
   instance.linkWidth = fluent()
+  instance.linkOpacity = fluent()
   instance.linkDirectionalArrowLength = fluent()
   instance.linkDirectionalArrowRelPos = fluent()
   instance.linkCurvature = fluent()
@@ -270,7 +271,7 @@ async function mountForceGraph3D(nodes: GraphNode[] = [], edges: GraphEdge[] = [
   // Stub setTimeout so zoomToFit delay does not interfere
   vi.useFakeTimers()
 
-  const ForceGraph3DVue = (await import('../../web/src/components/graph/ForceGraph3D.vue')).default
+  const ForceGraph3DVue = (await import('../../web/src/components/map/ForceGraph3D.vue')).default
   const wrapper = mount(ForceGraph3DVue, {
     props: { nodes, edges },
     attachTo: document.body,
