@@ -201,7 +201,7 @@ describe('AppSidebar — Milestone 1: toggle behaviour', () => {
 // ===========================================================================
 
 describe('AppSidebar — Milestone 2: icon rendering', () => {
-  const expectedLabels = ['Dashboard', 'List', 'Board', 'Testing', 'Graph', 'Roadmap', 'Agents', 'Scheduler', 'Feed', 'Parse Errors', 'Config', 'Ollama']
+  const expectedLabels = ['Dashboard', 'List', 'Board', 'Testing', 'Map', 'Roadmap', 'Agents', 'Scheduler', 'Feed', 'Parse Errors', 'Config', 'Ollama']
 
   it('renders an SVG icon for each nav item in expanded mode', async () => {
     const { wrapper } = await mountSidebar({ collapsed: false })
@@ -323,7 +323,7 @@ describe('AppSidebar — Milestone 3: tooltip behaviour', () => {
 
   it('aria-label on nav link matches the corresponding nav item label', async () => {
     const { wrapper } = await mountSidebar({ collapsed: true })
-    const allExpectedLabels = ['Dashboard', 'List', 'Board', 'Testing', 'Graph', 'Roadmap', 'Agents', 'Scheduler', 'Feed', 'Parse Errors', 'Config', 'Ollama']
+    const allExpectedLabels = ['Dashboard', 'List', 'Board', 'Testing', 'Map', 'Roadmap', 'Agents', 'Scheduler', 'Feed', 'Parse Errors', 'Config', 'Ollama']
     const navLinks = wrapper.findAll('.nav-link')
     // Iterate over navLinks (not a fixed-size array) so the test stays correct
     // when nav items are added or removed in future.
@@ -571,7 +571,7 @@ describe('AppSidebar — Milestone 7: layout integrity', () => {
   const views = [
     '/p/testproject/artifacts',
     '/p/testproject/artifacts/board',
-    '/p/testproject/graph',
+    '/p/testproject/map',
     '/p/testproject/agents',
     '/p/testproject/parse-errors',
     '/p/testproject/config',

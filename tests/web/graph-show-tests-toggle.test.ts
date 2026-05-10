@@ -278,7 +278,7 @@ describe('GraphFilters — Show tests checkbox (Milestone 2)', () => {
 // MILESTONE 3 — Integration smoke tests
 // ===========================================================================
 
-describe('GraphView integration — Show tests toggle (Milestone 3)', () => {
+describe('MapView integration — Show tests toggle (Milestone 3)', () => {
   // Shared node/edge fixtures that include both test and non-test artifacts
   const nodes: GraphNode[] = [
     makeNode({ id: 'test-1', type: 'test', title: 'Test artifact 1' }),
@@ -338,9 +338,9 @@ describe('GraphView integration — Show tests toggle (Milestone 3)', () => {
     expect(visibleIds).toContain('test-2')
   })
 
-  it('5. toggle state resets to hidden when GraphView is (re)mounted', async () => {
+  it('5. toggle state resets to hidden when MapView is (re)mounted', async () => {
     // Create a controlled pinia so we can pre-set hideTests=false, then
-    // verify the GraphView onMounted hook resets it back to true.
+    // verify the MapView onMounted hook resets it back to true.
     const pinia = createPinia()
     setActivePinia(pinia)
     const controlledStore = useGraphStore()
@@ -348,27 +348,27 @@ describe('GraphView integration — Show tests toggle (Milestone 3)', () => {
 
     expect(controlledStore.hideTests).toBe(false)
 
-    // Provide a router with the :project param that GraphView needs.
+    // Provide a router with the :project param that MapView needs.
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
         {
-          path: '/p/:project/graph',
+          path: '/p/:project/map',
           component: { template: '<div/>' },
         },
       ],
     })
-    await router.push('/p/testproject/graph')
+    await router.push('/p/testproject/map')
     await router.isReady()
 
-    const { default: GraphView } = await import(
-      '../../web/src/views/project/GraphView.vue'
+    const { default: MapView } = await import(
+      '../../web/src/views/project/MapView.vue'
     )
 
-    // Mount GraphView. Its onMounted hook sets store.hideTests = true.
+    // Mount MapView. Its onMounted hook sets store.hideTests = true.
     // The mocked API returns { nodes: [], edges: [] } so no graph view components
     // are rendered — only the "No artifacts indexed yet." placeholder.
-    mount(GraphView, {
+    mount(MapView, {
       global: {
         plugins: [pinia, router],
         stubs: {
@@ -383,7 +383,7 @@ describe('GraphView integration — Show tests toggle (Milestone 3)', () => {
     })
     await flushPromises()
 
-    // GraphView.onMounted sets store.hideTests = true — verify the reset.
+    // MapView.onMounted sets store.hideTests = true — verify the reset.
     expect(controlledStore.hideTests).toBe(true)
   })
 })
