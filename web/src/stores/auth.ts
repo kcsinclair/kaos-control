@@ -40,9 +40,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function clearSession(): void {
+    me.value = null
+  }
+
   function rolesForProject(projectName: string): string[] {
     return me.value?.roles[projectName] ?? []
   }
 
-  return { me, initialized, loading, isAuthenticated, fetchMe, login, logout, rolesForProject }
+  return { me, initialized, loading, isAuthenticated, fetchMe, login, logout, clearSession, rolesForProject }
 })

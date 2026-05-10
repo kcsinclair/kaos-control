@@ -56,6 +56,19 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const data = await res.json().catch(() => null)
 
   if (!res.ok) {
+    if (res.status === 401) {
+      // Dynamic imports avoid the circular dependency:
+      //   router → stores/auth → api/auth → api/client → router
+      const [{ default: router }, { useAuthStore }] = await Promise.all([
+        import('@/router'),
+        import('@/stores/auth'),
+      ])
+      if (router.currentRoute.value.path !== '/login') {
+        useAuthStore().clearSession()
+        const currentPath = router.currentRoute.value.fullPath
+        await router.push({ path: '/login', query: { redirect: currentPath, expired: '1' } })
+      }
+    }
     const err: ApiErrorBody = data?.error ?? { code: 'unknown', message: res.statusText }
     throw new ApiError(err.code, err.message, res.status)
   }
