@@ -7,16 +7,19 @@ import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 import StatusDropdown from './StatusDropdown.vue'
+import PriorityDropdown from './PriorityDropdown.vue'
 
 const props = defineProps<{
   artifact: ArtifactDetail
   project?: string
   targetPath?: string
   edges?: GraphEdge[]
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
   transitioned: [newStatus: string]
+  priorityChanged: [newPriority: string]
   error: [message: string]
 }>()
 
@@ -56,6 +59,24 @@ function fmt(v: string | undefined): string {
             @error="emit('error', $event)"
           />
           <span v-else class="badge" :data-status="artifact.status">{{ fmt(artifact.status) }}</span>
+        </dd>
+      </div>
+      <div class="fm-row">
+        <dt>Priority</dt>
+        <dd>
+          <PriorityDropdown
+            v-if="project && targetPath"
+            :project="project"
+            :path="targetPath"
+            :priority="artifact.frontmatter?.priority || 'normal'"
+            :readonly="readonly"
+            @changed="emit('priorityChanged', $event)"
+            @error="emit('error', $event)"
+          />
+          <span
+            v-else
+            class="priority-badge-static"
+          >{{ artifact.frontmatter?.priority || 'normal' }}</span>
         </dd>
       </div>
       <div class="fm-row">
@@ -230,6 +251,17 @@ function fmt(v: string | undefined): string {
   .badge[data-status="rejected"]       { background: #7f1d1d; color: #fca5a5; }
   .badge[data-status="abandoned"]      { background: #1f2937; color: #9ca3af; }
   .badge[data-status="in-progress"]    { background: #422006; color: #fcd34d; }
+}
+/* Static priority badge shown when project/targetPath are absent */
+.priority-badge-static {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--color-border);
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--color-border);
+  color: var(--color-text);
 }
 .tag {
   display: inline-block;
