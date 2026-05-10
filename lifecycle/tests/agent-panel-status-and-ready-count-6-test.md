@@ -1,7 +1,7 @@
 ---
 title: Agent Panel Status and Ready Count — Integration Tests
 type: test
-status: approved
+status: in-qa
 lineage: agent-panel-status-and-ready-count
 parent: lifecycle/test-plans/agent-panel-status-and-ready-count-5-test.md
 ---
