@@ -1,7 +1,7 @@
 ---
 title: 'Agent Panel: Ready Count Badge and Running-State Highlight'
 type: requirement
-status: approved
+status: planning
 lineage: agent-panel-status-and-ready-count
 created: "2026-05-10"
 priority: normal
