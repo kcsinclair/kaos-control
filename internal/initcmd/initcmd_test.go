@@ -13,7 +13,7 @@ import (
 // TestConfigTemplateLoadsCleanly renders config.yaml.tmpl and verifies that
 // config.LoadProject can parse the result without error. It also asserts the
 // key structural invariants required by the plan:
-//   - six agents
+//   - seven agents (including idea-capture)
 //   - seven roles
 //   - required_plans["ticket"] contains plan-backend, plan-frontend, plan-test
 func TestConfigTemplateLoadsCleanly(t *testing.T) {
@@ -43,8 +43,8 @@ func TestConfigTemplateLoadsCleanly(t *testing.T) {
 	}
 
 	// Assert agent count.
-	if got := len(proj.Agents); got != 6 {
-		t.Errorf("expected 6 agents, got %d", got)
+	if got := len(proj.Agents); got != 7 {
+		t.Errorf("expected 7 agents, got %d", got)
 	}
 
 	// Assert role count.
