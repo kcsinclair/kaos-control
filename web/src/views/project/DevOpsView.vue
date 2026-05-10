@@ -9,9 +9,11 @@ import { useUiStore } from '@/stores/ui'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
 import type { RunHistoryEntry } from '@/stores/devops'
+import { Plus } from 'lucide-vue-next'
 import PipelineCard from '@/components/devops/PipelineCard.vue'
 import SplitPane from '@/components/common/SplitPane.vue'
 import PipelineLogPane from '@/components/devops/PipelineLogPane.vue'
+import CreatePipelineDialog from '@/components/devops/CreatePipelineDialog.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -83,6 +85,8 @@ onUnmounted(() => {
   devops.clearLogBuffer()
 })
 
+const showCreateDialog = ref(false)
+
 onMounted(() => {
   if (hasAccess.value) {
     devops.fetchPipelines(project)
@@ -116,7 +120,18 @@ useWebSocket(project, 'pipeline.run.completed', (e: WsEvent) => {
     <template v-else>
       <div class="devops-header">
         <h2 class="devops-title">DevOps Pipelines</h2>
+        <button class="btn-create" @click="showCreateDialog = true">
+          <Plus :size="14" />
+          Create Pipeline
+        </button>
       </div>
+
+      <CreatePipelineDialog
+        :open="showCreateDialog"
+        :project="project"
+        @close="showCreateDialog = false"
+        @created="showCreateDialog = false"
+      />
 
       <SplitPane
         ref="splitPaneRef"
@@ -195,6 +210,24 @@ useWebSocket(project, 'pipeline.run.completed', (e: WsEvent) => {
   font-weight: 600;
   margin: 0;
   color: var(--color-text);
+}
+
+.btn-create {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-create:hover {
+  opacity: 0.88;
 }
 
 .devops-split {

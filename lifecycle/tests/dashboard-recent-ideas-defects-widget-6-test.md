@@ -31,7 +31,7 @@ sort is omitted, and safety under invalid/malformed/injection values.
 `tests/integration/api_artifacts_widget_query_test.go`
 
 Go integration tests for the exact combined query the widget uses:
-`?type=idea,defect&sort=created:desc&limit=6`. Covers limit application,
+`?type=idea,defect&sort=created:desc&limit=7`. Covers limit application,
 type exclusion, descending sort, accurate `total`, and edge cases
 (fewer-than-limit and zero results).
 
@@ -81,14 +81,14 @@ seed artifacts with explicit RFC3339 `created:` frontmatter timestamps spaced
 ### Milestone 3 — Combined widget query end-to-end
 
 Seed: 10 ideas + 5 defects (with known created timestamps) + 3 requirements.
-Query under test: `?type=idea,defect&sort=created:desc&limit=6`.
+Query under test: `?type=idea,defect&sort=created:desc&limit=7`.
 
 | Test | Scenario |
 |---|---|
-| `TestWidgetQuery_LimitApplied`         | Returns exactly 6 items |
+| `TestWidgetQuery_LimitApplied`         | Returns exactly 7 items |
 | `TestWidgetQuery_OnlyIdeasAndDefects`  | No requirements in results |
 | `TestWidgetQuery_SortedByCreatedDesc`  | Items ordered most-recent first |
-| `TestWidgetQuery_TotalIsFullMatchCount`| `total` = 15 (not capped at 6) |
+| `TestWidgetQuery_TotalIsFullMatchCount`| `total` = 15 (not capped at 7) |
 | `TestWidgetQuery_FewerThanLimit`       | 2 matching → returns 2, total = 2 |
 | `TestWidgetQuery_ZeroResults`          | 0 matching → empty items, total = 0 |
 

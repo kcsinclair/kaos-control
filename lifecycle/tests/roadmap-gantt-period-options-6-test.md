@@ -1,7 +1,7 @@
 ---
 title: 'Test Suite: Roadmap Gantt Period Display Options'
 type: test
-status: in-qa
+status: approved
 lineage: roadmap-gantt-period-options
 created: "2026-05-10T00:00:00+10:00"
 parent: lifecycle/test-plans/roadmap-gantt-period-options-5-test.md

@@ -74,7 +74,7 @@ func widgetQuerySeeds(t *testing.T, env *testEnv) {
 	}
 }
 
-// TestWidgetQuery_LimitApplied verifies that ?type=idea,defect&sort=created:desc&limit=6
+// TestWidgetQuery_LimitApplied verifies that ?type=idea,defect&sort=created:desc&limit=7
 // returns at most 6 items.
 // Covers test plan Milestone 3, scenario 1.
 func TestWidgetQuery_LimitApplied(t *testing.T) {
@@ -83,16 +83,16 @@ func TestWidgetQuery_LimitApplied(t *testing.T) {
 	widgetQuerySeeds(t, env)
 
 	resp := env.doRequest("GET",
-		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=6", nil)
+		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=7", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 
 	items, _ := data["items"].([]any)
-	if len(items) > 6 {
-		t.Errorf("expected at most 6 items with limit=6, got %d", len(items))
+	if len(items) > 7 {
+		t.Errorf("expected at most 7 items with limit=7, got %d", len(items))
 	}
-	if len(items) != 6 {
-		t.Errorf("expected exactly 6 items (15 matching, limit=6), got %d", len(items))
+	if len(items) != 7 {
+		t.Errorf("expected exactly 7 items (15 matching, limit=7), got %d", len(items))
 	}
 }
 
@@ -105,7 +105,7 @@ func TestWidgetQuery_OnlyIdeasAndDefects(t *testing.T) {
 	widgetQuerySeeds(t, env)
 
 	resp := env.doRequest("GET",
-		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=6", nil)
+		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=7", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 
@@ -128,7 +128,7 @@ func TestWidgetQuery_SortedByCreatedDesc(t *testing.T) {
 	widgetQuerySeeds(t, env)
 
 	resp := env.doRequest("GET",
-		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=6", nil)
+		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=7", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 
@@ -149,7 +149,7 @@ func TestWidgetQuery_SortedByCreatedDesc(t *testing.T) {
 }
 
 // TestWidgetQuery_TotalIsFullMatchCount verifies that the total in the response
-// equals the full count of ideas + defects (15), not capped at limit=6.
+// equals the full count of ideas + defects (15), not capped at limit=7.
 // Covers test plan Milestone 3, scenario 4.
 func TestWidgetQuery_TotalIsFullMatchCount(t *testing.T) {
 	env := newTestEnv(t, nil)
@@ -157,12 +157,12 @@ func TestWidgetQuery_TotalIsFullMatchCount(t *testing.T) {
 	widgetQuerySeeds(t, env)
 
 	resp := env.doRequest("GET",
-		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=6", nil)
+		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=7", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 
 	total, _ := data["total"].(float64)
-	// 10 ideas + 5 defects = 15 matching, regardless of limit=6
+	// 10 ideas + 5 defects = 15 matching, regardless of limit
 	if int(total) != 15 {
 		t.Errorf("expected total=15 (full match count), got %d", int(total))
 	}
@@ -175,7 +175,7 @@ func TestWidgetQuery_FewerThanLimit(t *testing.T) {
 	env := newTestEnv(t, nil)
 	env.login("admin@test.local", "admin-pass-123")
 
-	// Seed only 2 ideas (fewer than the limit of 6).
+	// Seed only 2 ideas (fewer than the limit of 7).
 	base := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
 	for i := 0; i < 2; i++ {
 		created := base.Add(time.Duration(i) * time.Hour).UTC().Format(time.RFC3339)
@@ -193,7 +193,7 @@ func TestWidgetQuery_FewerThanLimit(t *testing.T) {
 	}
 
 	resp := env.doRequest("GET",
-		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=6", nil)
+		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=7", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 
@@ -224,7 +224,7 @@ func TestWidgetQuery_ZeroResults(t *testing.T) {
 	env.login("admin@test.local", "admin-pass-123")
 
 	resp := env.doRequest("GET",
-		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=6", nil)
+		"/api/p/testproject/artifacts?type=idea,defect&sort=created:desc&limit=7", nil)
 	requireStatus(t, resp, 200)
 	data := readJSON(t, resp)
 

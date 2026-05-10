@@ -508,7 +508,7 @@ describe('RecentIdeasDefectsWidget — general', () => {
     expect(wrapper.find('.widget-title').text()).toContain('Recent Ideas')
   })
 
-  it('calls listArtifacts with type=idea,defect, sort=created:desc, limit=6', async () => {
+  it('calls listArtifacts with type=idea,defect, sort=created:desc, limit=7', async () => {
     const { listArtifacts } = await import('@/api/artifacts' as any)
     vi.mocked(listArtifacts).mockResolvedValue({ items: [], total: 0 })
 
@@ -523,7 +523,7 @@ describe('RecentIdeasDefectsWidget — general', () => {
       expect.objectContaining({
         type: 'idea,defect',
         sort: 'created:desc',
-        limit: 6,
+        limit: 7,
       }),
     )
   })
