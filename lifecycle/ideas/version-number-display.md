@@ -11,6 +11,7 @@ labels:
     - backend
     - releases
     - operability
+release: KC-Release0
 ---
 
 # Version Number Display in UI
