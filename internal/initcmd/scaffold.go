@@ -22,6 +22,7 @@ var lifecycleDirs = []string{
 	"lifecycle/sprints",
 	"lifecycle/defects",
 	"tests",
+	"devops",
 }
 
 // scaffoldDirs creates all lifecycle directories under root, placing a
