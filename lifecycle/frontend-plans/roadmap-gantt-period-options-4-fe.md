@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Roadmap Gantt Period Display Options"
 type: plan-frontend
-status: in-development
+status: done
 lineage: roadmap-gantt-period-options
 parent: lifecycle/requirements/roadmap-gantt-period-options-2.md
 created: "2026-05-10T00:00:00+10:00"
