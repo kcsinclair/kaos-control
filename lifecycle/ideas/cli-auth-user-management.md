@@ -1,7 +1,7 @@
 ---
 title: CLI Auth User Management and Secured API
 type: idea
-status: clarifying
+status: done
 lineage: cli-auth-user-management
 created: "2026-05-10T16:14:11+10:00"
 priority: high
