@@ -219,7 +219,7 @@ func newOllamaAgentTestEnvWithMock(
 		{"dev@test.local", "Developer", "dev-pass-123"},
 		{"qa@test.local", "QA", "qa-pass-123"},
 	} {
-		if err := authStore.CreateUser(u.email, u.name, u.pass); err != nil {
+		if err := authStore.CreateUser(u.email, u.name, u.pass, false); err != nil {
 			t.Fatal(err)
 		}
 	}

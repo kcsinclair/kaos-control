@@ -104,7 +104,7 @@ func newOllamaAPITestEnv(t *testing.T, initialInstances []config.OllamaInstance)
 		{"admin@test.local", "Admin", "admin-pass-123"},
 		{"dev@test.local", "Developer", "dev-pass-123"},
 	} {
-		if err := authStore.CreateUser(u.email, u.name, u.pass); err != nil {
+		if err := authStore.CreateUser(u.email, u.name, u.pass, false); err != nil {
 			t.Fatal(err)
 		}
 	}

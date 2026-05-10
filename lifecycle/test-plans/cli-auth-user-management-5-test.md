@@ -1,7 +1,7 @@
 ---
 title: CLI Auth User Management and Secured API — Test Plan
 type: plan-test
-status: in-development
+status: done
 lineage: cli-auth-user-management
 parent: lifecycle/requirements/cli-auth-user-management-2.md
 release: KC-Release0

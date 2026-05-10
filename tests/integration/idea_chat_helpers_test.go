@@ -239,7 +239,7 @@ func newTestEnvCustomConfig(t *testing.T, cfgYAML string, seeds []seedArtifact) 
 		{"dev@test.local", "Developer", "dev-pass-123"},
 		{"qa@test.local", "QA Engineer", "qa-pass-123"},
 	} {
-		if err := authStore.CreateUser(u.email, u.name, u.pass); err != nil {
+		if err := authStore.CreateUser(u.email, u.name, u.pass, false); err != nil {
 			t.Fatal(err)
 		}
 	}
