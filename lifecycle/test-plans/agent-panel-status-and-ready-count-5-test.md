@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Agent Panel Status and Ready Count'
 type: plan-test
-status: approved
+status: in-development
 lineage: agent-panel-status-and-ready-count
 parent: lifecycle/requirements/agent-panel-status-and-ready-count-2.md
 ---
