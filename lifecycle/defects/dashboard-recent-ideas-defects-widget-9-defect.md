@@ -13,6 +13,8 @@ assignees:
 
 # RecentIdeasDefectsWidget fetches limit=7 instead of limit=6
 
+ATTENTION: The requirement was updated, the Feature Spec and Test need to be updated to be 7 for each.  Who needs to fix this?
+
 `RecentIdeasDefectsWidget.vue` calls `listArtifacts` with `limit: 7`. The
 feature spec and test suite both require `limit: 6` (show the 6 most recent
 ideas and defects).
