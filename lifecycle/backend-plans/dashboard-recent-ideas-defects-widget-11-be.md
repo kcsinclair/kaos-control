@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Update Recent Ideas and Defects Widget Limit to 7'
 type: plan-backend
-status: draft
+status: blocked
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/requirements/dashboard-recent-ideas-defects-widget-10.md
 assignees:
@@ -77,6 +77,23 @@ Run the full Go integration test suite to confirm that the limit change does not
 
 - `go test ./tests/integration/...` passes with zero failures.
 - `go test ./... -short` (unit tests) passes with zero failures.
+
+---
+
+## Open Questions
+
+1. **Scope conflict — no `internal/**` or `cmd/**` changes exist in this plan.** The plan's own preamble states "the backend API itself requires no code changes." All milestones target files outside the backend developer agent's write scope:
+   - Milestone 1 writes to `tests/integration/api_artifacts_widget_query_test.go` — `tests/` is out of scope for the backend developer.
+   - Milestone 2 writes to `lifecycle/requirements/dashboard-recent-ideas-defects-widget-2.md` — `lifecycle/` is out of scope for backend developer writes.
+   - Milestone 3 is verification only (no writes).
+
+   **Questions for product-owner:**
+   - Should Milestone 1 be reassigned to the `test-developer` agent, which owns `tests/`?
+   - Should Milestone 2 be handled by the `analyst` agent or folded into an existing lifecycle-artifact update task?
+   - Is there any `internal/**` or `cmd/**` change that was omitted from this plan? If so, please describe it so the plan can be corrected before the backend developer proceeds.
+   - Alternatively, should this plan be rejected and its milestones absorbed by the test plan (`dashboard-recent-ideas-defects-widget-13-test`) and a separate analyst task?
+
+2. **`status: blocked` is not a valid status value.** The valid status vocabulary (`draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`) does not include `blocked`. The system normalises the status field back to `draft` when `blocked` is written. Should a new `blocked` status be added to the vocabulary, or should a different mechanism (e.g., a `blocked_reason` field) be used to record that an artifact is waiting on product-owner input?
 
 ---
 
