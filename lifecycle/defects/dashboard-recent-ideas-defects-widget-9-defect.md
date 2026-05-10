@@ -1,7 +1,7 @@
 ---
 title: RecentIdeasDefectsWidget fetches limit=7 instead of limit=6
 type: defect
-status: planning
+status: done
 lineage: dashboard-recent-ideas-defects-widget
 parent: lifecycle/tests/dashboard-recent-ideas-defects-widget-6-test.md
 labels:
