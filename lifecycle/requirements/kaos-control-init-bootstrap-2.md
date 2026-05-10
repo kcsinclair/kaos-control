@@ -1,7 +1,7 @@
 ---
 title: 'Init Bootstrap: Config Defaults, DevOps Scaffold, and Create-Pipeline UI'
 type: requirement
-status: approved
+status: planning
 lineage: kaos-control-init-bootstrap
 created: "2026-05-10"
 priority: normal
