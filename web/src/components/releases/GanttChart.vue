@@ -121,9 +121,55 @@ function endOfPeriod(period: FixedPeriod, d: Date): Date {
   }
 }
 
+// ── Granularity auto-coarsen (200-column safety cap) ───────────────────────
+
+const GRANULARITY_ORDER: Granularity[] = ['week', 'month', 'quarter', 'half-year', 'year']
+
+function estimateColumnCount(spanMs: number, gran: Granularity): number {
+  const spanDays = Math.max(spanMs / (1000 * 60 * 60 * 24), 1)
+  switch (gran) {
+    case 'week':      return Math.ceil(spanDays / 7)
+    case 'month':     return Math.ceil(spanDays / 30)
+    case 'quarter':   return Math.ceil(spanDays / 91)
+    case 'half-year': return Math.ceil(spanDays / 182)
+    case 'year':      return Math.ceil(spanDays / 365)
+  }
+}
+
+/** Rough date span without snapping, used only for estimating column counts. */
+const rawSpanMs = computed<number>(() => {
+  if (props.periodMode === 'fixed') {
+    const s = startOfPeriod(props.fixedPeriod, TODAY)
+    const e = endOfPeriod(props.fixedPeriod, TODAY)
+    return e.getTime() - s.getTime()
+  }
+  const scheduled = props.releases.filter((r) => r.start_date && r.end_date)
+  if (scheduled.length === 0) return 0
+  const starts = scheduled.map((r) => new Date(r.start_date!))
+  const ends   = scheduled.map((r) => new Date(r.end_date!))
+  const minStart = starts.reduce((a, b) => (a < b ? a : b))
+  const maxEnd   = ends.reduce((a, b) => (a > b ? a : b))
+  return maxEnd.getTime() - minStart.getTime()
+})
+
+/** The granularity actually used for column generation — may be coarsened. */
+const effectiveGranularity = computed<Granularity>(() => {
+  const span = rawSpanMs.value
+  const idx  = GRANULARITY_ORDER.indexOf(props.granularity)
+  for (let i = idx; i < GRANULARITY_ORDER.length; i++) {
+    if (estimateColumnCount(span, GRANULARITY_ORDER[i]) <= 200) {
+      return GRANULARITY_ORDER[i]
+    }
+  }
+  return 'year'
+})
+
+/** True when the granularity was coarsened from the user's selection. */
+const wasCoarsened = computed(() => effectiveGranularity.value !== props.granularity)
+
 /** Given a list of releases, compute a combined time range to display */
 const timeRange = computed<{ start: Date; end: Date }>(() => {
-  const gran = props.granularity
+  const gran = effectiveGranularity.value
 
   if (props.periodMode === 'fixed') {
     // Fixed-period: anchor to the current calendar period containing today.
@@ -165,7 +211,7 @@ const columns = computed<Column[]>(() => {
     let colEnd: Date
     let label: string
 
-    switch (props.granularity) {
+    switch (effectiveGranularity.value) {
       case 'week': {
         colStart = new Date(cur)
         colEnd = addDays(colStart, 6)
@@ -303,8 +349,15 @@ function summaryBadge(release: Release): string {
     </div>
 
     <template v-else>
+      <!-- Auto-coarsen notice -->
+      <div v-if="wasCoarsened" class="coarsen-badge" role="status" aria-live="polite">
+        Granularity auto-adjusted to <strong>{{ effectiveGranularity }}</strong>
+        ({{ granularity }} would exceed 200 columns)
+      </div>
+
       <!-- Time axis header -->
       <div class="gantt-header">
+        <div class="col-header col-header--label">Release</div>
         <div class="header-date-area">
           <div
             v-for="col in columns"
@@ -324,6 +377,7 @@ function summaryBadge(release: Release): string {
           :key="bar.release.id"
           class="gantt-row"
         >
+          <div class="row-label" :title="bar.release.name">{{ bar.release.name }}</div>
           <div class="row-track">
             <!-- Column grid lines -->
             <div
@@ -370,6 +424,7 @@ function summaryBadge(release: Release): string {
           :key="r.id"
           class="gantt-row"
         >
+          <div class="row-label" :title="r.name">{{ r.name }}</div>
           <div class="row-track">
             <!-- Column grid lines (keeps visual alignment with scheduled rows) -->
             <div
@@ -431,6 +486,21 @@ function summaryBadge(release: Release): string {
 }
 .btn-primary:hover { opacity: 0.88; }
 
+/* Auto-coarsen notice */
+.coarsen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: #fefce8;
+  border: 1px solid #fde047;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs, 11px);
+  color: #713f12;
+  align-self: flex-start;
+}
+
 /* Header */
 .gantt-header {
   display: flex;
@@ -438,6 +508,36 @@ function summaryBadge(release: Release): string {
   border: 1px solid var(--color-border);
   border-bottom: none;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  flex-shrink: 0;
+}
+
+/* Sticky left label column — header cell */
+.col-header--label {
+  flex: 0 0 140px;
+  position: sticky;
+  left: 0;
+  background: var(--color-surface);
+  border-right: 2px solid var(--color-border);
+  z-index: 11;
+}
+
+/* Sticky left label column — row cell */
+.row-label {
+  flex: 0 0 140px;
+  position: sticky;
+  left: 0;
+  background: var(--color-bg);
+  border-right: 2px solid var(--color-border);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   flex-shrink: 0;
 }
 .header-date-area {
