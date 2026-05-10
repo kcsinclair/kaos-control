@@ -1,7 +1,7 @@
 ---
 title: 'Dashboard: Velocity and Activity Side-by-Side Layout'
 type: requirement
-status: blocked
+status: approved
 lineage: dashboard-velocity-activity-side-by-side
 created: "2026-05-10T00:00:00+10:00"
 priority: normal
@@ -110,7 +110,12 @@ The layout change must not introduce additional JavaScript bundle size beyond wh
 - [ ] The layout does not introduce measurable Cumulative Layout Shift (CLS > 0) on initial dashboard load.
 - [ ] The DOM reading order remains velocity-then-activity in both layout modes.
 
-## Open Questions
+## Resolved Questions
 
 1. **Column width ratio** -- Should both columns be equal width (`1fr 1fr`), or should the Recent Activity panel be narrower (e.g., `3fr 2fr`) since it is a text list while the chart benefits from more horizontal space? Default assumption is equal width pending product-owner input.
-2. **Max-height / scroll on activity panel** -- If the activity feed is long, should the Recent Activity panel have a fixed max-height with internal scrolling to match the chart height, or should it grow naturally and potentially extend below the chart? Current behaviour (natural height) is assumed.
+
+> Equal Width
+
+3. **Max-height / scroll on activity panel** -- If the activity feed is long, should the Recent Activity panel have a fixed max-height with internal scrolling to match the chart height, or should it grow naturally and potentially extend below the chart? Current behaviour (natural height) is assumed.
+
+> Current height of 7 rows is sufficient.
