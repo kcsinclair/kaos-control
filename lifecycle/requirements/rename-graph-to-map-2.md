@@ -1,7 +1,7 @@
 ---
 title: Rename Graph to Map in UI and Routing
 type: requirement
-status: approved
+status: planning
 lineage: rename-graph-to-map
 created: "2026-05-10"
 priority: medium
