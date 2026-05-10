@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: Init Bootstrap — Create Pipeline Dialog and YAML Editor'
 type: plan-frontend
-status: in-development
+status: done
 lineage: kaos-control-init-bootstrap
 parent: lifecycle/requirements/kaos-control-init-bootstrap-2.md
 ---
