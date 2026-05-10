@@ -1,7 +1,7 @@
 ---
 title: "RecentIdeasDefectsWidget: limit=7 regression tests"
 type: test
-status: approved
+status: in-qa
 lineage: dashboard-recent-panels-limit-7
 parent: lifecycle/defects/dashboard-recent-panels-limit-7-2.md
 ---
