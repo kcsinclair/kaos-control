@@ -87,6 +87,25 @@ The Go binary embeds the SPA via `embed.FS`, so `./dist/kaos-control` is a singl
 
 On first launch, kaos-control writes a default `~/.kaos-control/config.yaml` and starts listening on `:8042`. Open <http://localhost:8042>.
 
+The contents of the config file are:
+```
+server:
+    listen: :8042
+    tls:
+        enabled: false
+        cert_file: ""
+        key_file: ""
+auth:
+    method: local
+    session_ttl: 24h0m0s
+projects_dir: /Users/keith/.kaos-control/projects
+limits:
+    max_concurrent_agents: 4
+    max_concurrent_scheduler_jobs: 2
+    scheduler_run_retention_days: 90
+data_dir: /Users/keith/.kaos-control/data
+```
+
 The first user can be created without authentication (bootstrap). Use the in-app sign-up form, or:
 
 ```sh
