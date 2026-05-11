@@ -1,7 +1,7 @@
 ---
 title: Enforce Role Checks on All Mutation Endpoints
 type: idea
-status: approved
+status: in-development
 lineage: auth-role-checks-mutations
 created: "2026-05-11T08:00:00+10:00"
 priority: high
