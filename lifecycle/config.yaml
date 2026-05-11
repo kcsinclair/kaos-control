@@ -84,6 +84,8 @@ agents:
     driver: claude-code-cli
     model: opus
     active_status: clarifying
+    source_types:
+      - idea
     timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/requirements
@@ -132,6 +134,8 @@ agents:
     driver: claude-code-cli
     model: opus
     active_status: planning
+    source_types:
+      - requirement
     timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/backend-plans
@@ -182,6 +186,8 @@ agents:
     model: sonnet
     active_status: in-development
     done_on_success: true
+    source_types:
+      - plan-backend
     timeout_minutes: 0
     allowed_write_paths:
       - internal
@@ -225,6 +231,8 @@ agents:
     model: sonnet
     active_status: in-development
     done_on_success: true
+    source_types:
+      - plan-frontend
     timeout_minutes: 0
     allowed_write_paths:
       - web/src
@@ -267,6 +275,8 @@ agents:
     model: sonnet
     active_status: in-development
     done_on_success: true
+    source_types:
+      - plan-test
     timeout_minutes: 0
     allowed_write_paths:
       - tests
@@ -313,6 +323,8 @@ agents:
     driver: claude-code-cli
     model: sonnet
     active_status: in-qa
+    source_types:
+      - test
     timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/defects
@@ -444,6 +456,8 @@ agents:
     timeout_minutes: 0
     ollama_instance: Loki
     active_status: in-qa
+    source_types:
+      - test
     allowed_write_paths:
       - lifecycle/defects
     git_identity:
