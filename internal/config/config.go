@@ -70,6 +70,7 @@ func defaultApp() App {
 }
 
 // LoadApp reads the app-level config file, applying defaults for missing fields.
+// If the file does not exist it is created with the defaults before returning.
 func LoadApp(path string) (*App, error) {
 	cfg := defaultApp()
 
@@ -80,6 +81,15 @@ func LoadApp(path string) (*App, error) {
 	if err == nil {
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
 			return nil, fmt.Errorf("parsing app config: %w", err)
+		}
+	} else {
+		// File does not exist: apply path-relative defaults and persist so the
+		// user has a concrete file to edit on the next run.
+		if cfg.ProjectsDir == "" {
+			cfg.ProjectsDir = filepath.Join(filepath.Dir(path), "projects")
+		}
+		if err2 := SaveApp(path, cfg); err2 != nil {
+			return nil, fmt.Errorf("creating default app config at %s: %w", path, err2)
 		}
 	}
 
