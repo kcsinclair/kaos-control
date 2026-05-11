@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/agent"
+	"github.com/kaos-control/kaos-control/internal/config"
 	"github.com/kaos-control/kaos-control/internal/index"
 )
 
@@ -62,6 +63,23 @@ func (s *Server) handleStartAgentRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := chi.URLParam(r, "name")
+
+	// Derive allowed roles: product-owner always permitted, plus the agent's own configured roles.
+	var agentCfg *config.AgentConfig
+	for i := range p.Cfg.Agents {
+		if p.Cfg.Agents[i].Name == name {
+			agentCfg = &p.Cfg.Agents[i]
+			break
+		}
+	}
+	if agentCfg == nil {
+		writeJSON(w, http.StatusNotFound, apiError("agent_not_found", "agent "+name+" not configured"))
+		return
+	}
+	allowed := append([]string{RoleProductOwner}, agentCfg.Roles...)
+	if !requireRole(w, r, p, allowed...) {
+		return
+	}
 
 	var req struct {
 		TargetPath string `json:"target_path"`
