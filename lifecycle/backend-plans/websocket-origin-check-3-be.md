@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — WebSocket Origin Validation"
 type: plan-backend
-status: approved
+status: in-development
 lineage: websocket-origin-check
 parent: lifecycle/requirements/websocket-origin-check-2.md
 created: "2026-05-11T08:25:00+10:00"
