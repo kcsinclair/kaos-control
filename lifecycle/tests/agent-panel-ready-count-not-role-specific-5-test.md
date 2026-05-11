@@ -1,7 +1,7 @@
 ---
 title: "Test: Per-Agent Role-Specific Ready Counts"
 type: test
-status: in-qa
+status: approved
 lineage: agent-panel-ready-count-not-role-specific
 parent: lifecycle/test-plans/agent-panel-ready-count-not-role-specific-4-test.md
 ---

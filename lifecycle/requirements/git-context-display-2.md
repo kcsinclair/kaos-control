@@ -3,7 +3,7 @@ title: Git Context Display in GUI
 type: requirement
 status: blocked
 lineage: git-context-display
-created: "2026-05-11"
+created: "2026-05-11T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/git-context-display.md
 labels:
