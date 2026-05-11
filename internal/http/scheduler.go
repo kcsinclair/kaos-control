@@ -105,6 +105,9 @@ func (s *Server) handleCreateSchedulerJob(w http.ResponseWriter, r *http.Request
 		writeJSON(w, http.StatusServiceUnavailable, apiError("not_configured", "scheduler not configured"))
 		return
 	}
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
+		return
+	}
 	name := r.URL.Query().Get("name")
 	// Name may also come from the JSON body; decode first then check.
 	var req struct {
@@ -168,6 +171,9 @@ func (s *Server) handleUpdateSchedulerJob(w http.ResponseWriter, r *http.Request
 		writeJSON(w, http.StatusNotFound, apiError("not_found", "scheduler not configured"))
 		return
 	}
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
+		return
+	}
 	name := chi.URLParam(r, "name")
 	existing, err := p.SchedulerStore.GetJob(name)
 	if err != nil {
@@ -215,6 +221,9 @@ func (s *Server) handleDeleteSchedulerJob(w http.ResponseWriter, r *http.Request
 	p := projectFromCtx(r.Context())
 	if p.SchedulerStore == nil {
 		writeJSON(w, http.StatusNotFound, apiError("not_found", "scheduler not configured"))
+		return
+	}
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
 		return
 	}
 	name := chi.URLParam(r, "name")
