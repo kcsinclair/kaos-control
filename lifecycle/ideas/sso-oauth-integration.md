@@ -1,7 +1,7 @@
 ---
 title: SSO with OAuth Integrations
 type: idea
-status: approved
+status: clarifying
 lineage: sso-oauth-integration
 created: "2026-05-11T12:21:53+10:00"
 priority: normal
