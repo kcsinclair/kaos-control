@@ -185,12 +185,27 @@ func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 		if ag.ActiveStatus == "" {
 			continue
 		}
-		n, err := p.Idx.Count(index.Filter{Status: ag.ActiveStatus})
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-			return
+		if len(ag.SourceTypes) == 0 {
+			// Legacy behaviour: count by status only.
+			n, err := p.Idx.Count(index.Filter{Status: ag.ActiveStatus})
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+				return
+			}
+			counts[ag.Name] = n
+		} else {
+			// Sum counts across each declared source type.
+			var total int
+			for _, t := range ag.SourceTypes {
+				n, err := p.Idx.Count(index.Filter{Status: ag.ActiveStatus, Type: t})
+				if err != nil {
+					writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+					return
+				}
+				total += n
+			}
+			counts[ag.Name] = total
 		}
-		counts[ag.Name] = n
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"counts": counts})
 }
