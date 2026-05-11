@@ -1,9 +1,10 @@
 ---
-title: "Backend: Per-Agent Role-Specific Ready Counts"
+title: 'Backend: Per-Agent Role-Specific Ready Counts'
 type: plan-backend
 status: approved
 lineage: agent-panel-ready-count-not-role-specific
 parent: lifecycle/defects/agent-panel-ready-count-not-role-specific.md
+release: KC-Release0
 ---
 
 # Backend: Per-Agent Role-Specific Ready Counts
