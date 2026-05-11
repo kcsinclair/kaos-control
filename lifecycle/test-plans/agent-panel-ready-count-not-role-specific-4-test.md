@@ -1,7 +1,7 @@
 ---
 title: "Test: Verify Per-Agent Role-Specific Ready Counts"
 type: plan-test
-status: approved
+status: in-development
 lineage: agent-panel-ready-count-not-role-specific
 parent: lifecycle/defects/agent-panel-ready-count-not-role-specific.md
 ---
