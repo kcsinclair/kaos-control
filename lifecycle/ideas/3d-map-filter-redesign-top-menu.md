@@ -1,7 +1,7 @@
 ---
 title: '3D Map Filter Redesign: Top Menu Bar'
 type: idea
-status: draft
+status: approved
 lineage: 3d-map-filter-redesign-top-menu
 created: "2026-05-10T09:11:27+10:00"
 priority: normal
