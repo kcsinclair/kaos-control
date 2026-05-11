@@ -76,6 +76,9 @@ func (s *Server) handleCreateOllamaInstance(w http.ResponseWriter, r *http.Reque
 		writeJSON(w, http.StatusServiceUnavailable, apiError("not_configured", "app config unavailable"))
 		return
 	}
+	if !s.requireAppRole(w, r, RolesDevopsOrAdmin...) {
+		return
+	}
 
 	var req struct {
 		Name    string `json:"name"`
@@ -126,6 +129,9 @@ func (s *Server) handleUpdateOllamaInstance(w http.ResponseWriter, r *http.Reque
 		writeJSON(w, http.StatusServiceUnavailable, apiError("not_configured", "app config unavailable"))
 		return
 	}
+	if !s.requireAppRole(w, r, RolesDevopsOrAdmin...) {
+		return
+	}
 
 	name := chi.URLParam(r, "name")
 
@@ -171,6 +177,9 @@ func (s *Server) handleUpdateOllamaInstance(w http.ResponseWriter, r *http.Reque
 func (s *Server) handleDeleteOllamaInstance(w http.ResponseWriter, r *http.Request) {
 	if s.appCfg == nil || s.appCfgPath == "" {
 		writeJSON(w, http.StatusServiceUnavailable, apiError("not_configured", "app config unavailable"))
+		return
+	}
+	if !s.requireAppRole(w, r, RolesDevopsOrAdmin...) {
 		return
 	}
 
