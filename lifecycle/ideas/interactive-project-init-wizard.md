@@ -4,13 +4,14 @@ type: idea
 status: draft
 lineage: interactive-project-init-wizard
 created: "2026-05-12T09:59:24+10:00"
-priority: normal
+priority: high
 labels:
     - onboarding
     - feature
     - backend
     - usability
     - v1
+release: KC-Release1
 ---
 
 # Interactive Project Initialisation Wizard
