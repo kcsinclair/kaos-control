@@ -57,6 +57,9 @@ func (s *Server) handleCreateRelease(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
 		return
 	}
+	if !requireRole(w, r, p, RolesAdminOnly...) {
+		return
+	}
 
 	var req createReleaseRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -162,6 +165,9 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
 		return
 	}
+	if !requireRole(w, r, p, RolesAdminOnly...) {
+		return
+	}
 
 	id, err := strconv.ParseInt(chi.URLParam(r, "releaseID"), 10, 64)
 	if err != nil {
@@ -252,6 +258,9 @@ func (s *Server) handleDeleteRelease(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
 	if p == nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	if !requireRole(w, r, p, RolesAdminOnly...) {
 		return
 	}
 
