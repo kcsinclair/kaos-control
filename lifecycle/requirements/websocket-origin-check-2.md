@@ -1,7 +1,7 @@
 ---
 title: WebSocket Origin Validation
 type: requirement
-status: in-development
+status: done
 lineage: websocket-origin-check
 created: "2026-05-11T08:20:00+10:00"
 priority: high
