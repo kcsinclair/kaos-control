@@ -1,7 +1,7 @@
 ---
 title: CLI Auth User Management and Secured API — Frontend Plan
 type: plan-frontend
-status: done
+status: approved
 lineage: cli-auth-user-management
 parent: lifecycle/requirements/cli-auth-user-management-2.md
 release: KC-Release0
