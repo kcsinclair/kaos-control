@@ -1,7 +1,7 @@
 ---
 title: End-to-end smoke tests for core flows — Requirements
 type: requirement
-status: approved
+status: planning
 lineage: end-to-end-smoke-tests
 priority: normal
 parent: lifecycle/ideas/end-to-end-smoke-tests.md
