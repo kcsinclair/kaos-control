@@ -21,32 +21,12 @@ func devopsDir(projectRoot string) string {
 	return filepath.Join(projectRoot, "lifecycle", "devops")
 }
 
-// hasAnyRole reports whether userRoles contains at least one of the allowed roles.
-func hasAnyRole(userRoles []string, allowed ...string) bool {
-	for _, ur := range userRoles {
-		for _, a := range allowed {
-			if ur == a {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // handleListPipelines handles GET /api/p/{project}/devops/pipelines.
 // It discovers all valid pipeline YAML files in lifecycle/devops/ and returns
 // them grouped by type. Access is restricted to product-owner and devops roles.
 func (s *Server) handleListPipelines(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
-	user := userFromCtx(r.Context())
-	if user == nil {
-		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
-		return
-	}
-
-	roles := p.Cfg.RolesFor(user.Email)
-	if !hasAnyRole(roles, "product-owner", "devops") {
-		writeJSON(w, http.StatusForbidden, apiError("forbidden", "product-owner or devops role required"))
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
 		return
 	}
 
@@ -88,15 +68,7 @@ func (s *Server) handleListPipelines(w http.ResponseWriter, r *http.Request) {
 // execution, and returns a run_id.
 func (s *Server) handleRunPipeline(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
-	user := userFromCtx(r.Context())
-	if user == nil {
-		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
-		return
-	}
-
-	roles := p.Cfg.RolesFor(user.Email)
-	if !hasAnyRole(roles, "product-owner", "devops") {
-		writeJSON(w, http.StatusForbidden, apiError("forbidden", "product-owner or devops role required"))
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
 		return
 	}
 
@@ -135,15 +107,7 @@ func (s *Server) handleRunPipeline(w http.ResponseWriter, r *http.Request) {
 // Cancels the active run for the given pipeline slug, or returns 404 if none.
 func (s *Server) handleCancelPipeline(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
-	user := userFromCtx(r.Context())
-	if user == nil {
-		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
-		return
-	}
-
-	roles := p.Cfg.RolesFor(user.Email)
-	if !hasAnyRole(roles, "product-owner", "devops") {
-		writeJSON(w, http.StatusForbidden, apiError("forbidden", "product-owner or devops role required"))
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
 		return
 	}
 
@@ -166,15 +130,7 @@ func (s *Server) handleCancelPipeline(w http.ResponseWriter, r *http.Request) {
 // Returns the JSON-lines log for a completed or in-progress run.
 func (s *Server) handleGetRunLog(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
-	user := userFromCtx(r.Context())
-	if user == nil {
-		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
-		return
-	}
-
-	roles := p.Cfg.RolesFor(user.Email)
-	if !hasAnyRole(roles, "product-owner", "devops") {
-		writeJSON(w, http.StatusForbidden, apiError("forbidden", "product-owner or devops role required"))
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
 		return
 	}
 
@@ -195,15 +151,7 @@ func (s *Server) handleGetRunLog(w http.ResponseWriter, r *http.Request) {
 // the new pipeline file to devops/{slug}.yaml under the project root.
 func (s *Server) handleCreatePipeline(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
-	user := userFromCtx(r.Context())
-	if user == nil {
-		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
-		return
-	}
-
-	roles := p.Cfg.RolesFor(user.Email)
-	if !hasAnyRole(roles, "product-owner", "devops") {
-		writeJSON(w, http.StatusForbidden, apiError("forbidden", "product-owner or devops role required"))
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
 		return
 	}
 
