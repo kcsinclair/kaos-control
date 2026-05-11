@@ -17,18 +17,57 @@ A single-binary lifecycle management tool that turns ideas into shipped releases
 ## Tech stack
 
 - **Backend**: Go 1.25, `chi`, `goldmark`, `modernc.org/sqlite` (pure-Go), `go-git`, `coder/websocket`, `fsnotify`.
-- **Frontend**: Vue 3, Vite 5, TypeScript, Pinia, `markdown-it`, `3d-force-graph` + three.js, Cytoscape.js + fcose, CodeMirror 6.
+- **Frontend**: Vue 3, Vite 6, TypeScript, Pinia, `markdown-it`, `3d-force-graph` + three.js, Cytoscape.js + fcose, CodeMirror 6.
 
 ## Getting started
 
 ### Prerequisites
 
-| | Why |
-|---|---|
-| **Go 1.25+** | Builds the server binary. |
-| **Node.js 20+ & pnpm** | Builds the embedded SPA. |
-| **Git 2.30+** | The server commits artifact changes to your project's git repo. |
-| **Claude Code CLI** *(optional)* | Required only if you want to run agents. `npm install -g @anthropic-ai/claude-code` and `claude auth login`. |
+| | Version | Why |
+|---|---|---|
+| **Go** | 1.25+ | Builds the server binary. |
+| **Node.js** | 20 LTS+ | Builds the embedded SPA. See [install steps](#nodejs-20-lts-or-newer) below. |
+| **pnpm** | 9+ | The frontend's package manager. See [install steps](#pnpm-9) below. |
+| **Git** | 2.30+ | The server commits artifact changes to your project's git repo. |
+| **Claude Code CLI** *(optional)* | — | Required only if you want to run agents. `npm install -g @anthropic-ai/claude-code` then `claude auth login`. |
+
+#### Node.js (20 LTS or newer)
+
+Pick one:
+
+- **macOS (Homebrew)** — `brew install node`
+- **macOS / Linux (nvm)** — install [nvm](https://github.com/nvm-sh/nvm), then:
+  ```sh
+  nvm install --lts
+  nvm use --lts
+  ```
+- **Linux (apt)** — Debian/Ubuntu ships an old version; use NodeSource:
+  ```sh
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+  ```
+- **Windows** — download the LTS installer from [nodejs.org](https://nodejs.org/), or `winget install OpenJS.NodeJS.LTS`.
+
+Verify: `node --version` should print `v20.x` or higher.
+
+#### pnpm (9+)
+
+The recommended way is `corepack`, which ships with Node ≥16.10:
+
+```sh
+corepack enable
+corepack prepare pnpm@latest --activate
+```
+
+That installs pnpm globally and pins it for this project.
+
+Alternatives:
+
+- **macOS (Homebrew)** — `brew install pnpm`
+- **standalone script** — `curl -fsSL https://get.pnpm.io/install.sh | sh -`
+- **npm** — `npm install -g pnpm`
+
+Verify: `pnpm --version` should print `9.x` or higher.
 
 ### 1. Build the binary
 
