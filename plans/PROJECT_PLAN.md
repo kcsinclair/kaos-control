@@ -10,6 +10,7 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-05-12** — Fix defect `default-config-data-dir-incorrect`: `LoadApp` in `internal/config/config.go` now sets `DataDir` to `<config-dir>/data` before calling `SaveApp` on first run, so the generated `config.yaml` contains a correct `data_dir` value. Added `TestLoadAppDefaultDataDir` to verify the persisted value survives a reload. `go build ./...` + `go vet ./...` pass.
 - **2026-05-12** — Fix defect `default-config-port-should-be-8042`: `defaultApp()` in `internal/config/config.go` now uses `:8042` as the default listen address instead of `:8080`. One-line change; `go build ./...` + `go vet ./...` pass.
 - **2026-05-12** — Fix defect `config-yaml-not-created-on-first-run`: `LoadApp` in `internal/config/config.go` now writes the default config to disk (via `SaveApp`) when the file doesn't exist on first run; also sets a sensible `projects_dir` default (`<config-dir>/projects`) before persisting. New installs have a concrete `~/.kaos-control/config.yaml` to inspect and edit without manual setup.
 - **2026-05-11** — Commit `internal/index/index_test.go` (8-case unit-test for `index.Count` covering status+type, status-only, type-only, CSV-type-OR, and the no-filter total). Was left uncommitted by an earlier agent run during the `source_types` work; supports the ready-count code paths.

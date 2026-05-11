@@ -1,7 +1,7 @@
 ---
 title: Default config.yaml data directory not set to /home/keith/.kaos-control/data
 type: defect
-status: in-development
+status: done
 lineage: default-config-data-dir-incorrect
 created: "2026-05-12T09:47:50+10:00"
 priority: normal
