@@ -10,6 +10,7 @@ labels:
     - backend
     - go
     - onboarding
+release: KC-Release1
 ---
 
 # Default config.yaml uses wrong port (8080 instead of 8042)
