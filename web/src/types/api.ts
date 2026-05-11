@@ -97,6 +97,7 @@ export interface AgentSummary {
   driver: string
   model?: string
   active_status?: string
+  source_types?: string[]
   allowed_write_paths?: string[]
   ollama_instance?: string
   ollama_endpoint?: string

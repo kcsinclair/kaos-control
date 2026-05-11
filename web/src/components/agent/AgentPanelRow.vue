@@ -43,9 +43,11 @@ function handleBadgeClick(event: MouseEvent, agent: AgentSummary) {
   event.stopPropagation()
   if (!agent.active_status) return
   const project = route.params.project as string
-  // Navigate to approved artifacts — consistent with the ready count which
-  // only counts approved items.
-  void router.push(`/p/${encodeURIComponent(project)}/artifacts?status=approved`)
+  const q = new URLSearchParams({ status: agent.active_status })
+  if (agent.source_types && agent.source_types.length > 0) {
+    q.set('type', agent.source_types[0])
+  }
+  void router.push(`/p/${encodeURIComponent(project)}/artifacts?${q.toString()}`)
 }
 
 function readyCount(agent: AgentSummary): number {
