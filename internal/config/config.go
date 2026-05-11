@@ -247,6 +247,10 @@ type AgentConfig struct {
 	// Status lifecycle: set target artifact status at run start/end.
 	ActiveStatus  string `yaml:"active_status,omitempty"`   // status to set when run starts (empty = no change)
 	DoneOnSuccess bool   `yaml:"done_on_success,omitempty"` // if true, set status=done when run completes successfully
+	// SourceTypes lists the artifact types this agent consumes. When set, the
+	// ready-counts endpoint filters by both status and type. When empty, the
+	// existing behaviour (count by status only) is preserved.
+	SourceTypes []string `yaml:"source_types,omitempty"`
 	// Ollama-specific fields (only used when Driver == "ollama").
 	OllamaInstanceName string `yaml:"ollama_instance,omitempty"` // name of OllamaInstance in app config
 	OllamaEndpoint     string `yaml:"ollama_endpoint,omitempty"` // "chat" (default) or "generate"
