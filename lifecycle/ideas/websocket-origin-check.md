@@ -1,7 +1,7 @@
 ---
 title: Validate WebSocket Origin Header
 type: idea
-status: in-development
+status: done
 lineage: websocket-origin-check
 created: "2026-05-11T08:15:00+10:00"
 priority: high
