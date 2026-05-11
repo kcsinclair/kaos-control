@@ -1,7 +1,7 @@
 ---
 title: "Frontend: Display Per-Agent Ready Counts from Backend Endpoint"
 type: plan-frontend
-status: in-development
+status: done
 lineage: agent-panel-ready-count-not-role-specific
 parent: lifecycle/defects/agent-panel-ready-count-not-role-specific.md
 ---
