@@ -9,7 +9,7 @@ labels:
     - testing
     - qa
     - feature
-release: KC-Release0
+release: KC-Release1
 ---
 
 # End-to-end smoke tests for core flows — Test Plan
