@@ -10,6 +10,7 @@ labels:
     - backend
     - go
     - onboarding
+release: KC-Release1
 ---
 
 # Default config.yaml data directory not set to /home/keith/.kaos-control/data
