@@ -11,6 +11,9 @@ labels:
     - frontend
     - usability
 release: KC-Release1
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Artefact List Text Filter Does Not Include Labels
