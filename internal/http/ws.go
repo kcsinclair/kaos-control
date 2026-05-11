@@ -20,8 +20,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		// Accept all origins for now; M4 auth will tighten this.
-		InsecureSkipVerify: true,
+		OriginPatterns: s.allowedWSOrigins(),
 	})
 	if err != nil {
 		slog.Error("ws: accept failed", "err", err)
