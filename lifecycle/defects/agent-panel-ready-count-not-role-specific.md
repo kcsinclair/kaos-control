@@ -1,7 +1,7 @@
 ---
 title: Agent Panel Ready Counts Show Same Value Instead of Role-Specific Counts
 type: defect
-status: planning
+status: done
 lineage: agent-panel-ready-count-not-role-specific
 created: "2026-05-11T11:38:12+10:00"
 priority: normal
