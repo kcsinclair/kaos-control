@@ -279,6 +279,33 @@ func containsString(s, sub string) bool {
 		}())
 }
 
+// TestLoadAppDefaultDataDir verifies that when LoadApp creates a fresh config file
+// (first run, no existing file), the generated YAML contains a non-empty data_dir
+// set to <config-dir>/data.
+func TestLoadAppDefaultDataDir(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+
+	cfg, err := LoadApp(cfgPath)
+	if err != nil {
+		t.Fatalf("LoadApp: %v", err)
+	}
+
+	wantDataDir := filepath.Join(dir, "data")
+	if cfg.DataDir != wantDataDir {
+		t.Errorf("DataDir = %q, want %q", cfg.DataDir, wantDataDir)
+	}
+
+	// Reload from the persisted file and confirm data_dir is present.
+	cfg2, err := LoadApp(cfgPath)
+	if err != nil {
+		t.Fatalf("LoadApp (second call): %v", err)
+	}
+	if cfg2.DataDir != wantDataDir {
+		t.Errorf("DataDir after reload = %q, want %q", cfg2.DataDir, wantDataDir)
+	}
+}
+
 // writeMinimalProjectConfig writes a lifecycle/config.yaml with a minimal valid
 // base configuration plus an optional extra YAML snippet (e.g. an ignore: line),
 // and returns the temp project root directory.

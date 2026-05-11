@@ -88,6 +88,9 @@ func LoadApp(path string) (*App, error) {
 		if cfg.ProjectsDir == "" {
 			cfg.ProjectsDir = filepath.Join(filepath.Dir(path), "projects")
 		}
+		if cfg.DataDir == "" {
+			cfg.DataDir = filepath.Join(filepath.Dir(path), "data")
+		}
 		if err2 := SaveApp(path, cfg); err2 != nil {
 			return nil, fmt.Errorf("creating default app config at %s: %w", path, err2)
 		}
