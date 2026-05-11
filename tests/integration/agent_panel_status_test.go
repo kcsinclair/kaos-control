@@ -12,10 +12,15 @@ package integration
 //   - Agent start/finish lifecycle: agent.started and agent.finished events broadcast
 //
 // Configuration: re-uses agentPanelCfgYAML from agents_api_test.go which defines:
-//   - agent-with-model:       active_status=clarifying  (count subject)
-//   - agent-no-model:         active_status=planning    (count subject)
+//   - agent-with-model:       active_status=clarifying, source_types=[ticket]       (count subject)
+//   - agent-no-model:         active_status=planning,   source_types=[plan-backend] (count subject)
 //   - agent-no-active-status: no active_status          (must not appear)
 //   - idea-capture:           driver=inline, no active_status (must not appear)
+//
+// Ready counts always filter on status="approved" (the ready-input status) AND
+// each agent's source_types. active_status is the during-run status the agent
+// transitions the artifact INTO when it picks it up, not the picking-from
+// status — so counting by active_status would be the wrong column.
 
 import (
 	"encoding/json"
@@ -60,26 +65,27 @@ func countFor(counts map[string]any, agentName string) int {
 
 // ── Milestone 4, Test Case 1 — Ready count reflects indexed artifacts ─────────
 
-// TestReadyCounts_ReflectsIndexedArtifacts seeds artifacts whose statuses match
-// (or do not match) agent active_status values and verifies:
-//   - agent-with-model (active_status=clarifying) count equals seeded clarifying artifacts
-//   - agent-no-model (active_status=planning) count equals seeded planning artifacts
+// TestReadyCounts_ReflectsIndexedArtifacts seeds approved artifacts of
+// different types and verifies:
+//   - agent-with-model (source_types=[ticket]) counts approved tickets
+//   - agent-no-model (source_types=[plan-backend]) counts approved plan-backends
 //   - agent-no-active-status is absent from the response (handler skips agents without active_status)
 //   - Response shape is {"counts": {...}} with numeric values
 func TestReadyCounts_ReflectsIndexedArtifacts(t *testing.T) {
-	// Seed 2 clarifying, 1 planning, 1 draft (should not contribute to any count).
+	// Seed 2 approved tickets, 1 approved plan-backend, 1 draft idea (must
+	// not contribute to any count because draft != approved).
 	seeds := []seedArtifact{
 		{
-			relPath: "lifecycle/requirements/ready-count-clfy-1-2.md",
-			content: makeArtifact("RC Clarifying 1", "ticket", "clarifying", "ready-count-clfy-1", "", "Body."),
+			relPath: "lifecycle/requirements/ready-count-tkt-1-2.md",
+			content: makeArtifact("RC Ticket 1", "ticket", "approved", "ready-count-tkt-1", "", "Body."),
 		},
 		{
-			relPath: "lifecycle/requirements/ready-count-clfy-2-2.md",
-			content: makeArtifact("RC Clarifying 2", "ticket", "clarifying", "ready-count-clfy-2", "", "Body."),
+			relPath: "lifecycle/requirements/ready-count-tkt-2-2.md",
+			content: makeArtifact("RC Ticket 2", "ticket", "approved", "ready-count-tkt-2", "", "Body."),
 		},
 		{
 			relPath: "lifecycle/backend-plans/ready-count-plan-1-3-be.md",
-			content: makeArtifact("RC Planning 1", "plan-backend", "planning", "ready-count-plan-1", "", "Body."),
+			content: makeArtifact("RC Plan-Backend 1", "plan-backend", "approved", "ready-count-plan-1", "", "Body."),
 		},
 		{
 			relPath: "lifecycle/ideas/ready-count-draft-1.md",
@@ -92,12 +98,12 @@ func TestReadyCounts_ReflectsIndexedArtifacts(t *testing.T) {
 
 	counts := getReadyCounts(t, env)
 
-	// agent-with-model has active_status=clarifying — expect 2.
+	// agent-with-model (source_types=[ticket]) — 2 approved tickets.
 	if got := countFor(counts, "agent-with-model"); got != 2 {
 		t.Errorf("agent-with-model: want count 2, got %d", got)
 	}
 
-	// agent-no-model has active_status=planning — expect 1.
+	// agent-no-model (source_types=[plan-backend]) — 1 approved plan-backend.
 	if got := countFor(counts, "agent-no-model"); got != 1 {
 		t.Errorf("agent-no-model: want count 1, got %d", got)
 	}
@@ -147,14 +153,14 @@ func TestReadyCounts_ZeroCountReturned(t *testing.T) {
 }
 
 // TestReadyCounts_MultipleArtifactsSameStatus verifies that when multiple
-// artifacts share the same status, the count is correctly aggregated.
+// artifacts share the same status+type, the count is correctly aggregated.
 func TestReadyCounts_MultipleArtifactsSameStatus(t *testing.T) {
 	seeds := make([]seedArtifact, 5)
 	for i := range seeds {
 		slug := "rc-multi-" + string(rune('a'+i))
 		seeds[i] = seedArtifact{
 			relPath: "lifecycle/requirements/" + slug + "-2.md",
-			content: makeArtifact("RC Multi "+string(rune('A'+i)), "ticket", "clarifying", slug, "", "Body."),
+			content: makeArtifact("RC Multi "+string(rune('A'+i)), "ticket", "approved", slug, "", "Body."),
 		}
 	}
 
@@ -164,7 +170,7 @@ func TestReadyCounts_MultipleArtifactsSameStatus(t *testing.T) {
 	counts := getReadyCounts(t, env)
 
 	if got := countFor(counts, "agent-with-model"); got != 5 {
-		t.Errorf("agent-with-model: want count 5 for 5 clarifying artifacts, got %d", got)
+		t.Errorf("agent-with-model: want count 5 for 5 approved tickets, got %d", got)
 	}
 }
 
@@ -196,19 +202,21 @@ func TestReadyCounts_NoAgentsConfigured(t *testing.T) {
 // ── Milestone 4, Test Case 2 — Real-time update via WebSocket ────────────────
 
 // TestReadyCounts_RealtimeUpdateAfterArtifactIndexed verifies:
-//  1. Initial ready-counts for agent-with-model is 0 (no clarifying artifacts).
-//  2. After transitioning an artifact to "clarifying", an artifact.indexed
+//  1. Initial ready-counts for agent-with-model is 0 (no approved tickets).
+//  2. After transitioning an artifact to "approved", an artifact.indexed
 //     WebSocket event is received on the hub channel.
 //  3. Re-fetching ready-counts returns an incremented count.
 func TestReadyCounts_RealtimeUpdateAfterArtifactIndexed(t *testing.T) {
 	const artifactPath = "lifecycle/requirements/rc-ws-update-2.md"
+	// Seed the artifact in "planning" so the product-owner can transition it
+	// to "approved" without going through the required-plans gate.
 	env := newAgentTestEnvWithCfg(t, agentPanelCfgYAML, []seedArtifact{{
 		relPath: artifactPath,
-		content: makeArtifact("RC WS Update", "ticket", "draft", "rc-ws-update", "", "Body."),
+		content: makeArtifact("RC WS Update", "ticket", "planning", "rc-ws-update", "", "Body."),
 	}})
 	env.login("admin@test.local", "admin-pass-123")
 
-	// Verify initial count is 0 — no clarifying artifacts yet.
+	// Verify initial count is 0 — no approved tickets yet.
 	initialCounts := getReadyCounts(t, env)
 	if got := countFor(initialCounts, "agent-with-model"); got != 0 {
 		t.Fatalf("agent-with-model: want initial count 0, got %d", got)
@@ -219,10 +227,10 @@ func TestReadyCounts_RealtimeUpdateAfterArtifactIndexed(t *testing.T) {
 	env.proj.Hub.Register(ch)
 	defer env.proj.Hub.Unregister(ch)
 
-	// Transition artifact from draft → clarifying — this triggers artifact.indexed broadcast.
+	// Transition artifact from planning → approved — this triggers artifact.indexed broadcast.
 	resp := env.doRequest("POST",
 		"/api/p/testproject/artifacts/"+artifactPath+"/transition",
-		map[string]string{"to": "clarifying"},
+		map[string]string{"to": "approved"},
 	)
 	requireStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
@@ -253,7 +261,7 @@ COLLECT:
 		}
 	}
 	if !gotIndexed {
-		t.Fatal("timed out waiting for artifact.indexed event after transition to clarifying")
+		t.Fatal("timed out waiting for artifact.indexed event after transition to approved")
 	}
 
 	// Re-fetch counts — agent-with-model should now be 1.
@@ -270,11 +278,12 @@ func TestReadyCounts_StatusChangeReflected(t *testing.T) {
 	const artifactPath = "lifecycle/requirements/rc-status-change-2.md"
 	env := newAgentTestEnvWithCfg(t, agentPanelCfgYAML, []seedArtifact{{
 		relPath: artifactPath,
-		content: makeArtifact("RC Status Change", "ticket", "clarifying", "rc-status-change", "", "Body."),
+		content: makeArtifact("RC Status Change", "ticket", "approved", "rc-status-change", "", "Body."),
 	}})
 	env.login("admin@test.local", "admin-pass-123")
 
-	// Initial count must be 1.
+	// Initial count must be 1 — one approved ticket matches
+	// agent-with-model.source_types=[ticket].
 	initial := getReadyCounts(t, env)
 	if got := countFor(initial, "agent-with-model"); got != 1 {
 		t.Fatalf("agent-with-model: want initial count 1, got %d", got)
@@ -285,10 +294,11 @@ func TestReadyCounts_StatusChangeReflected(t *testing.T) {
 	env.proj.Hub.Register(ch)
 	defer env.proj.Hub.Unregister(ch)
 
-	// Transition via API: clarifying → planning (moves artifact away from agent-with-model's status).
+	// Transition via API: approved → in-development (moves the artifact out
+	// of the ready-input pool for both agents).
 	resp := env.doRequest("POST",
 		"/api/p/testproject/artifacts/"+artifactPath+"/transition",
-		map[string]string{"to": "planning"},
+		map[string]string{"to": "in-development"},
 	)
 	requireStatus(t, resp, http.StatusOK)
 	resp.Body.Close()
@@ -320,14 +330,14 @@ WAIT:
 		t.Fatal("timed out waiting for artifact.indexed after status change")
 	}
 
-	// Count for agent-with-model should now be 0.
+	// Count for agent-with-model should now be 0 — the ticket is no longer
+	// approved, so it doesn't appear in either agent's ready set.
 	updated := getReadyCounts(t, env)
 	if got := countFor(updated, "agent-with-model"); got != 0 {
 		t.Errorf("agent-with-model: want count 0 after status change, got %d", got)
 	}
-	// Count for agent-no-model (active_status=planning) should now be 1.
-	if got := countFor(updated, "agent-no-model"); got != 1 {
-		t.Errorf("agent-no-model: want count 1 after transition to planning, got %d", got)
+	if got := countFor(updated, "agent-no-model"); got != 0 {
+		t.Errorf("agent-no-model: want count 0 (transitioned ticket is wrong type for plan-backend filter anyway), got %d", got)
 	}
 }
 

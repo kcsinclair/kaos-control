@@ -29,24 +29,24 @@ func TestAgentsReadyCounts_SmokeDistinctCounts(t *testing.T) {
 		t.Skip("skipping smoke test in -short mode")
 	}
 
-	// Seed one in-development plan-backend and three in-development plan-frontend
-	// so that backend-developer (1) and frontend-developer (3) are distinct.
+	// Seed one approved plan-backend and three approved plan-frontend so that
+	// backend-developer (1) and frontend-developer (3) are distinct.
 	seeds := []seedArtifact{
 		{
 			relPath: "lifecycle/backend-plans/smoke-be-1-3-be.md",
-			content: makeArtifact("Smoke BE Plan 1", "plan-backend", "in-development", "smoke-be-1", "", "Body."),
+			content: makeArtifact("Smoke BE Plan 1", "plan-backend", "approved", "smoke-be-1", "", "Body."),
 		},
 		{
 			relPath: "lifecycle/frontend-plans/smoke-fe-1-4-fe.md",
-			content: makeArtifact("Smoke FE Plan 1", "plan-frontend", "in-development", "smoke-fe-1", "", "Body."),
+			content: makeArtifact("Smoke FE Plan 1", "plan-frontend", "approved", "smoke-fe-1", "", "Body."),
 		},
 		{
 			relPath: "lifecycle/frontend-plans/smoke-fe-2-4-fe.md",
-			content: makeArtifact("Smoke FE Plan 2", "plan-frontend", "in-development", "smoke-fe-2", "", "Body."),
+			content: makeArtifact("Smoke FE Plan 2", "plan-frontend", "approved", "smoke-fe-2", "", "Body."),
 		},
 		{
 			relPath: "lifecycle/frontend-plans/smoke-fe-3-4-fe.md",
-			content: makeArtifact("Smoke FE Plan 3", "plan-frontend", "in-development", "smoke-fe-3", "", "Body."),
+			content: makeArtifact("Smoke FE Plan 3", "plan-frontend", "approved", "smoke-fe-3", "", "Body."),
 		},
 	}
 
@@ -84,8 +84,8 @@ func TestAgentsReadyCounts_SmokeDistinctCounts(t *testing.T) {
 }
 
 // TestAgentsReadyCounts_SmokeBackendVsFrontend is a targeted smoke test that
-// confirms the two developer agents (sharing active_status=in-development but
-// with distinct source_types) report different counts after targeted seeding.
+// confirms the two developer agents (with distinct source_types) report
+// different counts after targeted seeding of approved artifacts.
 func TestAgentsReadyCounts_SmokeBackendVsFrontend(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping smoke test in -short mode")
@@ -95,16 +95,16 @@ func TestAgentsReadyCounts_SmokeBackendVsFrontend(t *testing.T) {
 		// Two plan-backend in-development.
 		{
 			relPath: "lifecycle/backend-plans/bvf-be-1-3-be.md",
-			content: makeArtifact("BvF BE Plan 1", "plan-backend", "in-development", "bvf-be-1", "", "Body."),
+			content: makeArtifact("BvF BE Plan 1", "plan-backend", "approved", "bvf-be-1", "", "Body."),
 		},
 		{
 			relPath: "lifecycle/backend-plans/bvf-be-2-3-be.md",
-			content: makeArtifact("BvF BE Plan 2", "plan-backend", "in-development", "bvf-be-2", "", "Body."),
+			content: makeArtifact("BvF BE Plan 2", "plan-backend", "approved", "bvf-be-2", "", "Body."),
 		},
 		// One plan-frontend in-development.
 		{
 			relPath: "lifecycle/frontend-plans/bvf-fe-1-4-fe.md",
-			content: makeArtifact("BvF FE Plan 1", "plan-frontend", "in-development", "bvf-fe-1", "", "Body."),
+			content: makeArtifact("BvF FE Plan 1", "plan-frontend", "approved", "bvf-fe-1", "", "Body."),
 		},
 	}
 

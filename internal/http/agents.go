@@ -172,7 +172,16 @@ func (s *Server) handleKillAgentRun(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "run_id": runID})
 }
 
-// handleGetReadyCounts returns per-agent artifact counts based on each agent's active_status.
+// readyInputStatus is the artifact status that signals "ready for an agent to
+// pick up". The agent runner transitions the artifact out of this state and
+// into its configured ActiveStatus on run start, so ActiveStatus is the
+// *during-run* status — the wrong column to count for a "ready" badge.
+const readyInputStatus = "approved"
+
+// handleGetReadyCounts returns per-agent counts of artifacts whose status is
+// the ready-for-pickup status ("approved"), filtered by each agent's
+// source_types when set. Matches the filter used by the AgentLaunchModal so
+// the badge agrees with the launch dialog.
 // GET /api/p/:project/agents/ready-counts
 func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
@@ -182,22 +191,22 @@ func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 	}
 	counts := make(map[string]int)
 	for _, ag := range p.Agents.Agents() {
+		// Agents with no ActiveStatus are not part of the run lifecycle; skip
+		// them so we don't add spurious badge counts for misconfigured agents.
 		if ag.ActiveStatus == "" {
 			continue
 		}
 		if len(ag.SourceTypes) == 0 {
-			// Legacy behaviour: count by status only.
-			n, err := p.Idx.Count(index.Filter{Status: ag.ActiveStatus})
+			n, err := p.Idx.Count(index.Filter{Status: readyInputStatus})
 			if err != nil {
 				writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 				return
 			}
 			counts[ag.Name] = n
 		} else {
-			// Sum counts across each declared source type.
 			var total int
 			for _, t := range ag.SourceTypes {
-				n, err := p.Idx.Count(index.Filter{Status: ag.ActiveStatus, Type: t})
+				n, err := p.Idx.Count(index.Filter{Status: readyInputStatus, Type: t})
 				if err != nil {
 					writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 					return

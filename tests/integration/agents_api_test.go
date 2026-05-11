@@ -67,6 +67,7 @@ agents:
     driver: claude-code-cli
     model: claude-opus-4-6
     active_status: clarifying
+    source_types: [ticket]
     allowed_write_paths:
       - lifecycle/requirements
     git_identity:
@@ -79,6 +80,7 @@ agents:
     role: [analyst]
     driver: claude-code-cli
     active_status: planning
+    source_types: [plan-backend]
     allowed_write_paths:
       - lifecycle/requirements
     git_identity:
