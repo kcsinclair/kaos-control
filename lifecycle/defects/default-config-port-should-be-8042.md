@@ -1,7 +1,7 @@
 ---
 title: Default config.yaml uses wrong port (8080 instead of 8042)
 type: defect
-status: in-development
+status: done
 lineage: default-config-port-should-be-8042
 created: "2026-05-12T09:45:46+10:00"
 priority: normal
