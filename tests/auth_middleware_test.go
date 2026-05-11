@@ -341,12 +341,17 @@ func TestLoginEndpoint_NoAuth(t *testing.T) {
 	}
 }
 
-// TestWebSocketAuth_Rejected asserts that a WS upgrade attempt to a protected
-// route without credentials is rejected with 401.
+// TestWebSocketAuth_Rejected asserts that a WS upgrade attempt without
+// credentials is denied — either by requireAuth (when /ws was in scope of
+// the global gate) or by the project middleware (when /ws is exempt from
+// requireAuth and an unknown project is used). Both 401 and 404 indicate
+// the unauthenticated caller is denied access.
+//
+// For a *valid* project, an unauth WS upgrade now succeeds (101) and is
+// then closed by the handler with WS code 4401. That path is covered at
+// the protocol level by the integration tests in tests/integration/.
 func TestWebSocketAuth_Rejected(t *testing.T) {
 	setup, _ := startMiddlewareServer(t, false)
-	// The auth middleware runs before the project middleware, so even an
-	// unknown project will return 401 (not 404) when unauthenticated.
 	req, _ := http.NewRequest(http.MethodGet, setup.baseURL+"/api/p/dummy/ws", nil)
 	req.Header.Set("Upgrade", "websocket")
 	req.Header.Set("Connection", "Upgrade")
@@ -358,14 +363,16 @@ func TestWebSocketAuth_Rejected(t *testing.T) {
 		t.Fatalf("WS upgrade request: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("want 401 for unauthenticated WS upgrade, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusNotFound {
+		t.Errorf("want 401 or 404 for unauthenticated WS upgrade to unknown project, got %d", resp.StatusCode)
 	}
 }
 
 // TestBearerAuth_SkipsCsrf asserts that a POST request authenticated via
-// bearer token succeeds (or fails for handler-level reasons) without a
-// X-CSRF-Token header — i.e., the CSRF middleware is bypassed for bearer auth.
+// bearer token bypasses the CSRF middleware — i.e., the request reaches the
+// handler without an X-CSRF-Token header. The endpoint may still return 403
+// for handler-level reasons (e.g. role check), so we distinguish a CSRF 403
+// from any other 403 by inspecting the error code in the response body.
 func TestBearerAuth_SkipsCsrf(t *testing.T) {
 	setup, _ := startMiddlewareServer(t, false)
 	if err := setup.authStore.CreateUser("bearer_csrf@test.com", "BearerCSRF", "pass", false); err != nil {
@@ -377,8 +384,11 @@ func TestBearerAuth_SkipsCsrf(t *testing.T) {
 	}
 
 	// POST /api/admin/users with bearer token and NO X-CSRF-Token.
-	// The user already exists so the handler will return 409 (conflict), but
-	// it must NOT be 403 (CSRF failure).
+	// After Milestone 8 of auth-role-checks-mutations, handleCreateUser
+	// itself returns 403 for a non-product-owner caller — that's a
+	// handler-level 403 ("forbidden"), not a CSRF 403 ("csrf_missing" /
+	// "csrf_invalid"). The test passes as long as the response is anything
+	// except a CSRF rejection.
 	body, _ := json.Marshal(map[string]string{
 		"email":    "bearer_csrf@test.com",
 		"password": "anypass",
@@ -393,8 +403,17 @@ func TestBearerAuth_SkipsCsrf(t *testing.T) {
 		t.Fatalf("POST /api/admin/users with bearer: %v", err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode == http.StatusForbidden {
-		t.Error("bearer-authenticated POST returned 403 Forbidden (CSRF not skipped for bearer token)")
+		var bodyMap map[string]any
+		_ = json.NewDecoder(resp.Body).Decode(&bodyMap)
+		errBlock, _ := bodyMap["error"].(map[string]any)
+		code, _ := errBlock["code"].(string)
+		if code == "csrf_missing" || code == "csrf_invalid" {
+			t.Errorf("bearer-authenticated POST returned CSRF 403 (code=%q); CSRF was not skipped for bearer token", code)
+		}
+		// Any other 403 (e.g. "forbidden" from the role check) is fine — it
+		// means the request made it past CSRF middleware to the handler.
 	}
 }
 

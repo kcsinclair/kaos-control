@@ -110,7 +110,7 @@ Create `internal/http/permissions.go` to hold the role-name constants, group lis
 
 - **Edit** `internal/http/agents.go`:
   - In `handleStartAgentRun` (line 52), after `p.Agents == nil` check, look up the agent by `name` from `p.Cfg.Agents`. If found, derive `allowed := []string{RoleProductOwner, agent.Role}` and call `if !requireRole(w, r, p, allowed...) { return }`.
-  - If the agent name isn't configured, return 404 (`apiError("agent_not_found", ...)`) — existing handler may already do this; verify.
+  - If the agent name isn't configured, return 404 (`apiError("not_found", ...)`) — matches the existing convention used elsewhere in `internal/http/agents.go` and `internal/http/artifacts.go`.
 
 ### Acceptance criteria
 

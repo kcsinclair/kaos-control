@@ -73,7 +73,7 @@ func (s *Server) handleStartAgentRun(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if agentCfg == nil {
-		writeJSON(w, http.StatusNotFound, apiError("agent_not_found", "agent "+name+" not configured"))
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "agent "+name+" not configured"))
 		return
 	}
 	allowed := append([]string{RoleProductOwner}, agentCfg.Roles...)
