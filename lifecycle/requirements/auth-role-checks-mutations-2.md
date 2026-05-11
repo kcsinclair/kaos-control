@@ -1,7 +1,7 @@
 ---
 title: Role Checks on Mutation Endpoints
 type: requirement
-status: in-development
+status: done
 lineage: auth-role-checks-mutations
 created: "2026-05-11T08:05:00+10:00"
 priority: high
