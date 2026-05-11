@@ -55,7 +55,7 @@ type LimitsConfig struct {
 func defaultApp() App {
 	return App{
 		Server: ServerConfig{
-			Listen: ":8080",
+			Listen: ":8042",
 		},
 		Auth: AuthConfig{
 			Method:     "local",
