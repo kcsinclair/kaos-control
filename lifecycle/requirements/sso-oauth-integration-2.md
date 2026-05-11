@@ -3,7 +3,7 @@ title: SSO via OAuth 2.0 / OpenID Connect
 type: requirement
 status: blocked
 lineage: sso-oauth-integration
-created: "2026-05-11"
+created: "2026-05-11T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/sso-oauth-integration.md
 labels:
