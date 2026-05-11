@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Role Checks on Mutation Endpoints"
 type: plan-backend
-status: in-development
+status: done
 lineage: auth-role-checks-mutations
 parent: lifecycle/requirements/auth-role-checks-mutations-2.md
 created: "2026-05-11T08:10:00+10:00"
