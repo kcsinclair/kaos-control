@@ -10,6 +10,7 @@ labels:
     - frontend
     - vue
     - operability
+release: KC-Release1
 ---
 
 # Display Git Branch and Context in the GUI
