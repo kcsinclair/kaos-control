@@ -240,6 +240,12 @@ Alternatives:
 
 Verify: `pnpm --version` should print `9.x` or higher.
 
+### Windows / WSL development
+
+On Windows, develop from WSL and clone this repository into the Linux filesystem, not a Windows-mounted drive. For example, use a path like `~/src/kaos-control` or `/workspaces/kaos-control`, and avoid `/mnt/c/...`.
+
+Keeping the repo off the Windows drive prevents common file-watching, permissions, symlink, and dependency install issues with Go, Node.js, Vite, and pnpm.
+
 ### 1. Build the binary
 
 ```sh
