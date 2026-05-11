@@ -74,6 +74,9 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
 		return
 	}
+	if !requireRole(w, r, p, RolesAdminOnly...) {
+		return
+	}
 
 	var body struct {
 		Raw string `json:"raw"`
