@@ -1,7 +1,7 @@
 ---
 title: End-to-end smoke tests for core flows — Test Plan
 type: plan-test
-status: approved
+status: planning
 lineage: end-to-end-smoke-tests
 priority: normal
 parent: lifecycle/requirements/end-to-end-smoke-tests-2.md
