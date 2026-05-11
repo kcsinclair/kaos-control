@@ -266,8 +266,13 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
 	}
-	if count > 0 && userFromCtx(r.Context()) == nil {
+	user := userFromCtx(r.Context())
+	if count > 0 && user == nil {
 		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required to add more users"))
+		return
+	}
+	if count > 0 && !s.appUserHasRole(user, RoleProductOwner) {
+		writeJSON(w, http.StatusForbidden, apiError("forbidden", "product-owner role required"))
 		return
 	}
 	var req struct {
@@ -290,7 +295,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusConflict, apiError("conflict", err.Error()))
 		return
 	}
-	user, _ := s.cfg.Auth.GetUser(req.Email)
+	user, _ = s.cfg.Auth.GetUser(req.Email)
 	writeJSON(w, http.StatusCreated, map[string]any{"user": user})
 }
 
