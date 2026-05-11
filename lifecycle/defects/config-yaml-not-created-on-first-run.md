@@ -1,7 +1,7 @@
 ---
 title: Config file not auto-created on first run
 type: defect
-status: in-development
+status: done
 lineage: config-yaml-not-created-on-first-run
 created: "2026-05-12T09:32:22+10:00"
 priority: normal
@@ -11,6 +11,7 @@ labels:
     - onboarding
     - go
     - operability
+release: KC-Release1
 ---
 
 # Config file not auto-created on first run
