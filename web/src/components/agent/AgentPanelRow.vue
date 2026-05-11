@@ -49,9 +49,8 @@ function handleBadgeClick(event: MouseEvent, agent: AgentSummary) {
 }
 
 function readyCount(agent: AgentSummary): number {
-  // Only approved artifacts are ready for an agent to process.
   if (!agent.active_status) return 0
-  return agentsStore.approvedCount
+  return agentsStore.readyCounts[agent.name] ?? 0
 }
 
 function runningCount(agent: AgentSummary): number {

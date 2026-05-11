@@ -3,7 +3,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as agentsApi from '@/api/agents'
-import * as artifactsApi from '@/api/artifacts'
 import type { AgentRunRow, AgentSummary } from '@/types/api'
 
 // formatEvent renders a parsed stream event as a single line of text suitable
@@ -85,12 +84,6 @@ export const useAgentsStore = defineStore('agents', () => {
   /** Ready-artifact count per agent name, populated by fetchReadyCounts(). */
   const readyCounts = ref<Record<string, number>>({})
 
-  /**
-   * Count of artifacts with status "approved", refreshed by fetchReadyCounts().
-   * All agent panels with an active_status show this count as their "ready" badge.
-   */
-  const approvedCount = ref(0)
-
   const activeRuns = computed(() => runs.value.filter((r) => r.status === 'running'))
 
   /** Running-run count per agent name, derived from activeRuns. */
@@ -118,11 +111,8 @@ export const useAgentsStore = defineStore('agents', () => {
 
   async function fetchReadyCounts(project: string): Promise<void> {
     try {
-      // Only "approved" artifacts are genuinely ready for an agent to process.
-      // Fetch the total count of approved artifacts; limit=1 to avoid transferring
-      // full result sets — the server-side total reflects the full match count.
-      const data = await artifactsApi.listArtifacts(project, { status: 'approved', limit: 1 })
-      approvedCount.value = data.total ?? 0
+      const data = await agentsApi.getReadyCounts(project)
+      readyCounts.value = data.counts ?? {}
     } catch {
       // Non-fatal: counts remain stale until next successful fetch
     }
@@ -214,7 +204,6 @@ export const useAgentsStore = defineStore('agents', () => {
     activeRuns,
     runningCountByAgent,
     readyCounts,
-    approvedCount,
     artifactRuns,
     artifactRunsPath,
     fetchRuns,
