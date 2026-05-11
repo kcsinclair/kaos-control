@@ -134,6 +134,11 @@ func run() error {
 		}
 	}
 
+	publicHost := appCfg.Server.PublicHost
+	if publicHost == "" {
+		publicHost = os.Getenv("KAOS_PUBLIC_HOST")
+	}
+
 	srv := khttp.New(khttp.ServerConfig{
 		Listen:     appCfg.Server.Listen,
 		TLSOn:      appCfg.Server.TLS.Enabled,
@@ -143,6 +148,7 @@ func run() error {
 		Auth:       authStore,
 		AppCfg:     appCfg,
 		AppCfgPath: cfgPath,
+		PublicHost: publicHost,
 	}, projects)
 
 	return srv.ListenAndServe(ctx)

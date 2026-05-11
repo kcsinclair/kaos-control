@@ -30,8 +30,9 @@ type App struct {
 }
 
 type ServerConfig struct {
-	Listen string    `yaml:"listen"`
-	TLS    TLSConfig `yaml:"tls"`
+	Listen     string    `yaml:"listen"`
+	TLS        TLSConfig `yaml:"tls"`
+	PublicHost string    `yaml:"public_host"`
 }
 
 type TLSConfig struct {

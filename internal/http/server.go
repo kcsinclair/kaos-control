@@ -48,6 +48,28 @@ type ServerConfig struct {
 	Auth       *auth.Store  // nil when auth is not configured
 	AppCfg     *config.App  // may be nil; required for Ollama instance management
 	AppCfgPath string       // path to app config.yaml; required for Ollama instance management
+	// PublicHost is a comma-separated list of additional hostnames the server
+	// is reachable at; used to populate WebSocket OriginPatterns.
+	// Local listen addresses (localhost, 127.0.0.1) are always allowed.
+	PublicHost string
+}
+
+// allowedWSOrigins returns the set of hostnames that are permitted as the
+// Origin header on an incoming WebSocket upgrade. It always includes
+// "localhost" and "127.0.0.1". If the configured Listen address has a
+// non-wildcard host component, that host is included too. Any hosts listed
+// in cfg.PublicHost (comma-separated) are appended.
+func (s *Server) allowedWSOrigins() []string {
+	out := []string{"localhost", "127.0.0.1"}
+	if h, _, err := net.SplitHostPort(s.cfg.Listen); err == nil && h != "" && h != "0.0.0.0" && h != "::" {
+		out = append(out, h)
+	}
+	for _, h := range strings.Split(s.cfg.PublicHost, ",") {
+		if h = strings.TrimSpace(h); h != "" {
+			out = append(out, h)
+		}
+	}
+	return out
 }
 
 // New constructs and wires the server. projects maps project name → project.Project.
