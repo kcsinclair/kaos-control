@@ -43,7 +43,10 @@ function handleBadgeClick(event: MouseEvent, agent: AgentSummary) {
   event.stopPropagation()
   if (!agent.active_status) return
   const project = route.params.project as string
-  const q = new URLSearchParams({ status: agent.active_status })
+  // The badge counts artifacts that are READY for this agent (status="approved"),
+  // not artifacts already mid-run (status=active_status). Link to the same set
+  // so clicking the badge surfaces what the launch dialog would show.
+  const q = new URLSearchParams({ status: 'approved' })
   if (agent.source_types && agent.source_types.length > 0) {
     q.set('type', agent.source_types[0])
   }

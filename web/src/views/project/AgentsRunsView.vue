@@ -177,6 +177,9 @@ async function kill(runId: string) {
 onMounted(() => {
   store.fetchRuns(project)
   if (!store.agents.length) store.fetchAgents(project)
+  // Ready counts populate the per-agent badge; without this initial fetch the
+  // badges would read 0 until the first artifact.indexed WebSocket event.
+  void store.fetchReadyCounts(project)
   configStore.fetchRoles(project)
 })
 </script>
