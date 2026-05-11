@@ -37,6 +37,9 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
 		return
 	}
+	if !requireRole(w, r, p, RolesArtifactAuthors...) {
+		return
+	}
 
 	var req struct {
 		Stage       string               `json:"stage"`
@@ -172,6 +175,9 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
 		return
 	}
+	if !requireRole(w, r, p, RolesArtifactEditors...) {
+		return
+	}
 
 	relPath := chi.URLParam(r, "*")
 
@@ -286,6 +292,9 @@ func (s *Server) handleDeleteArtifact(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
 	if p == nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	if !requireRole(w, r, p, RolesAdminOnly...) {
 		return
 	}
 
@@ -434,12 +443,10 @@ func (s *Server) handlePatchPriority(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Priority is a meaningful workflow signal; require authentication.
-	user := userFromCtx(r.Context())
-	if user == nil {
-		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
+	if !requireRole(w, r, p, RolesPriorityEditors...) {
 		return
 	}
+	user := userFromCtx(r.Context())
 
 	rawParam := chi.URLParam(r, "*")
 	relPath := strings.TrimSuffix(rawParam, "/priority")
