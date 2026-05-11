@@ -313,3 +313,58 @@ func TestReadyCounts_ResponseShape(t *testing.T) {
 		}
 	}
 }
+
+// TestReadyCounts_DeveloperIncludesAssignedDefects verifies that a developer
+// agent's ready count includes approved defect artifacts whose frontmatter
+// assignees include the agent's role — matching the plan-* branch in
+// web/src/components/agent/AgentLaunchModal.vue so badge == dialog list size.
+//
+// Seeds:
+//   - One approved plan-backend (the primary source_type for backend-developer).
+//   - One approved defect assigned to role: backend-developer.
+//   - One approved defect assigned to role: qa (must NOT count for backend-developer).
+//   - One approved defect with no assignees (must NOT count).
+//   - One in-development defect assigned to backend-developer (must NOT count;
+//     wrong status).
+//
+// Expected: backend-developer count = 1 (plan-backend) + 1 (assigned defect) = 2.
+// frontend-developer count = 0 (no plan-frontend, no defects assigned to it).
+func TestReadyCounts_DeveloperIncludesAssignedDefects(t *testing.T) {
+	seeds := []seedArtifact{
+		{
+			relPath: "lifecycle/backend-plans/dev-defects-be-1-3-be.md",
+			content: makeArtifact("Dev-Defects BE 1", "plan-backend", "approved", "dev-defects-be-1", "", "Body."),
+		},
+		{
+			relPath: "lifecycle/defects/dev-defects-be-assigned.md",
+			content: "---\ntitle: \"BE-Assigned Defect\"\ntype: defect\nstatus: approved\nlineage: dev-defects-be-assigned\nassignees:\n  - role: backend-developer\n    who: agent\n---\nBody.\n",
+		},
+		{
+			relPath: "lifecycle/defects/dev-defects-qa-assigned.md",
+			content: "---\ntitle: \"QA-Assigned Defect\"\ntype: defect\nstatus: approved\nlineage: dev-defects-qa-assigned\nassignees:\n  - role: qa\n    who: agent\n---\nBody.\n",
+		},
+		{
+			relPath: "lifecycle/defects/dev-defects-noassignee.md",
+			content: "---\ntitle: \"Unassigned Defect\"\ntype: defect\nstatus: approved\nlineage: dev-defects-noassignee\n---\nBody.\n",
+		},
+		{
+			relPath: "lifecycle/defects/dev-defects-be-wrongstatus.md",
+			content: "---\ntitle: \"BE Defect Wrong Status\"\ntype: defect\nstatus: in-development\nlineage: dev-defects-be-wrongstatus\nassignees:\n  - role: backend-developer\n    who: agent\n---\nBody.\n",
+		},
+	}
+
+	env := newAgentTestEnvWithCfg(t, readyCountsCfgYAML, seeds)
+	env.login("admin@test.local", "admin-pass-123")
+
+	counts := getReadyCounts(t, env)
+
+	if got := countFor(counts, "backend-developer"); got != 2 {
+		t.Errorf("backend-developer: want 2 (1 plan-backend + 1 assigned defect), got %d", got)
+	}
+	if got := countFor(counts, "frontend-developer"); got != 0 {
+		t.Errorf("frontend-developer: want 0 (no plan-frontend, no defects assigned to frontend-developer), got %d", got)
+	}
+	if got := countFor(counts, "requirements-analyst"); got != 0 {
+		t.Errorf("requirements-analyst: want 0 (analyst is not a developer agent; assigned defects must not count), got %d", got)
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/agent"
@@ -178,10 +179,56 @@ func (s *Server) handleKillAgentRun(w http.ResponseWriter, r *http.Request) {
 // *during-run* status — the wrong column to count for a "ready" badge.
 const readyInputStatus = "approved"
 
+// hasDeveloperSourceType reports whether any of the given source types is a
+// plan-* type, identifying a developer agent that also picks up assigned
+// defects (matching the AgentLaunchModal's plan-* branch).
+func hasDeveloperSourceType(types []string) bool {
+	for _, t := range types {
+		if strings.HasPrefix(t, "plan-") {
+			return true
+		}
+	}
+	return false
+}
+
+// countAssignedDefects returns the number of approved defect artifacts whose
+// frontmatter assignees include at least one of the given agent roles. Mirrors
+// the JS-side filter in web/src/components/agent/AgentLaunchModal.vue so the
+// badge count agrees with the dialog's list size.
+func countAssignedDefects(idx *index.Index, agentRoles []string) (int, error) {
+	if len(agentRoles) == 0 {
+		return 0, nil
+	}
+	defects, _, err := idx.List(index.Filter{
+		Status:    readyInputStatus,
+		Type:      "defect",
+		Unlimited: true,
+	})
+	if err != nil {
+		return 0, err
+	}
+	want := make(map[string]struct{}, len(agentRoles))
+	for _, r := range agentRoles {
+		want[r] = struct{}{}
+	}
+	var n int
+	for _, d := range defects {
+		for _, a := range d.FM.Assignees {
+			if _, ok := want[a.Role]; ok {
+				n++
+				break
+			}
+		}
+	}
+	return n, nil
+}
+
 // handleGetReadyCounts returns per-agent counts of artifacts whose status is
 // the ready-for-pickup status ("approved"), filtered by each agent's
-// source_types when set. Matches the filter used by the AgentLaunchModal so
-// the badge agrees with the launch dialog.
+// source_types when set. For developer agents (any plan-* source type), the
+// count also includes approved defect artifacts whose assignees match the
+// agent's roles — matching the AgentLaunchModal's plan-* branch so the badge
+// agrees with the launch dialog.
 // GET /api/p/:project/agents/ready-counts
 func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
@@ -196,15 +243,15 @@ func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 		if ag.ActiveStatus == "" {
 			continue
 		}
+		var total int
 		if len(ag.SourceTypes) == 0 {
 			n, err := p.Idx.Count(index.Filter{Status: readyInputStatus})
 			if err != nil {
 				writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 				return
 			}
-			counts[ag.Name] = n
+			total = n
 		} else {
-			var total int
 			for _, t := range ag.SourceTypes {
 				n, err := p.Idx.Count(index.Filter{Status: readyInputStatus, Type: t})
 				if err != nil {
@@ -213,8 +260,17 @@ func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 				}
 				total += n
 			}
-			counts[ag.Name] = total
 		}
+		// Developer agents also pick up approved defects assigned to their role.
+		if hasDeveloperSourceType(ag.SourceTypes) {
+			n, err := countAssignedDefects(p.Idx, ag.Roles)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+				return
+			}
+			total += n
+		}
+		counts[ag.Name] = total
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"counts": counts})
 }
