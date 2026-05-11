@@ -39,16 +39,37 @@ function handleClick(agent: AgentSummary) {
   }
 }
 
+// sourceTypeToStage maps an artifact type (the value stored in
+// agent.source_types) to the lifecycle stage directory the artifact list view
+// filters on. Matches the standard lifecycle layout — keep in sync with
+// `stages:` in lifecycle/config.yaml.
+const sourceTypeToStage: Record<string, string> = {
+  idea: 'ideas',
+  ticket: 'requirements',
+  requirement: 'requirements',
+  'plan-backend': 'backend-plans',
+  'plan-frontend': 'frontend-plans',
+  'plan-test': 'test-plans',
+  'plan-dev': 'dev-plans',
+  test: 'tests',
+  defect: 'defects',
+  prototype: 'prototypes',
+  release: 'releases',
+  sprint: 'sprints',
+}
+
 function handleBadgeClick(event: MouseEvent, agent: AgentSummary) {
   event.stopPropagation()
   if (!agent.active_status) return
   const project = route.params.project as string
   // The badge counts artifacts that are READY for this agent (status="approved"),
-  // not artifacts already mid-run (status=active_status). Link to the same set
-  // so clicking the badge surfaces what the launch dialog would show.
+  // not artifacts already mid-run (status=active_status). Filter by stage so
+  // the linked list matches the natural per-role view, e.g.
+  //   /artifacts?status=approved&stage=test-plans
   const q = new URLSearchParams({ status: 'approved' })
   if (agent.source_types && agent.source_types.length > 0) {
-    q.set('type', agent.source_types[0])
+    const stage = sourceTypeToStage[agent.source_types[0]]
+    if (stage) q.set('stage', stage)
   }
   void router.push(`/p/${encodeURIComponent(project)}/artifacts?${q.toString()}`)
 }
