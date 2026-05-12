@@ -550,20 +550,6 @@ func (s *Server) handlePatchRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate the release name when non-null.
-	if req.Release != nil && *req.Release != "" {
-		store := release.NewStore(p.Idx.DB())
-		rel, err := store.GetByName(p.Entry.Name, *req.Release)
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-			return
-		}
-		if rel == nil {
-			writeJSON(w, http.StatusUnprocessableEntity, apiError("invalid_release", "release not found: "+*req.Release))
-			return
-		}
-	}
-
 	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
@@ -578,6 +564,20 @@ func (s *Server) handlePatchRelease(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
 		}
 		return
+	}
+
+	// Validate the release name when non-null.
+	if req.Release != nil && *req.Release != "" {
+		store := release.NewStore(p.Idx.DB())
+		rel, err := store.GetByName(p.Entry.Name, *req.Release)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
+		}
+		if rel == nil {
+			writeJSON(w, http.StatusUnprocessableEntity, apiError("invalid_release", "release not found: "+*req.Release))
+			return
+		}
 	}
 
 	info, err := os.Stat(absPath)
