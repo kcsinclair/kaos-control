@@ -27,6 +27,7 @@ type App struct {
 	Limits          LimitsConfig     `yaml:"limits"`
 	DataDir         string           `yaml:"data_dir"` // where app DBs live; defaults to projects_dir/../data
 	OllamaInstances []OllamaInstance `yaml:"ollama_instances,omitempty"`
+	Agent           AppAgentConfig   `yaml:"agent"`
 }
 
 type ServerConfig struct {
@@ -52,7 +53,22 @@ type LimitsConfig struct {
 	SchedulerRunRetentionDays  int `yaml:"scheduler_run_retention_days"`
 }
 
+// AppAgentConfig holds app-level agent runtime settings that apply to every project.
+type AppAgentConfig struct {
+	// InitEventTimeoutSeconds is the maximum time (in seconds) to wait for the
+	// Claude Code system/init event before declaring the run failed with reason
+	// "precheck_timeout". Default: 10.
+	InitEventTimeoutSeconds int `yaml:"init_event_timeout_seconds,omitempty"`
+
+	// RequireBypassPermissions controls whether agent runs are rejected when the
+	// Claude Code process reports a permission mode other than bypassPermissions.
+	// Defaults to true. Set to false to allow runs in any permission mode (escape
+	// hatch for environments where bypass mode cannot be enabled).
+	RequireBypassPermissions *bool `yaml:"require_bypass_permissions,omitempty"`
+}
+
 func defaultApp() App {
+	requireBypass := true
 	return App{
 		Server: ServerConfig{
 			Listen: ":8042",
@@ -65,6 +81,10 @@ func defaultApp() App {
 			MaxConcurrentAgents:        4,
 			MaxConcurrentSchedulerJobs: 2,
 			SchedulerRunRetentionDays:  90,
+		},
+		Agent: AppAgentConfig{
+			InitEventTimeoutSeconds:  10,
+			RequireBypassPermissions: &requireBypass,
 		},
 	}
 }
@@ -139,6 +159,15 @@ func validateApp(cfg *App) error {
 			return fmt.Errorf("server.tls.cert_file and server.tls.key_file are required when TLS is enabled")
 		}
 	}
+	// Agent precheck defaults.
+	if cfg.Agent.InitEventTimeoutSeconds <= 0 {
+		cfg.Agent.InitEventTimeoutSeconds = 10
+	}
+	if cfg.Agent.RequireBypassPermissions == nil {
+		v := true
+		cfg.Agent.RequireBypassPermissions = &v
+	}
+
 	seen := make(map[string]bool, len(cfg.OllamaInstances))
 	for i, inst := range cfg.OllamaInstances {
 		if inst.Name == "" {

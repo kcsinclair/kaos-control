@@ -306,6 +306,64 @@ func TestLoadAppDefaultDataDir(t *testing.T) {
 	}
 }
 
+// TestLoadApp_AgentPrecheckDefaults verifies that when no agent: section is
+// present in the app config file, the default values are applied correctly.
+// Run with: go test ./internal/config/ -run TestLoadApp_AgentPrecheckDefaults
+func TestLoadApp_AgentPrecheckDefaults(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+
+	// Write a minimal valid app config without an agent: section.
+	minimalCfg := "server:\n  listen: \":9999\"\nauth:\n  method: local\n  session_ttl: 24h\nprojects_dir: " + filepath.Join(dir, "projects") + "\ndata_dir: " + filepath.Join(dir, "data") + "\n"
+	if err := os.WriteFile(cfgPath, []byte(minimalCfg), 0o600); err != nil {
+		t.Fatalf("writing config: %v", err)
+	}
+
+	cfg, err := LoadApp(cfgPath)
+	if err != nil {
+		t.Fatalf("LoadApp: %v", err)
+	}
+
+	if cfg.Agent.InitEventTimeoutSeconds != 10 {
+		t.Errorf("InitEventTimeoutSeconds = %d, want 10", cfg.Agent.InitEventTimeoutSeconds)
+	}
+	if cfg.Agent.RequireBypassPermissions == nil {
+		t.Fatal("RequireBypassPermissions is nil, want non-nil pointer to true")
+	}
+	if !*cfg.Agent.RequireBypassPermissions {
+		t.Errorf("RequireBypassPermissions = false, want true")
+	}
+}
+
+// TestLoadApp_AgentPrecheckExplicitFalse verifies that explicitly setting
+// require_bypass_permissions: false in the config survives the load (pointer-bool
+// semantics: false != unset).
+// Run with: go test ./internal/config/ -run TestLoadApp_AgentPrecheckExplicitFalse
+func TestLoadApp_AgentPrecheckExplicitFalse(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+
+	cfgWithFalse := "server:\n  listen: \":9999\"\nauth:\n  method: local\n  session_ttl: 24h\nprojects_dir: " + filepath.Join(dir, "projects") + "\ndata_dir: " + filepath.Join(dir, "data") + "\nagent:\n  init_event_timeout_seconds: 30\n  require_bypass_permissions: false\n"
+	if err := os.WriteFile(cfgPath, []byte(cfgWithFalse), 0o600); err != nil {
+		t.Fatalf("writing config: %v", err)
+	}
+
+	cfg, err := LoadApp(cfgPath)
+	if err != nil {
+		t.Fatalf("LoadApp: %v", err)
+	}
+
+	if cfg.Agent.InitEventTimeoutSeconds != 30 {
+		t.Errorf("InitEventTimeoutSeconds = %d, want 30", cfg.Agent.InitEventTimeoutSeconds)
+	}
+	if cfg.Agent.RequireBypassPermissions == nil {
+		t.Fatal("RequireBypassPermissions is nil, want non-nil pointer to false")
+	}
+	if *cfg.Agent.RequireBypassPermissions {
+		t.Errorf("RequireBypassPermissions = true, want false (explicit override)")
+	}
+}
+
 // writeMinimalProjectConfig writes a lifecycle/config.yaml with a minimal valid
 // base configuration plus an optional extra YAML snippet (e.g. an ignore: line),
 // and returns the temp project root directory.
