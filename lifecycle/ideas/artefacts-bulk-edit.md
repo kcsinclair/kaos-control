@@ -16,6 +16,8 @@ release: KC-Release1
 
 # Bulk Edit Artifacts (Status, Priority, Release)
 
+Should this be bulk actions on tickets, e.g. add to work queue.
+
 From the artifacts screen, users need the ability to select multiple artifacts at once and apply shared changes to status, priority, and release assignment in a single action. This supports quick replanning sessions where teams need to triage or reorganise a set of artifacts without editing each one individually.
 
 The interaction flow is: select one or more artifacts via checkboxes, click a "Bulk Edit" button, and a modal appears with dropdown fields for status, priority, and release. Only fields the user explicitly changes are applied — unmodified dropdowns leave existing values intact. On save, all selected artifacts are updated atomically.
