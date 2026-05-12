@@ -35,6 +35,8 @@ var (
 	RolesDevopsOrAdmin = []string{RoleProductOwner, RoleDevops}
 	// RolesPriorityEditors may adjust artifact priority.
 	RolesPriorityEditors = []string{RoleProductOwner, RoleAnalyst}
+	// RolesReleaseEditors may assign or clear the release field on an artifact.
+	RolesReleaseEditors = []string{RoleProductOwner, RoleAnalyst}
 )
 
 // hasAnyRole reports whether userRoles contains at least one of the allowed roles.
