@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { api } from './client'
-import type { AgentSummary, AgentRunRow } from '@/types/api'
+import type { AgentSummary, AgentRunRow, RunResult } from '@/types/api'
 
 export function listAgents(project: string) {
   return api.get<{ agents: AgentSummary[] }>(`/p/${encodeURIComponent(project)}/agents`)
@@ -49,6 +49,21 @@ export function getReadyCounts(project: string) {
   return api.get<{ counts: Record<string, number> }>(
     `/p/${encodeURIComponent(project)}/agents/ready-counts`,
   )
+}
+
+export async function getRunResult(
+  project: string,
+  runId: string,
+): Promise<{ result: RunResult | null; reason?: string }> {
+  try {
+    const data = await api.get<{ result: RunResult }>(
+      `/p/${encodeURIComponent(project)}/agents/runs/${encodeURIComponent(runId)}/result`,
+    )
+    return { result: data.result ?? null }
+  } catch (e: unknown) {
+    const reason = e instanceof Error ? e.message : 'Unknown error'
+    return { result: null, reason }
+  }
 }
 
 export async function getRunLog(project: string, runId: string): Promise<string> {

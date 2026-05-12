@@ -290,3 +290,21 @@ export interface WsEvent {
 
 export const TERMINAL_STATUSES = ['done', 'rejected', 'abandoned'] as const
 export type TerminalStatus = typeof TERMINAL_STATUSES[number]
+
+export interface RunResultUsage {
+  input_tokens: number
+  cache_creation_input_tokens: number
+  cache_read_input_tokens: number
+  output_tokens: number
+}
+
+export interface RunResult {
+  subtype: string
+  total_cost_usd: number
+  duration_ms: number
+  duration_api_ms: number
+  num_turns: number
+  usage: RunResultUsage
+  permission_denials: unknown[]
+  session_id: string
+}
