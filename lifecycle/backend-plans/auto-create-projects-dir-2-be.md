@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Auto-Create Projects Directory on First Run"
 type: plan-backend
-status: in-development
+status: done
 lineage: auto-create-projects-dir
 parent: lifecycle/ideas/auto-create-projects-dir.md
 ---
