@@ -1,5 +1,5 @@
 ---
-title: "Dispatcher skips re-queued rate-limit jobs because artifact moved to active_status"
+title: Dispatcher skips re-queued rate-limit jobs because artifact moved to active_status
 type: defect
 status: approved
 lineage: agent-rate-limit-queue
@@ -7,6 +7,7 @@ parent: lifecycle/tests/agent-rate-limit-queue-6-test.md
 labels:
     - defect
     - release-blocker
+release: KC-Release1
 assignees:
     - role: backend-developer
       who: agent
