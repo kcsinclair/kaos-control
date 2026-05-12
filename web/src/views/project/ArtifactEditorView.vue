@@ -17,7 +17,10 @@ import MarkdownPreview from '@/components/artifact/MarkdownPreview.vue'
 import MarkdownEditor from '@/components/artifact/MarkdownEditor.vue'
 import LockBanner from '@/components/common/LockBanner.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
+import QueueWorkButton from '@/components/artifact/QueueWorkButton.vue'
 import { useGraphStore } from '@/stores/graph'
+import { useQueueStore } from '@/stores/queue'
+import { useAgentsStore } from '@/stores/agents'
 import type { ArtifactDetail, ArtifactFrontmatter, WsEvent } from '@/types/api'
 
 const route = useRoute()
@@ -25,6 +28,8 @@ const router = useRouter()
 const store = useArtifactsStore()
 const ui = useUiStore()
 const graphStore = useGraphStore()
+const queueStore = useQueueStore()
+const agentsStore = useAgentsStore()
 
 const project = computed(() => route.params.project as string)
 const artifactPath = computed(() => {
@@ -243,6 +248,9 @@ onMounted(() => {
   if (graphStore.rawEdges.length === 0) {
     graphStore.fetchGraph(project.value)
   }
+  // Ensure queue and agents are initialised so QueueWorkButton has data.
+  void queueStore.fetch()
+  if (!agentsStore.agents.length) void agentsStore.fetchAgents(project.value)
 })
 </script>
 
@@ -268,6 +276,7 @@ onMounted(() => {
             :disabled="runTestRunning"
             @click="runTest"
           >{{ runTestRunning ? 'Running…' : 'Run Test' }}</button>
+          <QueueWorkButton :artifact="artifact" :project="project" />
           <button class="btn-ghost" @click="showRunAgent = true">Run Agent</button>
           <button
             class="btn-primary"
