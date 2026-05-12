@@ -17,3 +17,5 @@ However, what is great for humans to put multiple ideas into a single request, a
 
 Idea: single concept, or related concepts per artefact.
 Epic: many concepts in a single artefact, probably related but may not be.
+
+Maybe this should be an Epic Idea, so you have a meta epic idea which will have wiki links to many smaller ideas, which will implemented in many releases.
