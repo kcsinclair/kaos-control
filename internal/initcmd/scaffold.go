@@ -21,6 +21,7 @@ var lifecycleDirs = []string{
 	"lifecycle/releases",
 	"lifecycle/sprints",
 	"lifecycle/defects",
+	"lifecycle/devops",
 	"tests",
 	"devops",
 }
