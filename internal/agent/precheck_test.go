@@ -5,6 +5,7 @@ package agent
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -325,6 +326,141 @@ func TestPrecheck_LogLineAppended(t *testing.T) {
 }
 
 // ----- integration: Manager precheck with AppAgentConfig ---------------------
+
+// TestPrecheck_PlanModeFails verifies that permissionMode=plan also fails the precheck.
+func TestPrecheck_PlanModeFails(t *testing.T) {
+	killCalled := false
+	state, mode := runPrecheck(
+		makeEventsCh(initEvent("plan")),
+		5*time.Second,
+		true,
+		"run-test-u4",
+		nil,
+		func() { killCalled = true },
+	)
+	if state != precheckFailedMode {
+		t.Errorf("state = %v, want precheckFailedMode", state)
+	}
+	if mode != "plan" {
+		t.Errorf("observedMode = %q, want \"plan\"", mode)
+	}
+	if !killCalled {
+		t.Error("kill was not called for plan permission mode")
+	}
+}
+
+// TestPrecheck_NonInitEventBeforeInit verifies that non-init events arriving before
+// the system/init event are forwarded (precheck stays pending) and the subsequent
+// init event is processed correctly.
+func TestPrecheck_NonInitEventBeforeInit(t *testing.T) {
+	assistantEv := ProgressEvent{
+		Raw:   `{"type":"assistant","message":{"role":"assistant","content":"hi"}}`,
+		Event: map[string]any{"type": "assistant"},
+	}
+
+	ch := make(chan ProgressEvent, 3)
+	ch <- assistantEv
+	ch <- initEvent("bypassPermissions")
+	close(ch)
+
+	killCalled := false
+	state, mode := runPrecheck(
+		ch,
+		5*time.Second,
+		true,
+		"run-test-u6",
+		nil,
+		func() { killCalled = true },
+	)
+	if state != precheckPassed {
+		t.Errorf("state = %v, want precheckPassed", state)
+	}
+	if mode != "bypassPermissions" {
+		t.Errorf("observedMode = %q, want \"bypassPermissions\"", mode)
+	}
+	if killCalled {
+		t.Error("kill should not be called when bypassPermissions follows a non-init event")
+	}
+}
+
+// TestPrecheck_SIGKILLEscalation verifies that defaultProcessKiller sends SIGTERM
+// first and then SIGKILL after 2 s when the process ignores SIGTERM.
+// The test requires python3 (available on macOS and most Linux CI systems);
+// it is skipped when python3 is not found or when -short is passed.
+func TestPrecheck_SIGKILLEscalation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("SIGKILL escalation test takes ~2 s")
+	}
+	python, err := exec.LookPath("python3")
+	if err != nil {
+		t.Skip("python3 not found; skipping SIGKILL escalation test")
+	}
+
+	// subprocess that masks SIGTERM so that only SIGKILL can terminate it.
+	// We sleep 0.5 s inside the python script before entering the sleep loop so
+	// that even on a very fast call to Kill, Python has had time to install the
+	// SIGTERM ignore handler before we send the signal.
+	cmd := exec.Command(python, "-c",
+		"import signal, time; time.sleep(0.5); signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(30)")
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("starting subprocess: %v", err)
+	}
+
+	// Allow the python process to start and install its SIGTERM handler.
+	time.Sleep(700 * time.Millisecond)
+
+	// Wrap in a claudeProcess so defaultProcessKiller uses the Signal+Kill path.
+	progress := make(chan ProgressEvent)
+	close(progress)
+	proc := &claudeProcess{cmd: cmd, progress: progress, stderr: newRingBuf(1024)}
+
+	start := time.Now()
+	defaultProcessKiller{}.Kill(proc)
+
+	exitCh := make(chan error, 1)
+	go func() { exitCh <- cmd.Wait() }()
+
+	select {
+	case <-exitCh:
+		elapsed := time.Since(start)
+		// SIGTERM was ignored; SIGKILL fires after 2 s.
+		if elapsed < 1500*time.Millisecond {
+			t.Errorf("process exited too quickly (%v): SIGTERM should have been ignored; SIGKILL fires at ~2 s", elapsed)
+		}
+		if elapsed > 6*time.Second {
+			t.Errorf("process took too long to exit (%v); SIGKILL should have fired within 2 s", elapsed)
+		}
+	case <-time.After(8 * time.Second):
+		_ = cmd.Process.Kill()
+		t.Fatal("process did not exit within 8 s after SIGKILL")
+	}
+}
+
+// TestPrecheck_ConfigDefaultTrue verifies that constructing an agent Manager from
+// an empty AppAgentConfig produces the documented defaults: RequireBypassPermissions=true
+// and InitEventTimeoutSeconds=10.
+func TestPrecheck_ConfigDefaultTrue(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "index.db")
+	idx, err := index.Open(dbPath, dir, nil)
+	if err != nil {
+		t.Fatalf("index.Open: %v", err)
+	}
+	defer idx.Close()
+
+	h := hub.New()
+	locks := lock.New(idx, h)
+
+	// Empty AppAgentConfig — all fields zero / nil.
+	m := New(nil, 4, idx, nil, h, locks, nil, dir, dir, nil, config.AppAgentConfig{})
+
+	if m.initEventTimeout != 10*time.Second {
+		t.Errorf("initEventTimeout = %v, want 10s (default)", m.initEventTimeout)
+	}
+	if !m.requireBypassPerms {
+		t.Error("requireBypassPerms = false, want true (default)")
+	}
+}
 
 // TestPrecheck_ConfigRoundTrip verifies that init_event_timeout_seconds from
 // AppAgentConfig is applied by the Manager. This test confirms:
