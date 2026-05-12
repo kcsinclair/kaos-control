@@ -1,7 +1,7 @@
 ---
 title: Global Agent Work Queue with Rate-Limit Auto-Pause
 type: idea
-status: approved
+status: planning
 lineage: agent-rate-limit-queue
 created: "2026-05-12T10:30:00+10:00"
 priority: high
