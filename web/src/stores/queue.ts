@@ -33,13 +33,16 @@ export const useQueueStore = defineStore('queue', () => {
       const p = e.payload as Record<string, unknown>
       switch (e.type) {
         case 'queue.added': {
-          // Server sends the new job; insert at the correct position.
+          // Server sends the full job record; upsert so that any optimistic
+          // placeholder inserted by enqueue() is replaced with authoritative data.
           const job = p as unknown as QueueJob
-          const existing = snapshot.value.pending.findIndex((j) => j.id === job.id)
-          if (existing === -1) {
+          const existingIdx = snapshot.value.pending.findIndex((j) => j.id === job.id)
+          if (existingIdx === -1) {
             snapshot.value.pending.push(job)
-            snapshot.value.pending.sort((a, b) => a.position - b.position)
+          } else {
+            snapshot.value.pending[existingIdx] = job
           }
+          snapshot.value.pending.sort((a, b) => a.position - b.position)
           break
         }
         case 'queue.started': {
@@ -124,8 +127,24 @@ export const useQueueStore = defineStore('queue', () => {
 
   async function enqueue(args: { project: string; artifact_path: string; agent: string }) {
     _subscribe()
-    await queueApi.enqueue(args)
-    // The WS event queue.added will update the snapshot; no need to refetch.
+    const result = await queueApi.enqueue(args)
+    // Optimistically insert the new job so the queued badge appears immediately,
+    // even before the queue.added WS event arrives.  The WS handler will upsert
+    // the same entry with full server data once the event comes in.
+    if (!snapshot.value.pending.find((j) => j.id === result.id)) {
+      snapshot.value.pending.push({
+        id: result.id,
+        project: args.project,
+        artifact_path: args.artifact_path,
+        agent: args.agent,
+        state: 'pending',
+        position: result.position,
+        attempts: 0,
+        enqueued_at: Math.floor(Date.now() / 1000),
+        enqueued_by: '',
+      })
+      snapshot.value.pending.sort((a, b) => a.position - b.position)
+    }
   }
 
   async function cancel(id: string) {
