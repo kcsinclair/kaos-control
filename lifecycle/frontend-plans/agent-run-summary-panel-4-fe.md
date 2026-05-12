@@ -1,9 +1,10 @@
 ---
-title: "Frontend Plan: Agent Run Summary Panel"
+title: 'Frontend Plan: Agent Run Summary Panel'
 type: plan-frontend
-status: approved
+status: draft
 lineage: agent-run-summary-panel
 parent: lifecycle/requirements/agent-run-summary-panel-2.md
+release: KC-Release1
 ---
 
 # Frontend Plan: Agent Run Summary Panel
