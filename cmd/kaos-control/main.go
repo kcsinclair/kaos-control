@@ -94,6 +94,7 @@ func run() error {
 		MaxConcurrentSchedulerJobs: appCfg.Limits.MaxConcurrentSchedulerJobs,
 		SchedulerRunRetentionDays:  appCfg.Limits.SchedulerRunRetentionDays,
 		OllamaInstances:            appCfg.OllamaInstances,
+		AgentCfg:                   appCfg.Agent,
 		// DevopsLogDir: store pipeline run logs at <appHome>/devops/<project>,
 		// e.g. ~/.kaos-control/devops/<project>. This is the directory that
 		// contains config.yaml, which is the app home directory.
