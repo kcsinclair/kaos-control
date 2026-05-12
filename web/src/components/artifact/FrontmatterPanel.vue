@@ -8,6 +8,7 @@ import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 import StatusDropdown from './StatusDropdown.vue'
 import PriorityDropdown from './PriorityDropdown.vue'
+import ReleaseDropdown from './ReleaseDropdown.vue'
 
 const props = defineProps<{
   artifact: ArtifactDetail
@@ -20,6 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   transitioned: [newStatus: string]
   priorityChanged: [newPriority: string]
+  releaseChanged: [newRelease: string | null]
   error: [message: string]
 }>()
 
@@ -43,10 +45,6 @@ function fmt(v: string | undefined): string {
   <aside class="fm-panel">
     <h3 class="fm-title">Details</h3>
     <dl class="fm-list">
-      <div class="fm-row">
-        <dt>Type</dt>
-        <dd>{{ fmt(artifact.type) }}</dd>
-      </div>
       <div class="fm-row">
         <dt>Status</dt>
         <dd>
@@ -78,6 +76,27 @@ function fmt(v: string | undefined): string {
             class="priority-badge-static"
           >{{ artifact.frontmatter?.priority || 'normal' }}</span>
         </dd>
+      </div>
+      <div class="fm-row">
+        <dt>Release</dt>
+        <dd>
+          <ReleaseDropdown
+            v-if="project && targetPath"
+            :project="project"
+            :path="targetPath"
+            :release="artifact.frontmatter?.release ?? null"
+            :readonly="readonly"
+            @changed="emit('releaseChanged', $event)"
+            @error="emit('error', $event)"
+          />
+          <span v-else class="release-badge-static" :class="{ 'release-badge-static--none': !artifact.frontmatter?.release }">
+            {{ artifact.frontmatter?.release ?? 'None' }}
+          </span>
+        </dd>
+      </div>
+      <div class="fm-row">
+        <dt>Type</dt>
+        <dd>{{ fmt(artifact.type) }}</dd>
       </div>
       <div class="fm-row">
         <dt>Stage</dt>
@@ -117,10 +136,6 @@ function fmt(v: string | undefined): string {
         <dd class="mono-list">
           <div v-for="b in artifact.frontmatter.blocks" :key="b">{{ b }}</div>
         </dd>
-      </div>
-      <div class="fm-row" v-if="artifact.frontmatter.release">
-        <dt>Release</dt>
-        <dd>{{ artifact.frontmatter.release }}</dd>
       </div>
       <div class="fm-row" v-if="artifact.frontmatter.sprint">
         <dt>Sprint</dt>
@@ -252,6 +267,22 @@ function fmt(v: string | undefined): string {
   .badge[data-status="abandoned"]      { background: #1f2937; color: #9ca3af; }
   .badge[data-status="in-progress"]    { background: #422006; color: #fcd34d; }
 }
+/* Static release badge shown when project/targetPath are absent */
+.release-badge-static {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--color-border);
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--color-surface-raised, rgba(0, 0, 0, 0.04));
+  color: var(--color-text);
+}
+.release-badge-static--none {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
 /* Static priority badge shown when project/targetPath are absent */
 .priority-badge-static {
   display: inline-block;
