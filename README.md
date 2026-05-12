@@ -19,6 +19,51 @@ A single-binary lifecycle management tool that turns ideas into shipped releases
 - **Backend**: Go 1.25, `chi`, `goldmark`, `modernc.org/sqlite` (pure-Go), `go-git`, `coder/websocket`, `fsnotify`.
 - **Frontend**: Vue 3, Vite 6, TypeScript, Pinia, `markdown-it`, `3d-force-graph` + three.js, Cytoscape.js + fcose, CodeMirror 6.
 
+## Note on Claude Permissions
+
+kaos-control runs `claude` as a headless subprocess — there is no human
+at the terminal to approve individual tool calls. The agent runner
+therefore needs Claude Code to be in **bypass-permissions mode**, where
+file writes, shell commands, and other tool calls happen without
+prompting. Without this, every agent run will stall with a message like
+*"I need write permission to create the file"* and produce no work.
+
+**Before your first agent run, on every machine that runs kaos-control:**
+
+1. **Run `claude` interactively at least once and accept the
+   bypass-permissions warning.** This is a one-time step that
+   Anthropic requires per machine and per user — until you do it,
+   the `--dangerously-skip-permissions` flag kaos-control passes is
+   silently ignored.
+
+   ```sh
+   claude
+   ```
+
+   At the first prompt, type any short instruction (e.g. `hello`).
+   Claude will show a one-time warning about bypass mode and ask you
+   to accept. Accept it. You can quit straight after.
+
+2. **Check no settings file is overriding it.** If you have a
+   `~/.claude/settings.json` (or a project-local `.claude/settings.json`)
+   with a `permissions.defaultMode` other than `bypassPermissions`, that
+   overrides the CLI flag. Either remove the key or set it to
+   `bypassPermissions`.
+
+3. **Smoke test.** From any directory, run:
+
+   ```sh
+   claude --dangerously-skip-permissions -p "list the files here" --output-format stream-json | head -20
+   ```
+
+   If you see a `Bash` tool call complete successfully (not appear in a
+   `permission_denials` block), you're set.
+
+> **Coming in KC-Release1**: kaos-control will detect this condition at
+> agent-run start and fail the run within seconds with a clear,
+> actionable error instead of silently producing nothing. Tracked under
+> the `agent-permission-precheck` lineage in this project's lifecycle.
+
 ## Getting started building from source
 
 ### Prerequisites
