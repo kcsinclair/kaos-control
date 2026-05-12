@@ -75,9 +75,6 @@ func patchRelease(env *testEnv, artifactPath string, release *string) *http.Resp
 	return env.doRequest("PATCH", "/api/p/testproject/artifacts/"+artifactPath+"/release", body)
 }
 
-// strPtr is a convenience helper to obtain a *string from a string literal.
-func strPtr(s string) *string { return &s }
-
 // ── Milestone 1: PATCH /artifacts/*/release ───────────────────────────────────
 
 // TestReleasePatch_SetRelease verifies the happy path: create an artifact with
