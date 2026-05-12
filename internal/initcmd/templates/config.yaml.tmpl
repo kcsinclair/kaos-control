@@ -41,7 +41,16 @@ required_plans:
     - plan-backend
     - plan-frontend
     - plan-test
-
+{{if .OwnerEmail}}
+users:
+  - email: {{.OwnerEmail}}
+    roles:
+      - product-owner
+      - analyst
+      - reviewer
+      - approver
+      - devops
+{{end}}
 dashboard:
   tracked_types:
     - requirement

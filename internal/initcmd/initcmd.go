@@ -14,6 +14,9 @@ import (
 type TemplateData struct {
 	ProjectName string
 	Language    string
+	// OwnerEmail, when non-empty, is written into lifecycle/config.yaml as the
+	// initial owner user with the standard owner role set.
+	OwnerEmail string
 }
 
 // ForceFlags controls which existing seed files may be overwritten.
