@@ -114,6 +114,12 @@ export interface AgentRunRow {
   exit_code?: number
   stderr_tail: string
   artifacts_produced: string[]
+  /** Stable reason code on failure; null on success / pending. */
+  failure_reason?: 'permission_mode_default' | 'precheck_timeout' | string | null
+  /** Set when failure_reason === 'permission_mode_default'. */
+  observed_permission_mode?: string | null
+  /** Set on precheck-related failures; up to ~5 short remediation lines. */
+  remediation?: string[] | null
 }
 
 export interface ArtifactFilter {
