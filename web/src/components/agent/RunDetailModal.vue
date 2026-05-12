@@ -5,6 +5,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as agentsApi from '@/api/agents'
 import type { AgentRunRow, RunResult } from '@/types/api'
 import RunSummaryCard from './RunSummaryCard.vue'
+import RawLogModal from './RawLogModal.vue'
 
 const props = defineProps<{
   project: string
@@ -21,6 +22,7 @@ const runResult = ref<RunResult | null>(null)
 const resultLoading = ref(false)
 
 const TERMINAL_RUN_STATUSES = new Set(['done', 'failed', 'killed', 'killed-timeout'])
+const showRawLog = ref(false)
 
 // Focus management: save element that had focus before the modal opened.
 let previousFocus: HTMLElement | null = null
@@ -183,10 +185,23 @@ function handleOverlayClick(e: MouseEvent) {
             v-if="!run.stderr_tail && !run.artifacts_produced?.length"
             class="rdm-state"
           >No output recorded.</div>
+
+          <!-- View Full Log button -->
+          <div class="rdm-log-action">
+            <button class="rdm-btn-log" @click="showRawLog = true">View Full Log</button>
+          </div>
         </div>
       </div>
     </div>
   </Teleport>
+
+  <!-- Raw log modal — uses its own Teleport internally -->
+  <RawLogModal
+    v-if="showRawLog"
+    :project="project"
+    :run-id="runId"
+    @close="showRawLog = false"
+  />
 </template>
 
 <style scoped>
@@ -320,4 +335,23 @@ function handleOverlayClick(e: MouseEvent) {
 .status-chip[data-status="failed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
 .status-chip[data-status="killed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
 .status-chip[data-status="killed-timeout"] { background: var(--badge-in-progress-bg);  color: var(--badge-in-progress-text); }
+
+.rdm-log-action {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-2);
+}
+.rdm-btn-log {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.rdm-btn-log:hover {
+  background: var(--color-border);
+}
 </style>
