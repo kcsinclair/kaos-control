@@ -1,7 +1,7 @@
 ---
 title: Inline Release Display and Editing on Artifact View
 type: requirement
-status: planning
+status: done
 lineage: inline-release-display-edit
 created: "2026-05-12T00:00:00+10:00"
 priority: normal
