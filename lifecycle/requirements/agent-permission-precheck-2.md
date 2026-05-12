@@ -1,7 +1,7 @@
 ---
 title: Claude Code Permission-Mode Precheck and Fail-Fast
 type: requirement
-status: draft
+status: done
 lineage: agent-permission-precheck
 parent: lifecycle/ideas/agent-permission-precheck.md
 created: "2026-05-12T15:35:00+10:00"
