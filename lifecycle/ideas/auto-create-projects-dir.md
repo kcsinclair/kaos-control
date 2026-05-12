@@ -4,12 +4,13 @@ type: idea
 status: draft
 lineage: auto-create-projects-dir
 created: "2026-05-12T12:25:51+10:00"
-priority: normal
+priority: high
 labels:
     - feature
     - onboarding
     - operability
     - go
+release: KC-Release1
 ---
 
 # Auto-Create Projects Directory on First Run
