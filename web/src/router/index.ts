@@ -19,6 +19,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/queue',
+      name: 'queue',
+      component: () => import('@/views/QueueView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/p/:project',
       component: () => import('@/views/project/WorkspaceView.vue'),
       meta: { requiresAuth: true },
