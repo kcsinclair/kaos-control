@@ -11,6 +11,7 @@ labels:
     - frontend
     - vue
     - feature
+release: KC-Release1
 ---
 
 # Agent Run Summary Panel with Token Efficiency Metrics
