@@ -112,3 +112,32 @@ export function closeProjectWs(project: string): void {
     _clients.delete(project)
   }
 }
+
+// Sentinel key for the app-level WS (not project-scoped).
+const APP_WS_KEY = '__app__'
+
+// getAppWs returns the singleton WsClient connected to /api/ws.
+// This endpoint receives app-level events such as queue.* broadcasts.
+export function getAppWs(): WsClient {
+  if (!_clients.has(APP_WS_KEY)) {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const url = `${proto}//${location.host}/api/ws`
+    const client = new WsClient(url)
+
+    client.onAuthFailure = async () => {
+      const [{ useAuthStore }, { default: router }] = await Promise.all([
+        import('@/stores/auth'),
+        import('@/router'),
+      ])
+      useAuthStore().clearSession()
+      _clients.delete(APP_WS_KEY)
+      if (router.currentRoute.value.path !== '/login') {
+        await router.push({ path: '/login', query: { expired: '1' } })
+      }
+    }
+
+    client.connect()
+    _clients.set(APP_WS_KEY, client)
+  }
+  return _clients.get(APP_WS_KEY)!
+}

@@ -237,6 +237,13 @@ export type WsEventType =
   | 'release.created'
   | 'release.updated'
   | 'release.deleted'
+  | 'queue.added'
+  | 'queue.started'
+  | 'queue.finished'
+  | 'queue.skipped'
+  | 'queue.cancelled'
+  | 'queue.paused'
+  | 'queue.resumed'
 
 export interface ScheduleSpec {
   type: 'cron' | 'interval' | 'once'
