@@ -1,7 +1,7 @@
 ---
 title: Detect & Fail-Fast When Claude Code Ignores Bypass-Permissions Flag
 type: idea
-status: draft
+status: in-development
 lineage: agent-permission-precheck
 created: "2026-05-12T15:30:00+10:00"
 priority: high
