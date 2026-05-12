@@ -19,7 +19,7 @@ A single-binary lifecycle management tool that turns ideas into shipped releases
 - **Backend**: Go 1.25, `chi`, `goldmark`, `modernc.org/sqlite` (pure-Go), `go-git`, `coder/websocket`, `fsnotify`.
 - **Frontend**: Vue 3, Vite 6, TypeScript, Pinia, `markdown-it`, `3d-force-graph` + three.js, Cytoscape.js + fcose, CodeMirror 6.
 
-## Getting started
+## Getting started building from source
 
 ### Prerequisites
 
@@ -108,13 +108,9 @@ data_dir: /Users/keith/.kaos-control/data
 
 The first user can be created without authentication (bootstrap). Use the in-app sign-up form, or:
 
-```sh
-curl -X POST http://localhost:8042/api/admin/users \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"you@example.com","display_name":"You","password":"choose-a-strong-password"}'
 ```
-
-After the first account exists, this endpoint requires authentication.
+echo STRONGPASSWORD | ./dist/kaos-control auth create-user -admin -email YOUR_EMAIL -name "YOU NAME" -password-stdin
+```
 
 ### 3. Bootstrap a project
 
@@ -122,7 +118,7 @@ The fastest path is the CLI scaffolder:
 
 ```sh
 cd /path/to/your/project        # any directory; an existing git repo or a fresh one
-kaos-control init               # creates lifecycle/, lifecycle/config.yaml, CLAUDE.md
+/path/to/dist/kaos-control init -owner-email YOUR_EMAIL  # creates lifecycle/, lifecycle/config.yaml, CLAUDE.md
 ```
 
 `kaos-control init` creates the standard `lifecycle/` directory tree (`ideas/`, `requirements/`, `backend-plans/`, `frontend-plans/`, `test-plans/`, `tests/`, `defects/`, `releases/`, `sprints/`, `prototypes/`), a skeleton `lifecycle/config.yaml` with the standard role and agent definitions, and a `CLAUDE.md` to guide agent runs in this project.
