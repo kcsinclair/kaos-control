@@ -1,12 +1,13 @@
 ---
-title: "patch_release_test.go redeclares strPtr — integration test build broken"
+title: patch_release_test.go redeclares strPtr — integration test build broken
 type: defect
-status: draft
+status: approved
 lineage: inline-release-display-edit
 parent: lifecycle/tests/inline-release-display-edit-6-test.md
 labels:
     - defect
     - release-blocker
+release: KC-Release1
 assignees:
     - role: test-developer
       who: agent
