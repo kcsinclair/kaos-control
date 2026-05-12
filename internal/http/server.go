@@ -196,6 +196,10 @@ func (s *Server) buildRouter() chi.Router {
 					s.handlePatchPriority(w, r)
 					return
 				}
+				if strings.HasSuffix(param, "/release") {
+					s.handlePatchRelease(w, r)
+					return
+				}
 				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
 			})
 
