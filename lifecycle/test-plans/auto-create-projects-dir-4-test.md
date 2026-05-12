@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Auto-Create Projects Directory on First Run'
 type: plan-test
-status: approved
+status: in-development
 lineage: auto-create-projects-dir
 parent: lifecycle/ideas/auto-create-projects-dir.md
 ---
