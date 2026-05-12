@@ -1,9 +1,10 @@
 ---
-title: "Test Plan: Agent Run Summary Panel"
+title: 'Test Plan: Agent Run Summary Panel'
 type: plan-test
-status: draft
+status: approved
 lineage: agent-run-summary-panel
 parent: lifecycle/requirements/agent-run-summary-panel-2.md
+release: KC-Release1
 ---
 
 # Test Plan: Agent Run Summary Panel
