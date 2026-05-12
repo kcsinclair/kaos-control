@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { useThemeStore } from '@/stores/theme'
 import { useAgentsStore } from '@/stores/agents'
+import { useQueueStore } from '@/stores/queue'
 import { ApiError } from '@/api/client'
 
 const router = useRouter()
@@ -15,9 +16,18 @@ const auth = useAuthStore()
 const ui = useUiStore()
 const theme = useThemeStore()
 const agentsStore = useAgentsStore()
+const queueStore = useQueueStore()
 
 const project = computed(() => route.params.project as string | undefined)
 const activeCount = computed(() => agentsStore.activeRuns.length)
+const queueBadgeTooltip = computed(() => {
+  if (queueStore.isPaused) {
+    const until = queueStore.pausedUntilDate
+    return until ? `Queue paused, resumes ${until.toLocaleString()}` : 'Queue paused'
+  }
+  const n = queueStore.pendingCount
+  return `Queue: ${n} pending`
+})
 
 async function handleLogout() {
   try {
@@ -37,6 +47,19 @@ async function handleLogout() {
       <RouterLink to="/projects" class="brand-link">kaos-control</RouterLink>
     </div>
     <div class="header-actions">
+      <!-- Queue badge: show when there are pending jobs OR the queue is paused -->
+      <RouterLink
+        v-if="auth.isAuthenticated && (queueStore.pendingCount > 0 || queueStore.isPaused)"
+        to="/queue"
+        class="header-queue-badge"
+        :class="{ 'header-queue-badge--paused': queueStore.isPaused }"
+        :aria-label="queueBadgeTooltip"
+        :title="queueBadgeTooltip"
+      >
+        <span v-if="queueStore.isPaused" class="queue-pause-icon">⏸</span>
+        <span v-else class="queue-count">{{ queueStore.pendingCount }}</span>
+        <span class="queue-label"> pending</span>
+      </RouterLink>
       <RouterLink
         v-if="project && activeCount > 0"
         :to="`/p/${project}/agents`"
@@ -134,6 +157,41 @@ async function handleLogout() {
   border-color: var(--color-sidebar-text);
   background: rgba(255,255,255,0.08);
 }
+.header-queue-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.header-queue-badge:hover {
+  color: #fff;
+  border-color: #fbbf24;
+  background: rgba(245, 158, 11, 0.25);
+}
+.header-queue-badge--paused {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+.header-queue-badge--paused:hover {
+  border-color: #f87171;
+  background: rgba(239, 68, 68, 0.25);
+  color: #fff;
+}
+.queue-pause-icon { font-size: 0.9em; }
+.queue-count { font-weight: 600; }
+@media (max-width: 768px) {
+  .queue-label { display: none; }
+}
+
 .header-run-indicator {
   display: flex;
   align-items: center;
