@@ -19,6 +19,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
+	"github.com/kaos-control/kaos-control/internal/release"
 	"github.com/kaos-control/kaos-control/internal/sandbox"
 	"gopkg.in/yaml.v3"
 )
@@ -498,6 +499,115 @@ func (s *Server) handlePatchPriority(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.FM.Priority = req.Priority
+
+	content, err := buildMarkdown(a.FM, a.Body)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("marshal_error", err.Error()))
+		return
+	}
+
+	if err := os.WriteFile(absPath, []byte(content), 0o644); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	if err := p.Idx.IndexFile(absPath); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("index_error", err.Error()))
+		return
+	}
+
+	p.Hub.Broadcast(hub.Event{
+		Type:    "artifact.indexed",
+		Payload: map[string]string{"path": relPath, "action": "updated"},
+	})
+
+	row, _ := p.Idx.Get(relPath)
+	writeJSON(w, http.StatusOK, map[string]any{"artifact": row})
+}
+
+// handlePatchRelease handles PATCH /api/p/:project/artifacts/*path/release
+// It updates only the release field in the artifact's YAML frontmatter.
+func (s *Server) handlePatchRelease(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	if !requireRole(w, r, p, RolesReleaseEditors...) {
+		return
+	}
+	user := userFromCtx(r.Context())
+
+	rawParam := chi.URLParam(r, "*")
+	relPath := strings.TrimSuffix(rawParam, "/release")
+
+	var req struct {
+		Release *string `json:"release"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
+		return
+	}
+
+	// Validate the release name when non-null.
+	if req.Release != nil && *req.Release != "" {
+		store := release.NewStore(p.Idx.DB())
+		rel, err := store.GetByName(p.Entry.Name, *req.Release)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
+		}
+		if rel == nil {
+			writeJSON(w, http.StatusUnprocessableEntity, apiError("invalid_release", "release not found: "+*req.Release))
+			return
+		}
+	}
+
+	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+		return
+	}
+
+	raw, err := os.ReadFile(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "artifact not found"))
+		} else {
+			writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		}
+		return
+	}
+
+	info, err := os.Stat(absPath)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	a := artifact.Parse(raw, relPath, info.ModTime())
+
+	// Lineage lock check: if another user holds the lock, reject with 423 Locked.
+	if p.Locks != nil && a.FM.Lineage != "" {
+		if lockRow, lerr := p.Locks.Get(a.FM.Lineage); lerr == nil && lockRow != nil && lockRow.Holder != user.Email {
+			writeJSON(w, http.StatusLocked, map[string]any{
+				"error": map[string]any{
+					"code":    "locked",
+					"message": "artifact lineage is locked by another user",
+				},
+				"lock": lockRow,
+			})
+			return
+		}
+	}
+
+	// Set or clear the release field. Empty string clears it (omitempty in YAML).
+	if req.Release == nil {
+		a.FM.Release = ""
+	} else {
+		a.FM.Release = *req.Release
+	}
 
 	content, err := buildMarkdown(a.FM, a.Body)
 	if err != nil {
