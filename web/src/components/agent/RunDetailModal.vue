@@ -207,7 +207,12 @@ function handleOverlayClick(e: MouseEvent) {
 
           <!-- View Full Log button -->
           <div class="rdm-log-action">
-            <button class="rdm-btn-log" @click="showRawLog = true">View Full Log</button>
+            <button
+              class="rdm-btn-log"
+              :disabled="run.status === 'running'"
+              :title="run.status === 'running' ? 'Log not yet available while run is in progress' : 'View the full raw log'"
+              @click="showRawLog = true"
+            >View Full Log</button>
           </div>
         </div>
       </div>
@@ -370,7 +375,11 @@ function handleOverlayClick(e: MouseEvent) {
   color: var(--color-text);
   cursor: pointer;
 }
-.rdm-btn-log:hover {
+.rdm-btn-log:hover:not(:disabled) {
   background: var(--color-border);
+}
+.rdm-btn-log:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 </style>
