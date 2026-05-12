@@ -1,7 +1,7 @@
 ---
 title: Agent Run Summary Panel with Token Efficiency Metrics
 type: requirement
-status: draft
+status: approved
 lineage: agent-run-summary-panel
 parent: lifecycle/ideas/agent-run-summary-panel.md
 labels:
@@ -10,6 +10,9 @@ labels:
     - frontend
     - vue
     - feature
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Agent Run Summary Panel with Token Efficiency Metrics
@@ -108,8 +111,16 @@ When an agent run completes, the UI updates the run row status but does not surf
 - [ ] Running runs do not show a summary section.
 - [ ] Token counts and cost match the values in the raw `type:result` JSON line (manual spot-check against log file).
 
-## Open Questions
+## Resolved Questions
 
 - Should the summary card also display `permission_denials` from the result line, or is that out of scope for this feature?
+
+> yes, that is a great idea, any errors or issues should displayed.  We should allow for conditions we may not know.
+
 - Should the per-model breakdown (`modelUsage.<model>`) be shown when a run uses mixed models (e.g. Opus + Sonnet), or is the aggregate sufficient for v1?
+
+> These are single model jobs aggregate works for v1
+
 - Is the existing `RunDetailModal.vue` the preferred location for the summary, or should it live in the inline expansion row in `AgentsRunsView.vue`? (Current idea text implies the inline expansion area.)
+
+> Lets go with the existing RunDetailModal.
