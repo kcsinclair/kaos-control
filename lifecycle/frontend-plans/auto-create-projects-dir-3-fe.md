@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Auto-Create Projects Directory on First Run"
 type: plan-frontend
-status: draft
+status: approved
 lineage: auto-create-projects-dir
 parent: lifecycle/ideas/auto-create-projects-dir.md
 ---
