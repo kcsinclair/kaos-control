@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Agent Run Summary Panel"
 type: plan-frontend
-status: draft
+status: approved
 lineage: agent-run-summary-panel
 parent: lifecycle/requirements/agent-run-summary-panel-2.md
 ---
