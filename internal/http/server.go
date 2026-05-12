@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
+	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/project"
 	"github.com/kaos-control/kaos-control/internal/queue"
 )
@@ -33,6 +34,7 @@ type Server struct {
 	httpSrv  *http.Server
 	projects map[string]*project.Project
 	queue    *queue.Dispatcher // nil when queue not configured
+	appHub   *hub.Hub          // app-level hub for queue.* broadcast; nil if unconfigured
 
 	// App-level config mutation (Ollama instance CRUD).
 	appCfgMu   sync.RWMutex
@@ -57,6 +59,9 @@ type ServerConfig struct {
 	// Queue is the app-level queue dispatcher. May be nil when the queue is
 	// not configured (e.g. in minimal test environments).
 	Queue *queue.Dispatcher
+	// AppHub is the app-level WebSocket hub used by the /api/ws endpoint
+	// to broadcast queue-level events (queue.added, queue.paused, etc.).
+	AppHub *hub.Hub
 }
 
 // allowedWSOrigins returns the set of hostnames that are permitted as the
@@ -83,6 +88,7 @@ func New(cfg ServerConfig, projects map[string]*project.Project) *Server {
 		cfg:        cfg,
 		projects:   projects,
 		queue:      cfg.Queue,
+		appHub:     cfg.AppHub,
 		appCfg:     cfg.AppCfg,
 		appCfgPath: cfg.AppCfgPath,
 	}
@@ -121,6 +127,9 @@ func (s *Server) buildRouter() chi.Router {
 
 		// Project registry
 		r.Get("/projects", s.handleListProjects)
+
+		// App-level WebSocket (queue events, etc.)
+		r.Get("/ws", s.handleAppWebSocket)
 
 		// Queue management (app-level, not project-scoped)
 		r.Post("/queue", s.handleEnqueue)

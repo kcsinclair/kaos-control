@@ -69,3 +69,57 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+// handleAppWebSocket handles GET /api/ws
+// Upgrades to WebSocket and forwards app-level hub events (queue.*, etc.)
+// to the client until disconnected.
+func (s *Server) handleAppWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		OriginPatterns: s.allowedWSOrigins(),
+	})
+	if err != nil {
+		slog.Error("app-ws: accept failed", "err", err)
+		return
+	}
+	defer conn.CloseNow()
+
+	if userFromCtx(r.Context()) == nil {
+		conn.Close(4401, "unauthorized")
+		return
+	}
+
+	if s.appHub == nil {
+		conn.Close(websocket.StatusNormalClosure, "queue not configured")
+		return
+	}
+
+	ctx := r.Context()
+	ch := make(chan []byte, 64)
+	s.appHub.Register(ch)
+	defer s.appHub.Unregister(ch)
+
+	go func() {
+		for {
+			var msg map[string]any
+			if err := wsjson.Read(ctx, conn, &msg); err != nil {
+				return
+			}
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			conn.Close(websocket.StatusNormalClosure, "")
+			return
+		case data, ok := <-ch:
+			if !ok {
+				conn.Close(websocket.StatusNormalClosure, "")
+				return
+			}
+			if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
+				return
+			}
+		}
+	}
+}

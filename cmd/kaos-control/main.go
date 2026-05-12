@@ -199,6 +199,7 @@ func run() error {
 		AppCfgPath: cfgPath,
 		PublicHost: publicHost,
 		Queue:      queueDispatcher,
+		AppHub:     appHub,
 	}, projects)
 
 	return srv.ListenAndServe(ctx)
