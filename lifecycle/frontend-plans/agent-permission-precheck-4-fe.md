@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Surface Permission-Mode Precheck Failures in Agent Runs View"
 type: plan-frontend
-status: in-development
+status: done
 lineage: agent-permission-precheck
 parent: lifecycle/requirements/agent-permission-precheck-2.md
 created: "2026-05-12T15:45:00+10:00"
