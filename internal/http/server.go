@@ -122,6 +122,13 @@ func (s *Server) buildRouter() chi.Router {
 		// Project registry
 		r.Get("/projects", s.handleListProjects)
 
+		// Queue management (app-level, not project-scoped)
+		r.Post("/queue", s.handleEnqueue)
+		r.Get("/queue", s.handleListQueue)
+		r.Delete("/queue/{id}", s.handleCancelQueue)
+		r.Post("/queue/pause", s.handlePauseQueue)
+		r.Post("/queue/resume", s.handleResumeQueue)
+
 		// Ollama instance management (app-level, not project-scoped)
 		r.Route("/ollama/instances", func(r chi.Router) {
 			r.Get("/", s.handleListOllamaInstances)

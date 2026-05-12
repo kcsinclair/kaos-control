@@ -400,6 +400,70 @@ func (d *Dispatcher) handleRateLimit(job *Job, rawText string) {
 		"paused_until", pausedUntil.Format(time.RFC3339))
 }
 
+// ---- public store-proxy methods (used by HTTP handlers) ----
+
+// Enqueue adds a job to the queue, delegating to the store.
+func (d *Dispatcher) Enqueue(j Job) error { return d.store.Enqueue(j) }
+
+// GetByID returns a single job by ID.
+func (d *Dispatcher) GetByID(id string) (*Job, error) { return d.store.GetByID(id) }
+
+// FindActiveByPath returns the active pending/running job for a project+path.
+func (d *Dispatcher) FindActiveByPath(project, path string) (*Job, error) {
+	return d.store.FindActiveByPath(project, path)
+}
+
+// Cancel cancels a pending job (returns ErrCannotCancelRunning for running jobs).
+func (d *Dispatcher) Cancel(id string) error { return d.store.Cancel(id) }
+
+// StateSnapshot assembles the GET /api/queue response payload.
+func (d *Dispatcher) StateSnapshot() (*queueSnapshot, error) {
+	running, err := d.store.ListByState(StateRunning)
+	if err != nil {
+		return nil, err
+	}
+	pending, err := d.store.ListByState(StatePending)
+	if err != nil {
+		return nil, err
+	}
+	recent, err := d.store.ListRecent(10)
+	if err != nil {
+		return nil, err
+	}
+	paused, until, reason, err := d.store.GetPauseState()
+	if err != nil {
+		return nil, err
+	}
+
+	var runningJob *Job
+	if len(running) > 0 {
+		runningJob = running[0]
+	}
+
+	snap := &queueSnapshot{
+		Running:     runningJob,
+		Pending:     pending,
+		Recent:      recent,
+		Paused:      paused,
+		PauseReason: reason,
+	}
+	if !until.IsZero() {
+		s := until.UTC().Format(time.RFC3339)
+		snap.PausedUntil = &s
+	}
+	return snap, nil
+}
+
+// queueSnapshot is the structured response for GET /api/queue.
+type queueSnapshot struct {
+	Running     *Job    `json:"running"`
+	Pending     []*Job  `json:"pending"`
+	Recent      []*Job  `json:"recent"`
+	Paused      bool    `json:"paused"`
+	PausedUntil *string `json:"paused_until"`
+	PauseReason string  `json:"pause_reason"`
+}
+
 // ---- broadcast helpers ----
 
 func (d *Dispatcher) broadcast(eventType string, payload map[string]any) {
