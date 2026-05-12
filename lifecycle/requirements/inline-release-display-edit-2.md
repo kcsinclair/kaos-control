@@ -1,9 +1,9 @@
 ---
 title: Inline Release Display and Editing on Artifact View
 type: requirement
-status: blocked
+status: approved
 lineage: inline-release-display-edit
-created: "2026-05-12"
+created: "2026-05-12T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/inline-release-display-edit.md
 labels:
@@ -102,6 +102,8 @@ Replace the static release `<dd>` text in `FrontmatterPanel.vue` with `<ReleaseD
 - [ ] `go vet ./...` and `go build ./...` pass with no new errors
 - [ ] Related artifacts: [[inline-release-display-edit]]
 
-## Open Questions
+## Resolved Questions
 
 - Should the release dropdown show release status (e.g., open/closed) or dates alongside the name, or just the release name? Currently the `listReleases` API returns full Release objects with `status`, `start_date`, and `end_date` — we could surface some of this context.
+
+> Yes, just display the status for now in brackets.
