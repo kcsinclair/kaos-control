@@ -275,6 +275,54 @@ func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"counts": counts})
 }
 
+// handleGetAgentRunResult reads the run log, parses the type:result JSON line,
+// and returns the structured summary.
+// GET /api/p/:project/agents/runs/{run_id}/result
+func (s *Server) handleGetAgentRunResult(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p.Agents == nil {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "agents not configured"))
+		return
+	}
+	runID := chi.URLParam(r, "run_id")
+	run, err := p.Agents.GetRun(runID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+	if run == nil {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "run not found"))
+		return
+	}
+	if run.Status == "running" {
+		writeJSON(w, http.StatusConflict, apiError("run_in_progress", "run is still in progress"))
+		return
+	}
+
+	logPath := p.Agents.LogPath(runID)
+	if logPath == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"result": nil, "reason": "log files are not enabled for this project"})
+		return
+	}
+
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeJSON(w, http.StatusOK, map[string]any{"result": nil, "reason": "no log file for this run"})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, apiError("read_error", err.Error()))
+		return
+	}
+
+	result, err := agent.ParseResultLine(string(data))
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"result": nil, "reason": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"result": result})
+}
+
 // handleGetAgentRunLog streams the per-run log file as text/plain.
 func (s *Server) handleGetAgentRunLog(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
