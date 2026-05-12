@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"database/sql"
 	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -452,6 +453,200 @@ func TestListAgentRunsByTargetPath_OrderNewestFirst(t *testing.T) {
 }
 
 // ── Milestone 2 — SQLite index existence ─────────────────────────────────────
+
+// ── Milestone 2 — Result endpoint ─────────────────────────────────────────────
+//
+// validResultLogLine is a realistic type:result JSON line as output by Claude Code.
+// It is used across the result-endpoint tests so expectations and test data agree.
+const validResultLogLine = `{"type":"result","subtype":"success","total_cost_usd":0.0456,"duration_ms":23400,"duration_api_ms":18200,"num_turns":5,"usage":{"input_tokens":2500,"cache_creation_input_tokens":400,"cache_read_input_tokens":800,"output_tokens":600},"permission_denials":[],"session_id":"ses_result_test_001"}`
+
+// seedCompletedRun inserts a run record with the given status and, if logContent
+// is non-empty, writes the log file at the expected path under env.dataDir.
+// For "running" status, pass an empty logContent and no finished time is recorded.
+func seedCompletedRun(t *testing.T, env *testEnv, runID, status, logContent string) {
+	t.Helper()
+
+	now := time.Now()
+	row := &index.AgentRunRow{
+		RunID:      runID,
+		AgentName:  "requirements-analyst",
+		Role:       "analyst",
+		TargetPath: "lifecycle/ideas/result-test-idea.md",
+		StartedAt:  now,
+		Status:     "running",
+	}
+	if err := env.proj.Idx.InsertAgentRun(row); err != nil {
+		t.Fatalf("InsertAgentRun %q: %v", runID, err)
+	}
+	if status != "running" {
+		finishedAt := now.Add(5 * time.Second)
+		exitCode := 0
+		row.Status = status
+		row.FinishedAt = &finishedAt
+		row.ExitCode = &exitCode
+		if err := env.proj.Idx.UpdateAgentRun(row); err != nil {
+			t.Fatalf("UpdateAgentRun %q: %v", runID, err)
+		}
+	}
+	if logContent != "" {
+		logsDir := filepath.Join(env.dataDir, "testproject", "runs")
+		if err := os.MkdirAll(logsDir, 0o755); err != nil {
+			t.Fatalf("creating runs dir: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(logsDir, runID+".log"), []byte(logContent), 0o644); err != nil {
+			t.Fatalf("writing log file for run %q: %v", runID, err)
+		}
+	}
+}
+
+// TestGetAgentRunResult_CompletedRun verifies that a completed run with a valid
+// type:result line returns 200 with a non-null result object.
+func TestGetAgentRunResult_CompletedRun(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	const runID = "result-completed-01"
+	logContent := `{"type":"assistant","content":"doing work"}` + "\n" + validResultLogLine + "\n"
+	seedCompletedRun(t, env, runID, "done", logContent)
+
+	resp := env.doRequest("GET", "/api/p/testproject/agents/runs/"+runID+"/result", nil)
+	requireStatus(t, resp, 200)
+
+	data := readJSON(t, resp)
+	result, hasResult := data["result"]
+	if !hasResult {
+		t.Fatal("response missing 'result' key")
+	}
+	if result == nil {
+		t.Fatal("expected non-null result for completed run with result line")
+	}
+	m, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("result is not an object: %T", result)
+	}
+	if subtype, _ := m["subtype"].(string); subtype != "success" {
+		t.Errorf("subtype: got %q, want %q", subtype, "success")
+	}
+	if cost, _ := m["total_cost_usd"].(float64); cost != 0.0456 {
+		t.Errorf("total_cost_usd: got %v, want 0.0456", cost)
+	}
+	if dur, _ := m["duration_ms"].(float64); int64(dur) != 23400 {
+		t.Errorf("duration_ms: got %v, want 23400", dur)
+	}
+	if turns, _ := m["num_turns"].(float64); int(turns) != 5 {
+		t.Errorf("num_turns: got %v, want 5", turns)
+	}
+}
+
+// TestGetAgentRunResult_RunningRun verifies that a run still in "running" state
+// returns 409 with an appropriate error.
+func TestGetAgentRunResult_RunningRun(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	const runID = "result-running-02"
+	seedCompletedRun(t, env, runID, "running", "") // no log, no finish
+
+	resp := env.doRequest("GET", "/api/p/testproject/agents/runs/"+runID+"/result", nil)
+	requireStatus(t, resp, 409)
+
+	data := readJSON(t, resp)
+	if data["error"] == nil {
+		t.Error("expected non-null 'error' field in 409 response")
+	}
+}
+
+// TestGetAgentRunResult_NoResultLine verifies that a completed run whose log has
+// no type:result line returns 200 with result: null and a reason (Ollama case).
+func TestGetAgentRunResult_NoResultLine(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	const runID = "result-no-result-03"
+	logContent := `{"type":"assistant","content":"hello"}` + "\n" +
+		`{"type":"user","content":"world"}` + "\n"
+	seedCompletedRun(t, env, runID, "done", logContent)
+
+	resp := env.doRequest("GET", "/api/p/testproject/agents/runs/"+runID+"/result", nil)
+	requireStatus(t, resp, 200)
+
+	data := readJSON(t, resp)
+	if _, hasResult := data["result"]; !hasResult {
+		t.Fatal("response missing 'result' key")
+	}
+	if data["result"] != nil {
+		t.Errorf("expected null result for run without result line, got %v", data["result"])
+	}
+	if reason, _ := data["reason"].(string); reason == "" {
+		t.Error("expected non-empty 'reason' field when result is null")
+	}
+}
+
+// TestGetAgentRunResult_UnknownRunId verifies that requesting a result for a
+// non-existent run ID returns 404.
+func TestGetAgentRunResult_UnknownRunId(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	resp := env.doRequest("GET", "/api/p/testproject/agents/runs/no-such-run-id-zz99/result", nil)
+	requireStatus(t, resp, 404)
+}
+
+// TestGetAgentRunResult_FieldAccuracy seeds a run with a known result line and
+// asserts every parsed field in the response matches the expected raw JSON values.
+func TestGetAgentRunResult_FieldAccuracy(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	const runID = "result-accuracy-04"
+	seedCompletedRun(t, env, runID, "done", validResultLogLine+"\n")
+
+	resp := env.doRequest("GET", "/api/p/testproject/agents/runs/"+runID+"/result", nil)
+	requireStatus(t, resp, 200)
+
+	data := readJSON(t, resp)
+	result, ok := data["result"].(map[string]any)
+	if !ok || result == nil {
+		t.Fatalf("expected non-null result object, got %v", data["result"])
+	}
+
+	checks := []struct {
+		field string
+		got   any
+		want  any
+	}{
+		{"subtype", result["subtype"], "success"},
+		{"total_cost_usd", result["total_cost_usd"], 0.0456},
+		{"duration_ms", result["duration_ms"], float64(23400)},
+		{"duration_api_ms", result["duration_api_ms"], float64(18200)},
+		{"num_turns", result["num_turns"], float64(5)},
+		{"session_id", result["session_id"], "ses_result_test_001"},
+	}
+	for _, c := range checks {
+		if c.got != c.want {
+			t.Errorf("%s: got %v (%T), want %v (%T)", c.field, c.got, c.got, c.want, c.want)
+		}
+	}
+
+	usage, _ := result["usage"].(map[string]any)
+	if usage == nil {
+		t.Fatal("expected non-null usage object")
+	}
+	usageChecks := []struct {
+		field string
+		want  float64
+	}{
+		{"input_tokens", 2500},
+		{"cache_creation_input_tokens", 400},
+		{"cache_read_input_tokens", 800},
+		{"output_tokens", 600},
+	}
+	for _, c := range usageChecks {
+		if v, _ := usage[c.field].(float64); v != c.want {
+			t.Errorf("usage.%s: got %v, want %v", c.field, v, c.want)
+		}
+	}
+}
 
 // TestAgentRunsTargetPathIndexExists verifies that idx_agent_runs_target_path
 // is created automatically when the project index is initialised.

@@ -6,6 +6,9 @@ package integration
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -83,6 +86,159 @@ COLLECT:
 }
 
 // ── Milestone 3 — WebSocket events include target_path ────────────────────
+
+// ── Milestone 3 — WebSocket events include result payload ─────────────────────
+
+// setupFakeClaudeWithOutput creates a fake `claude` shell script that prints
+// outputLines to stdout (one per line) and then exits with exitCode.  It
+// prepends its directory to PATH so the agent driver picks it up.
+func setupFakeClaudeWithOutput(t *testing.T, outputLines []string, exitCode int) {
+	t.Helper()
+	fakeDir := t.TempDir()
+
+	// Write the output to a file so the script can cat it, avoiding shell-quoting
+	// issues with JSON double-quotes inside the heredoc/printf.
+	outputFile := filepath.Join(fakeDir, "output.txt")
+	content := ""
+	for _, line := range outputLines {
+		content += line + "\n"
+	}
+	if err := os.WriteFile(outputFile, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	script := fmt.Sprintf("#!/bin/sh\ncat '%s'\nexit %d\n", outputFile, exitCode)
+	fakeScript := filepath.Join(fakeDir, "claude")
+	if err := os.WriteFile(fakeScript, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", fakeDir+":"+os.Getenv("PATH"))
+}
+
+// TestAgentWSFinished_IncludesResult verifies that when a Claude Code run
+// produces a type:result line in its stdout, the agent.finished WebSocket event
+// carries a non-null "result" field with the parsed summary fields.
+func TestAgentWSFinished_IncludesResult(t *testing.T) {
+	const resultLine = `{"type":"result","subtype":"success","total_cost_usd":0.0234,"duration_ms":12345,"duration_api_ms":9800,"num_turns":3,"usage":{"input_tokens":1500,"cache_creation_input_tokens":200,"cache_read_input_tokens":50,"output_tokens":400},"permission_denials":[],"session_id":"ses_ws_result_test"}`
+	setupFakeClaudeWithOutput(t, []string{resultLine}, 0)
+
+	const artifactPath = "lifecycle/ideas/ws-result-test.md"
+	env := newAgentTestEnv(t, []seedArtifact{{
+		relPath: artifactPath,
+		content: makeArtifact("WS Result Test", "idea", "draft", "ws-result-test", "", "Idea body."),
+	}})
+
+	ch := make(chan []byte, 128)
+	env.proj.Hub.Register(ch)
+	defer env.proj.Hub.Unregister(ch)
+
+	env.login("admin@test.local", "admin-pass-123")
+	runID := startAgentRun(t, env, "requirements-analyst", artifactPath)
+
+	type wsEvent struct {
+		Type    string         `json:"type"`
+		Payload map[string]any `json:"payload"`
+	}
+
+	var terminalPayload map[string]any
+	terminalTypes := map[string]bool{"agent.finished": true, "agent.failed": true}
+	timeout := time.After(15 * time.Second)
+COLLECT:
+	for terminalPayload == nil {
+		select {
+		case raw := <-ch:
+			var evt wsEvent
+			if err := json.Unmarshal(raw, &evt); err != nil {
+				continue
+			}
+			if terminalTypes[evt.Type] {
+				terminalPayload = evt.Payload
+			}
+		case <-timeout:
+			break COLLECT
+		}
+	}
+
+	if terminalPayload == nil {
+		t.Fatalf("never received agent.finished/agent.failed for run %s", runID)
+	}
+
+	result, hasResult := terminalPayload["result"]
+	if !hasResult {
+		t.Fatal("terminal event payload missing 'result' key")
+	}
+	if result == nil {
+		t.Fatal("expected non-null 'result' in terminal event — fake claude wrote a result line")
+	}
+
+	resultMap, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("'result' in terminal event is not an object: %T", result)
+	}
+	if cost, _ := resultMap["total_cost_usd"].(float64); cost != 0.0234 {
+		t.Errorf("result.total_cost_usd: got %v, want 0.0234", cost)
+	}
+	if subtype, _ := resultMap["subtype"].(string); subtype != "success" {
+		t.Errorf("result.subtype: got %q, want %q", subtype, "success")
+	}
+}
+
+// TestAgentWSFinished_NoResultLine_ResultNull verifies that when a run produces
+// no type:result line (e.g. Ollama driver, or a zero-output fake), the
+// agent.finished event carries "result": null — not an error event.
+func TestAgentWSFinished_NoResultLine_ResultNull(t *testing.T) {
+	setupFakeClaude(t, 0) // exits 0 with no output → no result line in log
+
+	const artifactPath = "lifecycle/ideas/ws-null-result-test.md"
+	env := newAgentTestEnv(t, []seedArtifact{{
+		relPath: artifactPath,
+		content: makeArtifact("WS Null Result Test", "idea", "draft", "ws-null-result-test", "", "Idea body."),
+	}})
+
+	ch := make(chan []byte, 128)
+	env.proj.Hub.Register(ch)
+	defer env.proj.Hub.Unregister(ch)
+
+	env.login("admin@test.local", "admin-pass-123")
+	runID := startAgentRun(t, env, "requirements-analyst", artifactPath)
+
+	type wsEvent struct {
+		Type    string         `json:"type"`
+		Payload map[string]any `json:"payload"`
+	}
+
+	var terminalPayload map[string]any
+	terminalTypes := map[string]bool{"agent.finished": true, "agent.failed": true}
+	timeout := time.After(15 * time.Second)
+COLLECT2:
+	for terminalPayload == nil {
+		select {
+		case raw := <-ch:
+			var evt wsEvent
+			if err := json.Unmarshal(raw, &evt); err != nil {
+				continue
+			}
+			if terminalTypes[evt.Type] {
+				terminalPayload = evt.Payload
+			}
+		case <-timeout:
+			break COLLECT2
+		}
+	}
+
+	if terminalPayload == nil {
+		t.Fatalf("never received terminal event for run %s", runID)
+	}
+
+	// "result" key must be present in the payload (just null, not absent).
+	result, hasResult := terminalPayload["result"]
+	if !hasResult {
+		t.Fatal("terminal event payload missing 'result' key — key should always be present")
+	}
+	if result != nil {
+		t.Errorf("expected null 'result' for run with no result line, got %v", result)
+	}
+}
 
 // TestAgentWSEvents_IncludeTargetPath verifies that both agent.started and
 // the terminal event (agent.finished or agent.failed) carry a target_path
