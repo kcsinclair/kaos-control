@@ -1,7 +1,7 @@
 ---
 title: Init Does Not Create lifecycle/devops Folder
 type: defect
-status: in-development
+status: done
 lineage: init-missing-lifecycle-devops-folder
 created: "2026-05-12T14:11:38+10:00"
 priority: normal
