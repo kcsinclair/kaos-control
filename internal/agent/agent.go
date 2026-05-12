@@ -589,12 +589,32 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 
 	// runPrecheck forwards events to the hub AND watches for the system/init event.
 	// It blocks until the precheck is resolved (init seen, timeout, or channel closed).
+	// The broadcast function also checks each event for rate-limit payloads (M4):
+	// when detected, a separate queue.rate_limit event is emitted so the queue
+	// dispatcher can pause and re-enqueue the job.
 	precheckResult, observedMode := runPrecheck(
 		proc.Progress(),
 		m.initEventTimeout,
 		m.requireBypassPerms,
 		run.RunID,
-		func(e hub.Event) { m.hub.Broadcast(e) },
+		func(e hub.Event) {
+			m.hub.Broadcast(e)
+			// M4: detect rate-limit events in the stream and re-broadcast them
+			// as queue.rate_limit so the queue dispatcher can react.
+			if e.Type == "agent.progress" {
+				if payload, ok := e.Payload.(map[string]any); ok {
+					if rawText, isRL := extractRateLimitText(payload); isRL {
+						m.hub.Broadcast(hub.Event{
+							Type: "queue.rate_limit",
+							Payload: map[string]any{
+								"run_id":   run.RunID,
+								"raw_text": rawText,
+							},
+						})
+					}
+				}
+			}
+		},
 		func() { m.killer.Kill(proc) },
 	)
 
@@ -942,4 +962,61 @@ func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// extractRateLimitText inspects a decoded agent.progress event payload and
+// returns (rawText, true) when the underlying stream event signals a
+// rate-limit error. It handles two Claude Code stream-json formats:
+//
+//  1. Top-level "error" == "rate_limit" with message.content[0].text
+//     {"error":"rate_limit","message":{"content":[{"type":"text","text":"..."}]}}
+//
+//  2. Nested error object with type containing "rate_limit"
+//     {"type":"error","error":{"type":"rate_limit_error","message":"..."}}
+//
+// The raw text is used by the queue dispatcher to parse the reset time; an
+// empty raw_text causes the dispatcher to fall back to the configured
+// fallback_pause_minutes.
+func extractRateLimitText(payload map[string]any) (rawText string, ok bool) {
+	ev, _ := payload["event"].(map[string]any)
+	if ev == nil {
+		return "", false
+	}
+
+	// Format 1: top-level error field is the string "rate_limit".
+	if errStr, _ := ev["error"].(string); errStr == "rate_limit" {
+		rawText = extractMessageText(ev)
+		return rawText, true
+	}
+
+	// Format 2: nested error object whose type contains "rate_limit".
+	if errObj, ok2 := ev["error"].(map[string]any); ok2 {
+		errType, _ := errObj["type"].(string)
+		if strings.Contains(errType, "rate_limit") {
+			// Prefer nested message text; fall back to the error message string.
+			rawText = extractMessageText(ev)
+			if rawText == "" {
+				rawText, _ = errObj["message"].(string)
+			}
+			return rawText, true
+		}
+	}
+
+	return "", false
+}
+
+// extractMessageText attempts to read a human-readable string from
+// ev["message"]["content"][0]["text"], as used in the Claude stream-json format.
+func extractMessageText(ev map[string]any) string {
+	msg, _ := ev["message"].(map[string]any)
+	if msg == nil {
+		return ""
+	}
+	content, _ := msg["content"].([]any)
+	if len(content) == 0 {
+		return ""
+	}
+	first, _ := content[0].(map[string]any)
+	text, _ := first["text"].(string)
+	return text
 }
