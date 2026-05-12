@@ -17,8 +17,10 @@ import (
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
 	khttp "github.com/kaos-control/kaos-control/internal/http"
+	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/initcmd"
 	"github.com/kaos-control/kaos-control/internal/project"
+	"github.com/kaos-control/kaos-control/internal/queue"
 	"github.com/kaos-control/kaos-control/web"
 )
 
@@ -120,6 +122,18 @@ func run() error {
 		p.StartScheduler(ctx)
 	}
 
+	// Open the queue database (app-level, shared across all projects).
+	queueStore, err := queue.Open(filepath.Join(appCfg.DataDir, "queue.db"))
+	if err != nil {
+		slog.Warn("failed to open queue database; agent work queue will be unavailable", "err", err)
+		queueStore = nil
+	}
+	if queueStore != nil {
+		if err := queueStore.RecoverOrphans(); err != nil {
+			slog.Warn("queue: orphan recovery failed", "err", err)
+		}
+	}
+
 	// Open the auth database (accounts + sessions, shared across projects).
 	authStore, err := auth.Open(
 		filepath.Join(appCfg.DataDir, "auth.db"),
@@ -140,6 +154,40 @@ func run() error {
 		publicHost = os.Getenv("KAOS_PUBLIC_HOST")
 	}
 
+	// Build the app-level hub for queue broadcast events.
+	appHub := hub.New()
+
+	// Build the project lookup closure used by the queue dispatcher.
+	projectLookup := func(name string) (queue.ProjectAccess, bool) {
+		p, ok := projects[name]
+		if !ok {
+			return queue.ProjectAccess{}, false
+		}
+		if p.Agents == nil {
+			return queue.ProjectAccess{}, false
+		}
+		return queue.ProjectAccess{
+			StartRun: func(runCtx context.Context, agentName, targetPath string) (string, error) {
+				return p.Agents.StartRun(runCtx, agentName, targetPath, "", nil)
+			},
+			ArtifactStatus: func(relPath string) string {
+				row, err := p.Idx.Get(relPath)
+				if err != nil || row == nil {
+					return ""
+				}
+				return row.Status
+			},
+			Hub: p.Hub,
+		}, true
+	}
+
+	// Construct and start the queue dispatcher (only when the queue DB is available).
+	var queueDispatcher *queue.Dispatcher
+	if queueStore != nil {
+		queueDispatcher = queue.New(queueStore, projectLookup, appHub, queue.Config{})
+		queueDispatcher.Start(ctx)
+	}
+
 	srv := khttp.New(khttp.ServerConfig{
 		Listen:     appCfg.Server.Listen,
 		TLSOn:      appCfg.Server.TLS.Enabled,
@@ -150,6 +198,7 @@ func run() error {
 		AppCfg:     appCfg,
 		AppCfgPath: cfgPath,
 		PublicHost: publicHost,
+		Queue:      queueDispatcher,
 	}, projects)
 
 	return srv.ListenAndServe(ctx)

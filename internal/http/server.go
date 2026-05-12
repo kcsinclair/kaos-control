@@ -20,6 +20,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
 	"github.com/kaos-control/kaos-control/internal/project"
+	"github.com/kaos-control/kaos-control/internal/queue"
 )
 
 // Version is injected at build time via -ldflags.
@@ -31,6 +32,7 @@ type Server struct {
 	router   chi.Router
 	httpSrv  *http.Server
 	projects map[string]*project.Project
+	queue    *queue.Dispatcher // nil when queue not configured
 
 	// App-level config mutation (Ollama instance CRUD).
 	appCfgMu   sync.RWMutex
@@ -52,6 +54,9 @@ type ServerConfig struct {
 	// is reachable at; used to populate WebSocket OriginPatterns.
 	// Local listen addresses (localhost, 127.0.0.1) are always allowed.
 	PublicHost string
+	// Queue is the app-level queue dispatcher. May be nil when the queue is
+	// not configured (e.g. in minimal test environments).
+	Queue *queue.Dispatcher
 }
 
 // allowedWSOrigins returns the set of hostnames that are permitted as the
@@ -77,6 +82,7 @@ func New(cfg ServerConfig, projects map[string]*project.Project) *Server {
 	s := &Server{
 		cfg:        cfg,
 		projects:   projects,
+		queue:      cfg.Queue,
 		appCfg:     cfg.AppCfg,
 		appCfgPath: cfg.AppCfgPath,
 	}
