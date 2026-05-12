@@ -10,6 +10,7 @@ labels:
     - frontend
     - vue
     - feature
+release: KC-Release1
 assignees:
     - role: product-owner
       who: agent
