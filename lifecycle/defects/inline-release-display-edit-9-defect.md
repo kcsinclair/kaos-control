@@ -1,7 +1,7 @@
 ---
 title: "handlePatchRelease returns 422 instead of 404 for non-existent artifact"
 type: defect
-status: draft
+status: approved
 lineage: inline-release-display-edit
 parent: lifecycle/tests/inline-release-display-edit-8-test.md
 labels:
