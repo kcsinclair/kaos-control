@@ -213,15 +213,23 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 	}
 
 	if status := pa.ArtifactStatus(job.ArtifactPath); status != "approved" {
-		reason := "status_changed_to:" + status
-		if status == "" {
-			reason = "artifact_not_found"
+		// Rate-limit retries (attempts > 1) have already been validated at first
+		// enqueue. The active_status transition performed by StartRun (e.g.
+		// approved → clarifying) should not block re-runs after a rate-limit pause.
+		if job.Attempts <= 1 {
+			reason := "status_changed_to:" + status
+			if status == "" {
+				reason = "artifact_not_found"
+			}
+			slog.Info("queue: skipping job — artifact no longer approved",
+				"job_id", job.ID, "artifact", job.ArtifactPath, "status", status)
+			_ = d.store.MarkTerminal(job.ID, StateSkipped, reason)
+			d.broadcastJobEvent("queue.finished", job, "skipped")
+			return
 		}
-		slog.Info("queue: skipping job — artifact no longer approved",
-			"job_id", job.ID, "artifact", job.ArtifactPath, "status", status)
-		_ = d.store.MarkTerminal(job.ID, StateSkipped, reason)
-		d.broadcastJobEvent("queue.finished", job, "skipped")
-		return
+		slog.Debug("queue: rate-limit retry bypassing status gate",
+			"job_id", job.ID, "artifact", job.ArtifactPath, "status", status,
+			"attempts", job.Attempts)
 	}
 
 	d.broadcastJobEvent("queue.started", job, "running")
