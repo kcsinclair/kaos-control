@@ -113,7 +113,9 @@ func (rb *ringBuf) String() string {
 
 // ----- claude-code-cli driver -----
 
-// ClaudeCodeDriver spawns `claude --dangerously-skip-permissions -p "<prompt>"`.
+// ClaudeCodeDriver spawns `claude --permission-mode bypassPermissions
+// --dangerously-skip-permissions -p "<prompt>"` (dual-flag invocation so that
+// both current and legacy Claude Code binaries enable bypass mode).
 type ClaudeCodeDriver struct{}
 
 type claudeProcess struct {
@@ -131,9 +133,13 @@ type ProgressEvent struct {
 	Event map[string]any `json:"event,omitempty"`
 }
 
-func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) {
+// buildArgs constructs the CLI argument slice for a claude invocation.
+// It is exported for use by tests that want to inspect the argument list
+// without starting a real subprocess.
+func (d *ClaudeCodeDriver) buildArgs(run Run) []string {
 	args := []string{
-		"--dangerously-skip-permissions",
+		"--permission-mode", "bypassPermissions",
+		"--dangerously-skip-permissions", // legacy alias; older binaries ignore --permission-mode
 		"-p", run.PromptText,
 		"--output-format", "stream-json",
 		"--verbose",
@@ -141,6 +147,11 @@ func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) 
 	if run.Model != "" {
 		args = append(args, "--model", run.Model)
 	}
+	return args
+}
+
+func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) {
+	args := d.buildArgs(run)
 
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	cmd.Dir = run.ProjectRoot
