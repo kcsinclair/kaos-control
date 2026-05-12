@@ -1,7 +1,7 @@
 ---
 title: Q4/Q8 integration tests read error code from wrong JSON path
 type: defect
-status: in-development
+status: done
 lineage: agent-rate-limit-queue
 parent: lifecycle/tests/agent-rate-limit-queue-6-test.md
 labels:
