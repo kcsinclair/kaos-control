@@ -1,7 +1,7 @@
 ---
 title: 'Tests: Auto-Create Projects Directory on First Run'
 type: test
-status: draft
+status: approved
 lineage: auto-create-projects-dir
 parent: lifecycle/test-plans/auto-create-projects-dir-4-test.md
 ---
