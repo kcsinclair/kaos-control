@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Agent Run Summary Panel'
 type: plan-backend
-status: approved
+status: in-development
 lineage: agent-run-summary-panel
 parent: lifecycle/requirements/agent-run-summary-panel-2.md
 release: KC-Release1
