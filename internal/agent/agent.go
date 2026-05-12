@@ -738,6 +738,19 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		eventType = "agent.failed"
 		feedEventType = "agent_failed"
 	}
+
+	// Attempt to parse the run result from the log and include it in the
+	// broadcast payload. Parsing errors are non-fatal — the broadcast proceeds
+	// with result: null (expected for Ollama runs or logs without a result line).
+	var runResult any
+	if run.LogPath != "" {
+		if logData, readErr := os.ReadFile(run.LogPath); readErr == nil {
+			if parsed, parseErr := ParseResultLine(string(logData)); parseErr == nil {
+				runResult = parsed
+			}
+		}
+	}
+
 	m.hub.Broadcast(hub.Event{
 		Type: eventType,
 		Payload: map[string]any{
@@ -747,6 +760,7 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 			"status":      status,
 			"artifacts":   produced,
 			"target_path": row.TargetPath,
+			"result":      runResult,
 		},
 	})
 
