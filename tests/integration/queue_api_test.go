@@ -126,7 +126,8 @@ func TestQueue_Enqueue_DuplicateRejected(t *testing.T) {
 	requireStatus(t, resp2, 409)
 	data2 := readJSON(t, resp2)
 
-	code, _ := data2["code"].(string)
+	errData2, _ := data2["error"].(map[string]any)
+	code, _ := errData2["code"].(string)
 	if code != "duplicate" && code != "already_queued" {
 		t.Errorf("expected duplicate/already_queued error code, got %q", code)
 	}
@@ -250,7 +251,8 @@ func TestQueue_Cancel_Running(t *testing.T) {
 	cancelResp := env.doRequest("DELETE", "/api/queue/"+id, nil)
 	requireStatus(t, cancelResp, 409)
 	data := readJSON(t, cancelResp)
-	code, _ := data["code"].(string)
+	errData, _ := data["error"].(map[string]any)
+	code, _ := errData["code"].(string)
 	if code != "running" && code != "cannot_cancel_running" {
 		t.Errorf("expected running/cannot_cancel_running error code, got %q", code)
 	}
