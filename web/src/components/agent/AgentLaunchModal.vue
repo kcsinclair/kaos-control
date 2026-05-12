@@ -5,6 +5,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAgentsStore } from '@/stores/agents'
 import { useUiStore } from '@/stores/ui'
 import * as artifactsApi from '@/api/artifacts'
+import { typeToAgent } from '@/composables/useAgentForArtifact'
 import type { AgentSummary, ArtifactRow } from '@/types/api'
 
 const props = defineProps<{
@@ -26,14 +27,10 @@ const selectedPath = ref<string | null>(null)
 const running = ref(false)
 
 // Maps agent name to the artifact type it expects as input.
-const agentInputTypeMap: Record<string, string> = {
-  'requirements-analyst': 'idea',
-  'planning-analyst': 'requirement',
-  'backend-developer': 'plan-backend',
-  'frontend-developer': 'plan-frontend',
-  'test-developer': 'plan-test',
-  qa: 'test',
-}
+// Built by inverting the shared typeToAgent map; see composables/useAgentForArtifact.ts.
+const agentInputTypeMap: Record<string, string> = Object.fromEntries(
+  Object.entries(typeToAgent).map(([type, agent]) => [agent, type]),
+)
 
 const inputType = computed(() => agentInputTypeMap[props.agent.name])
 
