@@ -1,9 +1,12 @@
 ---
-title: "Test Plan: Inline Release Display and Editing"
+title: 'Test Plan: Inline Release Display and Editing'
 type: plan-test
-status: in-development
+status: blocked
 lineage: inline-release-display-edit
 parent: lifecycle/requirements/inline-release-display-edit-2.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 ## Overview
@@ -92,4 +95,36 @@ Integration and unit tests covering the PATCH release endpoint, the ReleaseDropd
 
 - Depends on the [[inline-release-display-edit]] backend plan (PATCH endpoint) and frontend plan (ReleaseDropdown component) being implemented first.
 - Backend integration tests (Milestone 1) can be written in parallel with the backend implementation.
+
+## Open Questions
+
+Milestones 2 and 3 (frontend component tests) cannot be implemented until the
+following questions are resolved.
+
+**Q1 — Which frontend test framework should be used?**
+`web/package.json` has no test framework installed (no `vitest`, no
+`@vue/test-utils`, no `jsdom`). The test plan says "follow existing test file
+conventions" but no `*.spec.ts` files exist anywhere in `web/src/`. Before
+tests for `ReleaseDropdown.vue` and `FrontmatterPanel.vue` can be written, the
+product owner must decide which framework to adopt (vitest + @vue/test-utils is
+the natural choice for a Vite/Vue 3 project) and add the required dependencies
+to `web/package.json`.
+
+**Q2 — Where should component test files live?**
+The plan mentions both "co-located" files and a
+`web/src/components/artifact/__tests__/` directory. The project has no
+established pattern. Is the preference co-located (`*.spec.ts` next to the
+`.vue` file) or a dedicated `__tests__/` subdirectory?
+
+**Q3 — How should `patchRelease` and `listReleases` API calls be mocked in component tests?**
+The plan requires mocking `patchRelease` and `listReleases`. Should tests use
+`vi.mock('@/api/artifacts')` / `vi.mock('@/api/releases')` (vitest module
+mocks), or is there a different injection/stubbing approach preferred?
+
+**Q4 — Is `FrontmatterPanel.vue` ready for the integration tests described in Milestone 3?**
+Milestone 3 test case 3 asserts that `ReleaseDropdown` is rendered when
+`project` and `targetPath` props are provided. The existing
+`FrontmatterPanel.vue` must expose these props and conditionally render
+`ReleaseDropdown`. Confirm that the frontend implementation (Milestones 2 and 3
+of the frontend plan) is complete before test implementation begins.
 - Frontend tests (Milestones 2-3) require the components to exist.
