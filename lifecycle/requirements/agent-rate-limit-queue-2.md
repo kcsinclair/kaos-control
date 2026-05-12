@@ -1,7 +1,7 @@
 ---
 title: Global Agent Work Queue with Rate-Limit Auto-Pause
 type: requirement
-status: draft
+status: done
 lineage: agent-rate-limit-queue
 parent: lifecycle/ideas/agent-rate-limit-queue.md
 created: "2026-05-12T10:35:00+10:00"
