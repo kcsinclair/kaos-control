@@ -10,6 +10,7 @@ labels:
     - artefacts
     - enhancement
     - vue
+release: KC-Release1
 ---
 
 # Inline Release Display and Editing on Artefact View
