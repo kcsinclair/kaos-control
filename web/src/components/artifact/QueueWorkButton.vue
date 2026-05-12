@@ -53,10 +53,10 @@ const userCanEnqueue = computed(() => {
   return agent.roles.some((r) => userRoles.includes(r))
 })
 
-// The button is visible when the artifact is approved and an agent is mapped.
-const visible = computed(
-  () => props.artifact.status === 'approved' && agentName.value !== null,
-)
+// The button is visible whenever the artifact is in approved status.
+// Agent availability is checked at click time so the button appears immediately
+// on status change without waiting for agent metadata to load.
+const visible = computed(() => props.artifact.status === 'approved')
 
 // Tooltip for the disabled state.
 const disabledReason = computed(() => {
@@ -92,7 +92,7 @@ async function handleClick() {
     <button
       v-else
       class="btn-queue"
-      :disabled="!userCanEnqueue"
+      :disabled="!agentName || !userCanEnqueue"
       :title="disabledReason ?? `Queue for ${agentName}`"
       @click="handleClick"
     >

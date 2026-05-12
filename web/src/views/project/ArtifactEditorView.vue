@@ -249,8 +249,11 @@ onMounted(() => {
     graphStore.fetchGraph(project.value)
   }
   // Ensure queue and agents are initialised so QueueWorkButton has data.
+  // Always fetch agents for the current project — the store doesn't track which
+  // project's agents it holds, so a cached list from a prior project visit would
+  // cause wrong agent resolution (especially for defect assignee-role matching).
   void queueStore.fetch()
-  if (!agentsStore.agents.length) void agentsStore.fetchAgents(project.value)
+  void agentsStore.fetchAgents(project.value)
 })
 </script>
 
