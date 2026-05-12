@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Claude Code Permission-Mode Precheck"
 type: plan-test
-status: approved
+status: in-development
 lineage: agent-permission-precheck
 parent: lifecycle/requirements/agent-permission-precheck-2.md
 created: "2026-05-12T15:50:00+10:00"
