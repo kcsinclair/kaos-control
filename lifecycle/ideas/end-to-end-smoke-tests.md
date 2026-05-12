@@ -4,7 +4,7 @@ type: idea
 status: planning
 lineage: end-to-end-smoke-tests
 created: "2026-04-28T10:00:00+10:00"
-priority: normal
+priority: high
 labels:
     - testing
     - qa
