@@ -1,7 +1,7 @@
 ---
 title: Auto-Create Projects Directory on First Run
 type: idea
-status: draft
+status: planning
 lineage: auto-create-projects-dir
 created: "2026-05-12T12:25:51+10:00"
 priority: high
