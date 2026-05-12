@@ -1,7 +1,7 @@
 ---
 title: Inline Release Display and Editing on Artefact View
 type: idea
-status: draft
+status: approved
 lineage: inline-release-display-edit
 created: "2026-05-12T12:41:04+10:00"
 priority: normal
