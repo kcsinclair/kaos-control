@@ -3,7 +3,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import * as agentsApi from '@/api/agents'
-import type { AgentRunRow } from '@/types/api'
+import type { AgentRunRow, RunResult } from '@/types/api'
+import RunSummaryCard from './RunSummaryCard.vue'
 
 const props = defineProps<{
   project: string
@@ -16,6 +17,11 @@ const run = ref<AgentRunRow | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+const runResult = ref<RunResult | null>(null)
+const resultLoading = ref(false)
+
+const TERMINAL_RUN_STATUSES = new Set(['done', 'failed', 'killed', 'killed-timeout'])
+
 // Focus management: save element that had focus before the modal opened.
 let previousFocus: HTMLElement | null = null
 
@@ -24,6 +30,12 @@ onMounted(async () => {
   try {
     const data = await agentsApi.getRun(props.project, props.runId)
     run.value = data.run
+    if (data.run && TERMINAL_RUN_STATUSES.has(data.run.status)) {
+      resultLoading.value = true
+      const { result } = await agentsApi.getRunResult(props.project, props.runId)
+      runResult.value = result
+      resultLoading.value = false
+    }
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load run'
   } finally {
@@ -141,6 +153,16 @@ function handleOverlayClick(e: MouseEvent) {
               <div class="rdm-field-label">Exit code</div>
               <div class="rdm-field-value">{{ run.exit_code != null ? run.exit_code : '—' }}</div>
             </div>
+          </div>
+
+          <!-- Run summary card (terminal runs only) -->
+          <div v-if="TERMINAL_RUN_STATUSES.has(run.status)">
+            <div v-if="resultLoading" class="rdm-state">Loading summary…</div>
+            <RunSummaryCard
+              v-else
+              :result="runResult"
+              :driver-available="true"
+            />
           </div>
 
           <!-- Stderr tail -->
