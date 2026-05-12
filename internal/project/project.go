@@ -51,6 +51,7 @@ type OpenOptions struct {
 	MaxConcurrentSchedulerJobs int
 	SchedulerRunRetentionDays  int
 	OllamaInstances            []config.OllamaInstance // app-level Ollama servers for OllamaDriver
+	AgentCfg                   config.AppAgentConfig   // precheck timeout + bypass-permissions flag
 
 	// DevopsLogDir is the base directory for pipeline run logs.
 	// Logs are stored at DevopsLogDir/<project-name>/<run_id>.log.
@@ -118,7 +119,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	var agentMgr *agent.Manager
 	if len(cfg.Agents) > 0 {
 		runsLogDir := filepath.Join(dbDir, entry.Name, "runs")
-		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, wf, entry.Path, runsLogDir, opts.OllamaInstances)
+		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, wf, entry.Path, runsLogDir, opts.OllamaInstances, opts.AgentCfg)
 	}
 
 	// Determine the base directory for devops run logs.

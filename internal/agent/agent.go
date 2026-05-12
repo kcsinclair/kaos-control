@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/kaos-control/kaos-control/internal/artifact"
@@ -29,6 +30,30 @@ import (
 	kgit "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/lock"
 )
+
+// processKiller abstracts graceful process termination for testability.
+// The production implementation sends SIGTERM and, after a 2-second grace
+// period, SIGKILL. Tests can inject a no-op or recording implementation.
+type processKiller interface {
+	Kill(proc Process)
+}
+
+// defaultProcessKiller is the production processKiller: SIGTERM → 2 s → SIGKILL.
+type defaultProcessKiller struct{}
+
+func (defaultProcessKiller) Kill(proc Process) {
+	cp, ok := proc.(*claudeProcess)
+	if !ok || cp.cmd.Process == nil {
+		_ = proc.Kill()
+		return
+	}
+	// Best-effort SIGTERM; ignore error (process may have already exited).
+	_ = cp.cmd.Process.Signal(syscall.SIGTERM)
+	go func() {
+		time.Sleep(2 * time.Second)
+		_ = cp.cmd.Process.Kill() // SIGKILL if still alive
+	}()
+}
 
 // WorkflowEngine is the subset of workflow.Engine used by the agent Manager.
 // The interface avoids an import cycle: agent → workflow → (none), but
@@ -279,12 +304,18 @@ type Manager struct {
 	wf      WorkflowEngine // may be nil; used for type-aware transition validation
 	root    string
 	logsDir string // per-run log files go in <logsDir>/<run_id>.log
+
+	// Precheck configuration (from AppAgentConfig).
+	initEventTimeout   time.Duration // how long to wait for the system/init event
+	requireBypassPerms bool          // whether to reject non-bypassPermissions runs
+	killer             processKiller // injectable for tests
 }
 
 // New creates an agent Manager. maxConcurrent caps parallel runs across the project.
 // logsDir is where per-run .log files are written; empty disables log files.
 // ollamaInstances is the app-level list of registered Ollama servers.
 // wf is the optional workflow engine used for type-aware transition validation.
+// agentCfg supplies the precheck timeout and bypass-permissions requirement.
 func New(
 	agents []config.AgentConfig,
 	maxConcurrent int,
@@ -296,9 +327,18 @@ func New(
 	root string,
 	logsDir string,
 	ollamaInstances []config.OllamaInstance,
+	agentCfg config.AppAgentConfig,
 ) *Manager {
 	if maxConcurrent <= 0 {
 		maxConcurrent = 4
+	}
+	timeout := time.Duration(agentCfg.InitEventTimeoutSeconds) * time.Second
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	requireBypass := true
+	if agentCfg.RequireBypassPermissions != nil {
+		requireBypass = *agentCfg.RequireBypassPermissions
 	}
 	m := &Manager{
 		agents: agents,
@@ -306,15 +346,18 @@ func New(
 			"claude-code-cli": &ClaudeCodeDriver{},
 			"ollama":          &OllamaDriver{Instances: ollamaInstances},
 		},
-		sem:     make(chan struct{}, maxConcurrent),
-		active:  make(map[string]*activeRun),
-		idx:     idx,
-		git:     git,
-		hub:     h,
-		locks:   locks,
-		wf:      wf,
-		root:    root,
-		logsDir: logsDir,
+		sem:                make(chan struct{}, maxConcurrent),
+		active:             make(map[string]*activeRun),
+		idx:                idx,
+		git:                git,
+		hub:                h,
+		locks:              locks,
+		wf:                 wf,
+		root:               root,
+		logsDir:            logsDir,
+		initEventTimeout:   timeout,
+		requireBypassPerms: requireBypass,
+		killer:             defaultProcessKiller{},
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
 	if err := idx.RecoverRunningRuns(); err != nil {
@@ -544,21 +587,24 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		return
 	}
 
-	// Forward progress events as structured payloads.
-	go func() {
-		for ev := range proc.Progress() {
-			payload := map[string]any{
-				"run_id": run.RunID,
-				"line":   ev.Raw, // backward-compat: existing UI reads `line`
-				"raw":    ev.Raw,
-			}
-			if ev.Event != nil {
-				payload["event"] = ev.Event
-			}
-			m.hub.Broadcast(hub.Event{Type: "agent.progress", Payload: payload})
-		}
-	}()
+	// runPrecheck forwards events to the hub AND watches for the system/init event.
+	// It blocks until the precheck is resolved (init seen, timeout, or channel closed).
+	precheckResult, observedMode := runPrecheck(
+		proc.Progress(),
+		m.initEventTimeout,
+		m.requireBypassPerms,
+		run.RunID,
+		func(e hub.Event) { m.hub.Broadcast(e) },
+		func() { m.killer.Kill(proc) },
+	)
 
+	if precheckResult == precheckFailedMode || precheckResult == precheckFailedTimeout {
+		m.killAndFail(run, row, proc, lineage, precheckResult, observedMode)
+		return
+	}
+
+	// Precheck passed (or was not applicable — process exited before init).
+	// Wait for the process to fully exit.
 	waitErr := proc.Wait()
 	finishedAt := time.Now()
 
@@ -698,6 +744,98 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		if err := m.idx.InsertEvent(feedEvent); err == nil {
 			m.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
 		}
+	}
+}
+
+// killAndFail handles the full precheck failure path:
+//  1. Waits for the process to exit (the kill was already initiated by the
+//     processKiller inside runPrecheck).
+//  2. Releases the semaphore and lineage lock.
+//  3. Appends a JSON precheck_failure line to the on-disk run log.
+//  4. Updates the run record to status=failed.
+//  5. Broadcasts agent.failed with precheck details and a remediation list.
+//  6. Records a feed event.
+func (m *Manager) killAndFail(
+	run Run,
+	row *index.AgentRunRow,
+	proc Process,
+	lineage string,
+	state precheckState,
+	observedMode string,
+) {
+	// Wait for the process to exit (kill was initiated by runPrecheck).
+	_ = proc.Wait()
+
+	m.mu.Lock()
+	delete(m.active, run.RunID)
+	m.mu.Unlock()
+	<-m.sem
+
+	var reason string
+	var remediation []string
+	switch state {
+	case precheckFailedMode:
+		reason = "permission_mode_default"
+		if observedMode == "acceptEdits" {
+			reason = "permission_mode_accept_edits"
+		}
+		remediation = modeRemediation
+	case precheckFailedTimeout:
+		reason = "precheck_timeout"
+		remediation = timeoutRemediation
+	default:
+		reason = "precheck_unknown"
+		remediation = modeRemediation
+	}
+
+	// Append precheck failure line to the on-disk run log (Milestone 4).
+	if run.LogPath != "" {
+		line := precheckFailureLogLine(run.RunID, reason, observedMode, remediation)
+		if f, err := os.OpenFile(run.LogPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644); err == nil {
+			_, _ = f.Write(line)
+			_ = f.Close()
+		}
+	}
+
+	// Update run record.
+	finishedAt := time.Now()
+	code := -1
+	row.Status = "failed"
+	row.FinishedAt = &finishedAt
+	row.ExitCode = &code
+	row.StderrTail = fmt.Sprintf("precheck failed: %s (observed_permission_mode=%q)", reason, observedMode)
+	_ = m.idx.UpdateAgentRun(row)
+
+	// Release lineage lock.
+	_ = m.locks.Release(lineage)
+
+	// Broadcast agent.failed with structured precheck payload.
+	m.hub.Broadcast(hub.Event{
+		Type: "agent.failed",
+		Payload: map[string]any{
+			"run_id":                   run.RunID,
+			"agent":                    run.AgentName,
+			"lineage":                  lineage,
+			"status":                   "failed",
+			"reason":                   reason,
+			"observed_permission_mode": observedMode,
+			"remediation":              remediation,
+			"target_path":              row.TargetPath,
+		},
+	})
+
+	// Record feed event.
+	runIDCopy := run.RunID
+	summary := fmt.Sprintf("Agent %s precheck failed: %s", run.AgentName, reason)
+	feedEvent := &index.EventRow{
+		EventType: "agent_failed",
+		Timestamp: time.Now().Unix(),
+		Actor:     run.AgentName,
+		RunID:     &runIDCopy,
+		Summary:   summary,
+	}
+	if err := m.idx.InsertEvent(feedEvent); err == nil {
+		m.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
 	}
 }
 
