@@ -1,7 +1,7 @@
 ---
 title: Init Does Not Assign Owner Roles to First User
 type: defect
-status: draft
+status: in-development
 lineage: init-owner-role-assignment
 created: "2026-05-12T10:34:05+10:00"
 priority: normal
