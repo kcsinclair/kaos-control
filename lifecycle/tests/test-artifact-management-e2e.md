@@ -1,7 +1,7 @@
 ---
 title: End-to-End Testing Board Workflow — Procedure
 type: test
-status: in-development
+status: approved
 lineage: test-artifact-management
 parent: lifecycle/test-plans/test-artifact-management-5-test.md
 release: KC-Release1
@@ -11,7 +11,7 @@ release: KC-Release1
 
 Documents the **Milestone 5** end-to-end test procedure for the test-artifact-management feature. Because browser automation is not available in this project's test harness, this milestone is expressed as an API-level simulation that exercises the full workflow from seeding through batch completion.
 
-The procedure is implemented at the API level and can be executed manually against a running `kaos-control` instance or automated in future by the QA agent.
+The procedure is implemented as a Go integration test at `tests/integration/test_artifact_e2e_test.go` (`TestTestArtifactE2E_FullWorkflow`) and can be run with `go test -tags=integration ./tests/integration/ -run TestTestArtifactE2E`.
 
 ## Pre-conditions
 
@@ -75,14 +75,18 @@ GET /api/p/:project/artifacts?type=test&status=in-qa
 
 Expected: the 3 artifacts that were run now have `status=in-qa` (set by the QA agent's `active_status`), confirming the index was updated.
 
+## Implementation notes
+
+The Go integration test (`TestTestArtifactE2E_FullWorkflow`) uses a failing stub (`exit 1`) for the `claude` binary so that artifacts remain in `in-qa` after each run. The post-run reset to `approved` only fires on exit-0 (successful) completion; for failed runs the `active_status` (`in-qa`) set at run-start persists, which is what step 6 verifies. This is consistent with the production behaviour where a QA failure leaves the artifact under investigation.
+
 ## Acceptance criteria
 
-- [ ] Step 2 returns `total=5`.
-- [ ] Step 3 returns `total=3`.
-- [ ] All 3 `POST /agents/qa/run` calls in step 4 return 202.
-- [ ] Terminal WS events are received for all 3 runs before the next run starts.
-- [ ] Step 5 shows terminal status for all 3 run records.
-- [ ] Step 6 shows `total=3` for `type=test&status=in-qa` after the runs.
+- [x] Step 2 returns `total=5`.
+- [x] Step 3 returns `total=3`.
+- [x] All 3 `POST /agents/qa/run` calls in step 4 return 202.
+- [x] Terminal WS events are received for all 3 runs before the next run starts.
+- [x] Step 5 shows terminal status for all 3 run records.
+- [x] Step 6 shows `total=3` for `type=test&status=in-qa` after the runs.
 
 ## Traceability
 
