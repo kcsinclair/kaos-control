@@ -4,13 +4,14 @@ type: idea
 status: draft
 lineage: artefacts-bulk-edit
 created: "2026-05-12T12:38:31+10:00"
-priority: normal
+priority: medium
 labels:
     - feature
     - artefacts
     - frontend
     - enhancement
     - usability
+release: KC-Release1
 ---
 
 # Bulk Edit Artifacts (Status, Priority, Release)
