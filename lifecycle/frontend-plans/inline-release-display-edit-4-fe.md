@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Inline Release Display and Editing"
 type: plan-frontend
-status: draft
+status: approved
 lineage: inline-release-display-edit
 parent: lifecycle/requirements/inline-release-display-edit-2.md
 ---
