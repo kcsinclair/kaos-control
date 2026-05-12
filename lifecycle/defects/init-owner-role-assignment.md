@@ -9,6 +9,7 @@ labels:
     - defect
     - onboarding
     - backend
+release: KC-Release1
 ---
 
 # Init Does Not Assign Owner Roles to First User
