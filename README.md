@@ -4,6 +4,9 @@ A single-binary lifecycle management tool that turns ideas into shipped releases
 
 > **Status:** active development. Comprehensive documentation will follow — this README is a quick start only.
 
+[kaos-control on github](https://github.com/kcsinclair/kaos-control)
+[kaos-control.io](https://kaos-control.io)
+
 ## What you get
 
 - **Lifecycle directory** (`lifecycle/`) — markdown files with YAML frontmatter, organised by stage (`ideas`, `requirements`, `backend-plans`, `frontend-plans`, `test-plans`, `tests`, `defects`, `releases`, `sprints`).

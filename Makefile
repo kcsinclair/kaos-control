@@ -12,7 +12,7 @@ RELEASE_LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION) -X $(MODULE)/inter
 GOBIN := $(shell go env GOPATH)/bin
 export PATH := $(GOBIN):$(PATH)
 
-.PHONY: all build build-web release test test-unit test-integration lint clean run
+.PHONY: all build build-web release package test test-unit test-integration lint clean run
 
 all: build-web build
 
@@ -30,6 +30,12 @@ release:
 	    go build -trimpath $(RELEASE_LDFLAGS) \
 	    -o $(BUILD_DIR)/$(BINARY)-$$os-$$arch$$ext ./cmd/kaos-control || exit 1; \
 	done
+
+## package: build release binaries (via `release`) and bundle each into a
+##          versioned zip alongside README, LICENSE, CONTRIBUTING.md; also
+##          writes ./dist/SHA256SUMS.
+package: release
+	./scripts/package-release.sh
 
 ## build-web: build the Vite frontend into web/dist
 build-web:

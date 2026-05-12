@@ -1,5 +1,6 @@
 **/.DS_Store
 /dist/
+/support/
 /node_modules/
 web/node_modules/
 web/dist/
