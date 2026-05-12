@@ -108,6 +108,10 @@ func LoadApp(path string) (*App, error) {
 		return nil, fmt.Errorf("creating projects dir %s: %w", cfg.ProjectsDir, err)
 	}
 
+	if err := os.MkdirAll(cfg.DataDir, 0o700); err != nil {
+		return nil, fmt.Errorf("creating data dir %s: %w", cfg.DataDir, err)
+	}
+
 	return &cfg, nil
 }
 
