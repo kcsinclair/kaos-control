@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Inline Release Display and Editing"
 type: plan-backend
-status: in-development
+status: done
 lineage: inline-release-display-edit
 parent: lifecycle/requirements/inline-release-display-edit-2.md
 ---
