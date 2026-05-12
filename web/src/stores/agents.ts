@@ -172,6 +172,9 @@ export const useAgentsStore = defineStore('agents', () => {
           status: newStatus,
           finished_at: new Date().toISOString(),
           artifacts_produced: (payload.artifacts as string[]) ?? [],
+          failure_reason: (payload.failure_reason as string | null | undefined) ?? null,
+          observed_permission_mode: (payload.observed_permission_mode as string | null | undefined) ?? null,
+          remediation: (payload.remediation as string[] | null | undefined) ?? null,
         }
       }
     }
