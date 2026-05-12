@@ -13,6 +13,7 @@ import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import AgentPanelRow from '@/components/agent/AgentPanelRow.vue'
 import AgentLaunchModal from '@/components/agent/AgentLaunchModal.vue'
 import AgentConfigForm from '@/components/agent/AgentConfigForm.vue'
+import RunFailureBanner from '@/components/agent/RunFailureBanner.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
 import type { AgentSummary, AgentRunRow } from '@/types/api'
@@ -250,6 +251,13 @@ onMounted(() => {
           </tr>
           <tr v-if="expandedRun === run.run_id" class="run-detail">
             <td colspan="8" class="detail-cell">
+              <!-- Precheck failure banner -->
+              <RunFailureBanner
+                v-if="run.status === 'failed' && run.failure_reason"
+                :failure-reason="run.failure_reason"
+                :observed-mode="run.observed_permission_mode"
+                :remediation="run.remediation"
+              />
               <!-- Live progress for running runs -->
               <div v-if="run.status === 'running' && store.progressLines.get(run.run_id)?.length" class="detail-section">
                 <div class="detail-label">Progress</div>
