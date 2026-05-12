@@ -195,6 +195,57 @@ func TestPauseStateRoundTrip(t *testing.T) {
 	}
 }
 
+func TestStore_HeadInsert(t *testing.T) {
+	s := openTestStore(t)
+
+	// Enqueue three jobs to establish a baseline of positions.
+	for _, path := range []string{
+		"lifecycle/ideas/a.md",
+		"lifecycle/ideas/b.md",
+		"lifecycle/ideas/c.md",
+	} {
+		if err := s.Enqueue(job("proj", path, "analyst", "alice@example.com")); err != nil {
+			t.Fatalf("Enqueue(%q): %v", path, err)
+		}
+	}
+
+	minBefore := s.MinPosition()
+	if minBefore == 0 {
+		t.Fatal("expected positive min position after enqueue")
+	}
+
+	// EnqueueDirect with a position smaller than the current min simulates
+	// re-queuing at the head after a rate-limit failure.
+	headJob := Job{
+		ID:           "head-job",
+		Project:      "proj",
+		ArtifactPath: "lifecycle/ideas/head.md",
+		AgentName:    "analyst",
+		EnqueuedBy:   "alice@example.com",
+		Attempts:     2,
+		Position:     minBefore - 1,
+	}
+	if err := s.EnqueueDirect(headJob); err != nil {
+		t.Fatalf("EnqueueDirect: %v", err)
+	}
+
+	// The first Dequeue must return the head job (smallest position).
+	got, err := s.Dequeue()
+	if err != nil {
+		t.Fatalf("Dequeue: %v", err)
+	}
+	if got == nil {
+		t.Fatal("Dequeue returned nil, expected head job")
+	}
+	if got.ArtifactPath != "lifecycle/ideas/head.md" {
+		t.Errorf("first dequeue: got path %q, want head.md", got.ArtifactPath)
+	}
+	if got.Position >= minBefore {
+		t.Errorf("head job position %d should be strictly less than pre-insert min %d",
+			got.Position, minBefore)
+	}
+}
+
 func TestCancelPendingOnly(t *testing.T) {
 	s := openTestStore(t)
 	_ = s.Enqueue(job("proj", "lifecycle/ideas/a.md", "analyst", "alice@example.com"))

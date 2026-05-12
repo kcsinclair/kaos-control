@@ -4,6 +4,7 @@ package queue
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -164,6 +165,332 @@ func TestDispatcher_ManualPauseResume(t *testing.T) {
 	d.Resume()
 	if d.paused() {
 		t.Error("expected not paused after Resume()")
+	}
+}
+
+// collectAppEvents registers a channel on appHub and returns a helper that
+// drains events into a slice. Call stop() to unregister before assertions;
+// it is safe to call stop() multiple times.
+func collectAppEvents(t *testing.T, h *hub.Hub) (events func() []string, stop func()) {
+	t.Helper()
+	ch := make(chan []byte, 64)
+	h.Register(ch)
+	var mu sync.Mutex
+	var collected []string
+	done := make(chan struct{})
+	var once sync.Once
+	go func() {
+		defer close(done)
+		for data := range ch {
+			var evt struct {
+				Type string `json:"type"`
+			}
+			if err := json.Unmarshal(data, &evt); err == nil {
+				mu.Lock()
+				collected = append(collected, evt.Type)
+				mu.Unlock()
+			}
+		}
+	}()
+	stop = func() {
+		once.Do(func() {
+			h.Unregister(ch)
+			close(ch)
+			<-done
+		})
+	}
+	events = func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+		out := make([]string, len(collected))
+		copy(out, collected)
+		return out
+	}
+	return events, stop
+}
+
+// containsEvent returns true when typ appears in the slice returned by events().
+func containsEvent(events func() []string, typ string) bool {
+	for _, e := range events() {
+		if e == typ {
+			return true
+		}
+	}
+	return false
+}
+
+// TestDispatcher_RateLimitFlow verifies that when the agent hub emits a
+// queue.rate_limit event the dispatcher (a) marks the job failed/rate_limit,
+// (b) re-enqueues at the head with attempts incremented, (c) sets pause state,
+// and (d) broadcasts queue.paused.
+func TestDispatcher_RateLimitFlow(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(filepath.Join(dir, "queue.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	projHub := hub.New()
+	appHub := hub.New()
+	rateLimitText := "resets 8pm (Australia/Brisbane)"
+
+	lookup := func(name string) (ProjectAccess, bool) {
+		return ProjectAccess{
+			StartRun: func(ctx context.Context, agentName, targetPath string) (string, error) {
+				// Simulate the agent broadcasting a rate-limit event shortly after starting.
+				go func() {
+					time.Sleep(10 * time.Millisecond)
+					projHub.Broadcast(hub.Event{
+						Type: "queue.rate_limit",
+						Payload: map[string]any{
+							"run_id":   "test-run",
+							"raw_text": rateLimitText,
+						},
+					})
+				}()
+				return "test-run", nil
+			},
+			ArtifactStatus: func(relPath string) string { return "approved" },
+			Hub:            projHub,
+		}, true
+	}
+
+	now := time.Now()
+	cfg := Config{
+		TickInterval:  20 * time.Millisecond,
+		ClockFn:       func() time.Time { return now },
+		MaxAttempts:   5,
+		ResumeGrace:   time.Minute,
+		FallbackPause: 30 * time.Minute,
+	}
+	d := New(s, lookup, appHub, cfg)
+
+	// Subscribe to app hub to observe broadcast events.
+	events, stopCollect := collectAppEvents(t, appHub)
+	defer stopCollect()
+
+	_ = s.Enqueue(Job{
+		Project:      "proj",
+		ArtifactPath: "lifecycle/ideas/a.md",
+		AgentName:    "analyst",
+		EnqueuedBy:   "alice@example.com",
+		Attempts:     1,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	d.Start(ctx)
+
+	// Wait until the original job is marked failed and a re-queued job appears.
+	deadline := time.Now().Add(3 * time.Second)
+	var requeued []*Job
+	for time.Now().Before(deadline) {
+		failed, _ := s.ListByState(StateFailed)
+		pending, _ := s.ListByState(StatePending)
+		if len(failed) > 0 && len(pending) > 0 {
+			requeued = pending
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// (a) Original job marked failed with reason rate_limit.
+	failed, _ := s.ListByState(StateFailed)
+	if len(failed) == 0 {
+		t.Fatal("expected a failed job after rate-limit event")
+	}
+	if failed[0].Reason != "rate_limit" {
+		t.Errorf("failed job reason: got %q, want %q", failed[0].Reason, "rate_limit")
+	}
+
+	// (b) Re-queued job exists with attempts incremented and at head position.
+	if len(requeued) == 0 {
+		t.Fatal("expected a pending re-queued job")
+	}
+	if requeued[0].Attempts != 2 {
+		t.Errorf("re-queued attempts: got %d, want 2", requeued[0].Attempts)
+	}
+	if requeued[0].Position >= failed[0].Position {
+		t.Errorf("re-queued position %d should be less than failed position %d",
+			requeued[0].Position, failed[0].Position)
+	}
+
+	// (c) Pause state is set.
+	paused, _, _, err := s.GetPauseState()
+	if err != nil {
+		t.Fatalf("GetPauseState: %v", err)
+	}
+	if !paused {
+		t.Error("expected queue to be paused after rate-limit")
+	}
+
+	// (d) queue.paused was broadcast.
+	stopCollect()
+	if !containsEvent(events, "queue.paused") {
+		t.Errorf("expected queue.paused broadcast; got %v", events())
+	}
+}
+
+// TestDispatcher_MaxAttemptsCap verifies that when a job has already reached
+// the maximum number of attempts, a rate-limit failure does NOT re-enqueue it
+// and instead broadcasts queue.skipped.
+func TestDispatcher_MaxAttemptsCap(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(filepath.Join(dir, "queue.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	projHub := hub.New()
+	appHub := hub.New()
+
+	lookup := func(name string) (ProjectAccess, bool) {
+		return ProjectAccess{
+			StartRun: func(ctx context.Context, agentName, targetPath string) (string, error) {
+				go func() {
+					time.Sleep(10 * time.Millisecond)
+					projHub.Broadcast(hub.Event{
+						Type: "queue.rate_limit",
+						Payload: map[string]any{
+							"run_id":   "test-run",
+							"raw_text": "resets 8pm (Australia/Brisbane)",
+						},
+					})
+				}()
+				return "test-run", nil
+			},
+			ArtifactStatus: func(relPath string) string { return "approved" },
+			Hub:            projHub,
+		}, true
+	}
+
+	const maxAttempts = 3
+	cfg := Config{
+		TickInterval:  20 * time.Millisecond,
+		ClockFn:       time.Now,
+		MaxAttempts:   maxAttempts,
+		ResumeGrace:   time.Minute,
+		FallbackPause: 30 * time.Minute,
+	}
+	d := New(s, lookup, appHub, cfg)
+
+	events, stopCollect := collectAppEvents(t, appHub)
+	defer stopCollect()
+
+	// Enqueue with attempts already at maxAttempts.
+	_ = s.Enqueue(Job{
+		Project:      "proj",
+		ArtifactPath: "lifecycle/ideas/a.md",
+		AgentName:    "analyst",
+		EnqueuedBy:   "alice@example.com",
+		Attempts:     maxAttempts,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	d.Start(ctx)
+
+	// Wait until the job is failed.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if failed, _ := s.ListByState(StateFailed); len(failed) > 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// No re-queued pending job.
+	pending, _ := s.ListByState(StatePending)
+	if len(pending) != 0 {
+		t.Errorf("expected no re-queued job when max attempts exceeded, got %d", len(pending))
+	}
+
+	stopCollect()
+	if !containsEvent(events, "queue.skipped") {
+		t.Errorf("expected queue.skipped broadcast; got %v", events())
+	}
+}
+
+// TestDispatcher_FallbackOnUnparseableReset verifies that when the rate-limit
+// text cannot be parsed (e.g. "resets soon"), the dispatcher falls back to
+// cfg.FallbackPause for paused_until.
+func TestDispatcher_FallbackOnUnparseableReset(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(filepath.Join(dir, "queue.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	projHub := hub.New()
+	appHub := hub.New()
+
+	lookup := func(name string) (ProjectAccess, bool) {
+		return ProjectAccess{
+			StartRun: func(ctx context.Context, agentName, targetPath string) (string, error) {
+				go func() {
+					time.Sleep(10 * time.Millisecond)
+					projHub.Broadcast(hub.Event{
+						Type: "queue.rate_limit",
+						Payload: map[string]any{
+							"run_id":   "test-run",
+							"raw_text": "resets soon", // unparseable
+						},
+					})
+				}()
+				return "test-run", nil
+			},
+			ArtifactStatus: func(relPath string) string { return "approved" },
+			Hub:            projHub,
+		}, true
+	}
+
+	const fallbackPause = 45 * time.Minute
+	const resumeGrace = 2 * time.Minute
+	now := time.Now()
+	cfg := Config{
+		TickInterval:  20 * time.Millisecond,
+		ClockFn:       func() time.Time { return now },
+		MaxAttempts:   5,
+		FallbackPause: fallbackPause,
+		ResumeGrace:   resumeGrace,
+	}
+	d := New(s, lookup, appHub, cfg)
+
+	_ = s.Enqueue(Job{
+		Project:      "proj",
+		ArtifactPath: "lifecycle/ideas/a.md",
+		AgentName:    "analyst",
+		EnqueuedBy:   "alice@example.com",
+		Attempts:     1,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	d.Start(ctx)
+
+	// Wait until paused.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if p, _, _, _ := s.GetPauseState(); p {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	_, until, _, err := s.GetPauseState()
+	if err != nil {
+		t.Fatalf("GetPauseState: %v", err)
+	}
+
+	// paused_until = now + fallbackPause + resumeGrace (within 5 seconds tolerance).
+	expectedUntil := now.Add(fallbackPause + resumeGrace)
+	diff := until.Sub(expectedUntil)
+	if diff < -5*time.Second || diff > 5*time.Second {
+		t.Errorf("paused_until %v differs from expected %v by %v (want within 5s)",
+			until, expectedUntil, diff)
 	}
 }
 
