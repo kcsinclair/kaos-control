@@ -3,6 +3,7 @@ title: Agent Run Summary Panel with Token Efficiency Metrics
 type: requirement
 status: approved
 lineage: agent-run-summary-panel
+priority: high
 parent: lifecycle/ideas/agent-run-summary-panel.md
 labels:
     - agent
@@ -11,9 +12,6 @@ labels:
     - vue
     - feature
 release: KC-Release1
-assignees:
-    - role: product-owner
-      who: agent
 ---
 
 # Agent Run Summary Panel with Token Efficiency Metrics
