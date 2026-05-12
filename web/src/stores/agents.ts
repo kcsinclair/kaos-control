@@ -3,7 +3,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as agentsApi from '@/api/agents'
-import type { AgentRunRow, AgentSummary } from '@/types/api'
+import type { AgentRunRow, AgentSummary, RunResult } from '@/types/api'
 
 // formatEvent renders a parsed stream event as a single line of text suitable
 // for the live progress panel.
@@ -83,6 +83,9 @@ export const useAgentsStore = defineStore('agents', () => {
 
   /** Ready-artifact count per agent name, populated by fetchReadyCounts(). */
   const readyCounts = ref<Record<string, number>>({})
+
+  /** Run results received via WebSocket finish events, keyed by run_id. */
+  const runResults = ref(new Map<string, RunResult>())
 
   const activeRuns = computed(() => runs.value.filter((r) => r.status === 'running'))
 
@@ -177,6 +180,11 @@ export const useAgentsStore = defineStore('agents', () => {
           remediation: (payload.remediation as string[] | null | undefined) ?? null,
         }
       }
+      // Cache the result payload if provided by the backend.
+      const wsResult = payload.result as RunResult | undefined
+      if (wsResult) {
+        runResults.value.set(runId, wsResult)
+      }
     }
 
     // Refresh per-artifact run list when a relevant event arrives.
@@ -199,6 +207,10 @@ export const useAgentsStore = defineStore('agents', () => {
     artifactRuns.value = await agentsApi.listRunsByTargetPath(_lastArtifactProject, artifactRunsPath.value)
   }
 
+  function getRunResult(runId: string): RunResult | null {
+    return runResults.value.get(runId) ?? null
+  }
+
   return {
     runs,
     agents,
@@ -207,6 +219,7 @@ export const useAgentsStore = defineStore('agents', () => {
     activeRuns,
     runningCountByAgent,
     readyCounts,
+    runResults,
     artifactRuns,
     artifactRunsPath,
     fetchRuns,
@@ -215,6 +228,7 @@ export const useAgentsStore = defineStore('agents', () => {
     startRun,
     killRun,
     fetchRunsByTargetPath,
+    getRunResult,
     onWsEvent,
   }
 })

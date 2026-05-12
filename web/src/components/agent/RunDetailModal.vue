@@ -1,11 +1,12 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import * as agentsApi from '@/api/agents'
 import type { AgentRunRow, RunResult } from '@/types/api'
 import RunSummaryCard from './RunSummaryCard.vue'
 import RawLogModal from './RawLogModal.vue'
+import { useAgentsStore } from '@/stores/agents'
 
 const props = defineProps<{
   project: string
@@ -23,6 +24,18 @@ const resultLoading = ref(false)
 
 const TERMINAL_RUN_STATUSES = new Set(['done', 'failed', 'killed', 'killed-timeout'])
 const showRawLog = ref(false)
+const agentsStore = useAgentsStore()
+
+// When a run finishes while the modal is open, pick up the result from the store.
+watch(
+  () => agentsStore.runResults.get(props.runId),
+  (newResult) => {
+    if (newResult && !runResult.value) {
+      runResult.value = newResult
+      resultLoading.value = false
+    }
+  },
+)
 
 // Focus management: save element that had focus before the modal opened.
 let previousFocus: HTMLElement | null = null
@@ -33,10 +46,16 @@ onMounted(async () => {
     const data = await agentsApi.getRun(props.project, props.runId)
     run.value = data.run
     if (data.run && TERMINAL_RUN_STATUSES.has(data.run.status)) {
-      resultLoading.value = true
-      const { result } = await agentsApi.getRunResult(props.project, props.runId)
-      runResult.value = result
-      resultLoading.value = false
+      // Check store cache first (populated by WS events) before calling API.
+      const cached = agentsStore.getRunResult(props.runId)
+      if (cached) {
+        runResult.value = cached
+      } else {
+        resultLoading.value = true
+        const { result } = await agentsApi.getRunResult(props.project, props.runId)
+        runResult.value = result
+        resultLoading.value = false
+      }
     }
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load run'
