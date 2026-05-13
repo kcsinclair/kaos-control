@@ -207,6 +207,66 @@ func (repo *Repo) ModifiedFiles(allowedPaths []string) ([]string, error) {
 	return out, nil
 }
 
+// StatusSummary is a snapshot of the repository's working-tree state.
+type StatusSummary struct {
+	Branch      string `json:"branch"`
+	Dirty       bool   `json:"dirty"`
+	HeadSHA     string `json:"head_sha"`
+	HeadMessage string `json:"head_message"`
+	HeadAuthor  string `json:"head_author"`
+	HeadWhen    string `json:"head_when"` // ISO 8601
+}
+
+// Status returns a StatusSummary describing the current working-tree state.
+// It does not walk commit history, so it completes in O(1) commit operations.
+func (repo *Repo) Status() (*StatusSummary, error) {
+	ref, err := repo.r.Head()
+	if err != nil {
+		return nil, fmt.Errorf("reading HEAD: %w", err)
+	}
+
+	commit, err := repo.r.CommitObject(ref.Hash())
+	if err != nil {
+		return nil, fmt.Errorf("resolving HEAD commit: %w", err)
+	}
+
+	sha := ref.Hash().String()
+	if len(sha) > 7 {
+		sha = sha[:7]
+	}
+
+	msg := commit.Message
+	if i := strings.Index(msg, "\n"); i >= 0 {
+		msg = msg[:i]
+	}
+
+	wt, err := repo.r.Worktree()
+	if err != nil {
+		return nil, fmt.Errorf("getting worktree: %w", err)
+	}
+	wtStatus, err := wt.Status()
+	if err != nil {
+		return nil, fmt.Errorf("git status: %w", err)
+	}
+
+	dirty := false
+	for _, s := range wtStatus {
+		if s.Worktree != gogit.Unmodified || s.Staging != gogit.Unmodified {
+			dirty = true
+			break
+		}
+	}
+
+	return &StatusSummary{
+		Branch:      ref.Name().Short(),
+		Dirty:       dirty,
+		HeadSHA:     sha,
+		HeadMessage: msg,
+		HeadAuthor:  commit.Author.Name,
+		HeadWhen:    commit.Author.When.Format(time.RFC3339),
+	}, nil
+}
+
 // ResolveIdentity returns the author name/email to use for commits.
 // Falls back to defaults when the git config has no user identity set.
 func (repo *Repo) ResolveIdentity() (name, email string) {
