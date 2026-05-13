@@ -6,7 +6,7 @@ export interface QueueJob {
   id: string
   project: string
   artifact_path: string
-  agent: string
+  agent_name: string
   state: 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'cancelled'
   reason?: string
   attempts: number

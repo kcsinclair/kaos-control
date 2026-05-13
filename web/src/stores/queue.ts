@@ -87,6 +87,10 @@ export const useQueueStore = defineStore('queue', () => {
             if (snapshot.value.recent.length > MAX_RECENT) {
               snapshot.value.recent = snapshot.value.recent.slice(0, MAX_RECENT)
             }
+            // The WS event payload does not include the terminal reason (the
+            // backend only stores it in the DB). Refresh the snapshot silently
+            // so the recent list shows the correct reason from the DB.
+            void _silentRefresh()
           }
           break
         }
@@ -111,6 +115,21 @@ export const useQueueStore = defineStore('queue', () => {
   const pausedUntilDate = computed(() =>
     snapshot.value.paused_until ? new Date(snapshot.value.paused_until) : null,
   )
+
+  // Refreshes the snapshot from the server without touching loading/error state.
+  // Used internally to pick up data (e.g. terminal reason) that WS events omit.
+  async function _silentRefresh() {
+    try {
+      const raw = await queueApi.listQueue()
+      snapshot.value = {
+        ...raw,
+        pending: raw.pending ?? [],
+        recent: raw.recent ?? [],
+      }
+    } catch {
+      // Ignore errors — the existing snapshot remains visible.
+    }
+  }
 
   async function fetch() {
     _subscribe()
@@ -145,11 +164,11 @@ export const useQueueStore = defineStore('queue', () => {
         id: result.id,
         project: args.project,
         artifact_path: args.artifact_path,
-        agent: args.agent,
+        agent_name: args.agent,
         state: 'pending',
         position: result.position,
         attempts: 0,
-        enqueued_at: Math.floor(Date.now() / 1000),
+        enqueued_at: new Date().toISOString(),
         enqueued_by: '',
       })
       snapshot.value.pending.sort((a, b) => a.position - b.position)

@@ -81,7 +81,7 @@ async function handleRemove(id: string) {
               :to="`/p/${encodeURIComponent(job.project)}/artifacts/${job.artifact_path}`"
             >{{ job.artifact_path }}</RouterLink>
           </td>
-          <td class="agent-name">{{ job.agent }}</td>
+          <td class="agent-name">{{ job.agent_name }}</td>
           <td class="mono">{{ formatTime(job.enqueued_at) }}</td>
           <td class="mono">{{ job.enqueued_by }}</td>
           <td>

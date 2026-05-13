@@ -49,7 +49,7 @@ const startedAtLabel = computed(() => {
     <div v-else class="running-row">
       <div class="running-field">
         <span class="field-label">Agent</span>
-        <span class="field-value agent-name">{{ job.agent }}</span>
+        <span class="field-value agent-name">{{ job.agent_name }}</span>
       </div>
       <div class="running-field">
         <span class="field-label">Project</span>

@@ -70,7 +70,7 @@ function stateClass(state: QueueJob['state']): string {
               :to="`/p/${encodeURIComponent(job.project)}/artifacts/${job.artifact_path}`"
             >{{ job.artifact_path }}</RouterLink>
           </td>
-          <td class="agent-name">{{ job.agent }}</td>
+          <td class="agent-name">{{ job.agent_name }}</td>
           <td class="mono">{{ formatTime(job.finished_at) }}</td>
           <td class="reason">{{ job.reason ?? '—' }}</td>
         </tr>
