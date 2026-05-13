@@ -136,6 +136,8 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 		if _, err := p.Git.AddAndCommit([]string{relPath}, msg, authorName, authorEmail); err != nil {
 			// Non-fatal for now: index is updated but no commit.
 			_ = err
+		} else if summary, err := p.Git.Status(); err == nil {
+			p.Hub.Broadcast(hub.Event{Type: "git.status", Payload: summary})
 		}
 	}
 
@@ -276,7 +278,11 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 	if p.Git != nil {
 		authorName, authorEmail := p.Git.ResolveIdentity()
 		msg := fmt.Sprintf("update: %s", relPath)
-		_, _ = p.Git.AddAndCommit([]string{relPath}, msg, authorName, authorEmail)
+		if _, err := p.Git.AddAndCommit([]string{relPath}, msg, authorName, authorEmail); err == nil {
+			if summary, err := p.Git.Status(); err == nil {
+				p.Hub.Broadcast(hub.Event{Type: "git.status", Payload: summary})
+			}
+		}
 	}
 
 	p.Hub.Broadcast(hub.Event{
@@ -325,7 +331,11 @@ func (s *Server) handleDeleteArtifact(w http.ResponseWriter, r *http.Request) {
 	if p.Git != nil {
 		authorName, authorEmail := p.Git.ResolveIdentity()
 		msg := fmt.Sprintf("delete: %s", relPath)
-		_, _ = p.Git.AddAndCommit([]string{relPath}, msg, authorName, authorEmail)
+		if _, err := p.Git.AddAndCommit([]string{relPath}, msg, authorName, authorEmail); err == nil {
+			if summary, err := p.Git.Status(); err == nil {
+				p.Hub.Broadcast(hub.Event{Type: "git.status", Payload: summary})
+			}
+		}
 	}
 
 	p.Hub.Broadcast(hub.Event{
@@ -423,7 +433,11 @@ func (s *Server) handleRenameArtifact(w http.ResponseWriter, r *http.Request) {
 	if p.Git != nil {
 		authorName, authorEmail := p.Git.ResolveIdentity()
 		msg := fmt.Sprintf("rename: %s → %s", oldSlug, req.NewSlug)
-		_, _ = p.Git.AddAndCommit(changed, msg, authorName, authorEmail)
+		if _, err := p.Git.AddAndCommit(changed, msg, authorName, authorEmail); err == nil {
+			if summary, err := p.Git.Status(); err == nil {
+				p.Hub.Broadcast(hub.Event{Type: "git.status", Payload: summary})
+			}
+		}
 	}
 
 	p.Hub.Broadcast(hub.Event{

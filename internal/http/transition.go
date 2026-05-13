@@ -203,7 +203,11 @@ func applyTransition(p *project.Project, row *index.ArtifactRow, relPath, toStat
 		if comment != "" {
 			msg += "\n\n" + comment
 		}
-		_, _ = p.Git.AddAndCommit([]string{relPath}, msg, authorName, authorEmail)
+		if _, err := p.Git.AddAndCommit([]string{relPath}, msg, authorName, authorEmail); err == nil {
+			if summary, err := p.Git.Status(); err == nil {
+				p.Hub.Broadcast(hub.Event{Type: "git.status", Payload: summary})
+			}
+		}
 	}
 
 	// WebSocket broadcast.
