@@ -1,7 +1,7 @@
 ---
 title: "Test Suite — Inline Status Transition Dropdown"
 type: test
-status: in-qa
+status: approved
 lineage: artefact-inline-status-change
 parent: lifecycle/test-plans/artefact-inline-status-change-5-test.md
 ---

@@ -30,6 +30,11 @@ stages:
     dir: releases
   - name: defects
     dir: defects
+required_plans:
+  requirement:
+    - plan-backend
+    - plan-frontend
+    - plan-test
 users:
   - email: keith@sinclair.org.au
     roles:
@@ -448,21 +453,22 @@ agents:
         ```json
         {"action":"propose","reply":"<short confirmation message>","slug":"<slug>","title":"<Defect Title>","labels":["defect"],"body":"# <Defect Title>\n\n## Reproduction Steps\n\n<steps>\n\n## Expected Behaviour\n\n<expected>\n\n## Actual Behaviour\n\n<actual>"}
         ```
-  - name: ollama-qa
+  - name: ollama-chat-qa
     role:
       - qa
     driver: ollama
-    model: qwen2.5-coder:32b
+    model: gemma4:26b
     timeout_minutes: 0
     ollama_instance: Loki
+    ollama_endpoint: chat
     active_status: in-qa
     source_types:
       - test
     allowed_write_paths:
       - lifecycle/defects
     git_identity:
-      name: qwen2.5-qa
-      email: qwen2.5-qa@kaos-control.local
+      name: ollama-qa
+      email: ollama-qa@kaos-control.local
     prompt_templates:
       qa: |
         You are a QA agent for the Innovation Maker project.
@@ -494,9 +500,97 @@ agents:
           - Actual Behaviour
           - Logs / Output (include stderr tail or test output)
 
-required_plans:
-  requirement:
-    - plan-backend
-    - plan-frontend
-    - plan-test
+  - name: ollama-gen-qa
+    role:
+      - qa
+    driver: ollama
+    model: gemma4:26b
+    timeout_minutes: 0
+    ollama_instance: Loki
+    ollama_endpoint: generate
+    active_status: in-qa
+    source_types:
+      - test
+    allowed_write_paths:
+      - lifecycle/defects
+    git_identity:
+      name: ollama-qa
+      email: ollama-qa@kaos-control.local
+    prompt_templates:
+      qa: |
+        You are a QA agent for the Innovation Maker project.
+        Given the artifact at {target_path} (typically a requirement or
+        test artifact), run the relevant integration tests in tests/ and
+        report results.
+
+        For EACH failing test, create one defect artifact in
+        lifecycle/defects/ with frontmatter:
+          title: <short defect title>
+          type: defect
+          status: draft
+          lineage: <lineage of the feature being tested>
+          parent: <path to the failing test artifact or feature>
+          labels: [defect]
+          assignees:
+            - role: <backend-developer | frontend-developer | test-developer>
+              who: agent
+
+        Route each defect to the correct developer role based on which layer
+        failed:
+          - Backend API / logic / data → backend-developer
+          - UI / component / state → frontend-developer
+          - Flaky or wrong test → test-developer
+
+        Body sections:
+          - Reproduction Steps (exact, numbered)
+          - Expected Behaviour
+          - Actual Behaviour
+          - Logs / Output (include stderr tail or test output)
+
+  - name: ollama-gemma4-qa
+    role:
+      - qa
+    driver: ollama
+    model: gemma4:31b-cloud
+    timeout_minutes: 0
+    ollama_instance: Loki
+    ollama_endpoint: generate
+    active_status: in-qa
+    source_types:
+      - test
+    allowed_write_paths:
+      - lifecycle/defects
+    git_identity:
+      name: ollama-qa
+      email: ollama-qa@kaos-control.local
+    prompt_templates:
+      qa: |
+        You are a QA agent for the Innovation Maker project.
+        Given the artifact at {target_path} (typically a requirement or
+        test artifact), run the relevant integration tests in tests/ and
+        report results.
+
+        For EACH failing test, create one defect artifact in
+        lifecycle/defects/ with frontmatter:
+          title: <short defect title>
+          type: defect
+          status: draft
+          lineage: <lineage of the feature being tested>
+          parent: <path to the failing test artifact or feature>
+          labels: [defect]
+          assignees:
+            - role: <backend-developer | frontend-developer | test-developer>
+              who: agent
+
+        Route each defect to the correct developer role based on which layer
+        failed:
+          - Backend API / logic / data → backend-developer
+          - UI / component / state → frontend-developer
+          - Flaky or wrong test → test-developer
+
+        Body sections:
+          - Reproduction Steps (exact, numbered)
+          - Expected Behaviour
+          - Actual Behaviour
+          - Logs / Output (include stderr tail or test output)
 

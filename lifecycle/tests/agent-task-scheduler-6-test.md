@@ -1,7 +1,7 @@
 ---
 title: "Agent & Task Scheduler — Test Suite"
 type: test
-status: in-qa
+status: approved
 lineage: agent-task-scheduler
 parent: lifecycle/test-plans/agent-task-scheduler-5-test.md
 created: "2026-05-06T00:00:00+10:00"
