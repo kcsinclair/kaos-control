@@ -73,6 +73,7 @@ type Run struct {
 	RunID        string
 	AgentName    string
 	Role         string
+	Driver       string // "claude-code-cli", "ollama", … — controls supervisor behaviour (e.g. precheck applicability)
 	Model        string // empty → CLI default
 	PromptText   string
 	ProjectRoot  string
@@ -467,6 +468,7 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		RunID:              runID,
 		AgentName:          agentName,
 		Role:               role,
+		Driver:             ag.Driver,
 		Model:              ag.Model,
 		PromptText:         prompt,
 		ProjectRoot:        m.root,
@@ -587,40 +589,56 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		return
 	}
 
-	// runPrecheck forwards events to the hub AND watches for the system/init event.
-	// It blocks until the precheck is resolved (init seen, timeout, or channel closed).
-	// The broadcast function also checks each event for rate-limit payloads (M4):
-	// when detected, a separate queue.rate_limit event is emitted so the queue
-	// dispatcher can pause and re-enqueue the job.
-	precheckResult, observedMode := runPrecheck(
-		proc.Progress(),
-		m.initEventTimeout,
-		m.requireBypassPerms,
-		run.RunID,
-		func(e hub.Event) {
-			m.hub.Broadcast(e)
-			// M4: detect rate-limit events in the stream and re-broadcast them
-			// as queue.rate_limit so the queue dispatcher can react.
-			if e.Type == "agent.progress" {
-				if payload, ok := e.Payload.(map[string]any); ok {
-					if rawText, isRL := extractRateLimitText(payload); isRL {
-						m.hub.Broadcast(hub.Event{
-							Type: "queue.rate_limit",
-							Payload: map[string]any{
-								"run_id":   run.RunID,
-								"raw_text": rawText,
-							},
-						})
-					}
+	// Event-forwarding closure shared by the precheck (Claude) and the plain
+	// drain loop (Ollama and any other non-Claude driver). Also detects
+	// rate-limit payloads (M4) and re-broadcasts them as queue.rate_limit so
+	// the queue dispatcher can pause and re-enqueue the job.
+	broadcast := func(e hub.Event) {
+		m.hub.Broadcast(e)
+		if e.Type == "agent.progress" {
+			if payload, ok := e.Payload.(map[string]any); ok {
+				if rawText, isRL := extractRateLimitText(payload); isRL {
+					m.hub.Broadcast(hub.Event{
+						Type: "queue.rate_limit",
+						Payload: map[string]any{
+							"run_id":   run.RunID,
+							"raw_text": rawText,
+						},
+					})
 				}
 			}
-		},
-		func() { m.killer.Kill(proc) },
-	)
+		}
+	}
 
-	if precheckResult == precheckFailedMode || precheckResult == precheckFailedTimeout {
-		m.killAndFail(run, row, proc, lineage, precheckResult, observedMode)
-		return
+	// The init-event/permission-mode precheck is Claude-Code-specific — only
+	// `claude` emits system/init events with a permissionMode field. For any
+	// other driver, just forward events to the hub until the channel closes.
+	if run.Driver == "claude-code-cli" {
+		precheckResult, observedMode := runPrecheck(
+			proc.Progress(),
+			m.initEventTimeout,
+			m.requireBypassPerms,
+			run.RunID,
+			broadcast,
+			func() { m.killer.Kill(proc) },
+		)
+
+		if precheckResult == precheckFailedMode || precheckResult == precheckFailedTimeout {
+			m.killAndFail(run, row, proc, lineage, precheckResult, observedMode)
+			return
+		}
+	} else {
+		for ev := range proc.Progress() {
+			payload := map[string]any{
+				"run_id": run.RunID,
+				"line":   ev.Raw,
+				"raw":    ev.Raw,
+			}
+			if ev.Event != nil {
+				payload["event"] = ev.Event
+			}
+			broadcast(hub.Event{Type: "agent.progress", Payload: payload})
+		}
 	}
 
 	// Precheck passed (or was not applicable — process exited before init).
