@@ -227,13 +227,13 @@ onMounted(async () => {
         <ShieldCheck :size="15" />
         Check statuses
       </button>
-      <button class="btn-new-defect" @click="openBrainDump('defect')">
-        <Bug :size="15" />
-        New Defect
-      </button>
       <button class="btn-new-idea" ref="newIdeaButtonEl" @click="openBrainDump('idea')">
         <MessageSquarePlus :size="15" />
         New Idea
+      </button>
+      <button class="btn-new-defect" @click="openBrainDump('defect')">
+        <Bug :size="15" />
+        New Defect
       </button>
     </div>
 
@@ -393,7 +393,6 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  margin-left: auto;
   padding: var(--space-1) var(--space-3);
   background: none;
   border: 1px solid var(--color-border);
@@ -409,6 +408,7 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  margin-left: auto;
   padding: var(--space-1) var(--space-3);
   background: var(--color-accent);
   color: #fff;
