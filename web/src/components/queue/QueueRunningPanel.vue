@@ -22,7 +22,9 @@ const job = computed(() => {
 
 const elapsedLabel = computed(() => {
   if (!job.value?.started_at) return '…'
-  const diffSec = Math.floor((now.value.getTime() / 1000) - job.value.started_at)
+  const startMs = new Date(job.value.started_at).getTime()
+  if (isNaN(startMs)) return '—'
+  const diffSec = Math.floor((now.value.getTime() - startMs) / 1000)
   if (diffSec < 0) return '0s'
   if (diffSec < 60) return `${diffSec}s`
   const mins = Math.floor(diffSec / 60)
@@ -35,7 +37,8 @@ const elapsedLabel = computed(() => {
 
 const startedAtLabel = computed(() => {
   if (!job.value?.started_at) return '—'
-  return new Date(job.value.started_at * 1000).toLocaleString()
+  const d = new Date(job.value.started_at)
+  return isNaN(d.getTime()) ? '—' : d.toLocaleString()
 })
 </script>
 

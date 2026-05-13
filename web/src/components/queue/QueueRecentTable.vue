@@ -22,9 +22,10 @@ const emptyMessage = computed(() =>
   props.projectFilter ? `No recent jobs for ${props.projectFilter}` : 'No recent jobs',
 )
 
-function formatTime(unix?: number): string {
-  if (!unix) return '—'
-  return new Date(unix * 1000).toLocaleString()
+function formatTime(iso?: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return isNaN(d.getTime()) ? '—' : d.toLocaleString()
 }
 
 function stateClass(state: QueueJob['state']): string {

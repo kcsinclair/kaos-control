@@ -10,9 +10,9 @@ export interface QueueJob {
   state: 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'cancelled'
   reason?: string
   attempts: number
-  enqueued_at: number
-  started_at?: number
-  finished_at?: number
+  enqueued_at: string
+  started_at?: string
+  finished_at?: string
   position: number
   enqueued_by: string
 }

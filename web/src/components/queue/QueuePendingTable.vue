@@ -25,8 +25,9 @@ const emptyMessage = computed(() =>
   props.projectFilter ? `No pending jobs for ${props.projectFilter}` : 'Queue is empty',
 )
 
-function formatTime(unix: number): string {
-  return new Date(unix * 1000).toLocaleString()
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  return isNaN(d.getTime()) ? '—' : d.toLocaleString()
 }
 
 function canRemove(enqueuedBy: string, project: string): boolean {
