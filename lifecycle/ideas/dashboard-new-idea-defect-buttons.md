@@ -1,7 +1,7 @@
 ---
 title: Add New Idea and New Defect Buttons to Dashboard Top Menu
 type: idea
-status: approved
+status: clarifying
 lineage: dashboard-new-idea-defect-buttons
 created: "2026-05-13T11:26:01+10:00"
 priority: normal
