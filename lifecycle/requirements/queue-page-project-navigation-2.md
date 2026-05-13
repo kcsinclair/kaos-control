@@ -3,7 +3,7 @@ title: Queue Page Project Navigation
 type: requirement
 status: planning
 lineage: queue-page-project-navigation
-created: "2026-05-13"
+created: "2026-05-13T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/queue-page-project-navigation.md
 labels:

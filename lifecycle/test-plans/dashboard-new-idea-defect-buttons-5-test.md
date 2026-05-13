@@ -4,7 +4,7 @@ type: plan-test
 status: done
 lineage: dashboard-new-idea-defect-buttons
 parent: lifecycle/requirements/dashboard-new-idea-defect-buttons-2.md
-created: "2026-05-13"
+created: "2026-05-13T00:00:00+10:00"
 ---
 
 # Test Plan — Dashboard New Idea & Defect Buttons

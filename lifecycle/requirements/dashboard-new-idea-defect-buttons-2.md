@@ -3,7 +3,7 @@ title: New Idea & New Defect Quick-Action Buttons on Dashboard and Button Reorde
 type: requirement
 status: in-development
 lineage: dashboard-new-idea-defect-buttons
-created: "2026-05-13"
+created: "2026-05-13T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/dashboard-new-idea-defect-buttons.md
 labels:
