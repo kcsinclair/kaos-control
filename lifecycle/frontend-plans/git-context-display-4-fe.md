@@ -1,7 +1,7 @@
 ---
 title: "Git Context Display — Frontend Plan"
 type: plan-frontend
-status: draft
+status: approved
 lineage: git-context-display
 parent: lifecycle/requirements/git-context-display-2.md
 ---
