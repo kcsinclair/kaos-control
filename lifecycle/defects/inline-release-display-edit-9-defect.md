@@ -1,14 +1,15 @@
 ---
-title: "handlePatchRelease returns 422 instead of 404 for non-existent artifact"
+title: handlePatchRelease returns 422 instead of 404 for non-existent artifact
 type: defect
-status: in-development
+status: done
 lineage: inline-release-display-edit
 parent: lifecycle/tests/inline-release-display-edit-8-test.md
 labels:
-  - defect
+    - defect
+release: KC-Release1
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # handlePatchRelease returns 422 instead of 404 for non-existent artifact

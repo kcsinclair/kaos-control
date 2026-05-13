@@ -1,7 +1,7 @@
 ---
 title: Queue Work Button Not Visible on Approved Artifacts; Queue Limited to One Item
 type: defect
-status: in-development
+status: done
 lineage: queue-work-button-visibility-and-multi-item
 created: "2026-05-12T19:01:06+10:00"
 priority: normal
@@ -11,6 +11,7 @@ labels:
     - queue
     - workflow
     - usability
+release: KC-Release1
 ---
 
 # Queue Work Button Not Visible on Approved Artifacts; Queue Limited to One Item
