@@ -1,7 +1,7 @@
 ---
 title: Git Context Display in GUI
 type: requirement
-status: blocked
+status: approved
 lineage: git-context-display
 created: "2026-05-11T00:00:00+10:00"
 priority: normal
@@ -12,9 +12,6 @@ labels:
     - backend
     - operability
 release: KC-Release1
-assignees:
-    - role: product-owner
-      who: agent
 ---
 
 # Git Context Display in GUI
@@ -115,8 +112,16 @@ The status bar component must be keyboard-navigable and use appropriate ARIA att
 - [ ] No new Go or npm dependencies are introduced.
 - [ ] Related: [[git-context-display]]
 
-## Open Questions
+## Resolved Questions
 
 1. **Placement**: Should the git status bar be in the top header, a bottom status strip, or both? The idea suggests "status bar or header" — a specific decision is needed during design/planning.
+
+> In the left menu bar under the application menu options include a panel for the git information.
+
 2. **Dirty-file count**: Should the dirty indicator show the number of modified files, or just a boolean dirty/clean flag? Showing a count is marginally more useful but adds complexity to the endpoint.
+
+> boolean for now.
+
 3. **Branch icon**: Should the branch name use a git-branch icon from the existing lucide icon set, or plain text with monospace styling?
+
+> git-branch icon is good.
