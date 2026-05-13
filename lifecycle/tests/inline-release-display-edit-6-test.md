@@ -1,7 +1,7 @@
 ---
 title: "Test Coverage: Inline Release Display and Editing"
 type: test
-status: in-qa
+status: draft
 lineage: inline-release-display-edit
 parent: lifecycle/test-plans/inline-release-display-edit-5-test.md
 ---
