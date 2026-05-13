@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { useAuthStore } from '@/stores/auth'
@@ -24,6 +24,10 @@ onMounted(async () => {
   }
 })
 
+const sortedProjects = computed(() =>
+  [...projectStore.projects].sort((a, b) => a.name.localeCompare(b.name))
+)
+
 function openProject(name: string) {
   projectStore.setCurrent(name)
   router.push(`/p/${encodeURIComponent(name)}`)
@@ -45,7 +49,7 @@ function openProject(name: string) {
 
         <ul v-else class="project-list">
           <li
-            v-for="p in projectStore.projects"
+            v-for="p in sortedProjects"
             :key="p.name"
             class="project-item"
             @click="openProject(p.name)"
