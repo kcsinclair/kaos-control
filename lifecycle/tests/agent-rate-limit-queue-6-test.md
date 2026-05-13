@@ -1,7 +1,7 @@
 ---
 title: "Tests — Agent Work Queue with Rate-Limit Auto-Pause"
 type: test
-status: approved
+status: draft
 lineage: agent-rate-limit-queue
 parent: lifecycle/test-plans/agent-rate-limit-queue-5-test.md
 created: "2026-05-12T17:30:00+10:00"
