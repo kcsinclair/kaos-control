@@ -29,6 +29,11 @@ onMounted(() => {
     const name = typeof qp === 'string' ? qp : null
     if (name && projectStore.projects.some((p) => p.name === name)) {
       activeProject.value = name
+    } else if (name) {
+      // Unknown project — strip the param so the URL reflects "All Projects".
+      const next = { ...route.query }
+      delete next.project
+      void router.replace({ query: next })
     }
   })
 })
