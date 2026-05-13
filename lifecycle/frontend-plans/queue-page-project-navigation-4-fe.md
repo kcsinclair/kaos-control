@@ -1,7 +1,7 @@
 ---
 title: "Queue Page Project Navigation — Frontend Plan"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: queue-page-project-navigation
 parent: lifecycle/requirements/queue-page-project-navigation-2.md
 created: "2026-05-13"
