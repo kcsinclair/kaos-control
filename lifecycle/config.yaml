@@ -448,11 +448,11 @@ agents:
         ```json
         {"action":"propose","reply":"<short confirmation message>","slug":"<slug>","title":"<Defect Title>","labels":["defect"],"body":"# <Defect Title>\n\n## Reproduction Steps\n\n<steps>\n\n## Expected Behaviour\n\n<expected>\n\n## Actual Behaviour\n\n<actual>"}
         ```
-  - name: gemma-qa
+  - name: ollama-qa
     role:
       - qa
     driver: ollama
-    model: gemma4:26b
+    model: qwen2.5-coder:32b
     timeout_minutes: 0
     ollama_instance: Loki
     active_status: in-qa
@@ -461,8 +461,8 @@ agents:
     allowed_write_paths:
       - lifecycle/defects
     git_identity:
-      name: gemma-qa
-      email: gemma-qa@kaos-control.local
+      name: qwen2.5-qa
+      email: qwen2.5-qa@kaos-control.local
     prompt_templates:
       qa: |
         You are a QA agent for the Innovation Maker project.
