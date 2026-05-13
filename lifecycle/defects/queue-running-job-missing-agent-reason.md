@@ -1,7 +1,7 @@
 ---
 title: 'Queue Page: Agent and Reason Fields Empty While Job is Running'
 type: defect
-status: draft
+status: approved
 lineage: queue-running-job-missing-agent-reason
 created: "2026-05-13T16:11:30+10:00"
 priority: normal
@@ -10,6 +10,10 @@ labels:
     - queue
     - frontend
     - usability
+release: KC-Release1
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Queue Page: Agent and Reason Fields Empty While Job is Running
