@@ -1,7 +1,7 @@
 ---
 title: "Defect Fix Tests — Q4/Q8 error code JSON path correction"
 type: test
-status: approved
+status: in-qa
 lineage: agent-rate-limit-queue
 parent: lifecycle/defects/agent-rate-limit-queue-7-defect.md
 created: "2026-05-12T00:00:00+10:00"
