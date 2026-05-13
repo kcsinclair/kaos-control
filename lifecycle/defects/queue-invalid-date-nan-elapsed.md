@@ -10,6 +10,10 @@ labels:
     - frontend
     - queue
     - vue
+release: KC-Release1
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Queue Page Shows 'Invalid Date' and 'NaNh' for All Entries
