@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Inline Release Display and Editing'
 type: plan-test
-status: in-development
+status: done
 lineage: inline-release-display-edit
 parent: lifecycle/requirements/inline-release-display-edit-2.md
 assignees:
