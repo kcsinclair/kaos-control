@@ -1,7 +1,7 @@
 ---
 title: Queue Page Project Navigation
 type: idea
-status: draft
+status: approved
 lineage: queue-page-project-navigation
 created: "2026-05-13T11:27:58+10:00"
 priority: normal
@@ -11,6 +11,7 @@ labels:
     - vue
     - usability
     - enhancement
+release: KC-Release1
 ---
 
 # Queue Page Project Navigation
