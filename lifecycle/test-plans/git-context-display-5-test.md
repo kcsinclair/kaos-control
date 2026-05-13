@@ -1,7 +1,7 @@
 ---
 title: "Git Context Display — Test Plan"
 type: plan-test
-status: approved
+status: in-development
 lineage: git-context-display
 parent: lifecycle/requirements/git-context-display-2.md
 ---
