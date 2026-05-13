@@ -4,7 +4,7 @@ A single-binary lifecycle management tool that turns ideas into shipped releases
 
 > **Status:** active development. Comprehensive documentation will follow — this README is a quick start only.
 
-[kaos-control on github](https://github.com/kcsinclair/kaos-control)
+[kaos-control on github](https://github.com/kcsinclair/kaos-control)  
 [kaos-control.io](https://kaos-control.io)
 
 ## What you get
@@ -66,6 +66,102 @@ prompting. Without this, every agent run will stall with a message like
 > agent-run start and fail the run within seconds with a clear,
 > actionable error instead of silently producing nothing. Tracked under
 > the `agent-permission-precheck` lineage in this project's lifecycle.
+
+## Install from a released binary
+
+Pre-built single-binary archives are published on GitHub Releases for
+macOS (Intel + Apple Silicon), Linux (x86-64 + arm64), and Windows
+(x86-64). Each archive ships the `kaos-control` binary alongside this
+README, LICENSE, and CONTRIBUTING.
+
+This is the recommended path for most users. If you want to build from
+source instead, skip ahead to [Install from source](#getting-started-building-from-source).
+
+### 1. Download the archive for your platform
+
+Pick the build for your OS and CPU architecture from the
+[Releases page](https://github.com/kcsinclair/kaos-control/releases),
+or from a terminal — replace `0.1.1` with the version you want:
+
+```sh
+VERSION=0.1.1
+BASE=https://github.com/kcsinclair/kaos-control/releases/download/v${VERSION}
+
+# Pick ONE of the following:
+curl -L -o kaos-control.zip "$BASE/kaos-control-${VERSION}-darwin-arm64.zip"    # macOS, Apple Silicon
+curl -L -o kaos-control.zip "$BASE/kaos-control-${VERSION}-darwin-amd64.zip"    # macOS, Intel
+curl -L -o kaos-control.zip "$BASE/kaos-control-${VERSION}-linux-amd64.zip"     # Linux, x86-64
+curl -L -o kaos-control.zip "$BASE/kaos-control-${VERSION}-linux-arm64.zip"     # Linux, arm64
+curl -L -o kaos-control.zip "$BASE/kaos-control-${VERSION}-windows-amd64.zip"   # Windows, x86-64
+```
+
+### 2. Verify the checksum (recommended)
+
+Each release publishes a `SHA256SUMS` file alongside the archives.
+
+```sh
+curl -L -o SHA256SUMS "$BASE/SHA256SUMS"
+
+# macOS
+shasum -a 256 -c SHA256SUMS --ignore-missing
+
+# Linux
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+Each line that matches a file you downloaded should print `OK`. If any
+line says `FAILED`, do not run the binary — re-download the archive.
+
+### 3. Unzip and place the binary
+
+The archive extracts to a versioned `kaos-control-<VERSION>/` directory
+containing the binary plus the docs — e.g. `kaos-control-0.1.1/`:
+
+```sh
+unzip kaos-control.zip
+cd kaos-control-${VERSION}
+```
+
+Two releases unzipped side-by-side won't collide because each gets its
+own versioned directory.
+
+To make `kaos-control` runnable from anywhere, move it onto your PATH.
+
+```sh
+# macOS / Linux
+sudo mv ./kaos-control /usr/local/bin/
+```
+
+On Windows, copy `kaos-control.exe` into a directory that's on your
+`%PATH%`, or invoke it by its full path.
+
+### 4. macOS first-run only — clear the quarantine attribute
+
+The macOS builds are not yet code-signed, so the first time you run
+the binary macOS will refuse with a *"cannot be opened because Apple
+cannot check it for malicious software"* message. Strip the
+quarantine attribute once and you won't see the dialog again:
+
+```sh
+xattr -d com.apple.quarantine /usr/local/bin/kaos-control
+```
+
+Linux and Windows have no equivalent step.
+
+### 5. Run it
+
+From here on the bootstrap path is the same whether you built from
+source or downloaded a release:
+
+- [First run](#2-first-run) — kaos-control writes `~/.kaos-control/config.yaml`,
+  starts on `:8042`, and waits for you to create the first user.
+- [Bootstrap a project](#3-bootstrap-a-project) — register a directory
+  on disk as a project so it appears in the picker.
+- [Use it](#4-use-it) — what the SPA looks like once you're in.
+
+If you plan to run agents, the [Note on Claude Permissions](#note-on-claude-permissions)
+section above is required reading. Without it your first agent run
+will stall silently — there's a fix for that landing in KC-Release1.
 
 ## Getting started building from source
 

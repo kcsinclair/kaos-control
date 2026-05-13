@@ -12,6 +12,11 @@ steps:
     command: make release VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
     timeout: 15m
 
+  - name: Make package
+    description: Create release packages for all platforms
+    command: make package VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
+    timeout: 15m
+
   - name: List artifacts
     description: Show the produced binaries with sizes
     command: ls -lah dist/kaos-control-*

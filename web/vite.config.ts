@@ -33,12 +33,36 @@ export default defineConfig({
           }
         },
       },
+      // Silence the "dynamic import will not move module into another chunk"
+      // warning for @/router and @/stores/auth. These two modules are
+      // intentionally dynamic-imported from api/client.ts and api/ws.ts to
+      // break a load-time circular dependency:
+      //   router → stores/auth → api/auth → api/client → router
+      // They're also statically imported by many components (header, sidebar,
+      // login form, etc.) so Rollup correctly observes that the dynamic
+      // imports don't move them to a separate chunk. That's fine — the goal
+      // here is cycle-breaking, not chunk-splitting.
+      onwarn(warning, defaultHandler) {
+        const msg = warning.message ?? ''
+        if (
+          msg.includes('dynamic import will not move module into another chunk') &&
+          (msg.includes('stores/auth.ts') || msg.includes('router/index.ts'))
+        ) {
+          return
+        }
+        defaultHandler(warning)
+      },
     },
   },
   server: {
     proxy: {
+      // `pnpm run dev` proxies /api/* (and WebSocket upgrades on /api/p/*/ws)
+      // to a locally running kaos-control backend. The default backend port
+      // is :8042 (see defaultApp() in internal/config and the README quick
+      // start). Override here only if you're running the backend on a
+      // non-default port for dev.
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8042',
         ws: true,
       },
     },

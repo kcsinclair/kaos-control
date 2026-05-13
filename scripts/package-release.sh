@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # package-release.sh — bundle each cross-compiled binary in dist/ into a
-# zip archive containing a `kaos-control/` directory with the binary
-# (renamed to `kaos-control`), README, LICENSE, and CONTRIBUTING.
+# zip archive containing a versioned `kaos-control-<VERSION>/` directory
+# with the binary (renamed to `kaos-control`), README, LICENSE, and
+# CONTRIBUTING.
 #
 # Version comes from the top-level `VERSION` file and is embedded in
 # every archive filename: `kaos-control-<version>-<os>-<arch>.zip`.
@@ -22,8 +23,8 @@
 #   dist/kaos-control-0.1.1-darwin-arm64.zip
 #   dist/kaos-control-0.1.1-windows-amd64.zip
 #
-# Each zip extracts to:
-#   kaos-control/
+# Each zip extracts to (for VERSION=0.1.1):
+#   kaos-control-0.1.1/
 #   ├── kaos-control      (or kaos-control.exe on Windows; mode 0755)
 #   ├── README.md
 #   ├── LICENSE
@@ -138,7 +139,11 @@ for platform in "${PLATFORMS[@]}"; do
         continue
     fi
 
-    stage_dir="$STAGE_ROOT/${os}-${arch}/kaos-control"
+    # Inner directory is versioned (e.g. `kaos-control-0.1.1/`) so unzipping
+    # multiple releases side-by-side doesn't collide and the directory name
+    # is self-documenting.
+    inner_dir="kaos-control-${VERSION}"
+    stage_dir="$STAGE_ROOT/${os}-${arch}/$inner_dir"
     mkdir -p "$stage_dir"
     cp "$bin_src" "$stage_dir/kaos-control${ext}"
     chmod 0755 "$stage_dir/kaos-control${ext}"
@@ -150,9 +155,9 @@ for platform in "${PLATFORMS[@]}"; do
     zip_out="$DIST_DIR/$zip_name"
     rm -f "$zip_out"
 
-    # Run zip from the parent of `kaos-control/` so the archive contains
-    # `kaos-control/...` paths (not absolute paths or a flat layout).
-    (cd "$STAGE_ROOT/${os}-${arch}" && zip -qr "$zip_out" kaos-control)
+    # Run zip from the parent of the versioned dir so the archive contains
+    # `kaos-control-<VERSION>/...` paths (not absolute paths or a flat layout).
+    (cd "$STAGE_ROOT/${os}-${arch}" && zip -qr "$zip_out" "$inner_dir")
 
     size=$(du -h "$zip_out" | awk '{print $1}')
     printf '  ✓    %-22s → %s (%s)\n' "${os}/${arch}" "$zip_name" "$size"
