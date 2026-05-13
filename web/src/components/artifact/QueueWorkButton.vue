@@ -54,9 +54,10 @@ const userCanEnqueue = computed(() => {
 })
 
 // The button is visible whenever the artifact is in approved status.
-// Agent availability is checked at click time so the button appears immediately
-// on status change without waiting for agent metadata to load.
-const visible = computed(() => props.artifact.status === 'approved')
+// Defensive `?.` guard: if Vue ever delivers an undefined prop briefly
+// (during a remount race), don't throw — just compute false so the next
+// reactive update can re-evaluate.
+const visible = computed(() => props.artifact?.status === 'approved')
 
 // Tooltip for the disabled state.
 const disabledReason = computed(() => {

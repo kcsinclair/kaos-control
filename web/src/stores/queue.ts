@@ -117,7 +117,16 @@ export const useQueueStore = defineStore('queue', () => {
     loading.value = true
     error.value = null
     try {
-      snapshot.value = await queueApi.listQueue()
+      const raw = await queueApi.listQueue()
+      // Defensive normalisation: an older or buggy backend may return `null`
+      // for empty slices. Consumers do `.length` / `.find(...)` directly so
+      // a null array field throws `null is not an object`. Coerce to empty
+      // arrays here so every reader stays safe regardless of backend version.
+      snapshot.value = {
+        ...raw,
+        pending: raw.pending ?? [],
+        recent: raw.recent ?? [],
+      }
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Failed to load queue'
     } finally {
