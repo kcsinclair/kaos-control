@@ -120,6 +120,9 @@ func LoadApp(path string) (*App, error) {
 		return nil, err
 	}
 
+	if cfg.ProjectsDir == "" {
+		cfg.ProjectsDir = filepath.Join(filepath.Dir(path), "projects")
+	}
 	if cfg.DataDir == "" {
 		cfg.DataDir = filepath.Join(filepath.Dir(path), "data")
 	}
