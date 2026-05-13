@@ -1,7 +1,7 @@
 ---
 title: "Git Context Display — Backend Plan"
 type: plan-backend
-status: in-development
+status: done
 lineage: git-context-display
 parent: lifecycle/requirements/git-context-display-2.md
 ---
