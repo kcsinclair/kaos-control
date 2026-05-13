@@ -12,8 +12,15 @@ export default defineConfig({
     // uses relative URLs ('/api/…') which fetch must resolve against an origin;
     // happy-dom defaults to 'about:blank' which causes ERR_INVALID_URL on every
     // un-mocked fetch leaking out of component onMounted/watch callbacks.
+    //
+    // The host here is a deliberately fake string — `http://test.local` — so
+    // it's obviously not a real server. Un-mocked fetches that leak out of
+    // tests will fail with `ECONNREFUSED test.local` (or DNS error), making
+    // the leak source easy to spot in logs without colliding with any port
+    // number used by the real application or its CI fixtures. Tracked under
+    // lifecycle/defects/frontend-tests-leak-unmocked-fetches.md.
     environmentOptions: {
-      happyDOM: { url: 'http://localhost:8080' },
+      happyDOM: { url: 'http://test.local' },
     },
     globals: true,
     // Run *.perf.test.ts / *.perf.spec.ts files in isolated forked processes

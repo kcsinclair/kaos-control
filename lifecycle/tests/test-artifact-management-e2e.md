@@ -1,7 +1,7 @@
 ---
 title: End-to-End Testing Board Workflow — Procedure
 type: test
-status: in-qa
+status: approved
 lineage: test-artifact-management
 parent: lifecycle/test-plans/test-artifact-management-5-test.md
 release: KC-Release1
