@@ -1,7 +1,7 @@
 ---
 title: Make Pipelines Editable
 type: defect
-status: draft
+status: approved
 lineage: pipeline-editing
 created: "2026-05-13T17:01:56+10:00"
 priority: normal
