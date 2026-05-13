@@ -7,7 +7,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -132,11 +135,43 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 		client = &http.Client{}
 	}
 
+	// Open the per-run log file if configured. Mirrors the ClaudeCodeDriver
+	// header/footer convention so on-disk run logs are consistent across drivers.
+	var logFile *os.File
+	if run.LogPath != "" {
+		if err := os.MkdirAll(filepath.Dir(run.LogPath), 0o755); err != nil {
+			slog.Warn("ollama agent: creating log dir failed", "path", run.LogPath, "err", err)
+		} else if f, err := os.OpenFile(run.LogPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644); err != nil {
+			slog.Warn("ollama agent: opening log file failed", "path", run.LogPath, "err", err)
+		} else {
+			logFile = f
+			fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s driver=ollama instance=%s model=%s endpoint=%s\n# started=%s\n\n",
+				run.RunID, run.AgentName, run.Role, instanceName, run.Model, endpoint, time.Now().Format(time.RFC3339))
+		}
+	}
+
+	// writeLog appends a line + newline to the log file (no-op if not configured).
+	writeLog := func(s string) {
+		if logFile != nil {
+			_, _ = logFile.WriteString(s)
+			if !strings.HasSuffix(s, "\n") {
+				_, _ = logFile.WriteString("\n")
+			}
+		}
+	}
+
 	go func() {
 		defer cancel()
 		defer close(progressCh)
+		defer func() {
+			if logFile != nil {
+				fmt.Fprintf(logFile, "\n# finished=%s\n", time.Now().Format(time.RFC3339))
+				_ = logFile.Close()
+			}
+		}()
 
 		// Emit "started" event.
+		writeLog("# event: started")
 		select {
 		case progressCh <- ProgressEvent{Raw: "started"}:
 		default:
@@ -145,6 +180,7 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 		resp, err := client.Do(httpReq)
 		if err != nil {
 			rb.Write([]byte(err.Error()))
+			writeLog("# error: " + err.Error())
 			doneCh <- err
 			return
 		}
@@ -153,6 +189,7 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 		if resp.StatusCode != http.StatusOK {
 			msg := fmt.Sprintf("ollama returned HTTP %d", resp.StatusCode)
 			rb.Write([]byte(msg))
+			writeLog("# error: " + msg)
 			doneCh <- fmt.Errorf("%s", msg)
 			return
 		}
@@ -166,6 +203,7 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 			if line == "" {
 				continue
 			}
+			writeLog(line)
 			ev := ProgressEvent{Raw: line}
 			var parsed map[string]any
 			if jsonErr := json.Unmarshal([]byte(line), &parsed); jsonErr == nil {
@@ -191,6 +229,7 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 
 		if scanErr := sc.Err(); scanErr != nil {
 			rb.Write([]byte(scanErr.Error()))
+			writeLog("# error: " + scanErr.Error())
 			doneCh <- scanErr
 			return
 		}
@@ -203,6 +242,8 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 				"response": fullResponse.String(),
 			},
 		}
+		writeLog("# event: completed")
+		writeLog(fullResponse.String())
 		select {
 		case progressCh <- completed:
 		default:
