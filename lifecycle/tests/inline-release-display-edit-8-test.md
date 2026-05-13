@@ -1,7 +1,7 @@
 ---
 title: "Test Fix: Remove duplicate strPtr declaration in patch_release_test.go"
 type: test
-status: approved
+status: done
 lineage: inline-release-display-edit
 parent: lifecycle/defects/inline-release-display-edit-7-defect.md
 ---
