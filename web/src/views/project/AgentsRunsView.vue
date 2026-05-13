@@ -14,6 +14,8 @@ import AgentPanelRow from '@/components/agent/AgentPanelRow.vue'
 import AgentLaunchModal from '@/components/agent/AgentLaunchModal.vue'
 import AgentConfigForm from '@/components/agent/AgentConfigForm.vue'
 import RunFailureBanner from '@/components/agent/RunFailureBanner.vue'
+import RunSummaryCard from '@/components/agent/RunSummaryCard.vue'
+import RawLogModal from '@/components/agent/RawLogModal.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
 import type { AgentSummary, AgentRunRow } from '@/types/api'
@@ -135,27 +137,43 @@ const paginatedRuns = computed(() => sortedRuns.value.slice(sliceStart.value, sl
 // Reset to page 1 on sort change
 watch([sortColumn, sortDirection], () => setPage(1))
 
-// Per-run log state. logVisible.get(id)===true means the log pane is shown
-// and logContent has the fetched text.
-const logVisible = ref(new Map<string, boolean>())
-const logLoading = ref(new Map<string, boolean>())
-const logContent = ref(new Map<string, string>())
+// run_id currently being viewed in the full-height RawLogModal (one open at a
+// time across the whole runs table). null = closed.
+const fullLogRunId = ref<string | null>(null)
 
-async function loadLog(runId: string) {
-  logLoading.value.set(runId, true)
+// Run statuses that have produced a terminal type:result line we can summarise.
+// `running` / `queued` runs don't have one yet so the summary section is hidden.
+const TERMINAL_RUN_STATUSES = new Set(['done', 'failed', 'killed', 'killed-timeout'])
+
+// Tracks in-flight summary fetches per run_id so the loading state is per-row,
+// not shared across expansions. Result values live in agentsStore.runResults
+// (also populated by WS events as runs complete).
+const summaryLoading = ref(new Set<string>())
+
+async function loadRunSummary(runId: string) {
+  if (store.runResults.has(runId)) return
+  if (summaryLoading.value.has(runId)) return
+  summaryLoading.value.add(runId)
   try {
-    const text = await agentsApi.getRunLog(project, runId)
-    logContent.value.set(runId, text || '(empty log)')
-    logVisible.value.set(runId, true)
-  } catch (e: unknown) {
-    ui.error(e instanceof Error ? e.message : 'Failed to load log')
+    const { result } = await agentsApi.getRunResult(project, runId)
+    if (result) store.runResults.set(runId, result)
+  } catch {
+    // The endpoint returns null for runs with no type:result line (e.g. precheck
+    // failures). Surface those silently — the summary card handles null.
   } finally {
-    logLoading.value.set(runId, false)
+    summaryLoading.value.delete(runId)
   }
 }
 
 function toggleExpand(runId: string) {
-  expandedRun.value = expandedRun.value === runId ? null : runId
+  const opening = expandedRun.value !== runId
+  expandedRun.value = opening ? runId : null
+  if (opening) {
+    const row = paginatedRuns.value.find((r) => r.run_id === runId)
+    if (row && TERMINAL_RUN_STATUSES.has(row.status)) {
+      void loadRunSummary(runId)
+    }
+  }
 }
 
 function elapsed(row: { started_at: string; finished_at?: string }): string {
@@ -280,16 +298,21 @@ onMounted(() => {
                   >{{ p }}</button>
                 </div>
               </div>
-              <!-- Full log -->
+              <!-- Run summary (terminal runs only) -->
+              <div v-if="TERMINAL_RUN_STATUSES.has(run.status)" class="detail-section">
+                <div class="detail-label">Run summary</div>
+                <div v-if="summaryLoading.has(run.run_id)" class="detail-empty">Loading summary…</div>
+                <RunSummaryCard
+                  v-else
+                  :result="store.runResults.get(run.run_id) ?? null"
+                  :driver-available="true"
+                />
+              </div>
+              <!-- Full log — opens in a full-height modal (same component
+                   used by the artefact-screen run-detail modal). -->
               <div class="detail-section">
                 <div class="detail-label">Run log</div>
-                <button
-                  v-if="logVisible.get(run.run_id) !== true"
-                  class="btn-link"
-                  @click="loadLog(run.run_id)"
-                  :disabled="logLoading.get(run.run_id) === true"
-                >{{ logLoading.get(run.run_id) ? 'Loading…' : 'View full log' }}</button>
-                <pre v-else class="detail-log">{{ logContent.get(run.run_id) }}</pre>
+                <button class="btn-link" @click="fullLogRunId = run.run_id">View full log</button>
               </div>
               <div v-if="!run.stderr_tail && !run.artifacts_produced?.length && run.status !== 'running'" class="detail-empty">
                 No output recorded.
@@ -324,6 +347,15 @@ onMounted(() => {
       @cancel="selectedAgent = null"
     />
 
+    <!-- Full-height log viewer — same component the artefact-screen
+         run-detail modal uses, so the experience matches across views. -->
+    <RawLogModal
+      v-if="fullLogRunId"
+      :project="project"
+      :run-id="fullLogRunId"
+      @close="fullLogRunId = null"
+    />
+
     <!-- Agent config form modal -->
     <Teleport to="body">
       <div v-if="showAgentForm" class="modal-overlay" @click.self="closeAgentForm">
@@ -351,8 +383,7 @@ onMounted(() => {
 .runs-view {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
 }
 .runs-header {
   display: flex;
@@ -387,7 +418,6 @@ onMounted(() => {
 .runs-table {
   width: 100%;
   border-collapse: collapse;
-  overflow-y: auto;
 }
 .runs-table th {
   position: sticky;
