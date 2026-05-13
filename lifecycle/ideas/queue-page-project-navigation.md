@@ -1,7 +1,7 @@
 ---
 title: Queue Page Project Navigation
 type: idea
-status: clarifying
+status: planning
 lineage: queue-page-project-navigation
 created: "2026-05-13T11:27:58+10:00"
 priority: normal
