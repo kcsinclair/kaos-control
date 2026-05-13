@@ -1,7 +1,7 @@
 ---
 title: Front Page Projects Not Listed in Alphabetical Order
 type: defect
-status: draft
+status: approved
 lineage: projects-list-not-alphabetical
 created: "2026-05-13T14:38:11+10:00"
 priority: normal
