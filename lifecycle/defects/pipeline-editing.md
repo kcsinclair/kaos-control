@@ -10,6 +10,10 @@ labels:
     - feature
     - enhancement
     - frontend
+release: KC-Release1
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Make Pipelines Editable
