@@ -1,7 +1,7 @@
 ---
 title: 'Agents Screen: No Vertical Scroll When Content Exceeds Viewport'
 type: defect
-status: draft
+status: approved
 lineage: agents-screen-no-vertical-scroll
 created: "2026-05-13T11:51:09+10:00"
 priority: normal
