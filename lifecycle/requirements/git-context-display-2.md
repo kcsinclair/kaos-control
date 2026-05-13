@@ -1,7 +1,7 @@
 ---
 title: Git Context Display in GUI
 type: requirement
-status: approved
+status: planning
 lineage: git-context-display
 created: "2026-05-11T00:00:00+10:00"
 priority: normal
