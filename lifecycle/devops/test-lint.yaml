@@ -1,0 +1,8 @@
+name: Run Lint Tests
+type: test
+
+steps:
+  - name: Lint
+    description: go vet + staticcheck. Fails on any finding (pre-commit safety net).
+    command: make lint
+    timeout: 2m

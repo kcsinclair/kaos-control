@@ -1,0 +1,8 @@
+name: Run Integration Tests
+type: test
+
+steps:
+  - name: Go integration tests
+    description: Integration tests behind the `integration` build tag (slowest step).
+    command: make test-integration
+    timeout: 15m

@@ -1,0 +1,27 @@
+name: Run ALL Tests
+type: test
+
+# Ordered fail-fast: cheap static analysis first, then unit/component tests,
+# then the longer integration suite. Each step's timeout is sized for the
+# worst case observed locally; tighten over time as the suite stabilises.
+
+steps:
+  - name: Lint
+    description: go vet + staticcheck. Fails on any finding (pre-commit safety net).
+    command: make lint
+    timeout: 2m
+
+  - name: Go unit tests
+    description: Pure Go unit tests with -short flag (skips long-running cases).
+    command: make test-unit
+    timeout: 5m
+
+  - name: Frontend tests
+    description: Vitest component tests in tests/web/ (Vue 3 + happy-dom).
+    command: cd tests/web && pnpm test
+    timeout: 5m
+
+  - name: Go integration tests
+    description: Integration tests behind the `integration` build tag (slowest step).
+    command: make test-integration
+    timeout: 15m

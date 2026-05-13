@@ -1,0 +1,9 @@
+name: Run Frontend Tests
+type: test
+
+steps:
+  - name: Frontend tests
+    description: Vitest component tests in tests/web/ (Vue 3 + happy-dom).
+    command: cd tests/web && pnpm test
+    timeout: 5m
+

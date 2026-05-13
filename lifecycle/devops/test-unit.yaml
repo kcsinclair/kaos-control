@@ -1,0 +1,8 @@
+name: Run Unit Tests
+type: test
+
+steps:
+  - name: Go unit tests
+    description: Pure Go unit tests with -short flag (skips long-running cases).
+    command: make test-unit
+    timeout: 5m
