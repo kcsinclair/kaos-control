@@ -1,7 +1,7 @@
 ---
 title: Queue Page Project Navigation
 type: requirement
-status: approved
+status: planning
 lineage: queue-page-project-navigation
 created: "2026-05-13"
 priority: normal
