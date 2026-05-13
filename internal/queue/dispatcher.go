@@ -448,6 +448,16 @@ func (d *Dispatcher) StateSnapshot() (*queueSnapshot, error) {
 		runningJob = running[0]
 	}
 
+	// Normalise nil slices to empty so the JSON payload always emits `[]`
+	// rather than `null`. SPA consumers do `pending.find(...)` /
+	// `pending.length` directly and crash on null.
+	if pending == nil {
+		pending = []*Job{}
+	}
+	if recent == nil {
+		recent = []*Job{}
+	}
+
 	snap := &queueSnapshot{
 		Running:     runningJob,
 		Pending:     pending,
