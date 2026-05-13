@@ -261,6 +261,9 @@ func (s *Server) buildRouter() chi.Router {
 				r.Get("/{releaseID}/artifacts", s.handleListReleaseArtifacts)
 			})
 
+			// Git context
+			r.Get("/git/status", s.handleGetGitStatus)
+
 			// Dashboard
 			r.Route("/dashboard", func(r chi.Router) {
 				r.Get("/stats", s.handleGetDashboardStats)
