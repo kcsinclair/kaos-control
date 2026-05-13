@@ -216,10 +216,21 @@ export interface FeedResponse {
   next_cursor: number | null
 }
 
+export interface GitStatusResponse {
+  available: boolean
+  branch?: string
+  dirty?: boolean
+  head_sha?: string
+  head_message?: string
+  head_author?: string
+  head_when?: string
+}
+
 export type WsEventType =
   | 'file.changed'
   | 'artifact.indexed'
   | 'git.committed'
+  | 'git.status'
   | 'lock.acquired'
   | 'lock.released'
   | 'agent.started'
