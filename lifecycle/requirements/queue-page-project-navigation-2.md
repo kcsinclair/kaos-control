@@ -1,7 +1,7 @@
 ---
 title: Queue Page Project Navigation
 type: requirement
-status: blocked
+status: approved
 lineage: queue-page-project-navigation
 created: "2026-05-13"
 priority: normal
@@ -13,9 +13,6 @@ labels:
     - usability
     - enhancement
 release: KC-Release1
-assignees:
-    - role: product-owner
-      who: agent
 ---
 
 # Queue Page Project Navigation
@@ -58,7 +55,7 @@ Additionally, the project name shown in the running-job panel (`QueueRunningPane
 
 #### F2 — Clickable Project Name
 
-- In `QueueRunningPanel`, the project name field (`job.project`) is rendered as a `<RouterLink>` to `/p/:project/dashboard`.
+- In `QueueRunningPanel`, the project name field (`job.project`) is rendered as a `<RouterLink>` to `/p/:project/agents`.
 - In `QueuePendingTable` and `QueueRecentTable`, any project name column is likewise rendered as a `<RouterLink>` to the project dashboard.
 - Links use standard anchor styling consistent with existing link styles in the app (e.g., the artifact link already present in the running panel).
 
@@ -84,12 +81,17 @@ Additionally, the project name shown in the running-job panel (`QueueRunningPane
 - [ ] The selected project filter is stored as a `?project=` query parameter in the URL.
 - [ ] Invalid or missing `?project=` values fall back to "All Projects" without error.
 - [ ] Project name in the running panel is a `<RouterLink>` to `/p/:project/dashboard`.
-- [ ] Project name in pending and recent tables is a `<RouterLink>` to `/p/:project/dashboard`.
+- [ ] Project name in pending and recent tables is a `<RouterLink>` to `/p/:project/agents`.
 - [ ] Project list and queue snapshot load concurrently on mount — sidebar does not block queue content.
 - [ ] Sidebar items are keyboard-navigable and have correct ARIA attributes.
 - [ ] No new API endpoints are required; implementation uses existing `listProjects()` and `QueueSnapshot` APIs.
 
-## Open Questions
+## Resolved Questions
 
 - Should the sidebar project list auto-refresh (e.g., via WebSocket event) when a new project is registered, or is fetch-on-mount sufficient?
+
+> fetch-on-mount is sufficient
+
 - Should clicking a project name link in the queue tables navigate immediately, or open in a new tab? Current artifact links in the running panel navigate in the same tab — should this be consistent?
+
+> navigate immediately
