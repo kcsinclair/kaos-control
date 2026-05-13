@@ -145,8 +145,12 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 			slog.Warn("ollama agent: opening log file failed", "path", run.LogPath, "err", err)
 		} else {
 			logFile = f
-			fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s driver=ollama instance=%s model=%s endpoint=%s\n# started=%s\n\n",
+			fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s driver=ollama instance=%s model=%s endpoint=%s\n# started=%s\n",
 				run.RunID, run.AgentName, run.Role, instanceName, run.Model, endpoint, time.Now().Format(time.RFC3339))
+			if systemPrompt != "" {
+				fmt.Fprintf(logFile, "\n# system_prompt:\n%s\n", systemPrompt)
+			}
+			fmt.Fprintf(logFile, "\n# user_prompt:\n%s\n\n", userPrompt)
 		}
 	}
 
@@ -196,6 +200,7 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 
 		// Stream NDJSON response lines.
 		var fullResponse strings.Builder
+		var lastDone map[string]any // last NDJSON event with "done": true — carries Ollama's run stats.
 		sc := bufio.NewScanner(resp.Body)
 		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 		for sc.Scan() {
@@ -208,6 +213,9 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 			var parsed map[string]any
 			if jsonErr := json.Unmarshal([]byte(line), &parsed); jsonErr == nil {
 				ev.Event = parsed
+				if d, ok := parsed["done"].(bool); ok && d {
+					lastDone = parsed
+				}
 				// Accumulate response text for final event.
 				if endpoint == "generate" {
 					if r, ok := parsed["response"].(string); ok {
@@ -244,6 +252,9 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 		}
 		writeLog("# event: completed")
 		writeLog(fullResponse.String())
+		if lastDone != nil {
+			writeLog("\n" + formatOllamaSummary(lastDone))
+		}
 		select {
 		case progressCh <- completed:
 		default:
@@ -253,6 +264,58 @@ func (d *OllamaDriver) Start(ctx context.Context, run Run) (Process, error) {
 	}()
 
 	return proc, nil
+}
+
+// formatOllamaSummary turns the final `done:true` NDJSON event into a one-line
+// human-readable summary suitable for the tail of the run log. Durations come
+// from the Ollama API in nanoseconds; eval tok/s is derived from eval_count
+// over eval_duration when both are present.
+func formatOllamaSummary(done map[string]any) string {
+	asInt := func(v any) (int64, bool) {
+		switch n := v.(type) {
+		case float64:
+			return int64(n), true
+		case int64:
+			return n, true
+		case int:
+			return int64(n), true
+		}
+		return 0, false
+	}
+	asDur := func(v any) (time.Duration, bool) {
+		if ns, ok := asInt(v); ok {
+			return time.Duration(ns), true
+		}
+		return 0, false
+	}
+
+	var parts []string
+	if reason, ok := done["done_reason"].(string); ok && reason != "" {
+		parts = append(parts, "done_reason="+reason)
+	}
+	if total, ok := asDur(done["total_duration"]); ok {
+		parts = append(parts, fmt.Sprintf("total=%s", total.Round(time.Millisecond)))
+	}
+	if load, ok := asDur(done["load_duration"]); ok {
+		parts = append(parts, fmt.Sprintf("load=%s", load.Round(time.Millisecond)))
+	}
+	if pec, ok := asInt(done["prompt_eval_count"]); ok {
+		if ped, ok2 := asDur(done["prompt_eval_duration"]); ok2 && ped > 0 {
+			rate := float64(pec) / ped.Seconds()
+			parts = append(parts, fmt.Sprintf("prompt_eval=%d (%s, %.1f tok/s)", pec, ped.Round(time.Millisecond), rate))
+		} else {
+			parts = append(parts, fmt.Sprintf("prompt_eval=%d", pec))
+		}
+	}
+	if ec, ok := asInt(done["eval_count"]); ok {
+		if ed, ok2 := asDur(done["eval_duration"]); ok2 && ed > 0 {
+			rate := float64(ec) / ed.Seconds()
+			parts = append(parts, fmt.Sprintf("eval=%d (%s, %.1f tok/s)", ec, ed.Round(time.Millisecond), rate))
+		} else {
+			parts = append(parts, fmt.Sprintf("eval=%d", ec))
+		}
+	}
+	return "# summary: " + strings.Join(parts, " ")
 }
 
 // splitPrompt splits a prompt on the ---SYSTEM--- / ---USER--- delimiter
