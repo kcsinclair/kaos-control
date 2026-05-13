@@ -1,7 +1,7 @@
 ---
 title: New Idea & New Defect Quick-Action Buttons on Dashboard and Button Reordering on Artifacts Page
 type: requirement
-status: approved
+status: planning
 lineage: dashboard-new-idea-defect-buttons
 created: "2026-05-13"
 priority: normal
