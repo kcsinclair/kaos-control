@@ -9,6 +9,10 @@ labels:
     - defect
     - frontend
     - usability
+release: KC-Release1
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Front Page Projects Not Listed in Alphabetical Order
