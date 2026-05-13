@@ -1,7 +1,7 @@
 ---
 title: 'Queue Page: Agent and Reason Fields Empty While Job is Running'
 type: defect
-status: draft
+status: done
 lineage: queue-running-job-missing-agent-reason
 created: "2026-05-13T16:11:30+10:00"
 priority: high
