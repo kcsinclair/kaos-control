@@ -44,13 +44,6 @@ func initEvent(permissionMode string) ProgressEvent {
 	return ProgressEvent{Raw: string(b), Event: ev}
 }
 
-// nonInitEvent returns a plain result event (not an init event).
-func nonInitEvent() ProgressEvent {
-	ev := map[string]any{"type": "result", "subtype": "success"}
-	b, _ := json.Marshal(ev)
-	return ProgressEvent{Raw: string(b), Event: ev}
-}
-
 // ----- runPrecheck unit tests ------------------------------------------------
 
 // TestPrecheck_BypassPasses verifies that a system/init event with

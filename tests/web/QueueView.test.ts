@@ -125,7 +125,7 @@ function makeJob(overrides: Partial<QueueJob> = {}): QueueJob {
     id: 'job-1',
     project: 'testproject',
     artifact_path: 'lifecycle/ideas/test.md',
-    agent: 'requirements-analyst',
+    agent_name: 'requirements-analyst',
     state: 'pending',
     attempts: 1,
     enqueued_at: 1700000000,
@@ -252,7 +252,7 @@ describe('FV1: renders running + pending + recent sections', () => {
   })
 
   it('running panel shows the agent name when a job is running', async () => {
-    _snapshotRef.value.running = makeJob({ id: 'run-1', agent: 'requirements-analyst', state: 'running' })
+    _snapshotRef.value.running = makeJob({ id: 'run-1', agent_name: 'requirements-analyst', state: 'running' })
 
     const wrapper = await mountRunningPanel()
     expect(wrapper.text()).toContain('requirements-analyst')

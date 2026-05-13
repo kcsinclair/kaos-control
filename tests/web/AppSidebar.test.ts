@@ -63,6 +63,10 @@ vi.mock('@/stores/project', () => ({
   })),
 }))
 
+vi.mock('@/components/layout/GitStatusBar.vue', () => ({
+  default: { name: 'GitStatusBar', template: '<div data-testid="git-status-bar-stub" />' },
+}))
+
 // ---------------------------------------------------------------------------
 // Router factory — AppSidebar reads route.params.project
 // ---------------------------------------------------------------------------

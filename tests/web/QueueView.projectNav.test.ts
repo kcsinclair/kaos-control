@@ -165,7 +165,7 @@ function makeJob(overrides: Partial<QueueJob> = {}): QueueJob {
     id: 'job-1',
     project: 'project-a',
     artifact_path: 'lifecycle/ideas/test.md',
-    agent: 'requirements-analyst',
+    agent_name: 'requirements-analyst',
     state: 'pending',
     attempts: 1,
     enqueued_at: 1_700_000_000,
