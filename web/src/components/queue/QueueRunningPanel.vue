@@ -6,10 +6,19 @@ import { RouterLink } from 'vue-router'
 import { useQueueStore } from '@/stores/queue'
 import { useNow } from '@/composables/useNow'
 
+const props = defineProps<{
+  projectFilter?: string | null
+}>()
+
 const queueStore = useQueueStore()
 const now = useNow()
 
-const job = computed(() => queueStore.snapshot.running)
+const job = computed(() => {
+  const running = queueStore.snapshot.running
+  if (!running) return null
+  if (props.projectFilter && running.project !== props.projectFilter) return null
+  return running
+})
 
 const elapsedLabel = computed(() => {
   if (!job.value?.started_at) return '…'
@@ -41,7 +50,11 @@ const startedAtLabel = computed(() => {
       </div>
       <div class="running-field">
         <span class="field-label">Project</span>
-        <span class="field-value">{{ job.project }}</span>
+        <RouterLink
+          class="field-link"
+          :to="`/p/${encodeURIComponent(job.project)}/dashboard`"
+          :aria-label="`Go to project ${job.project}`"
+        >{{ job.project }}</RouterLink>
       </div>
       <div class="running-field">
         <span class="field-label">Artifact</span>

@@ -1,18 +1,28 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useQueueStore } from '@/stores/queue'
 
+const props = defineProps<{
+  modelValue?: string | null
+}>()
+
 const emit = defineEmits<{
   select: [project: string | null]
+  'update:modelValue': [project: string | null]
 }>()
 
 const projectStore = useProjectStore()
 const queueStore = useQueueStore()
 
-const selected = ref<string | null>(null)
+const selected = ref<string | null>(props.modelValue ?? null)
+
+// Keep internal selection in sync when parent changes modelValue (e.g. URL param applied after projects load)
+watch(() => props.modelValue, (v) => {
+  selected.value = v ?? null
+})
 const collapsed = ref(false)
 
 // Set initial collapsed state based on viewport width
@@ -58,6 +68,7 @@ const totalCount = computed(() =>
 function selectProject(project: string | null) {
   selected.value = project
   emit('select', project)
+  emit('update:modelValue', project)
 }
 
 function toggleCollapse() {

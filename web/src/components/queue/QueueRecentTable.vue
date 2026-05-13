@@ -6,9 +6,21 @@ import { RouterLink } from 'vue-router'
 import { useQueueStore } from '@/stores/queue'
 import type { QueueJob } from '@/api/queue'
 
+const props = defineProps<{
+  projectFilter?: string | null
+}>()
+
 const queueStore = useQueueStore()
 
-const jobs = computed(() => queueStore.snapshot.recent)
+const jobs = computed(() => {
+  const all = queueStore.snapshot.recent
+  if (!props.projectFilter) return all
+  return all.filter((j) => j.project === props.projectFilter)
+})
+
+const emptyMessage = computed(() =>
+  props.projectFilter ? `No recent jobs for ${props.projectFilter}` : 'No recent jobs',
+)
 
 function formatTime(unix?: number): string {
   if (!unix) return '—'
@@ -27,7 +39,7 @@ function stateClass(state: QueueJob['state']): string {
 <template>
   <section class="recent-section">
     <h3 class="panel-title">Recently finished</h3>
-    <div v-if="!jobs.length" class="empty-state">No recent jobs</div>
+    <div v-if="!jobs.length" class="empty-state">{{ emptyMessage }}</div>
     <table v-else class="queue-table">
       <thead>
         <tr>
@@ -44,7 +56,13 @@ function stateClass(state: QueueJob['state']): string {
           <td>
             <span class="state-badge" :class="stateClass(job.state)">{{ job.state }}</span>
           </td>
-          <td>{{ job.project }}</td>
+          <td>
+            <RouterLink
+              class="project-link"
+              :to="`/p/${encodeURIComponent(job.project)}/agents`"
+              :aria-label="`Go to project ${job.project}`"
+            >{{ job.project }}</RouterLink>
+          </td>
           <td>
             <RouterLink
               class="artifact-link"
@@ -99,6 +117,12 @@ function stateClass(state: QueueJob['state']): string {
 .mono { font-family: monospace; font-size: 12px; }
 .agent-name { font-family: monospace; }
 .reason { font-size: 12px; color: var(--color-text-muted); font-family: monospace; }
+.project-link {
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.project-link:hover { text-decoration: underline; }
 .artifact-link {
   font-family: monospace;
   font-size: 12px;

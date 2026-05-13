@@ -7,11 +7,23 @@ import { useQueueStore } from '@/stores/queue'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 
+const props = defineProps<{
+  projectFilter?: string | null
+}>()
+
 const queueStore = useQueueStore()
 const authStore = useAuthStore()
 const ui = useUiStore()
 
-const jobs = computed(() => queueStore.snapshot.pending)
+const jobs = computed(() => {
+  const all = queueStore.snapshot.pending
+  if (!props.projectFilter) return all
+  return all.filter((j) => j.project === props.projectFilter)
+})
+
+const emptyMessage = computed(() =>
+  props.projectFilter ? `No pending jobs for ${props.projectFilter}` : 'Queue is empty',
+)
 
 function formatTime(unix: number): string {
   return new Date(unix * 1000).toLocaleString()
@@ -39,7 +51,7 @@ async function handleRemove(id: string) {
 <template>
   <section class="pending-section">
     <h3 class="panel-title">Pending</h3>
-    <div v-if="!jobs.length" class="empty-state">Queue is empty</div>
+    <div v-if="!jobs.length" class="empty-state">{{ emptyMessage }}</div>
     <table v-else class="queue-table">
       <thead>
         <tr>
@@ -55,7 +67,13 @@ async function handleRemove(id: string) {
       <tbody>
         <tr v-for="job in jobs" :key="job.id">
           <td class="pos">{{ job.position }}</td>
-          <td>{{ job.project }}</td>
+          <td>
+            <RouterLink
+              class="project-link"
+              :to="`/p/${encodeURIComponent(job.project)}/agents`"
+              :aria-label="`Go to project ${job.project}`"
+            >{{ job.project }}</RouterLink>
+          </td>
           <td>
             <RouterLink
               class="artifact-link"
@@ -122,6 +140,12 @@ async function handleRemove(id: string) {
 }
 .mono { font-family: monospace; font-size: 12px; }
 .agent-name { font-family: monospace; }
+.project-link {
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.project-link:hover { text-decoration: underline; }
 .artifact-link {
   font-family: monospace;
   font-size: 12px;
