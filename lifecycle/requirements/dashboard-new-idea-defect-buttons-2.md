@@ -1,7 +1,7 @@
 ---
 title: New Idea & New Defect Quick-Action Buttons on Dashboard and Button Reordering on Artifacts Page
 type: requirement
-status: blocked
+status: approved
 lineage: dashboard-new-idea-defect-buttons
 created: "2026-05-13"
 priority: normal
@@ -90,6 +90,8 @@ Dashboard buttons must be visually identical to their artifacts-page counterpart
 - [ ] No changes are made to `BrainDumpModal.vue`, `brainDump.ts`, or any backend API.
 - [ ] The feature works in both light and dark themes.
 
-## Open Questions
+## Resolved Questions
 
 - Should the dashboard buttons be hidden or disabled when the user lacks permission to create artifacts (if role-based access is enforced in a future release)?
+
+> Hidden
