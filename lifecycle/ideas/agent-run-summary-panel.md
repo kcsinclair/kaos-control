@@ -1,7 +1,7 @@
 ---
 title: Agent Run Summary Panel with Token Efficiency Metrics
 type: idea
-status: clarifying
+status: planning
 lineage: agent-run-summary-panel
 created: "2026-05-12T16:59:39+10:00"
 priority: high
