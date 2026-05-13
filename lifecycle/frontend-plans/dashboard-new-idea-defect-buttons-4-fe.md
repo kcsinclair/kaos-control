@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Dashboard New Idea & Defect Buttons"
 type: plan-frontend
-status: in-development
+status: done
 lineage: dashboard-new-idea-defect-buttons
 parent: lifecycle/requirements/dashboard-new-idea-defect-buttons-2.md
 created: "2026-05-13"
