@@ -41,9 +41,11 @@ func (s *Server) handleEnqueue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Look up the project to validate and check role.
+	// An unrecognised project name is treated as a bad request (400) because
+	// the client supplied an invalid value for the `project` field.
 	p, ok := s.projects[req.Project]
 	if !ok {
-		writeJSON(w, http.StatusNotFound, apiError("project_not_found", "project not found: "+req.Project))
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "unknown project: "+req.Project))
 		return
 	}
 
