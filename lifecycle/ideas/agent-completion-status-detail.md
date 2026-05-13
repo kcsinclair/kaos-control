@@ -1,7 +1,7 @@
 ---
 title: Richer Agent Completion Status
 type: idea
-status: approved
+status: in-qa
 lineage: agent-completion-status-detail
 created: "2026-04-27T13:56:41+10:00"
 priority: normal
