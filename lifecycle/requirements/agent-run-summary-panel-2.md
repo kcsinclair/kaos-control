@@ -1,7 +1,7 @@
 ---
 title: Agent Run Summary Panel with Token Efficiency Metrics
 type: requirement
-status: planning
+status: done
 lineage: agent-run-summary-panel
 priority: high
 parent: lifecycle/ideas/agent-run-summary-panel.md
