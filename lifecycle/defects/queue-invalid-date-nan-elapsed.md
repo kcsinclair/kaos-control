@@ -1,7 +1,7 @@
 ---
 title: Queue Page Shows 'Invalid Date' and 'NaNh' for All Entries
 type: defect
-status: approved
+status: in-development
 lineage: queue-invalid-date-nan-elapsed
 created: "2026-05-13T14:12:56+10:00"
 priority: normal
