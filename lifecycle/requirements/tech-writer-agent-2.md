@@ -1,7 +1,7 @@
 ---
 title: Tech Writer Agent
 type: requirement
-status: blocked
+status: draft
 lineage: tech-writer-agent
 parent: ideas/tech-writer-agent.md
 labels:
@@ -97,9 +97,20 @@ The current lifecycle produces working code but no user-facing or developer-faci
 - [ ] Existing agent workflows (analyst, developers, QA) are unaffected by the addition.
 - [ ] [[tech-writer-agent]] lineage is preserved end-to-end.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the tech-writer agent produce one documentation artifact per lineage, or one per plan type (i.e. separate backend docs, frontend docs, etc.)?
+
+> One document per lineage which is associated to an idea
+
 2. Should documentation be gated -- i.e. must a `doc` artifact exist before `in-development` -> `in-qa` is allowed? Or is it optional and advisory?
+
+> Optional and advisory
+
 3. Should the tech-writer also produce content in a project-level `docs/` directory (e.g. markdown files suitable for a static site generator), or only lifecycle artifacts?
+
+> The tech-writer would be writing project document in docs/ which are markdown files suitable for a static site generator
+
 4. What model should the tech-writer agent use (`opus`, `sonnet`, or configurable)?
+
+> Configurable, sonnet to start with.
