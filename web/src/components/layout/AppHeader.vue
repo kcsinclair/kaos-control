@@ -47,12 +47,17 @@ async function handleLogout() {
       <RouterLink to="/projects" class="brand-link">kaos-control</RouterLink>
     </div>
     <div class="header-actions">
-      <!-- Queue badge: show when there are pending jobs OR the queue is paused -->
+      <!-- Queue badge: always visible when authenticated so /queue is reachable
+           regardless of queue state. Amber when there's pending work, red when
+           paused, muted when idle (0 pending). -->
       <RouterLink
-        v-if="auth.isAuthenticated && (queueStore.pendingCount > 0 || queueStore.isPaused)"
+        v-if="auth.isAuthenticated"
         to="/queue"
         class="header-queue-badge"
-        :class="{ 'header-queue-badge--paused': queueStore.isPaused }"
+        :class="{
+          'header-queue-badge--paused': queueStore.isPaused,
+          'header-queue-badge--idle': !queueStore.isPaused && queueStore.pendingCount === 0,
+        }"
         :aria-label="queueBadgeTooltip"
         :title="queueBadgeTooltip"
       >
@@ -185,6 +190,17 @@ async function handleLogout() {
   border-color: #f87171;
   background: rgba(239, 68, 68, 0.25);
   color: #fff;
+}
+/* Idle: 0 pending and not paused — muted so it doesn't look alarming. */
+.header-queue-badge--idle {
+  border-color: var(--color-border-dark);
+  color: var(--color-sidebar-text-muted);
+  background: transparent;
+}
+.header-queue-badge--idle:hover {
+  color: #fff;
+  border-color: var(--color-sidebar-text);
+  background: rgba(255, 255, 255, 0.08);
 }
 .queue-pause-icon { font-size: 0.9em; }
 .queue-count { font-weight: 600; }

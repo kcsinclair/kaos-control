@@ -167,25 +167,32 @@ describe('FH1: renders pending count', () => {
     expect(badge.text()).toContain('3')
   })
 
-  it('badge is hidden when there are no pending jobs and queue is not paused', async () => {
+  it('badge is visible in idle state (0 pending, not paused) so /queue stays reachable', async () => {
     _snapshotRef.value.pending = []
     _snapshotRef.value.paused = false
 
     const { wrapper } = await mountHeader()
-    expect(wrapper.find('.header-queue-badge').exists()).toBe(false)
+    const badge = wrapper.find('.header-queue-badge')
+    expect(badge.exists()).toBe(true)
+    expect(badge.classes()).toContain('header-queue-badge--idle')
+    expect(badge.text()).toContain('0')
   })
 
   it('count updates reactively when a job is added', async () => {
     _snapshotRef.value.pending = []
     const { wrapper } = await mountHeader()
-    expect(wrapper.find('.header-queue-badge').exists()).toBe(false)
+    // Idle state is rendered but tagged with the --idle modifier.
+    let badge = wrapper.find('.header-queue-badge')
+    expect(badge.exists()).toBe(true)
+    expect(badge.classes()).toContain('header-queue-badge--idle')
 
     _snapshotRef.value.pending = [
       { id: 'j1', project: 'p', artifact_path: 'a.md', agent: 'a', state: 'pending', attempts: 1, enqueued_at: 0, position: 1, enqueued_by: 'u' },
     ]
     await nextTick()
-    const badge = wrapper.find('.header-queue-badge')
+    badge = wrapper.find('.header-queue-badge')
     expect(badge.exists()).toBe(true)
+    expect(badge.classes()).not.toContain('header-queue-badge--idle')
     expect(badge.text()).toContain('1')
   })
 })

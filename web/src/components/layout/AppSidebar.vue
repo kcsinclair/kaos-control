@@ -27,6 +27,7 @@ import {
   CalendarRange,
   Server,
   FlaskConical,
+  ListChecks,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
@@ -93,6 +94,10 @@ const navItems = computed((): NavItem[] => {
     { label: 'Map',          to: `/p/${p}/map`,             icon: Network },
     { label: 'Roadmap',      to: `/p/${p}/roadmap`,         icon: CalendarRange },
     { label: 'Agents',       to: `/p/${p}/agents`,          icon: Bot },
+    // Queue is a global route (not project-scoped) but lives in the project
+    // sidebar for discoverability — it's the natural place users look when
+    // they've queued work from an artefact view.
+    { label: 'Queue',        to: `/queue`,                  icon: ListChecks },
     { label: 'Scheduler',    to: `/p/${p}/scheduler`,       icon: CalendarClock },
     { label: 'Feed',         to: `/p/${p}/feed`,            icon: Activity },
     { label: 'Parse Errors', to: `/p/${p}/parse-errors`,    icon: AlertTriangle },

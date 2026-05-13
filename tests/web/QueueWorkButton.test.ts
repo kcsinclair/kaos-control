@@ -185,13 +185,20 @@ describe('FB2: hides when status is not approved', () => {
 })
 
 // ---------------------------------------------------------------------------
-// FB3 — hides when no agent matches the type
+// FB3 — disabled when no agent matches the type
 // ---------------------------------------------------------------------------
+// After milestone-1 (commit 5b4a9c0) the button is visible on every approved
+// artefact so the action is discoverable; "no agent for this type" and "user
+// lacks the role" both surface as a disabled state with a tooltip rather than
+// as absence of the button.
 
-describe('FB3: hides when no agent matches the type', () => {
-  it('does not render button for a release artifact (no agent mapped)', async () => {
+describe('FB3: disabled when no agent matches the type', () => {
+  it('renders the button in disabled state for a release artifact (no agent mapped)', async () => {
     const wrapper = await mountButton(makeArtifact({ type: 'release', status: 'approved' }))
-    expect(wrapper.find('.btn-queue').exists()).toBe(false)
+    const btn = wrapper.find('.btn-queue')
+    expect(btn.exists()).toBe(true)
+    expect(btn.attributes('disabled')).toBeDefined()
+    expect(btn.attributes('title')).toBe('No agent configured for this artifact type')
     expect(wrapper.find('.queued-badge').exists()).toBe(false)
   })
 })
@@ -214,14 +221,17 @@ describe('FB4: defect falls back to assignee role', () => {
     expect(hasButton || hasBadge).toBe(true)
   })
 
-  it('does not render for a defect with no assignees', async () => {
+  it('renders the button disabled for a defect with no assignees', async () => {
     const artifact = makeArtifact({
       type: 'defect',
       status: 'approved',
       assignees: [],
     } as unknown as Partial<ArtifactDetail['frontmatter']> & { path?: string })
     const wrapper = await mountButton(artifact)
-    expect(wrapper.find('.btn-queue').exists()).toBe(false)
+    const btn = wrapper.find('.btn-queue')
+    expect(btn.exists()).toBe(true)
+    expect(btn.attributes('disabled')).toBeDefined()
+    expect(btn.attributes('title')).toBe('No agent configured for this artifact type')
     expect(wrapper.find('.queued-badge').exists()).toBe(false)
   })
 })
