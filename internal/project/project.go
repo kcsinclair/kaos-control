@@ -109,6 +109,16 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		w = nil
 	}
 
+	// Wire the git-status broadcast callback so the watcher can signal
+	// external git state changes (branch checkout, git add) via WebSocket.
+	if w != nil && gitRepo != nil {
+		w.SetGitStatusCallback(func() {
+			if summary, err := gitRepo.Status(); err == nil {
+				h.Broadcast(hub.Event{Type: "git.status", Payload: summary})
+			}
+		})
+	}
+
 	locks := lock.New(idx, h)
 
 	maxConcurrent := opts.MaxConcurrentAgents

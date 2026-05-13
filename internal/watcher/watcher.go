@@ -26,6 +26,10 @@ type Watcher struct {
 	idx          *index.Index
 	hub          *hub.Hub
 	ignore       []string // glob patterns; base name matched via config.ShouldIgnore
+
+	// gitStatusFn is called (with 150 ms debounce) when .git/HEAD or
+	// .git/index change. May be nil when git is not available.
+	gitStatusFn func()
 }
 
 // New creates a Watcher but does not start it. The optional ignore variadic
@@ -45,6 +49,12 @@ func New(projectRoot string, idx *index.Index, h *hub.Hub, ignore ...string) (*W
 	}, nil
 }
 
+// SetGitStatusCallback registers a callback that is invoked (debounced, 150 ms)
+// whenever .git/HEAD or .git/index changes. It must be called before Start.
+func (w *Watcher) SetGitStatusCallback(fn func()) {
+	w.gitStatusFn = fn
+}
+
 // Start begins watching the lifecycle/ tree and blocks until ctx is cancelled.
 // It does not return until all in-flight handleChange callbacks have completed,
 // ensuring it is safe to close the index immediately after Start returns.
@@ -53,13 +63,20 @@ func (w *Watcher) Start(ctx context.Context) error {
 		return err
 	}
 
+	// Watch individual .git files so we detect external branch checkouts and
+	// index updates. Errors are non-fatal (project may not be a git repo).
+	gitHEAD := filepath.Join(w.projectRoot, ".git", "HEAD")
+	gitIndex := filepath.Join(w.projectRoot, ".git", "index")
+	_ = w.fsw.Add(gitHEAD)
+	_ = w.fsw.Add(gitIndex)
+
 	// Debounce: map from path to active timer.
 	timers := map[string]*time.Timer{}
 	var mu sync.Mutex
 	// wg tracks in-flight handleChange calls launched by time.AfterFunc.
 	var wg sync.WaitGroup
 
-	fire := func(path string) {
+	fire := func(path string, fn func()) {
 		mu.Lock()
 		defer mu.Unlock()
 		if t, ok := timers[path]; ok {
@@ -72,7 +89,7 @@ func (w *Watcher) Start(ctx context.Context) error {
 			mu.Lock()
 			delete(timers, path)
 			mu.Unlock()
-			w.handleChange(path)
+			fn()
 		})
 	}
 
@@ -101,8 +118,13 @@ func (w *Watcher) Start(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
+			// Git-state files: debounce and call the git status callback.
+			if w.gitStatusFn != nil && (evt.Name == gitHEAD || evt.Name == gitIndex) {
+				fire(evt.Name, w.gitStatusFn)
+				continue
+			}
 			if w.shouldProcess(evt.Name) {
-				fire(evt.Name)
+				fire(evt.Name, func() { w.handleChange(evt.Name) })
 			}
 			// When a new directory is created inside lifecycle/, watch it too.
 			if evt.Has(fsnotify.Create) {
