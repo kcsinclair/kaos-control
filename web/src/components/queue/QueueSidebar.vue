@@ -18,34 +18,35 @@ const projectStore = useProjectStore()
 const queueStore = useQueueStore()
 
 const selected = ref<string | null>(props.modelValue ?? null)
+const collapsed = ref(false)
+const isMobile = ref(false)
 
 // Keep internal selection in sync when parent changes modelValue (e.g. URL param applied after projects load)
 watch(() => props.modelValue, (v) => {
   selected.value = v ?? null
 })
-const collapsed = ref(false)
 
-// Set initial collapsed state based on viewport width
-function initCollapsed() {
-  collapsed.value = window.matchMedia('(max-width: 767px)').matches
-}
+const mobileQuery = window.matchMedia('(max-width: 767px)')
 
-let mql: MediaQueryList | null = null
-function onMediaChange(e: MediaQueryListEvent) {
-  if (e.matches) {
+function applyMedia(matches: boolean) {
+  isMobile.value = matches
+  if (matches) {
     collapsed.value = true
   }
 }
 
+function onMediaChange(e: MediaQueryListEvent) {
+  applyMedia(e.matches)
+}
+
 onMounted(() => {
-  initCollapsed()
-  mql = window.matchMedia('(max-width: 767px)')
-  mql.addEventListener('change', onMediaChange)
+  applyMedia(mobileQuery.matches)
+  mobileQuery.addEventListener('change', onMediaChange)
   void projectStore.fetchProjects()
 })
 
 onUnmounted(() => {
-  mql?.removeEventListener('change', onMediaChange)
+  mobileQuery.removeEventListener('change', onMediaChange)
 })
 
 // Count running + pending jobs per project
@@ -69,6 +70,10 @@ function selectProject(project: string | null) {
   selected.value = project
   emit('select', project)
   emit('update:modelValue', project)
+  // Auto-collapse on mobile after selection
+  if (isMobile.value) {
+    collapsed.value = true
+  }
 }
 
 function toggleCollapse() {
@@ -81,14 +86,18 @@ defineExpose({ selected })
 <template>
   <aside
     class="queue-sidebar"
-    :class="{ 'queue-sidebar--collapsed': collapsed }"
+    :class="{
+      'queue-sidebar--collapsed': collapsed,
+      'queue-sidebar--mobile': isMobile,
+    }"
   >
     <div class="sidebar-header">
       <span v-if="!collapsed" class="sidebar-title">Projects</span>
       <button
         class="collapse-toggle"
-        :aria-expanded="!collapsed"
+        :aria-expanded="String(!collapsed)"
         :aria-label="collapsed ? 'Expand project sidebar' : 'Collapse project sidebar'"
+        :aria-controls="'queue-sidebar-nav'"
         @click="toggleCollapse"
       >
         <svg
@@ -132,13 +141,14 @@ defineExpose({ selected })
 
     <nav
       v-if="!collapsed"
+      id="queue-sidebar-nav"
       role="navigation"
       aria-label="Project filter"
       class="sidebar-nav"
     >
       <button
         class="sidebar-item"
-        :aria-current="selected === null ? 'true' : undefined"
+        :aria-current="selected === null ? 'page' : undefined"
         :class="{ 'sidebar-item--active': selected === null }"
         @click="selectProject(null)"
       >
@@ -146,6 +156,7 @@ defineExpose({ selected })
         <span
           class="item-badge"
           :class="{ 'item-badge--active': totalCount > 0 }"
+          aria-label="`${totalCount} active jobs`"
         >{{ totalCount }}</span>
       </button>
 
@@ -157,7 +168,7 @@ defineExpose({ selected })
         v-for="project in projectStore.projects"
         :key="project.name"
         class="sidebar-item"
-        :aria-current="selected === project.name ? 'true' : undefined"
+        :aria-current="selected === project.name ? 'page' : undefined"
         :class="{ 'sidebar-item--active': selected === project.name }"
         @click="selectProject(project.name)"
       >
@@ -181,11 +192,39 @@ defineExpose({ selected })
   background: var(--color-surface, var(--color-bg));
   flex-shrink: 0;
   transition: width 0.2s ease, min-width 0.2s ease;
+  position: relative;
+  z-index: 10;
 }
 
 .queue-sidebar--collapsed {
   width: 40px;
   min-width: 40px;
+}
+
+/* On mobile, overlay instead of occupying layout space */
+@media (max-width: 767px) {
+  .queue-sidebar--collapsed {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 40px;
+    min-width: 40px;
+    z-index: 20;
+    border-right: none;
+    background: transparent;
+  }
+
+  .queue-sidebar--mobile:not(.queue-sidebar--collapsed) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 220px;
+    min-width: 220px;
+    z-index: 20;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  }
 }
 
 .sidebar-header {
@@ -196,6 +235,7 @@ defineExpose({ selected })
   border-bottom: 1px solid var(--color-border);
   min-height: 40px;
   gap: var(--space-2);
+  background: var(--color-surface, var(--color-bg));
 }
 
 .sidebar-title {
@@ -216,7 +256,7 @@ defineExpose({ selected })
   border: none;
   cursor: pointer;
   color: var(--color-text-muted);
-  padding: 2px;
+  padding: 4px;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
   line-height: 0;
@@ -238,6 +278,8 @@ defineExpose({ selected })
   padding: var(--space-2) 0;
   overflow-y: auto;
   flex: 1;
+  background: var(--color-surface, var(--color-bg));
+  border-right: 1px solid var(--color-border);
 }
 
 .sidebar-loading {

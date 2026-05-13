@@ -86,6 +86,7 @@ function onSidebarSelect(project: string | null) {
   flex: 1;
   display: flex;
   overflow: hidden;
+  position: relative;
 }
 .queue-main {
   flex: 1;
