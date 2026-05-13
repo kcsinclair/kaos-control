@@ -1,7 +1,7 @@
 ---
 title: Display Git Branch and Context in the GUI
 type: idea
-status: clarifying
+status: planning
 lineage: git-context-display
 created: "2026-05-11T13:09:16+10:00"
 priority: normal
