@@ -31,6 +31,7 @@ import {
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
+import GitStatusBar from '@/components/layout/GitStatusBar.vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -210,6 +211,8 @@ watch(
         </SidebarTooltip>
       </li>
     </ul>
+    <!-- Git status panel -->
+    <GitStatusBar :project="projectName()" :collapsed="uiStore.sidebarCollapsed && !hoverExpanded" />
     <div class="sidebar-version" aria-label="Application version">
       <span v-if="isVisuallyExpanded()" class="version-label">kaos-control {{ appStore.version }}</span>
     </div>
