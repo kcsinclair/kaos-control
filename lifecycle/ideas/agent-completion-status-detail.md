@@ -1,7 +1,7 @@
 ---
 title: Richer Agent Completion Status
 type: idea
-status: planning
+status: approved
 lineage: agent-completion-status-detail
 created: "2026-04-27T13:56:41+10:00"
 priority: normal
@@ -10,7 +10,7 @@ labels:
     - enhancement
     - workflow
     - artefacts
-release: KC-AgentHandling
+release: KC-Release1
 ---
 
 relates-to: [[ideas/improved-agent-handling]]
