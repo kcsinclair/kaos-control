@@ -10,6 +10,10 @@ labels:
     - frontend
     - usability
     - vue
+release: KC-Release1
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Agents Screen: No Vertical Scroll When Content Exceeds Viewport
