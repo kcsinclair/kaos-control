@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Mediated Claude Driver with Permission Hooks"
 type: plan-test
-status: in-development
+status: done
 lineage: claude-hooks-driver
 parent: lifecycle/requirements/claude-hooks-driver-2.md
 created: "2026-05-15T14:00:00+10:00"
