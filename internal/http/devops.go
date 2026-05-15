@@ -177,6 +177,94 @@ func (s *Server) handleGetPipeline(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
+// handleUpdatePipeline handles PUT /api/p/{project}/devops/pipelines/{slug}.
+// It validates and atomically persists an updated YAML pipeline definition.
+// Returns 409 if the pipeline slug is currently running, 400 for invalid YAML,
+// 404 if the pipeline does not exist, and 200 with a summary on success.
+func (s *Server) handleUpdatePipeline(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+	if !pipelineSlugRe.MatchString(slug) {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid pipeline slug"))
+		return
+	}
+
+	var req struct {
+		Definition string `json:"definition"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
+		return
+	}
+
+	dir := devopsDir(p.Entry.Path)
+	destPath := filepath.Join(dir, slug+".yaml")
+	if _, err := os.Stat(destPath); os.IsNotExist(err) {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "pipeline not found: "+slug))
+		return
+	}
+
+	// Active-run guard (first check, before validation).
+	if p.DevopsRunner.IsRunning(slug) {
+		writeJSON(w, http.StatusConflict, apiError("conflict", "cannot edit pipeline while it is running: "+slug))
+		return
+	}
+
+	// Validate the YAML definition.
+	pl, err := devops.ValidateDefinition([]byte(req.Definition))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid pipeline definition: "+err.Error()))
+		return
+	}
+	pl.Slug = slug
+
+	// Second active-run check immediately before write to close the TOCTOU window.
+	if p.DevopsRunner.IsRunning(slug) {
+		writeJSON(w, http.StatusConflict, apiError("conflict", "cannot edit pipeline while it is running: "+slug))
+		return
+	}
+
+	// Atomic write: write to a temp file then rename.
+	tmp, err := os.CreateTemp(dir, slug+".yaml.tmp*")
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+	tmpPath := tmp.Name()
+	// Deferred removal is a no-op after a successful rename.
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	if _, err := tmp.Write([]byte(req.Definition)); err != nil {
+		_ = tmp.Close()
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+	if err := tmp.Close(); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+	if err := os.Rename(tmpPath, destPath); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"slug":       pl.Slug,
+		"name":       pl.Name,
+		"type":       pl.Type,
+		"step_count": len(pl.Steps),
+	})
+}
+
 // handleCreatePipeline handles POST /api/p/{project}/devops/pipelines.
 // It validates the slug and YAML definition, rejects duplicates, and writes
 // the new pipeline file to devops/{slug}.yaml under the project root.
