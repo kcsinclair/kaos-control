@@ -1,7 +1,7 @@
 ---
 title: Run all tests and auto-file defects for failures — Requirements
 type: requirement
-status: draft
+status: approved
 lineage: test-everything
 priority: high
 parent: lifecycle/ideas/test-everything.md
@@ -12,6 +12,9 @@ labels:
     - workflow
     - artefacts
 release: KC-Release2
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Run all tests and auto-file defects for failures — Requirements
@@ -157,9 +160,20 @@ The gap is most painful before a release, when the full suite must pass and ever
 - [ ] Agent handles a suite that fails to compile (no JSON output) by filing a single suite-level defect and continuing (NF4).
 - [ ] Related artifacts: [[end-to-end-smoke-tests]], [[agent-task-scheduler]], [[test-artifact-management]].
 
-## Open Questions
+## Resolved Questions
 
 - Should the agent also detect and report **new tests that have no corresponding `lifecycle/tests/*.md` artifact** as a separate finding (not a defect, but a coverage gap signal)?
+
+> Yes
+
 - What is the threshold for "substantially similar error message" in deduplication (F5)? Is first-200-characters sufficient, or should a more sophisticated similarity metric be used?
+
+> 100 characters will be good for now.
+
 - Should the `tests-orphaned` lineage be auto-created if it does not exist, or should it be a pre-seeded artifact?
+
+> auto-created.
+
 - When running on a schedule (daily), should the agent skip the run if no source files have changed since the last successful run?
+
+> yes.
