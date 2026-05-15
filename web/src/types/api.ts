@@ -16,6 +16,35 @@ export interface ProjectSummary {
   name: string
   description: string
   path: string
+  owner: string
+  initialised: boolean
+}
+
+export type ProjectDetail = ProjectSummary
+
+export interface CreateProjectPayload {
+  name: string
+  path: string
+  description?: string
+  owner?: string
+}
+
+export interface UpdateProjectPayload {
+  description?: string
+  owner?: string
+  path?: string
+}
+
+export interface CheckDirectoryResult {
+  exists: boolean
+  writable: boolean
+  initialised: boolean
+}
+
+export interface InitProjectResult {
+  created: string[]
+  git_initialised: boolean
+  git_commands?: string[]
 }
 
 export interface ApiErrorBody {
