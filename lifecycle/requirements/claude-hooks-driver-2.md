@@ -1,7 +1,7 @@
 ---
 title: Mediated Claude Driver with Permission Hooks
 type: requirement
-status: planning
+status: done
 lineage: claude-hooks-driver
 created: "2026-05-15T12:00:00+10:00"
 priority: high
