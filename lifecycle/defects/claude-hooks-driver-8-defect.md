@@ -1,7 +1,7 @@
 ---
 title: "hook-helper outputs inconsistent JSON format: pass-through vs error paths"
 type: defect
-status: draft
+status: approved
 lineage: claude-hooks-driver
 parent: lifecycle/tests/claude-hooks-driver-6-test.md
 labels: [defect]
