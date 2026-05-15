@@ -1,7 +1,7 @@
 ---
 title: "Test 01 uses wrong CSS selector `.stat-card` — SummaryCountCard renders `.summary-card`"
 type: defect
-status: draft
+status: approved
 lineage: end-to-end-smoke-tests
 parent: lifecycle/tests/end-to-end-smoke-tests-4-test.md
 labels: [defect]
