@@ -1,13 +1,15 @@
 ---
-title: "2D map shows 'project not found' alert and no nodes render when doc artifacts present"
+title: 2D map shows 'project not found' alert and no nodes render when doc artifacts present
 type: defect
-status: draft
+status: approved
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release2
 assignees:
-  - role: frontend-developer
-    who: agent
+    - role: frontend-developer
+      who: agent
 ---
 
 # 2D map shows "project not found" alert and no nodes render when doc artifacts present
