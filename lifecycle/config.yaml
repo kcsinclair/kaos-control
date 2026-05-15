@@ -86,12 +86,20 @@ agents:
   - name: requirements-analyst
     role:
       - analyst
-    driver: claude-code-cli
+    driver: claude-mediated
     model: opus
     active_status: clarifying
     source_types:
       - idea
     timeout_minutes: 0
+    #bash_allowlist:                   # when non-empty, only matching commands run
+    #  - "go test *"
+    #  - "git status"
+    #  - "head *"
+    #bash_denylist:                    # merged with DefaultBashDenylist
+    #  - "git push *"
+    on_denial: continue               # or "abort" — kills run on first deny
+    observe_only: false               # true = log decisions but always allow
     allowed_write_paths:
       - lifecycle/requirements
       - lifecycle/ideas
