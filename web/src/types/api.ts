@@ -94,6 +94,7 @@ export interface OllamaModel {
 export interface AgentSummary {
   name: string
   roles: string[]
+  /** driver: 'ollama' | 'claude-code-cli' | 'claude-mediated' | 'inline' */
   driver: string
   model?: string
   active_status?: string
@@ -101,6 +102,18 @@ export interface AgentSummary {
   allowed_write_paths?: string[]
   ollama_instance?: string
   ollama_endpoint?: string
+  observe_only?: boolean
+  bash_allowlist?: string[]
+  bash_denylist?: string[]
+  on_denial?: string
+}
+
+export interface DenialRecord {
+  tool_name: string
+  path?: string
+  command?: string
+  reason: string
+  rule: string
 }
 
 export interface AgentRunRow {
@@ -120,6 +133,8 @@ export interface AgentRunRow {
   observed_permission_mode?: string | null
   /** Set on precheck-related failures; up to ~5 short remediation lines. */
   remediation?: string[] | null
+  /** Tool calls denied by the mediated driver permission hooks. */
+  denied_tool_calls?: DenialRecord[] | null
 }
 
 export interface ArtifactFilter {
@@ -226,6 +241,17 @@ export interface GitStatusResponse {
   head_when?: string
 }
 
+export interface PermissionDecision {
+  run_id: string
+  tool_name: string
+  target_path?: string
+  command?: string
+  decision: 'allow' | 'deny'
+  reason: string
+  policy_rule: string
+  timestamp: string
+}
+
 export type WsEventType =
   | 'file.changed'
   | 'artifact.indexed'
@@ -237,6 +263,7 @@ export type WsEventType =
   | 'agent.progress'
   | 'agent.finished'
   | 'agent.failed'
+  | 'agent.permission'
   | 'feed.new'
   | 'pipeline.run.started'
   | 'pipeline.step.started'

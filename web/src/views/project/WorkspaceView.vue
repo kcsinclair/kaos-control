@@ -20,7 +20,7 @@ const agentsStore = useAgentsStore()
 const schedulerStore = useSchedulerStore()
 const appStore = useAppStore()
 
-const AGENT_EVENTS     = new Set(['agent.started', 'agent.progress', 'agent.finished', 'agent.failed'])
+const AGENT_EVENTS     = new Set(['agent.started', 'agent.progress', 'agent.finished', 'agent.failed', 'agent.permission'])
 const LOCK_EVENTS      = new Set(['lock.acquired', 'lock.released'])
 const SCHEDULER_EVENTS = new Set(['scheduler.job.started', 'scheduler.job.completed'])
 

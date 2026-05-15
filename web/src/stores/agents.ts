@@ -3,7 +3,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as agentsApi from '@/api/agents'
-import type { AgentRunRow, AgentSummary, RunResult } from '@/types/api'
+import type { AgentRunRow, AgentSummary, RunResult, PermissionDecision } from '@/types/api'
 
 // formatEvent renders a parsed stream event as a single line of text suitable
 // for the live progress panel.
@@ -68,6 +68,12 @@ function formatEvent(ev: Record<string, unknown>): string {
   return JSON.stringify(ev)
 }
 
+function formatPermissionEvent(ev: PermissionDecision): string {
+  const icon = ev.decision === 'allow' ? '✓' : '✗'
+  const target = ev.target_path ?? ev.command ?? ''
+  return `[PERMISSION] ${icon} ${ev.tool_name}${target ? ' ' + target : ''} — ${ev.reason}`
+}
+
 export const useAgentsStore = defineStore('agents', () => {
   const runs = ref<AgentRunRow[]>([])
   const agents = ref<AgentSummary[]>([])
@@ -86,6 +92,9 @@ export const useAgentsStore = defineStore('agents', () => {
 
   /** Run results received via WebSocket finish events, keyed by run_id. */
   const runResults = ref(new Map<string, RunResult>())
+
+  /** Permission decisions received via agent.permission WS events, keyed by run_id. */
+  const permissionEvents = ref(new Map<string, PermissionDecision[]>())
 
   const activeRuns = computed(() => runs.value.filter((r) => r.status === 'running'))
 
@@ -166,6 +175,15 @@ export const useAgentsStore = defineStore('agents', () => {
       const lines = progressLines.value.get(runId)!
       lines.push(formatted)
       if (lines.length > 200) lines.splice(0, lines.length - 200)
+    } else if (type === 'agent.permission') {
+      const ev = payload as unknown as PermissionDecision
+      if (!permissionEvents.value.has(runId)) permissionEvents.value.set(runId, [])
+      permissionEvents.value.get(runId)!.push(ev)
+      // Also append a formatted line to the live progress log.
+      if (!progressLines.value.has(runId)) progressLines.value.set(runId, [])
+      const lines = progressLines.value.get(runId)!
+      lines.push(formatPermissionEvent(ev))
+      if (lines.length > 200) lines.splice(0, lines.length - 200)
     } else if (type === 'agent.finished' || type === 'agent.failed') {
       const idx = runs.value.findIndex((r) => r.run_id === runId)
       const newStatus = (payload.status as string) ?? (type === 'agent.finished' ? 'done' : 'failed')
@@ -178,6 +196,7 @@ export const useAgentsStore = defineStore('agents', () => {
           failure_reason: (payload.failure_reason as string | null | undefined) ?? null,
           observed_permission_mode: (payload.observed_permission_mode as string | null | undefined) ?? null,
           remediation: (payload.remediation as string[] | null | undefined) ?? null,
+          denied_tool_calls: (payload.denied_tool_calls as import('@/types/api').DenialRecord[] | null | undefined) ?? null,
         }
       }
       // Cache the result payload if provided by the backend.
@@ -216,6 +235,7 @@ export const useAgentsStore = defineStore('agents', () => {
     agents,
     loading,
     progressLines,
+    permissionEvents,
     activeRuns,
     runningCountByAgent,
     readyCounts,
