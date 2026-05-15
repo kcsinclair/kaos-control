@@ -1,16 +1,19 @@
 ---
 title: Projects Page CRUD Operations — Requirements
 type: requirement
-status: draft
+status: approved
 lineage: projects-crud-ui
-parent: ideas/projects-crud-ui.md
 priority: high
+parent: ideas/projects-crud-ui.md
 labels:
     - feature
     - frontend
     - backend
     - v1
 release: KC-Release2
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Projects Page CRUD Operations — Requirements
@@ -132,8 +135,16 @@ The projects page must be usable on viewports ≥ 768 px wide, consistent with t
 - [ ] Path validation rejects traversal attempts and non-absolute paths.
 - [ ] [[projects-crud-ui]] lineage is preserved across all derived artifacts.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the "Initialise" action also create an initial git commit for the scaffolding, or leave that to the user?
+
+> If git has not been initialised, it should git init and commit.  If git already setup, do not commit but suggest the commands needed to add files and make the commit.
+
 2. Should there be a "Test Connection" or path-validation button in the create/edit form that checks the path before submission, or is submit-time validation sufficient?
+
+> Yes, call it Check Directory, which will check for existence and that kaos-control can write to the directory for the process running kaos-control.
+
 3. Are there additional project registry fields beyond `name`, `path`, `description`, and `owner` that should be exposed in v1 (e.g., a project icon or colour for the nav)?
+
+> No, standard fields for now.  I will raise an enhancement to get custom icons and colours for projects, great idea.
