@@ -56,6 +56,79 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, projectToSummary(p))
 }
 
+// handleUpdateProject updates mutable project fields (description, owner, path).
+// name is immutable; if included in the body it is ignored.
+func (s *Server) handleUpdateProject(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "project")
+	p, ok := s.getProject(name)
+	if !ok {
+		writeJSON(w, http.StatusNotFound, apiError("project_not_found", "project not found: "+name))
+		return
+	}
+
+	var body struct {
+		Description *string `json:"description"`
+		Owner       *string `json:"owner"`
+		Path        *string `json:"path"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_body", "invalid JSON: "+err.Error()))
+		return
+	}
+
+	// Build updated entry from existing values.
+	entry := &config.ProjectEntry{
+		Name:        p.Entry.Name,
+		Path:        p.Entry.Path,
+		Description: p.Entry.Description,
+		Owner:       p.Entry.Owner,
+	}
+	if body.Description != nil {
+		entry.Description = *body.Description
+	}
+	if body.Owner != nil {
+		entry.Owner = *body.Owner
+	}
+
+	pathChanged := false
+	if body.Path != nil && *body.Path != p.Entry.Path {
+		resolved, err := config.ValidatePath(*body.Path)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+			return
+		}
+		entry.Path = resolved
+		pathChanged = true
+	}
+
+	// Persist to disk atomically.
+	if err := config.SaveProjectEntry(s.projectsDir, entry); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("save_failed", "saving project entry: "+err.Error()))
+		return
+	}
+
+	if pathChanged {
+		// Re-initialise project runtime for the new path.
+		if err := s.UnregisterProject(name); err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("unregister_failed", "unregistering project: "+err.Error()))
+			return
+		}
+		if err := s.RegisterProject(entry); err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("register_failed", "re-registering project at new path: "+err.Error()))
+			return
+		}
+		p, _ = s.getProject(name)
+	} else {
+		// In-place update of non-path fields.
+		s.projectsMu.RLock()
+		p.Entry.Description = entry.Description
+		p.Entry.Owner = entry.Owner
+		s.projectsMu.RUnlock()
+	}
+
+	writeJSON(w, http.StatusOK, projectToSummary(p))
+}
+
 // handleCreateProject registers a new project and persists it to the registry.
 func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 	var body struct {

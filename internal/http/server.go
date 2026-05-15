@@ -163,6 +163,7 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/projects", s.handleListProjects)
 		r.Post("/projects", s.handleCreateProject)
 		r.Get("/projects/{project}", s.handleGetProject)
+		r.Put("/projects/{project}", s.handleUpdateProject)
 
 		// App-level WebSocket (queue events, etc.)
 		r.Get("/ws", s.handleAppWebSocket)
@@ -433,6 +434,26 @@ func (s *Server) RegisterProject(entry *config.ProjectEntry) error {
 	s.projectCancels[entry.Name] = cancel
 	s.projectsMu.Unlock()
 	return nil
+}
+
+// UnregisterProject stops a project's goroutines, closes its index, and removes
+// it from the server's live project map. Does not delete any on-disk files.
+func (s *Server) UnregisterProject(name string) error {
+	s.projectsMu.Lock()
+	p, ok := s.projects[name]
+	cancel := s.projectCancels[name]
+	delete(s.projects, name)
+	delete(s.projectCancels, name)
+	s.projectsMu.Unlock()
+
+	if !ok {
+		return fmt.Errorf("project not found: %s", name)
+	}
+	// Cancel the project context to stop watcher/reaper/scheduler goroutines.
+	if cancel != nil {
+		cancel()
+	}
+	return p.Close()
 }
 
 // TrackCancel records a cancel function for a project that was opened and
