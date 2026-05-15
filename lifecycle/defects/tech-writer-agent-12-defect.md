@@ -1,7 +1,7 @@
 ---
 title: '"New Docs" creation modal submit never fires POST /artifacts'
 type: defect
-status: draft
+status: approved
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
 labels: [defect]
