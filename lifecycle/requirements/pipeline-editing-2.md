@@ -1,7 +1,7 @@
 ---
 title: Make Pipelines Editable
 type: requirement
-status: blocked
+status: approved
 lineage: pipeline-editing
 created: "2026-05-15T00:00:00+10:00"
 priority: medium
@@ -120,7 +120,7 @@ Users can create and run DevOps pipelines, but there is no way to modify an exis
 - [ ] No regressions to pipeline creation ([[devops-pipelines]]) or log streaming ([[devops-pipeline-log-streaming]]).
 - [ ] Edit and create dialogs are visually and behaviourally consistent.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the edit dialog support a "diff view" showing changes against the saved version before confirming, or is the raw editor sufficient for v1?
 
