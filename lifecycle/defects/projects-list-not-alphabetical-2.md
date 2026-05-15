@@ -10,6 +10,9 @@ labels:
     - frontend
     - usability
 release: KC-Release2
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Projects List Not Sorted Alphabetically
