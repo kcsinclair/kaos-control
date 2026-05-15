@@ -1,7 +1,7 @@
 ---
 title: Artifact Relationship Links Not Clickable in Right Panel
 type: defect
-status: in-development
+status: done
 lineage: artifact-relationship-links-not-clickable
 created: "2026-05-16T08:09:06+10:00"
 priority: normal

@@ -4,12 +4,13 @@ type: defect
 status: approved
 lineage: modal-closes-on-outside-click
 created: "2026-05-16T07:50:43+10:00"
-priority: normal
+priority: medium
 labels:
     - defect
     - frontend
     - usability
     - vue
+release: KC-Release3
 ---
 
 # Modals Dismiss on Outside Click Instead of Explicit Action

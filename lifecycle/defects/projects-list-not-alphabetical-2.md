@@ -9,6 +9,7 @@ labels:
     - defect
     - frontend
     - usability
+release: KC-Release2
 ---
 
 # Projects List Not Sorted Alphabetically
