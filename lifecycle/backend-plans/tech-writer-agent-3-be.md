@@ -1,7 +1,7 @@
 ---
 title: "Tech Writer Agent — Backend Plan"
 type: plan-backend
-status: approved
+status: in-development
 lineage: tech-writer-agent
 parent: lifecycle/requirements/tech-writer-agent-2.md
 ---
