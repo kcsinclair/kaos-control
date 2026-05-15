@@ -4,24 +4,30 @@
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
-  failureReason: string
+  failureReason?: string
   observedMode?: string | null
   remediation?: string[] | null
+  /** When set, shows a denial-count notice instead of a failure reason. */
+  denialCount?: number
 }>()
 
 const disclosureOpen = ref(false)
 
 const heading = computed(() => {
+  if (props.denialCount != null) {
+    return `This run had ${props.denialCount} denied tool call${props.denialCount === 1 ? '' : 's'}. Auto-commit was skipped.`
+  }
   if (props.failureReason === 'permission_mode_default') {
     return 'Claude Code is in default permission mode'
   }
   if (props.failureReason === 'precheck_timeout') {
     return 'Claude Code did not start within the expected time'
   }
-  return `Run failed: ${props.failureReason}`
+  return `Run failed: ${props.failureReason ?? 'unknown'}`
 })
 
 const bodyText = computed(() => {
+  if (props.denialCount != null) return null
   if (props.failureReason === 'permission_mode_default') {
     const observed = props.observedMode ? `\`${props.observedMode}\`` : 'an unexpected mode'
     return `kaos-control needs Claude Code to run in \`bypassPermissions\` mode, but the agent run reported ${observed}.`
@@ -68,7 +74,7 @@ function parseRemediationSegments(text: string): Array<{ code: boolean; text: st
       </li>
     </ol>
 
-    <details class="failure-banner__disclosure" @toggle="disclosureOpen = ($event.target as HTMLDetailsElement).open">
+    <details v-if="!props.denialCount" class="failure-banner__disclosure" @toggle="disclosureOpen = ($event.target as HTMLDetailsElement).open">
       <summary class="failure-banner__summary">What does this mean?</summary>
       <p class="failure-banner__disclosure-body">
         kaos-control launches Claude Code agents with the

@@ -15,6 +15,7 @@ import AgentLaunchModal from '@/components/agent/AgentLaunchModal.vue'
 import AgentConfigForm from '@/components/agent/AgentConfigForm.vue'
 import RunFailureBanner from '@/components/agent/RunFailureBanner.vue'
 import RunSummaryCard from '@/components/agent/RunSummaryCard.vue'
+import RunDenialSummary from '@/components/agent/RunDenialSummary.vue'
 import RawLogModal from '@/components/agent/RawLogModal.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
@@ -276,6 +277,11 @@ onMounted(() => {
                 :observed-mode="run.observed_permission_mode"
                 :remediation="run.remediation"
               />
+              <!-- Denial notice for done runs that had denials (on_denial: continue) -->
+              <RunFailureBanner
+                v-else-if="run.status === 'done' && run.denied_tool_calls?.length"
+                :denial-count="run.denied_tool_calls.length"
+              />
               <!-- Live progress for running runs -->
               <div v-if="run.status === 'running' && store.progressLines.get(run.run_id)?.length" class="detail-section">
                 <div class="detail-label">Progress</div>
@@ -315,6 +321,11 @@ onMounted(() => {
                   >{{ p }}</button>
                 </div>
               </div>
+              <!-- Denied-calls summary (runs with denials) -->
+              <RunDenialSummary
+                v-if="run.denied_tool_calls?.length"
+                :denials="run.denied_tool_calls"
+              />
               <!-- Run summary (terminal runs only) -->
               <div v-if="TERMINAL_RUN_STATUSES.has(run.status)" class="detail-section">
                 <div class="detail-label">Run summary</div>

@@ -5,6 +5,8 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import * as agentsApi from '@/api/agents'
 import type { AgentRunRow, RunResult } from '@/types/api'
 import RunSummaryCard from './RunSummaryCard.vue'
+import RunDenialSummary from './RunDenialSummary.vue'
+import RunFailureBanner from './RunFailureBanner.vue'
 import RawLogModal from './RawLogModal.vue'
 import { useAgentsStore } from '@/stores/agents'
 
@@ -175,6 +177,17 @@ function handleOverlayClick(e: MouseEvent) {
               <div class="rdm-field-value">{{ run.exit_code != null ? run.exit_code : '—' }}</div>
             </div>
           </div>
+
+          <!-- Denial notice for done runs with denials (on_denial: continue) -->
+          <RunFailureBanner
+            v-if="run.status === 'done' && run.denied_tool_calls?.length"
+            :denial-count="run.denied_tool_calls.length"
+          />
+          <!-- Denied-calls summary -->
+          <RunDenialSummary
+            v-if="run.denied_tool_calls?.length"
+            :denials="run.denied_tool_calls"
+          />
 
           <!-- Run summary card (terminal runs only) -->
           <div v-if="TERMINAL_RUN_STATUSES.has(run.status)">
