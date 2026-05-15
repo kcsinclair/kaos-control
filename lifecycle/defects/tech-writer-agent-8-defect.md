@@ -1,13 +1,15 @@
 ---
-title: "Required-plans gate not enforced for requirement when plans are absent"
+title: Required-plans gate not enforced for requirement when plans are absent
 type: defect
 status: approved
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release2
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # Required-plans gate not enforced for requirement when plans are absent
