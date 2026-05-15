@@ -27,6 +27,18 @@ var KnownTypes = map[string]bool{
 	"doc": true,
 }
 
+// Edge kinds used in GraphEdge.Kind and the links table.
+const (
+	EdgeKindParent    = "parent"
+	EdgeKindDependsOn = "depends_on"
+	EdgeKindBlocks    = "blocks"
+	EdgeKindRelatedTo = "related_to"
+	EdgeKindMembers   = "members"
+	EdgeKindWiki      = "wiki"
+	EdgeKindAssigned  = "assigned"
+	EdgeKindTimeline  = "timeline"
+)
+
 // KnownStatuses is the allowed vocabulary for the status field.
 var KnownStatuses = map[string]bool{
 	"draft": true, "clarifying": true, "planning": true,
@@ -273,14 +285,14 @@ func extractLinks(fm Frontmatter, body, fromPath string) []Link {
 		links = append(links, Link{
 			From:   fromPath,
 			To:     normaliseLinkTarget(fm.Parent, fromPath),
-			Kind:   "parent",
+			Kind:   EdgeKindParent,
 			Source: "frontmatter:parent",
 		})
 	}
-	addFM("depends_on", fm.DependsOn)
-	addFM("blocks", fm.Blocks)
-	addFM("related_to", fm.Related)
-	addFM("members", fm.Members)
+	addFM(EdgeKindDependsOn, fm.DependsOn)
+	addFM(EdgeKindBlocks, fm.Blocks)
+	addFM(EdgeKindRelatedTo, fm.Related)
+	addFM(EdgeKindMembers, fm.Members)
 
 	// Wiki-style body links.
 	for _, m := range wikiLinkRe.FindAllStringSubmatch(body, -1) {
@@ -292,7 +304,7 @@ func extractLinks(fm Frontmatter, body, fromPath string) []Link {
 		links = append(links, Link{
 			From:   fromPath,
 			To:     normaliseLinkTarget(target, fromPath),
-			Kind:   "wiki",
+			Kind:   EdgeKindWiki,
 			Source: "body:wiki",
 		})
 	}

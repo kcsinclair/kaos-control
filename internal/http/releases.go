@@ -464,7 +464,7 @@ func buildRoadmapGraph(p *project.Project) (*index.GraphData, error) {
 			edges = append(edges, &index.GraphEdge{
 				Source: releaseNodeID,
 				Target: a.Path,
-				Kind:   "assigned",
+				Kind:   artifact.EdgeKindAssigned,
 			})
 		}
 		return nil
@@ -485,7 +485,7 @@ func buildRoadmapGraph(p *project.Project) (*index.GraphData, error) {
 		edges = append(edges, &index.GraphEdge{
 			Source: prevID,
 			Target: nodeID,
-			Kind:   "timeline",
+			Kind:   artifact.EdgeKindTimeline,
 			Label:  label,
 		})
 		prevID = nodeID
@@ -516,7 +516,7 @@ func buildRoadmapGraph(p *project.Project) (*index.GraphData, error) {
 			edges = append(edges, &index.GraphEdge{
 				Source: nodeID,
 				Target: unschedID,
-				Kind:   "timeline",
+				Kind:   artifact.EdgeKindTimeline,
 			})
 		}
 	}
@@ -552,7 +552,7 @@ func buildRoadmapGraph(p *project.Project) (*index.GraphData, error) {
 		edges = append(edges, &index.GraphEdge{
 			Source: backlogID,
 			Target: a.Path,
-			Kind:   "assigned",
+			Kind:   artifact.EdgeKindAssigned,
 		})
 	}
 
