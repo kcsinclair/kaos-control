@@ -1,7 +1,7 @@
 ---
 title: "Tech Writer Agent — Test Plan"
 type: plan-test
-status: draft
+status: approved
 lineage: tech-writer-agent
 parent: lifecycle/requirements/tech-writer-agent-2.md
 ---
