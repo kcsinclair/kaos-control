@@ -274,6 +274,8 @@ async function init() {
     userPanningEnabled: true,
     boxSelectionEnabled: false,
   })
+  // Expose for E2E tests.
+  ;(window as any).__cy = cy
 
   cy.on('tap', 'node', (evt: any) => {
     const raw = evt.target.data('_raw') as GraphNode

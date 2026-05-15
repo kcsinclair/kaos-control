@@ -1,0 +1,44 @@
+git:
+  default_branch: main
+  branch_template: "requirement/{slug}"
+roles:
+  - product-owner
+  - analyst
+  - backend-developer
+  - frontend-developer
+  - test-developer
+  - qa
+stages:
+  - name: ideas
+    dir: ideas
+  - name: requirements
+    dir: requirements
+  - name: defects
+    dir: defects
+  - name: releases
+    dir: releases
+required_plans:
+  requirement:
+    - plan-backend
+    - plan-frontend
+    - plan-test
+users:
+  - email: admin@kaos-e2e.local
+    roles:
+      - product-owner
+      - analyst
+dashboard:
+  tracked_types:
+    - idea
+    - requirement
+    - defect
+agents:
+  - name: stub-agent
+    role:
+      - product-owner
+    driver: shell-stub
+    shell_command: "sleep 1 && printf '{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false}\\n'"
+    git_identity:
+      name: Stub Agent
+      email: stub@kaos-e2e.local
+    allowed_write_paths: []

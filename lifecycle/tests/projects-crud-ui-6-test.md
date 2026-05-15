@@ -1,7 +1,7 @@
 ---
 title: "Tests: Projects CRUD UI"
 type: test
-status: in-qa
+status: approved
 lineage: projects-crud-ui
 parent: lifecycle/test-plans/projects-crud-ui-5-test.md
 ---
