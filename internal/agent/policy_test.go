@@ -28,6 +28,61 @@ func TestEvaluate_ReadOnlyTools(t *testing.T) {
 	}
 }
 
+// TestEvaluate_AbsolutePath_InsideProjectRoot verifies that Claude's habit of
+// sending absolute file_paths in PreToolUse is correctly resolved to a
+// project-relative path before being matched against AllowedPaths. This is
+// the bug surfaced by run 207bdbaab07e22e0 where the absolute path
+// /Users/keith/Code/kaos-control/lifecycle/requirements/foo.md was being
+// denied because TrimLeft("/") gave Users/... which obviously doesn't match
+// the project-relative prefix lifecycle/requirements.
+func TestEvaluate_AbsolutePath_InsideProjectRoot(t *testing.T) {
+	cfg := PolicyConfig{
+		ProjectRoot:  "/Users/keith/Code/kaos-control",
+		AllowedPaths: []string{"lifecycle/requirements", "lifecycle/ideas"},
+	}
+	d := Evaluate(cfg, "Write", fileInput("/Users/keith/Code/kaos-control/lifecycle/requirements/pipeline-editing-2.md"))
+	if d.Action != "allow" {
+		t.Errorf("expected allow for absolute path inside project root + AllowedPaths, got %v", d)
+	}
+}
+
+// TestEvaluate_AbsolutePath_OutsideProjectRoot verifies that absolute paths
+// escaping the project root are denied with rule=outside_project even if the
+// path's suffix would otherwise match an AllowedPath.
+func TestEvaluate_AbsolutePath_OutsideProjectRoot(t *testing.T) {
+	cfg := PolicyConfig{
+		ProjectRoot:  "/Users/keith/Code/kaos-control",
+		AllowedPaths: []string{"lifecycle/requirements"},
+	}
+	cases := []string{
+		"/etc/passwd",
+		"/tmp/lifecycle/requirements/sneaky.md",
+		"/Users/keith/Code/other-project/lifecycle/requirements/foo.md",
+	}
+	for _, p := range cases {
+		d := Evaluate(cfg, "Write", fileInput(p))
+		if d.Action != "deny" {
+			t.Errorf("path=%s: expected deny, got %v", p, d)
+		}
+		if d.Rule != "outside_project" {
+			t.Errorf("path=%s: expected rule=outside_project, got %q", p, d.Rule)
+		}
+	}
+}
+
+// TestEvaluate_AbsolutePath_NoProjectRoot verifies that when an absolute path
+// is sent but no ProjectRoot is configured, we deny rather than silently
+// allowing (defensive: misconfigured installs shouldn't open a hole).
+func TestEvaluate_AbsolutePath_NoProjectRoot(t *testing.T) {
+	cfg := PolicyConfig{
+		AllowedPaths: []string{"lifecycle/requirements"},
+	}
+	d := Evaluate(cfg, "Write", fileInput("/anything/at/all.md"))
+	if d.Action != "deny" || d.Rule != "outside_project" {
+		t.Errorf("expected deny+outside_project when ProjectRoot empty, got %v", d)
+	}
+}
+
 func TestEvaluate_AllowedPaths_Allow(t *testing.T) {
 	cfg := PolicyConfig{AllowedPaths: []string{"internal/", "cmd/"}}
 	cases := []struct {
@@ -53,7 +108,7 @@ func TestEvaluate_AllowedPaths_Deny(t *testing.T) {
 		path string
 	}{
 		{"Write", "lifecycle/requirements/foo.md"},
-		{"Edit", "/etc/passwd"},
+		{"Edit", "tests/web/App.vue"},
 		{"Write", "web/src/App.vue"},
 	}
 	for _, tc := range cases {

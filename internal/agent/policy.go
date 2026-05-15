@@ -3,11 +3,17 @@
 package agent
 
 import (
+	"path/filepath"
 	"strings"
 )
 
 // PolicyConfig holds the permission parameters for a single agent run.
 type PolicyConfig struct {
+	// ProjectRoot is the absolute path to the project's working tree. Used to
+	// convert absolute tool_input file_path values (which is what Claude Code
+	// sends in PreToolUse) into project-relative paths before they are
+	// prefix-matched against AllowedPaths / LineagePaths.
+	ProjectRoot string
 	// AllowedPaths are directory prefixes the agent may write to.
 	// Derived from AgentConfig.AllowedPaths.
 	AllowedPaths []string
@@ -77,8 +83,31 @@ func Evaluate(cfg PolicyConfig, toolName string, toolInput map[string]any) Decis
 			return Decision{Action: "allow", Reason: "no file_path in input", Rule: "no_path"}
 		}
 
-		// Normalise to forward-slash, strip leading slash for prefix matching.
-		filePath = strings.TrimLeft(filePath, "/")
+		// Claude Code sends absolute file paths in PreToolUse tool_input.
+		// Resolve them to project-relative paths before prefix-matching
+		// against AllowedPaths / LineagePaths (which are project-relative).
+		// Absolute paths that escape the project root are denied outright.
+		if filepath.IsAbs(filePath) {
+			if cfg.ProjectRoot == "" {
+				return Decision{
+					Action: "deny",
+					Reason: "absolute file_path " + filePath + " cannot be resolved (no project root)",
+					Rule:   "outside_project",
+				}
+			}
+			rel, err := filepath.Rel(cfg.ProjectRoot, filepath.Clean(filePath))
+			if err != nil || strings.HasPrefix(rel, "..") {
+				return Decision{
+					Action: "deny",
+					Reason: "write target " + filePath + " is outside project root " + cfg.ProjectRoot,
+					Rule:   "outside_project",
+				}
+			}
+			filePath = rel
+		} else {
+			// Relative path: just normalise.
+			filePath = strings.TrimLeft(filePath, "/")
+		}
 
 		if len(cfg.AllowedPaths) > 0 {
 			matched := false

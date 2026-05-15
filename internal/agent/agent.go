@@ -577,6 +577,7 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	if ag.Driver == "claude-mediated" {
 		bashDenylist := mergeDenylist(ag.BashDenylist)
 		policy := &PolicyConfig{
+			ProjectRoot:   m.root,
 			AllowedPaths:  ag.AllowedPaths,
 			BashAllowlist: ag.BashAllowlist,
 			BashDenylist:  bashDenylist,
