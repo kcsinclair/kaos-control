@@ -16,6 +16,8 @@ release: KC-Release1
 
 # Interactive Project Initialisation Wizard
 
+**doing this with CRUD in the Project GUI**
+
 When a user initialises a directory with kaos-control, the tool should interactively prompt for the inputs required to populate the project YAML (e.g. `~/.kaos-control/projects/kaos-control.yaml`) rather than requiring the user to create or edit the file manually.
 
 The wizard should infer sensible defaults where possible — the project path defaults to the directory being initialised and the name defaults to the directory name — but prompt the user to confirm or override each value. It should also collect required fields that cannot be inferred, such as description and owner.
