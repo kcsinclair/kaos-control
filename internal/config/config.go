@@ -418,6 +418,10 @@ type AgentConfig struct {
 	// ObserveOnly puts the permission endpoint in log-only mode: every tool
 	// call is logged but always allowed. Useful for auditing without blocking.
 	ObserveOnly bool `yaml:"observe_only,omitempty"`
+	// ShellCommand is only used by the shell-stub driver (driver: shell-stub).
+	// It is the shell command to run as the agent process.
+	// If empty, the stub emits one synthetic result event and exits 0.
+	ShellCommand string `yaml:"shell_command,omitempty"`
 }
 
 // GitIdentity is the git author identity for an agent or user commit.
