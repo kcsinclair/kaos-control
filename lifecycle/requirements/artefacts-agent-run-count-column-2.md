@@ -1,7 +1,7 @@
 ---
 title: 'Artefacts View: Agent Run Count Column'
 type: requirement
-status: approved
+status: planning
 lineage: artefacts-agent-run-count-column
 created: "2026-05-16"
 priority: normal
@@ -12,6 +12,7 @@ labels:
     - agent
     - enhancement
     - feature
+release: KC-Release2
 assignees:
     - role: product-owner
       who: agent
