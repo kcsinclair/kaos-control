@@ -3,7 +3,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MessageSquarePlus, Bug } from 'lucide-vue-next'
+import { MessageSquarePlus, Bug, BookOpen } from 'lucide-vue-next'
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 import AgentRunningBanner from '@/components/dashboard/AgentRunningBanner.vue'
 import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
@@ -18,10 +18,10 @@ const brainDumpStore = useBrainDumpStore()
 const ui = useUiStore()
 
 const showBrainDump = ref(false)
-const brainDumpType = ref<'idea' | 'defect'>('idea')
+const brainDumpType = ref<'idea' | 'defect' | 'doc'>('idea')
 const triggerButtonEl = ref<HTMLButtonElement | null>(null)
 
-function openBrainDump(type: 'idea' | 'defect', el: HTMLButtonElement) {
+function openBrainDump(type: 'idea' | 'defect' | 'doc', el: HTMLButtonElement) {
   brainDumpType.value = type
   triggerButtonEl.value = el
   brainDumpStore.reset()
@@ -58,6 +58,13 @@ function onBrainDumpCreated(path: string) {
         >
           <Bug :size="15" />
           New Defect
+        </button>
+        <button
+          class="btn-new-docs"
+          @click="openBrainDump('doc', $event.currentTarget as HTMLButtonElement)"
+        >
+          <BookOpen :size="15" />
+          New Docs
         </button>
       </div>
     </header>
@@ -128,6 +135,22 @@ function onBrainDumpCreated(path: string) {
 }
 .btn-new-defect:hover { background: var(--color-surface); color: var(--color-text); }
 .btn-new-defect:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.btn-new-docs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-new-docs:hover { background: var(--color-surface); color: var(--color-text); }
+.btn-new-docs:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 .btn-new-idea {
   display: inline-flex;

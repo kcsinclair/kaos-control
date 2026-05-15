@@ -15,7 +15,7 @@ import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
 import TextFilter from '@/components/TextFilter.vue'
 import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 import { useUiStore } from '@/stores/ui'
-import { MessageSquarePlus, Bug, ShieldCheck } from 'lucide-vue-next'
+import { MessageSquarePlus, Bug, ShieldCheck, BookOpen } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
@@ -27,7 +27,7 @@ const releasesStore = useReleasesStore()
 const ui = useUiStore()
 
 const showBrainDump = ref(false)
-const brainDumpType = ref<'idea' | 'defect'>('idea')
+const brainDumpType = ref<'idea' | 'defect' | 'doc'>('idea')
 const newIdeaButtonEl = ref<HTMLButtonElement | null>(null)
 const showCompleted = ref(false)
 const showStatusPanel = ref(false)
@@ -75,7 +75,7 @@ const { sortColumn, sortDirection, sortedRows, toggleSort, resetSort } = useSort
 
 const paginatedItems = computed(() => sortedRows.value.slice(sliceStart.value, sliceEnd.value))
 
-function openBrainDump(type: 'idea' | 'defect' = 'idea') {
+function openBrainDump(type: 'idea' | 'defect' | 'doc' = 'idea') {
   brainDumpType.value = type
   showBrainDump.value = true
 }
@@ -234,6 +234,10 @@ onMounted(async () => {
       <button class="btn-new-defect" @click="openBrainDump('defect')">
         <Bug :size="15" />
         New Defect
+      </button>
+      <button class="btn-new-docs" @click="openBrainDump('doc')">
+        <BookOpen :size="15" />
+        New Docs
       </button>
     </div>
 
@@ -404,6 +408,21 @@ onMounted(async () => {
 }
 .btn-new-defect:hover { background: var(--color-surface); color: var(--color-text); }
 .btn-new-defect:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.btn-new-docs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-new-docs:hover { background: var(--color-surface); color: var(--color-text); }
+.btn-new-docs:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .btn-new-idea {
   display: inline-flex;
   align-items: center;
