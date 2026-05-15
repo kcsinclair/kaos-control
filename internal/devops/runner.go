@@ -62,6 +62,14 @@ func (r *Runner) IsRunning(slug string) bool {
 	return ok
 }
 
+// AnyRunning reports whether any pipeline is currently active. It is used to
+// block pipeline edits while a run is in progress (global edit lock).
+func (r *Runner) AnyRunning() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.bySlug) > 0
+}
+
 // ActiveRunID returns the run_id of the currently active run for slug, and
 // true. Returns "", false if no run is active.
 func (r *Runner) ActiveRunID(slug string) (string, bool) {

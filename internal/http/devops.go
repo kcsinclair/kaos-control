@@ -209,8 +209,9 @@ func (s *Server) handleUpdatePipeline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Active-run guard (first check, before validation).
-	if p.DevopsRunner.IsRunning(slug) {
-		writeJSON(w, http.StatusConflict, apiError("conflict", "cannot edit pipeline while it is running: "+slug))
+	// Any running pipeline blocks edits — not just the target slug.
+	if p.DevopsRunner.AnyRunning() {
+		writeJSON(w, http.StatusConflict, apiError("conflict", "cannot edit pipeline while any pipeline is running"))
 		return
 	}
 
@@ -223,8 +224,8 @@ func (s *Server) handleUpdatePipeline(w http.ResponseWriter, r *http.Request) {
 	pl.Slug = slug
 
 	// Second active-run check immediately before write to close the TOCTOU window.
-	if p.DevopsRunner.IsRunning(slug) {
-		writeJSON(w, http.StatusConflict, apiError("conflict", "cannot edit pipeline while it is running: "+slug))
+	if p.DevopsRunner.AnyRunning() {
+		writeJSON(w, http.StatusConflict, apiError("conflict", "cannot edit pipeline while any pipeline is running"))
 		return
 	}
 
