@@ -1,15 +1,16 @@
 ---
 title: Mediated Claude Driver with Permission Hooks
 type: requirement
-status: blocked
+status: approved
 lineage: claude-hooks-driver
 created: "2026-05-15T12:00:00+10:00"
-priority: medium
+priority: high
 parent: lifecycle/ideas/claude-hooks-driver.md
 labels:
     - agent
     - security
     - backend
+release: KC-Release2
 assignees:
     - role: product-owner
       who: agent
@@ -302,26 +303,20 @@ and command restrictions before tool calls execute, not after.
   init event reports bypass mode or if hooks are not configured.
   See [[agent-permission-precheck]].
 
-## Open Questions
+## Resolved Questions
 
-1. **Hook helper process overhead.** The hook helper is a new process
-   spawn per tool call. Should we consider a long-running sidecar
-   process instead, or is per-call spawn acceptable given loopback
-   latency? (The idea doc leans toward per-call; confirm after
-   benchmarking.)
+1. **Hook helper process overhead.** The hook helper is a new process spawn per tool call. Should we consider a long-running sidecar process instead, or is per-call spawn acceptable given loopback latency? (The idea doc leans toward per-call; confirm after benchmarking.)
 
-2. **Lineage scope at run time.** How does the driver determine the
-   current lineage for a run? Is it passed explicitly in the agent
-   config, inferred from the ticket/artifact being worked on, or
-   derived from the prompt? This affects FR10 implementation.
+> Long-running sidecar works.
 
-3. **Bash pattern matching semantics.** Should `bash_allowlist` /
-   `bash_denylist` use glob patterns, regex, or prefix matching?
-   Glob is simplest; regex is most powerful but harder to configure
-   safely. The idea doc uses glob-like syntax — confirm the contract.
+2. **Lineage scope at run time.** How does the driver determine the current lineage for a run? Is it passed explicitly in the agent config, inferred from the ticket/artifact being worked on, or derived from the prompt? This affects FR10 implementation.
 
-4. **Hook helper fallback on server unreachable.** FR's NFR2 specifies
-   deny-on-unreachable as the safe default. The idea doc suggests a
-   local-allowlist fallback instead. Which is correct? Deny-on-
-   unreachable is safer; local-allowlist is more available. Recommend
-   deny-on-unreachable with a config escape hatch.
+> It is inferred from the artifact being worked on.
+
+3. **Bash pattern matching semantics.** Should `bash_allowlist` / `bash_denylist` use glob patterns, regex, or prefix matching? Glob is simplest; regex is most powerful but harder to configure safely. The idea doc uses glob-like syntax — confirm the contract.
+
+> Globs work for v1
+
+4. **Hook helper fallback on server unreachable.** FR's NFR2 specifies deny-on-unreachable as the safe default. The idea doc suggests a local-allowlist fallback instead. Which is correct? Deny-on-unreachable is safer; local-allowlist is more available. Recommend deny-on-unreachable with a config escape hatch.
+
+> deny-on-unreachable with a config escape hatch
