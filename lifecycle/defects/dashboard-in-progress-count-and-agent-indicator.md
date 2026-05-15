@@ -10,6 +10,9 @@ labels:
     - frontend
     - agent
     - queue
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Dashboard In-Progress Count Shows 0 and Running Agent Not Displayed
