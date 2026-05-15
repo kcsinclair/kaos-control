@@ -1,7 +1,7 @@
 ---
 title: Artefact Relationship Labels and Clickable Links
 type: idea
-status: draft
+status: approved
 lineage: artefact-relationship-labels-and-links
 created: "2026-05-10T09:35:28+10:00"
 priority: medium
@@ -10,7 +10,7 @@ labels:
     - frontend
     - enhancement
     - usability
-release: KC-Release1
+release: KC-Release2
 ---
 
 # Artefact Relationship Labels and Clickable Links
