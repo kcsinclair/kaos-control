@@ -1,7 +1,7 @@
 ---
 title: 'Tests: Artefact Relationship Labels and Clickable Links'
 type: test
-status: approved
+status: in-qa
 lineage: artefact-relationship-labels-and-links
 parent: lifecycle/test-plans/artefact-relationship-labels-and-links-5-test.md
 ---
