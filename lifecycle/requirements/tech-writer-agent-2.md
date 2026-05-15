@@ -6,7 +6,7 @@ lineage: tech-writer-agent
 parent: ideas/tech-writer-agent.md
 labels:
     - agent
-release: KC-Release1
+release: KC-Release2
 assignees:
     - role: product-owner
       who: agent

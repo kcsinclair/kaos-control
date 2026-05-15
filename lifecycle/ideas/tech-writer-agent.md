@@ -6,7 +6,7 @@ lineage: tech-writer-agent
 priority: medium
 labels:
     - agent
-release: KC-Release1
+release: KC-Release2
 ---
 
 # Tech Writer Agent

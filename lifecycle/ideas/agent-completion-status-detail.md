@@ -10,7 +10,7 @@ labels:
     - enhancement
     - workflow
     - artefacts
-release: KC-Release1
+release: KC-Release3
 ---
 
 relates-to: [[ideas/improved-agent-handling]]

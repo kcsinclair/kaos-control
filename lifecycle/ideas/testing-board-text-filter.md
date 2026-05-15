@@ -10,7 +10,6 @@ labels:
     - frontend
     - testing
     - usability
-release: KC-Release1
 ---
 
 # Testing Board Text Search Filter

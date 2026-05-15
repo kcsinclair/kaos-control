@@ -4,13 +4,12 @@ type: idea
 status: draft
 lineage: yaml-configurable-panels-and-cards
 created: "2026-05-10T09:23:42+10:00"
-priority: normal
+priority: medium
 labels:
     - frontend
     - feature
     - vue
     - architecture
-release: KC-Release1
 ---
 
 # YAML-Configurable Panels and Cards
