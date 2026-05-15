@@ -1,7 +1,7 @@
 ---
 title: Make Pipelines Editable
 type: idea
-status: approved
+status: clarifying
 lineage: pipeline-editing
 created: "2026-05-13T17:01:56+10:00"
 priority: medium
