@@ -9,7 +9,9 @@ import { useBrainDumpStore } from '@/stores/brainDump'
 const props = withDefaults(
   defineProps<{
     project: string
-    artifactType?: 'idea' | 'defect'
+    artifactType?: 'idea' | 'defect' | 'doc'
+    sourceLineage?: string
+    sourcePath?: string
   }>(),
   { artifactType: 'idea' },
 )
@@ -31,15 +33,17 @@ const panelEl = ref<HTMLElement | null>(null)
 
 // ── Derived labels ─────────────────────────────────────────────────────────
 
-const headerLabel = computed(() =>
-  props.artifactType === 'defect' ? 'New Defect' : 'New Idea',
-)
+const headerLabel = computed(() => {
+  if (props.artifactType === 'defect') return 'New Defect'
+  if (props.artifactType === 'doc') return 'New Docs'
+  return 'New Idea'
+})
 
-const placeholderText = computed(() =>
-  props.artifactType === 'defect'
-    ? 'Describe the defect — what happened, what you expected...'
-    : 'Describe your idea — paste, ramble, brain dump...',
-)
+const placeholderText = computed(() => {
+  if (props.artifactType === 'defect') return 'Describe the defect — what happened, what you expected...'
+  if (props.artifactType === 'doc') return 'Describe what documentation is needed…'
+  return 'Describe your idea — paste, ramble, brain dump...'
+})
 
 const renderedBody = computed(() => {
   const body = store.proposal?.body ?? ''
@@ -48,11 +52,17 @@ const renderedBody = computed(() => {
 
 // ── Keyboard handling ──────────────────────────────────────────────────────
 
+function docOpts() {
+  return props.artifactType === 'doc'
+    ? { sourceLineage: props.sourceLineage, sourcePath: props.sourcePath }
+    : undefined
+}
+
 function onTextareaKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault()
     if (store.canSubmit) {
-      store.generate(props.project)
+      store.generate(props.project, docOpts())
     }
   }
 }
@@ -102,7 +112,7 @@ function trapFocus(e: KeyboardEvent) {
 
 async function onGenerate() {
   if (!store.canSubmit) return
-  await store.generate(props.project)
+  await store.generate(props.project, docOpts())
   // focus panel after transition so keyboard users can Tab to actions
   nextTick(() => panelEl.value?.focus())
 }

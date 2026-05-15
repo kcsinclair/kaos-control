@@ -11,7 +11,7 @@ export type BrainDumpPhase = 'input' | 'generating' | 'preview' | 'editing'
 
 export const useBrainDumpStore = defineStore('brainDump', () => {
   const input = ref('')
-  const artifactType = ref<'idea' | 'defect'>('idea')
+  const artifactType = ref<'idea' | 'defect' | 'doc'>('idea')
   const phase = ref<BrainDumpPhase>('input')
   const error = ref<string | null>(null)
   const proposal = ref<IdeaGenerateResponse | null>(null)
@@ -21,11 +21,20 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     () => input.value.trim().length > 0 && phase.value === 'input',
   )
 
-  async function generate(project: string): Promise<void> {
+  async function generate(
+    project: string,
+    opts?: { sourceLineage?: string; sourcePath?: string },
+  ): Promise<void> {
     error.value = null
     phase.value = 'generating'
     try {
-      const res = await generateIdea(project, input.value, artifactType.value)
+      const res = await generateIdea(
+        project,
+        input.value,
+        artifactType.value,
+        opts?.sourceLineage,
+        opts?.sourcePath,
+      )
       proposal.value = res
       phase.value = 'preview'
     } catch (e: unknown) {
@@ -41,8 +50,11 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
   async function acceptProposal(project: string): Promise<string | null> {
     if (!proposal.value) return null
     const p = proposal.value
-    // Derive stage from target_dir: strip leading "lifecycle/" prefix
-    const stage = p.target_dir.replace(/^lifecycle\//, '')
+    // For doc type always use 'docs' stage; otherwise derive from target_dir
+    const stage =
+      artifactType.value === 'doc'
+        ? 'docs'
+        : p.target_dir.replace(/^lifecycle\//, '')
     try {
       const res = await api.post<{ artifact: { path: string } }>(
         `/p/${encodeURIComponent(project)}/artifacts`,

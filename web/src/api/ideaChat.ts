@@ -6,11 +6,15 @@ import type { IdeaConverseResponse, IdeaGenerateResponse } from '@/types/api'
 export function generateIdea(
   project: string,
   input: string,
-  type?: 'idea' | 'defect',
+  type?: 'idea' | 'defect' | 'doc',
+  sourceLineage?: string,
+  sourcePath?: string,
 ): Promise<IdeaGenerateResponse> {
   return api.post<IdeaGenerateResponse>(`/p/${encodeURIComponent(project)}/ideas/generate`, {
     input,
     ...(type !== undefined ? { type } : {}),
+    ...(sourceLineage !== undefined ? { source_lineage: sourceLineage } : {}),
+    ...(sourcePath !== undefined ? { source_path: sourcePath } : {}),
   })
 }
 
