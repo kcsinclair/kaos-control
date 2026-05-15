@@ -2,6 +2,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import type { ArtifactDetail, GraphEdge } from '@/types/api'
 import { edgeLabel } from '@/components/map/graphConstants'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
@@ -180,14 +181,26 @@ function fmt(v: string | undefined): string {
         <div class="rel-group-label">Outbound</div>
         <div v-for="e in outbound" :key="e.target + e.kind" class="rel-item">
           <span class="rel-kind">{{ edgeLabel(e.kind, 'outbound') }}</span>
-          <span class="rel-path">{{ e.target }}</span>
+          <RouterLink
+            v-if="project"
+            :to="`/p/${project}/artifacts/${e.target}`"
+            class="rel-path rel-path-link"
+            :aria-label="`${edgeLabel(e.kind, 'outbound')} ${e.target}`"
+          >{{ e.target }}</RouterLink>
+          <span v-else class="rel-path">{{ e.target }}</span>
         </div>
       </div>
       <div v-if="inbound.length" class="rel-group">
         <div class="rel-group-label">Inbound</div>
         <div v-for="e in inbound" :key="e.source + e.kind" class="rel-item">
           <span class="rel-kind">{{ edgeLabel(e.kind, 'inbound') }}</span>
-          <span class="rel-path">{{ e.source }}</span>
+          <RouterLink
+            v-if="project"
+            :to="`/p/${project}/artifacts/${e.source}`"
+            class="rel-path rel-path-link"
+            :aria-label="`${edgeLabel(e.kind, 'inbound')} ${e.source}`"
+          >{{ e.source }}</RouterLink>
+          <span v-else class="rel-path">{{ e.source }}</span>
         </div>
       </div>
     </div>
@@ -345,5 +358,18 @@ function fmt(v: string | undefined): string {
   font-size: 11px;
   color: var(--color-text);
   word-break: break-all;
+}
+.rel-path-link {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.rel-path-link:hover {
+  color: var(--link-highlight, #60a5fa);
+  text-decoration: underline;
+}
+.rel-path-link:focus-visible {
+  outline: 2px solid var(--link-highlight, #60a5fa);
+  outline-offset: 2px;
 }
 </style>
