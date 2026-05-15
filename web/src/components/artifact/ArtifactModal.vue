@@ -23,7 +23,10 @@ const props = defineProps<{
   edges: GraphEdge[]
 }>()
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{
+  close: []
+  'navigate-artifact': [path: string]
+}>()
 
 const router = useRouter()
 const store = useArtifactsStore()
@@ -252,14 +255,24 @@ const STATUS_TEXT: Record<string, string> = {
             <div class="edge-group-label">Outbound</div>
             <div v-for="e in outbound" :key="e.target + e.kind" class="edge-item">
               <span class="edge-kind">{{ edgeLabel(e.kind, 'outbound') }}</span>
-              <span class="edge-path">{{ e.target }}</span>
+              <a
+                class="edge-path edge-path-link"
+                href="#"
+                :aria-label="`${edgeLabel(e.kind, 'outbound')} ${e.target}`"
+                @click.prevent="emit('navigate-artifact', e.target)"
+              >{{ e.target }}</a>
             </div>
           </div>
           <div v-if="inbound.length" class="edge-group">
             <div class="edge-group-label">Inbound</div>
             <div v-for="e in inbound" :key="e.source + e.kind" class="edge-item">
               <span class="edge-kind">{{ edgeLabel(e.kind, 'inbound') }}</span>
-              <span class="edge-path">{{ e.source }}</span>
+              <a
+                class="edge-path edge-path-link"
+                href="#"
+                :aria-label="`${edgeLabel(e.kind, 'inbound')} ${e.source}`"
+                @click.prevent="emit('navigate-artifact', e.source)"
+              >{{ e.source }}</a>
             </div>
           </div>
         </div>
@@ -430,6 +443,19 @@ const STATUS_TEXT: Record<string, string> = {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.edge-path-link {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.edge-path-link:hover {
+  color: var(--link-highlight, #60a5fa);
+  text-decoration: underline;
+}
+.edge-path-link:focus-visible {
+  outline: 2px solid var(--link-highlight, #60a5fa);
+  outline-offset: 2px;
 }
 .modal-close {
   position: absolute;

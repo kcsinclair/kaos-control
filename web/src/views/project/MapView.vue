@@ -156,6 +156,7 @@ onMounted(() => {
     :project="project"
     :edges="store.rawEdges"
     @close="closeModal"
+    @navigate-artifact="(path) => { selectedNode = store.rawNodes.find(n => n.id === path) ?? null }"
   />
 
   <LabelModal

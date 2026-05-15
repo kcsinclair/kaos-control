@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useReleasesStore } from '@/stores/releases'
 import { useArtifactsStore } from '@/stores/artifacts'
 import { useRoadmapSettingsStore } from '@/stores/roadmapSettings'
+import { useGraphStore } from '@/stores/graph'
 import GanttChart from '@/components/releases/GanttChart.vue'
 import BacklogPanel from '@/components/releases/BacklogPanel.vue'
 import ReleaseFormModal from '@/components/releases/ReleaseFormModal.vue'
@@ -25,6 +26,7 @@ const project = route.params.project as string
 const store = useReleasesStore()
 const artifactsStore = useArtifactsStore()
 const roadmapSettings = useRoadmapSettingsStore()
+const graphStore = useGraphStore()
 
 // ── Backlog artifacts ────────────────────────────────────────────────────────
 // All artifacts with no release assignment, excluding release and sprint types.
@@ -268,6 +270,13 @@ function openEdit(releaseId: number) {
       :project="project"
       :edges="selectedArtifactEdges"
       @close="selectedArtifactNode = null"
+      @navigate-artifact="(path) => {
+        const node = graphStore.rawNodes.find(n => n.id === path)
+        if (node) {
+          selectedArtifactNode = node
+          selectedArtifactEdges = graphStore.rawEdges
+        }
+      }"
     />
   </div>
 </template>
