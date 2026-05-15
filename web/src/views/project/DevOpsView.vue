@@ -14,6 +14,7 @@ import PipelineCard from '@/components/devops/PipelineCard.vue'
 import SplitPane from '@/components/common/SplitPane.vue'
 import PipelineLogPane from '@/components/devops/PipelineLogPane.vue'
 import CreatePipelineDialog from '@/components/devops/CreatePipelineDialog.vue'
+import EditPipelineDialog from '@/components/devops/EditPipelineDialog.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -86,6 +87,23 @@ onUnmounted(() => {
 })
 
 const showCreateDialog = ref(false)
+const showEditDialog = ref(false)
+const editTargetSlug = ref('')
+
+function handleEditPipeline(slug: string) {
+  editTargetSlug.value = slug
+  showEditDialog.value = true
+}
+
+function handleEditClose() {
+  showEditDialog.value = false
+  editTargetSlug.value = ''
+}
+
+function handleEditUpdated() {
+  showEditDialog.value = false
+  editTargetSlug.value = ''
+}
 
 onMounted(() => {
   if (hasAccess.value) {
@@ -107,6 +125,9 @@ useWebSocket(project, 'pipeline.step.completed', (e: WsEvent) => {
 })
 useWebSocket(project, 'pipeline.run.completed', (e: WsEvent) => {
   devops.handleRunCompleted(e.payload)
+})
+useWebSocket(project, 'pipeline.updated', () => {
+  devops.handlePipelineUpdated(project)
 })
 </script>
 
@@ -131,6 +152,14 @@ useWebSocket(project, 'pipeline.run.completed', (e: WsEvent) => {
         :project="project"
         @close="showCreateDialog = false"
         @created="showCreateDialog = false"
+      />
+
+      <EditPipelineDialog
+        :open="showEditDialog"
+        :project="project"
+        :slug="editTargetSlug"
+        @close="handleEditClose"
+        @updated="handleEditUpdated"
       />
 
       <SplitPane
@@ -163,6 +192,7 @@ useWebSocket(project, 'pipeline.run.completed', (e: WsEvent) => {
                     :pipeline="pipeline"
                     :project="project"
                     @view-log="handleViewLog"
+                    @edit="handleEditPipeline"
                   />
                 </div>
               </div>
