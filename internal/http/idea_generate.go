@@ -33,8 +33,10 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Input        string `json:"input"`
-		ArtifactType string `json:"type"`
+		Input          string `json:"input"`
+		ArtifactType   string `json:"type"`
+		SourceLineage  string `json:"source_lineage"`
+		SourcePath     string `json:"source_path"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
@@ -54,9 +56,14 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 		artifactType = "idea"
 	}
 
-	templateKey := "idea-generate"
-	if artifactType == "defect" {
+	var templateKey string
+	switch artifactType {
+	case "defect":
 		templateKey = "defect-generate"
+	case "doc":
+		templateKey = "doc-generate"
+	default:
+		templateKey = "idea-generate"
 	}
 
 	modelCfg, err := resolveIdeaCaptureConfig(p, templateKey)
@@ -69,9 +76,14 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 	existingLabels, _ := p.Idx.Labels()
 
 	// Gather slugs: merge index slugs with disk slugs for thorough collision detection.
-	targetDir := "lifecycle/ideas"
-	if artifactType == "defect" {
+	var targetDir string
+	switch artifactType {
+	case "defect":
 		targetDir = "lifecycle/defects"
+	case "doc":
+		targetDir = "lifecycle/docs"
+	default:
+		targetDir = "lifecycle/ideas"
 	}
 	diskSlugs, _ := ideachat.CollectDiskSlugs(p.Entry.Path, targetDir)
 	indexSlugs, _ := collectSlugs(p)
@@ -80,6 +92,8 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 	result, err := ideachat.Generate(r.Context(), ideachat.GenerateOptions{
 		Input:          req.Input,
 		ArtifactType:   artifactType,
+		SourceLineage:  req.SourceLineage,
+		SourcePath:     req.SourcePath,
 		ExistingLabels: existingLabels,
 		ExistingSlugs:  allSlugs,
 		ModelCfg:       modelCfg,

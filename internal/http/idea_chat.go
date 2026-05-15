@@ -208,17 +208,26 @@ func writeIdeaArtifact(p *project.Project, sess *ideachat.Session, actor string)
 	return relPath, nil
 }
 
-// resolveIdeaCaptureConfig finds the idea-capture agent configuration in the
-// project config and returns a ModelConfig for the given templateKey.
-// Known keys: "idea-capture" (conversational), "idea-generate", "defect-generate".
+// resolveIdeaCaptureConfig finds the inline agent configuration in the project
+// config that owns the given templateKey and returns a ModelConfig for it.
+// Known keys: "idea-capture" (conversational), "idea-generate", "defect-generate",
+// "doc-generate".
+// "doc-generate" is owned by the docs-capture agent; all other keys are looked
+// up in the idea-capture agent.
 // When templateKey is "idea-capture" and no agent is configured, a built-in
 // default prompt is returned so the conversational endpoint keeps working.
 func resolveIdeaCaptureConfig(p *project.Project, templateKey string) (ideachat.ModelConfig, error) {
+	// Determine which agent owns this template key.
+	agentName := "idea-capture"
+	if templateKey == "doc-generate" {
+		agentName = "docs-capture"
+	}
+
 	for _, a := range p.Cfg.Agents {
-		if a.Name == "idea-capture" {
+		if a.Name == agentName {
 			prompt, ok := a.PromptTemplates[templateKey]
 			if !ok {
-				return ideachat.ModelConfig{}, fmt.Errorf("idea-capture agent has no template %q", templateKey)
+				return ideachat.ModelConfig{}, fmt.Errorf("%s agent has no template %q", agentName, templateKey)
 			}
 			model := a.Model
 			if model == "" {
@@ -237,7 +246,7 @@ func resolveIdeaCaptureConfig(p *project.Project, templateKey string) (ideachat.
 			SystemPrompt: defaultIdeaCapturePrompt,
 		}, nil
 	}
-	return ideachat.ModelConfig{}, fmt.Errorf("idea-capture agent not configured")
+	return ideachat.ModelConfig{}, fmt.Errorf("%s agent not configured", agentName)
 }
 
 // collectSlugs returns all lineage slugs currently in the project index.

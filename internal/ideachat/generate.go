@@ -13,10 +13,13 @@ import (
 // ErrInputTooShort is returned by Generate when the input has fewer than 5 words.
 var ErrInputTooShort = errors.New("input too short: provide at least 5 words describing your idea")
 
-// GenerateOptions configures a single-shot idea or defect generation call.
+// GenerateOptions configures a single-shot idea, defect, or doc generation call.
 type GenerateOptions struct {
 	Input          string
-	ArtifactType   string   // "idea" or "defect"; defaults to "idea"
+	ArtifactType   string   // "idea", "defect", or "doc"; defaults to "idea"
+	SourceLineage  string   // optional: lineage slug of the source artifact (doc flow)
+	SourcePath     string   // optional: project-relative path of the source artifact (doc flow)
+	SourceContext  string   // optional: pre-assembled context text from source lineage to inject into prompt
 	ExistingLabels []string // label vocabulary to constrain LLM choices
 	ExistingSlugs  []string // existing slugs for collision detection
 	ModelCfg       ModelConfig
@@ -46,16 +49,19 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerateResult, error
 		artifactType = "idea"
 	}
 	switch artifactType {
-	case "idea", "defect":
+	case "idea", "defect", "doc":
 		// valid
 	default:
-		return nil, fmt.Errorf("unknown artifact type %q: must be \"idea\" or \"defect\"", artifactType)
+		return nil, fmt.Errorf("unknown artifact type %q: must be \"idea\", \"defect\", or \"doc\"", artifactType)
 	}
 
-	// 3. Build user message with label vocabulary hint.
+	// 3. Build user message with label vocabulary hint and optional source context.
 	userContent := opts.Input
 	if len(opts.ExistingLabels) > 0 {
 		userContent += "\n\nAvailable label vocabulary: " + strings.Join(opts.ExistingLabels, ", ")
+	}
+	if opts.SourceContext != "" {
+		userContent += "\n\n" + opts.SourceContext
 	}
 	llmMsgs := []LLMMessage{
 		{Role: "user", Content: userContent},
@@ -103,19 +109,30 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerateResult, error
 	}
 
 	// 8. Construct frontmatter map.
+	// For doc artifacts with a source lineage, inherit the lineage from the source.
+	lineage := slug
+	if artifactType == "doc" && opts.SourceLineage != "" {
+		lineage = opts.SourceLineage
+	}
 	fm := map[string]any{
 		"title":    action.Title,
 		"type":     artifactType,
 		"status":   "draft",
-		"lineage":  slug,
+		"lineage":  lineage,
 		"labels":   labels,
 		"priority": "normal",
+	}
+	if artifactType == "doc" && opts.SourcePath != "" {
+		fm["parent"] = opts.SourcePath
 	}
 
 	// 9. Set target directory.
 	targetDir := "lifecycle/ideas"
-	if artifactType == "defect" {
+	switch artifactType {
+	case "defect":
 		targetDir = "lifecycle/defects"
+	case "doc":
+		targetDir = "lifecycle/docs"
 	}
 
 	return &GenerateResult{
