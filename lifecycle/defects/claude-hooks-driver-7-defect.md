@@ -1,7 +1,7 @@
 ---
 title: "hook-helper test assertions use obsolete simple JSON format"
 type: defect
-status: draft
+status: approved
 lineage: claude-hooks-driver
 parent: lifecycle/tests/claude-hooks-driver-6-test.md
 labels: [defect]
