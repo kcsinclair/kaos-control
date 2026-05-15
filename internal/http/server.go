@@ -317,6 +317,7 @@ func (s *Server) buildRouter() chi.Router {
 			// DevOps pipelines
 			r.Get("/devops/pipelines", s.handleListPipelines)
 			r.Post("/devops/pipelines", s.handleCreatePipeline)
+			r.Get("/devops/pipelines/{slug}", s.handleGetPipeline)
 			r.Post("/devops/pipelines/{slug}/run", s.handleRunPipeline)
 			r.Post("/devops/pipelines/{slug}/cancel", s.handleCancelPipeline)
 			r.Get("/devops/runs/{run_id}", s.handleGetRunLog)

@@ -146,6 +146,37 @@ func (s *Server) handleGetRunLog(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
+// handleGetPipeline handles GET /api/p/{project}/devops/pipelines/{slug}.
+// It returns the raw YAML content of the named pipeline file so the frontend
+// can populate the editor. Access is restricted to product-owner and devops roles.
+func (s *Server) handleGetPipeline(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+	if !pipelineSlugRe.MatchString(slug) {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid pipeline slug"))
+		return
+	}
+
+	path := filepath.Join(devopsDir(p.Entry.Path), slug+".yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "pipeline not found: "+slug))
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/yaml")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
 // handleCreatePipeline handles POST /api/p/{project}/devops/pipelines.
 // It validates the slug and YAML definition, rejects duplicates, and writes
 // the new pipeline file to devops/{slug}.yaml under the project root.
