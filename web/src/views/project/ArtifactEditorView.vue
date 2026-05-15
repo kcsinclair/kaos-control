@@ -10,6 +10,8 @@ import { useExternalChange } from '@/composables/useExternalChange'
 import { useWebSocket } from '@/composables/useWebSocket'
 import * as artifactsApi from '@/api/artifacts'
 import * as agentsApi from '@/api/agents'
+import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
+import { useBrainDumpStore } from '@/stores/brainDump'
 import LineageBreadcrumb from '@/components/artifact/LineageBreadcrumb.vue'
 import FrontmatterPanel from '@/components/artifact/FrontmatterPanel.vue'
 import FrontmatterEditor from '@/components/artifact/FrontmatterEditor.vue'
@@ -58,6 +60,18 @@ async function load() {
 
 // ── toolbar dialogs ──────────────────────────────────────────────────────────
 const showRunAgent = ref(false)
+const showDocsModal = ref(false)
+const brainDumpStore = useBrainDumpStore()
+
+function openDocsModal() {
+  brainDumpStore.reset()
+  showDocsModal.value = true
+}
+
+function onDocsCreated(path: string) {
+  showDocsModal.value = false
+  router.push(`/p/${project.value}/artifacts/${path}`)
+}
 
 // ── run test (single execution) ──────────────────────────────────────────────
 const runTestRunning = ref(false)
@@ -279,6 +293,11 @@ onMounted(() => {
             :disabled="runTestRunning"
             @click="runTest"
           >{{ runTestRunning ? 'Running…' : 'Run Test' }}</button>
+          <button
+            v-if="artifact.status === 'done'"
+            class="btn-ghost"
+            @click="openDocsModal"
+          >Request docs</button>
           <QueueWorkButton :artifact="artifact" :project="project" />
           <button class="btn-ghost" @click="showRunAgent = true">Run Agent</button>
           <button
@@ -363,6 +382,16 @@ onMounted(() => {
     :target-path="artifactPath"
     @started="showRunAgent = false"
     @cancel="showRunAgent = false"
+  />
+
+  <BrainDumpModal
+    v-if="showDocsModal && artifact"
+    :project="project"
+    artifact-type="doc"
+    :source-lineage="artifact.lineage"
+    :source-path="artifactPath"
+    @close="showDocsModal = false"
+    @created="onDocsCreated"
   />
 </template>
 
