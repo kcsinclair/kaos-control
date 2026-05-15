@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -24,6 +25,21 @@ type hookPermissionRequest struct {
 type hookPermissionResponse struct {
 	Decision string `json:"decision"`
 	Reason   string `json:"reason,omitempty"`
+}
+
+// permissionDecisionLog is the structured envelope written to the run log file
+// for every permission decision (FR19). It is distinct from Claude Code's
+// stream-json lines so consumers can filter by "type".
+type permissionDecisionLog struct {
+	Type        string `json:"type"`
+	RunID       string `json:"run_id"`
+	ToolName    string `json:"tool_name"`
+	TargetPath  string `json:"target_path,omitempty"`
+	Command     string `json:"command,omitempty"`
+	Decision    string `json:"decision"`
+	Reason      string `json:"reason"`
+	PolicyRule  string `json:"policy_rule"`
+	Timestamp   string `json:"timestamp"`
 }
 
 // handleHookPermission handles POST /api/agent/{run_id}/permission.
@@ -73,6 +89,7 @@ func (s *Server) handleHookPermission(w http.ResponseWriter, r *http.Request) {
 	// --- Structured log line (FR19) ---
 	targetPath, _ := req.ToolInput["file_path"].(string)
 	command, _ := req.ToolInput["command"].(string)
+	now := time.Now().UTC().Format(time.RFC3339)
 	slog.Info("agent.permission",
 		"run_id", runID,
 		"tool_name", req.ToolName,
@@ -81,8 +98,31 @@ func (s *Server) handleHookPermission(w http.ResponseWriter, r *http.Request) {
 		"decision", decision.Action,
 		"reason", decision.Reason,
 		"policy_rule", decision.Rule,
-		"timestamp", time.Now().UTC().Format(time.RFC3339),
+		"timestamp", now,
 	)
+
+	// Append structured decision to the per-run log file (FR19).
+	logPath := mgr.LogPath(runID)
+	if logPath != "" {
+		entry := permissionDecisionLog{
+			Type:       "permission_decision",
+			RunID:      runID,
+			ToolName:   req.ToolName,
+			TargetPath: targetPath,
+			Command:    command,
+			Decision:   decision.Action,
+			Reason:     decision.Reason,
+			PolicyRule: decision.Rule,
+			Timestamp:  now,
+		}
+		if b, err := json.Marshal(entry); err == nil {
+			b = append(b, '\n')
+			if f, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644); err == nil {
+				_, _ = f.Write(b)
+				_ = f.Close()
+			}
+		}
+	}
 
 	// --- Broadcast WS event (FR20) ---
 	wsPayload := map[string]any{
@@ -93,7 +133,7 @@ func (s *Server) handleHookPermission(w http.ResponseWriter, r *http.Request) {
 		"decision":    decision.Action,
 		"reason":      decision.Reason,
 		"policy_rule": decision.Rule,
-		"timestamp":   time.Now().UTC().Format(time.RFC3339),
+		"timestamp":   now,
 	}
 	// Find the project hub to broadcast on.
 	if projHub := s.hubForRun(runID); projHub != nil {
