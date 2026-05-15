@@ -57,6 +57,28 @@ export function createPipeline(
   )
 }
 
+export interface PipelineResponse {
+  slug: string
+  name: string
+  type: string
+  step_count: number
+}
+
+export function getPipelineDefinition(project: string, slug: string): Promise<string> {
+  return api.getText(`/p/${encodeURIComponent(project)}/devops/pipelines/${encodeURIComponent(slug)}`)
+}
+
+export function updatePipeline(
+  project: string,
+  slug: string,
+  definition: string,
+): Promise<PipelineResponse> {
+  return api.put<PipelineResponse>(
+    `/p/${encodeURIComponent(project)}/devops/pipelines/${encodeURIComponent(slug)}`,
+    { definition },
+  )
+}
+
 export function getRunLog(project: string, runId: string): Promise<string> {
   return api.getText(`/p/${encodeURIComponent(project)}/devops/runs/${encodeURIComponent(runId)}`)
 }
