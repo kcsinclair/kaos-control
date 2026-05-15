@@ -222,15 +222,16 @@ func TestHookHelper_ServerUnreachable(t *testing.T) {
 		t.Errorf("took %v, want < 5s for unreachable server", elapsed)
 	}
 
-	// Response must be JSON with decision=deny.
+	// Response must be JSON in the Claude-native hookSpecificOutput shape.
 	var resp map[string]any
 	if err := json.Unmarshal([]byte(stdout), &resp); err != nil {
 		t.Fatalf("stdout is not valid JSON: %v (stdout=%q)", err, stdout)
 	}
-	if dec, _ := resp["decision"].(string); dec != "deny" {
+	inner, _ := resp["hookSpecificOutput"].(map[string]any)
+	if dec, _ := inner["permissionDecision"].(string); dec != "deny" {
 		t.Errorf("decision = %q, want deny when server is unreachable", dec)
 	}
-	reason, _ := resp["reason"].(string)
+	reason, _ := inner["permissionDecisionReason"].(string)
 	if !strings.Contains(strings.ToLower(reason), "unreachable") &&
 		!strings.Contains(strings.ToLower(reason), "server") {
 		t.Errorf("reason = %q, expected to mention unreachable server", reason)
@@ -266,12 +267,13 @@ func TestHookHelper_MissingSecret(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &resp); err != nil {
 		t.Fatalf("stdout is not valid JSON: %v (stdout=%q)", err, stdout)
 	}
-	if _, ok := resp["decision"]; !ok {
-		t.Error("response must contain a 'decision' key")
+	inner, _ := resp["hookSpecificOutput"].(map[string]any)
+	if inner == nil {
+		t.Error("response must contain a 'hookSpecificOutput' key")
 	}
 	// With no secret, the hook-helper should deny (not allow), since it cannot
 	// authenticate the request.
-	if dec, _ := resp["decision"].(string); dec != "deny" {
+	if dec, _ := inner["permissionDecision"].(string); dec != "deny" {
 		t.Errorf("decision = %q, want deny when secret is missing", dec)
 	}
 }

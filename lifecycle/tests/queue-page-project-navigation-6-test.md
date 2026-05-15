@@ -1,7 +1,7 @@
 ---
 title: "Tests — Queue Page Project Navigation"
 type: test
-status: in-qa
+status: approved
 lineage: queue-page-project-navigation
 parent: lifecycle/test-plans/queue-page-project-navigation-5-test.md
 created: "2026-05-13T00:00:00+10:00"

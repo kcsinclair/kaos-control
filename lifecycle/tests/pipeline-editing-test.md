@@ -1,7 +1,7 @@
 ---
 title: "Test Suite — Make Pipelines Editable"
 type: test
-status: in-qa
+status: approved
 lineage: pipeline-editing
 parent: lifecycle/test-plans/pipeline-editing-5-test.md
 created: "2026-05-15T00:00:00+10:00"
