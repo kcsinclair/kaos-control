@@ -1,7 +1,7 @@
 ---
 title: Interactive Project Initialisation Wizard
 type: idea
-status: draft
+status: abandoned
 lineage: interactive-project-init-wizard
 created: "2026-05-12T09:59:24+10:00"
 priority: high
