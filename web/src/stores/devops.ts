@@ -73,6 +73,13 @@ export const useDevOpsStore = defineStore('devops', () => {
   /** True once pipeline.run.completed has been received for the buffered run */
   const logRunCompleted = ref(false)
 
+  const anyRunning = computed((): boolean => {
+    for (const [, run] of activeRuns.value) {
+      if (run.overallStatus === 'running') return true
+    }
+    return false
+  })
+
   const pipelinesByType = computed((): Record<string, Pipeline[]> => {
     const grouped: Record<string, Pipeline[]> = {}
     for (const p of pipelines.value) {
@@ -127,6 +134,20 @@ export const useDevOpsStore = defineStore('devops', () => {
     // Re-fetch pipelines to get the full pipeline object including steps
     await fetchPipelines(project)
     return pipelines.value.find((p) => p.slug === res.slug)!
+  }
+
+  async function updatePipeline(
+    project: string,
+    slug: string,
+    definition: string,
+  ): Promise<devopsApi.PipelineResponse> {
+    const res = await devopsApi.updatePipeline(project, slug, definition)
+    await fetchPipelines(project)
+    return res
+  }
+
+  function handlePipelineUpdated(project: string): void {
+    fetchPipelines(project)
   }
 
   async function fetchRunLog(project: string, runId: string): Promise<string> {
@@ -276,10 +297,12 @@ export const useDevOpsStore = defineStore('devops', () => {
     loadError,
     activeRuns,
     runHistory,
+    anyRunning,
     pipelinesByType,
     historyForPipeline,
     fetchPipelines,
     createPipeline,
+    updatePipeline,
     runPipeline,
     cancelPipeline,
     fetchRunLog,
@@ -288,6 +311,7 @@ export const useDevOpsStore = defineStore('devops', () => {
     handleStepOutput,
     handleStepCompleted,
     handleRunCompleted,
+    handlePipelineUpdated,
     // Log buffer
     logBuffer,
     logPipelineSlug,
