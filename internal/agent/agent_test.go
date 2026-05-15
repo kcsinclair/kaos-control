@@ -79,6 +79,23 @@ func TestExtractRateLimitText(t *testing.T) {
 			wantOK:  false,
 		},
 		{
+			name:    "format3 result is_error out-of-usage with timezone",
+			rawJSON: `{"type":"result","subtype":"success","is_error":true,"result":"You're out of extra usage · resets 11:10pm (Australia/Brisbane)"}`,
+			wantOK:  true,
+			wantTxt: "You're out of extra usage · resets 11:10pm (Australia/Brisbane)",
+		},
+		{
+			name:    "format3 result is_error rate-limit phrasing",
+			rawJSON: `{"type":"result","is_error":true,"result":"Rate limit exceeded — try again in 5 minutes"}`,
+			wantOK:  true,
+			wantTxt: "Rate limit exceeded — try again in 5 minutes",
+		},
+		{
+			name:    "format3 result is_error but non-quota message — not classified as rate limit",
+			rawJSON: `{"type":"result","is_error":true,"result":"Internal server error"}`,
+			wantOK:  false,
+		},
+		{
 			name:    "empty event",
 			rawJSON: `{}`,
 			wantOK:  false,

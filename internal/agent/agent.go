@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -92,6 +93,7 @@ type Run struct {
 	// Ollama-specific fields (only used when Driver == "ollama").
 	OllamaInstanceName string // resolved from AgentConfig.OllamaInstanceName
 	OllamaEndpoint     string // "chat" or "generate"
+	ShellCommand       string // shell-stub driver: command to run (empty = default stub behavior)
 }
 
 // Process is a handle to a running agent.
@@ -395,6 +397,7 @@ func New(
 		"claude-code-cli":  &ClaudeCodeDriver{},
 		"ollama":           &OllamaDriver{Instances: ollamaInstances},
 		"claude-mediated":  hookDriver,
+		"shell-stub":       &ShellStubDriver{},
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
 	if err := idx.RecoverRunningRuns(); err != nil {
@@ -523,6 +526,7 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		RelatedTestPath:    relatedTestPath,
 		OllamaInstanceName: ag.OllamaInstanceName,
 		OllamaEndpoint:     ag.OllamaEndpoint,
+		ShellCommand:       ag.ShellCommand,
 	}
 
 	// Acquire lineage lock.
@@ -1282,13 +1286,20 @@ func (m *Manager) ConfigureHookDriver(serverAddr, binaryPath string) {
 
 // extractRateLimitText inspects a decoded agent.progress event payload and
 // returns (rawText, true) when the underlying stream event signals a
-// rate-limit error. It handles two Claude Code stream-json formats:
+// rate-limit / quota-exhausted error. It handles three Claude Code stream-json
+// shapes:
 //
 //  1. Top-level "error" == "rate_limit" with message.content[0].text
 //     {"error":"rate_limit","message":{"content":[{"type":"text","text":"..."}]}}
 //
 //  2. Nested error object with type containing "rate_limit"
 //     {"type":"error","error":{"type":"rate_limit_error","message":"..."}}
+//
+//  3. Terminal "type":"result" event with is_error:true and a usage-exhausted
+//     message in the "result" field. The model exited normally but the API
+//     replied with a quota message:
+//     {"type":"result","is_error":true,
+//      "result":"You're out of extra usage · resets 11:10pm (Australia/Brisbane)"}
 //
 // The raw text is used by the queue dispatcher to parse the reset time; an
 // empty raw_text causes the dispatcher to fall back to the configured
@@ -1318,7 +1329,33 @@ func extractRateLimitText(payload map[string]any) (rawText string, ok bool) {
 		}
 	}
 
+	// Format 3: terminal "result" event with is_error:true that carries a
+	// quota-exhausted message in the result field. The run completed without
+	// emitting a rate_limit stream event; the quota verdict is only visible
+	// in the wrap-up result line. Match the result text against a small set
+	// of phrases that indicate a usage/quota condition (not every is_error
+	// result is a rate limit — e.g. a generic API error shouldn't be
+	// re-enqueued).
+	if evType, _ := ev["type"].(string); evType == "result" {
+		if isErr, _ := ev["is_error"].(bool); isErr {
+			result, _ := ev["result"].(string)
+			if result != "" && looksLikeQuotaExhausted(result) {
+				return result, true
+			}
+		}
+	}
+
 	return "", false
+}
+
+// looksLikeQuotaExhausted returns true when text contains a phrase that
+// indicates a rate-limit or quota condition. Matched case-insensitively.
+// Conservative on purpose: only matches phrases unique to quota / usage
+// exhaustion so generic API errors aren't misclassified as rate limits.
+var quotaExhaustedRE = regexp.MustCompile(`(?i)(out of (extra )?usage|usage[\s\S]*resets?|rate.?limit|message limit|exceeded[\s\S]{0,40}(quota|limit))`)
+
+func looksLikeQuotaExhausted(text string) bool {
+	return quotaExhaustedRE.MatchString(text)
 }
 
 // extractMessageText attempts to read a human-readable string from
