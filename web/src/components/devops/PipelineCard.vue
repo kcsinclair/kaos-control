@@ -5,11 +5,13 @@ import { computed, ref } from 'vue'
 import type { Pipeline } from '@/api/devops'
 import { useDevOpsStore } from '@/stores/devops'
 import { useUiStore } from '@/stores/ui'
+import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/api/client'
 import type { RunHistoryEntry } from '@/stores/devops'
 import StepProgress from '@/components/devops/StepProgress.vue'
 import StepOutput from '@/components/devops/StepOutput.vue'
 import RunHistory from '@/components/devops/RunHistory.vue'
+import { Pencil } from 'lucide-vue-next'
 
 const props = defineProps<{
   pipeline: Pipeline
@@ -18,10 +20,17 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'view-log', entry: RunHistoryEntry): void
+  (e: 'edit', slug: string): void
 }>()
 
 const devops = useDevOpsStore()
 const ui = useUiStore()
+const auth = useAuthStore()
+
+const canEdit = computed(() => {
+  const roles = auth.rolesForProject(props.project)
+  return roles.includes('product-owner') || roles.includes('devops')
+})
 
 const running = ref(false)
 const cancelling = ref(false)
@@ -128,6 +137,15 @@ async function handleCancel() {
         :disabled="cancelling"
         @click="handleCancel"
       >{{ cancelling ? 'Cancelling…' : 'Cancel' }}</button>
+      <button
+        v-if="canEdit"
+        class="btn-edit"
+        :disabled="devops.anyRunning"
+        :title="devops.anyRunning ? 'Editing is disabled while a pipeline is running' : 'Edit pipeline'"
+        @click="emit('edit', props.pipeline.slug)"
+      >
+        <Pencil :size="14" />
+      </button>
     </div>
   </div>
 
@@ -252,5 +270,25 @@ async function handleCancel() {
 }
 .btn-cancel:not(:disabled):hover {
   background: var(--badge-blocked-bg);
+}
+.btn-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-left: auto;
+}
+.btn-edit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-edit:not(:disabled):hover {
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 </style>
