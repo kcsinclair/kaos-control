@@ -42,13 +42,6 @@ function artifactTypeBadgeClass(type: string): string {
   return map[type] ?? 'badge--default'
 }
 
-function artifactStatusBadgeClass(status: string): string {
-  const terminal = ['done', 'rejected', 'abandoned']
-  if (terminal.includes(status)) return 'badge--terminal'
-  if (status === 'in-development' || status === 'in-qa') return 'badge--active'
-  return 'badge--default'
-}
-
 async function load() {
   loading.value = true
   error.value = null
@@ -129,7 +122,7 @@ onMounted(load)
                 <div class="artifact-row">
                   <span class="type-badge" :class="artifactTypeBadgeClass(artifact.type)">{{ artifact.type }}</span>
                   <span class="artifact-title">{{ artifact.title }}</span>
-                  <span class="status-chip" :class="artifactStatusBadgeClass(artifact.status)">{{ artifact.status }}</span>
+                  <span class="status-chip" :data-status="artifact.status">{{ artifact.status }}</span>
                 </div>
                 <div class="artifact-lineage">{{ artifact.lineage }}</div>
               </button>
@@ -237,9 +230,14 @@ onMounted(load)
   font-size: 11px;
   font-weight: 600;
 }
-.status-badge--planned { background: #e2e8f0; color: #475569; }
-.status-badge--active  { background: #dbeafe; color: #1d4ed8; }
-.status-badge--shipped { background: #dcfce7; color: #16a34a; }
+.status-badge--planned { background: #e2e8f0; color: #334155; }
+.status-badge--active  { background: #dbeafe; color: #1e40af; }
+.status-badge--shipped { background: #d1fae5; color: #065f46; }
+@media (prefers-color-scheme: dark) {
+  .status-badge--planned { background: #334155; color: #e2e8f0; }
+  .status-badge--active  { background: #1e3a5f; color: #93c5fd; }
+  .status-badge--shipped { background: #064e3b; color: #6ee7b7; }
+}
 .artifacts-section { display: flex; flex-direction: column; gap: var(--space-2); }
 .artifacts-heading {
   font-size: var(--text-sm);
@@ -297,19 +295,48 @@ onMounted(load)
   letter-spacing: 0.03em;
   flex-shrink: 0;
 }
-.badge--idea    { background: #ede9fe; color: #7c3aed; }
-.badge--defect  { background: #fee2e2; color: #dc2626; }
-.badge--default { background: #f1f5f9; color: #475569; }
+.badge--idea    { background: #ede9fe; color: #5b21b6; }
+.badge--defect  { background: #fee2e2; color: #991b1b; }
+.badge--default { background: #f1f5f9; color: #334155; }
+@media (prefers-color-scheme: dark) {
+  .badge--idea    { background: #3b2f6e; color: #c4b5fd; }
+  .badge--defect  { background: #7f1d1d; color: #fca5a5; }
+  .badge--default { background: #1f2937; color: #cbd5e1; }
+}
+
 .status-chip {
   display: inline-block;
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
+  padding: 1px 8px;
+  border-radius: 99px;
   font-size: 10px;
   font-weight: 500;
   flex-shrink: 0;
 }
-.badge--terminal { background: #f1f5f9; color: #94a3b8; }
-.badge--active   { background: #dbeafe; color: #1d4ed8; }
+/* Per-status palette — keep in sync with web/src/components/artifact/StatusDropdown.vue */
+.status-chip[data-status="draft"]          { background: #f3f4f6; color: #374151; }
+.status-chip[data-status="clarifying"]     { background: #ede9fe; color: #5b21b6; }
+.status-chip[data-status="planning"]       { background: #fef3c7; color: #92400e; }
+.status-chip[data-status="in-development"] { background: #dbeafe; color: #1e40af; }
+.status-chip[data-status="in-qa"]          { background: #ede9fe; color: #6d28d9; }
+.status-chip[data-status="approved"]       { background: #d1fae5; color: #065f46; }
+.status-chip[data-status="done"]           { background: #bbf7d0; color: #14532d; }
+.status-chip[data-status="blocked"]        { background: #fee2e2; color: #991b1b; }
+.status-chip[data-status="rejected"]       { background: #fef2f2; color: #b91c1c; }
+.status-chip[data-status="abandoned"]      { background: #f3f4f6; color: #6b7280; }
+.status-chip[data-status="in-progress"]    { background: #fef3c7; color: #92400e; }
+@media (prefers-color-scheme: dark) {
+  .status-chip[data-status="draft"]          { background: #374151; color: #d1d5db; }
+  .status-chip[data-status="clarifying"]     { background: #3b2f6e; color: #c4b5fd; }
+  .status-chip[data-status="planning"]       { background: #422006; color: #fcd34d; }
+  .status-chip[data-status="in-development"] { background: #1e3a5f; color: #93c5fd; }
+  .status-chip[data-status="in-qa"]          { background: #2e1065; color: #c4b5fd; }
+  .status-chip[data-status="approved"]       { background: #064e3b; color: #6ee7b7; }
+  .status-chip[data-status="done"]           { background: #052e16; color: #4ade80; }
+  .status-chip[data-status="blocked"]        { background: #7f1d1d; color: #fca5a5; }
+  .status-chip[data-status="rejected"]       { background: #7f1d1d; color: #fca5a5; }
+  .status-chip[data-status="abandoned"]      { background: #1f2937; color: #9ca3af; }
+  .status-chip[data-status="in-progress"]    { background: #422006; color: #fcd34d; }
+}
 .modal-footer {
   display: flex;
   gap: var(--space-2);
