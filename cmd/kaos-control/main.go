@@ -101,8 +101,7 @@ func run() error {
 		selfBinary = ""
 	}
 
-	// Open each project (loads config + opens/scans SQLite index).
-	projects := make(map[string]*project.Project, len(entries))
+	// Build OpenOptions once; reused for runtime project registration.
 	opts := project.OpenOptions{
 		MaxConcurrentAgents:        appCfg.Limits.MaxConcurrentAgents,
 		MaxConcurrentSchedulerJobs: appCfg.Limits.MaxConcurrentSchedulerJobs,
@@ -116,6 +115,12 @@ func run() error {
 		HookServerAddr: appCfg.Server.Listen,
 		HookBinaryPath: selfBinary,
 	}
+
+	// Open each project (loads config + opens/scans SQLite index).
+	// Each project gets its own derived context so that UnregisterProject can
+	// cancel only that project's goroutines without affecting others.
+	projects := make(map[string]*project.Project, len(entries))
+	startupCancels := make(map[string]context.CancelFunc, len(entries))
 	for _, e := range entries {
 		slog.Info("opening project", "name", e.Name, "path", e.Path)
 		p, err := project.Open(e, appCfg.DataDir, opts)
@@ -125,15 +130,12 @@ func run() error {
 			continue
 		}
 		projects[e.Name] = p
-	}
-
-	// Start file watchers, lock reapers, session reapers, and the scheduler
-	// (non-blocking; each runs until ctx is cancelled or the project is closed).
-	for _, p := range projects {
-		p.StartWatcher(ctx)
-		p.StartLockReaper(ctx)
-		p.StartSessionReaper(ctx)
-		p.StartScheduler(ctx)
+		pCtx, cancel := context.WithCancel(ctx)
+		startupCancels[e.Name] = cancel
+		p.StartWatcher(pCtx)
+		p.StartLockReaper(pCtx)
+		p.StartSessionReaper(pCtx)
+		p.StartScheduler(pCtx)
 	}
 
 	// Open the queue database (app-level, shared across all projects).
@@ -171,45 +173,10 @@ func run() error {
 	// Build the app-level hub for queue broadcast events.
 	appHub := hub.New()
 
-	// Build the project lookup closure used by the queue dispatcher.
-	projectLookup := func(name string) (queue.ProjectAccess, bool) {
-		p, ok := projects[name]
-		if !ok {
-			return queue.ProjectAccess{}, false
-		}
-		if p.Agents == nil {
-			return queue.ProjectAccess{}, false
-		}
-		return queue.ProjectAccess{
-			StartRun: func(runCtx context.Context, agentName, targetPath string) (string, error) {
-				return p.Agents.StartRun(runCtx, agentName, targetPath, "", nil)
-			},
-			ArtifactStatus: func(relPath string) string {
-				row, err := p.Idx.Get(relPath)
-				if err != nil || row == nil {
-					return ""
-				}
-				return row.Status
-			},
-			Hub: p.Hub,
-		}, true
-	}
-
-	// Construct and start the queue dispatcher (only when the queue DB is available).
-	var queueDispatcher *queue.Dispatcher
-	if queueStore != nil {
-		queueDispatcher = queue.New(queueStore, projectLookup, appHub, queue.Config{})
-		queueDispatcher.Start(ctx)
-		// Wire PauseQueue callbacks into all project agent managers so that
-		// runs with denied tool calls pause the queue (FR16).
-		for _, p := range projects {
-			if p.Agents != nil {
-				d := queueDispatcher
-				p.Agents.PauseQueue = func(reason string) { d.Pause(reason) }
-			}
-		}
-	}
-
+	// Build the server first so that the queue's project lookup can use
+	// srv.GetProject — a mutex-protected accessor — rather than reading
+	// the raw projects map directly. This eliminates data races between
+	// concurrent project CRUD requests and queue dispatch.
 	srv := khttp.New(khttp.ServerConfig{
 		Listen:     appCfg.Server.Listen,
 		TLSOn:      appCfg.Server.TLS.Enabled,
@@ -220,9 +187,54 @@ func run() error {
 		AppCfg:     appCfg,
 		AppCfgPath: cfgPath,
 		PublicHost: publicHost,
-		Queue:      queueDispatcher,
 		AppHub:     appHub,
+		// Queue wired below after creation.
+		ProjectsDir:        appCfg.ProjectsDir,
+		DataDir:            appCfg.DataDir,
+		ProjectOpenOptions: opts,
 	}, projects)
+
+	// Register cancel functions for startup projects so that UnregisterProject
+	// can cleanly stop their goroutines at runtime.
+	for name, cancel := range startupCancels {
+		srv.TrackCancel(name, cancel)
+	}
+
+	// Build the queue dispatcher after the server so the lookup closure can go
+	// through the server's mutex-protected GetProject.
+	var queueDispatcher *queue.Dispatcher
+	if queueStore != nil {
+		projectLookup := func(name string) (queue.ProjectAccess, bool) {
+			p, ok := srv.GetProject(name)
+			if !ok || p.Agents == nil {
+				return queue.ProjectAccess{}, false
+			}
+			return queue.ProjectAccess{
+				StartRun: func(runCtx context.Context, agentName, targetPath string) (string, error) {
+					return p.Agents.StartRun(runCtx, agentName, targetPath, "", nil)
+				},
+				ArtifactStatus: func(relPath string) string {
+					row, err := p.Idx.Get(relPath)
+					if err != nil || row == nil {
+						return ""
+					}
+					return row.Status
+				},
+				Hub: p.Hub,
+			}, true
+		}
+		queueDispatcher = queue.New(queueStore, projectLookup, appHub, queue.Config{})
+		queueDispatcher.Start(ctx)
+		// Wire PauseQueue into startup projects and into the server so that
+		// future RegisterProject calls also wire new projects automatically.
+		for _, p := range projects {
+			if p.Agents != nil {
+				d := queueDispatcher
+				p.Agents.PauseQueue = func(reason string) { d.Pause(reason) }
+			}
+		}
+		srv.SetQueue(queueDispatcher)
+	}
 
 	return srv.ListenAndServe(ctx)
 }

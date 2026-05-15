@@ -418,6 +418,7 @@ func (s *Server) RegisterProject(entry *config.ProjectEntry) error {
 	// Snapshot the server context under the read-lock.
 	s.projectsMu.RLock()
 	parent := s.servCtx
+	q := s.queue
 	s.projectsMu.RUnlock()
 	if parent == nil {
 		parent = context.Background()
@@ -433,6 +434,11 @@ func (s *Server) RegisterProject(entry *config.ProjectEntry) error {
 	p.StartLockReaper(pCtx)
 	p.StartSessionReaper(pCtx)
 	p.StartScheduler(pCtx)
+
+	// Wire queue pause callback so denied tool calls pause the queue.
+	if q != nil && p.Agents != nil {
+		p.Agents.PauseQueue = func(reason string) { q.Pause(reason) }
+	}
 
 	s.projectsMu.Lock()
 	s.projects[entry.Name] = p
