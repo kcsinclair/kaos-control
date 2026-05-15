@@ -3,6 +3,7 @@ title: Ollama Agents Need an Execution Layer
 type: idea
 status: blocked
 lineage: ollama-agents-need-execution-layer
+created: "2026-05-13T19:50:00+10:00"
 priority: high
 labels:
     - agent

@@ -4,6 +4,7 @@ type: idea
 status: blocked
 lineage: sidecar-agent-drivers
 priority: medium
+created: "2026-05-14T10:15:00+10:00"
 labels:
     - agent
     - architecture
