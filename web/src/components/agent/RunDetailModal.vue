@@ -186,6 +186,24 @@ function handleOverlayClick(e: MouseEvent) {
             />
           </div>
 
+          <!-- Permission events -->
+          <div v-if="agentsStore.permissionEvents.get(props.runId)?.length" class="rdm-field">
+            <div class="rdm-field-label">Permission Events</div>
+            <div class="rdm-perm-list">
+              <div
+                v-for="(ev, idx) in agentsStore.permissionEvents.get(props.runId)"
+                :key="idx"
+                class="rdm-perm-row"
+              >
+                <span class="rdm-perm-chip" :data-decision="ev.decision">{{ ev.decision }}</span>
+                <span class="rdm-perm-tool">{{ ev.tool_name }}</span>
+                <span class="rdm-perm-target">{{ ev.target_path ?? ev.command ?? '' }}</span>
+                <span class="rdm-perm-reason">{{ ev.reason }}</span>
+                <span class="rdm-perm-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Stderr tail -->
           <div class="rdm-field" v-if="run.stderr_tail">
             <div class="rdm-field-label">Stderr tail</div>
@@ -359,6 +377,33 @@ function handleOverlayClick(e: MouseEvent) {
 .status-chip[data-status="failed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
 .status-chip[data-status="killed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
 .status-chip[data-status="killed-timeout"] { background: var(--badge-in-progress-bg);  color: var(--badge-in-progress-text); }
+
+/* Permission events */
+.rdm-perm-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.rdm-perm-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+.rdm-perm-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.rdm-perm-chip[data-decision="allow"] { background: var(--badge-done-bg); color: var(--badge-done-text); }
+.rdm-perm-chip[data-decision="deny"]  { background: var(--badge-blocked-bg); color: var(--badge-blocked-text); }
+.rdm-perm-tool { font-family: monospace; font-weight: 600; color: var(--color-text); flex-shrink: 0; }
+.rdm-perm-target { font-family: monospace; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px; }
+.rdm-perm-reason { color: var(--color-text-muted); flex: 1; }
+.rdm-perm-time { color: var(--color-text-muted); flex-shrink: 0; font-size: 11px; }
 
 .rdm-log-action {
   display: flex;

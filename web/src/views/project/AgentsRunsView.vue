@@ -281,6 +281,23 @@ onMounted(() => {
                 <div class="detail-label">Progress</div>
                 <pre class="detail-log">{{ store.progressLines.get(run.run_id)!.slice(-30).join('\n') }}</pre>
               </div>
+              <!-- Permission events -->
+              <div v-if="store.permissionEvents.get(run.run_id)?.length" class="detail-section">
+                <div class="detail-label">Permission Events</div>
+                <div class="perm-event-list">
+                  <div
+                    v-for="(ev, idx) in store.permissionEvents.get(run.run_id)"
+                    :key="idx"
+                    class="perm-event-row"
+                  >
+                    <span class="perm-chip" :data-decision="ev.decision">{{ ev.decision }}</span>
+                    <span class="perm-tool">{{ ev.tool_name }}</span>
+                    <span class="perm-target">{{ ev.target_path ?? ev.command ?? '' }}</span>
+                    <span class="perm-reason">{{ ev.reason }}</span>
+                    <span class="perm-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
+                  </div>
+                </div>
+              </div>
               <!-- Stderr tail for completed -->
               <div v-if="run.stderr_tail" class="detail-section">
                 <div class="detail-label">Stderr tail</div>
@@ -542,6 +559,33 @@ onMounted(() => {
 }
 .driver-badge[data-driver="ollama"] { background: #dbeafe; color: #1d4ed8; }
 .driver-badge[data-driver="claude-code-cli"] { background: #f3e8ff; color: #7e22ce; }
+.driver-badge[data-driver="claude-mediated"] { background: #fef3c7; color: #92400e; }
+/* Permission events */
+.perm-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.perm-event-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+.perm-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.perm-chip[data-decision="allow"] { background: var(--badge-done-bg); color: var(--badge-done-text); }
+.perm-chip[data-decision="deny"]  { background: var(--badge-blocked-bg); color: var(--badge-blocked-text); }
+.perm-tool { font-family: monospace; font-weight: 600; color: var(--color-text); flex-shrink: 0; }
+.perm-target { font-family: monospace; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px; }
+.perm-reason { color: var(--color-text-muted); flex: 1; }
+.perm-time { color: var(--color-text-muted); flex-shrink: 0; font-size: 11px; }
 .runs-header-actions { display: flex; gap: var(--space-2); }
 .btn-secondary {
   padding: var(--space-2) var(--space-4);
