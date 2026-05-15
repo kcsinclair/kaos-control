@@ -56,6 +56,30 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, projectToSummary(p))
 }
 
+// handleDeleteProject unloads a project from the server and removes its registry file.
+// No on-disk project files are deleted.
+func (s *Server) handleDeleteProject(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "project")
+	if _, ok := s.getProject(name); !ok {
+		writeJSON(w, http.StatusNotFound, apiError("project_not_found", "project not found: "+name))
+		return
+	}
+
+	// Remove the registry YAML first so that if Close() takes a while the project
+	// is already gone from disk and won't be re-loaded on next restart.
+	if err := config.DeleteProjectEntry(s.projectsDir, name); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("delete_failed", "removing registry entry: "+err.Error()))
+		return
+	}
+
+	if err := s.UnregisterProject(name); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("unregister_failed", "unregistering project: "+err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 // handleUpdateProject updates mutable project fields (description, owner, path).
 // name is immutable; if included in the body it is ignored.
 func (s *Server) handleUpdateProject(w http.ResponseWriter, r *http.Request) {
