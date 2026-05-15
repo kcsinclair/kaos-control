@@ -9,6 +9,7 @@ export const typeToAgent: Record<string, string> = {
   'plan-frontend': 'frontend-developer',
   'plan-test': 'test-developer',
   test: 'qa',
+  doc: 'tech-writer',
 }
 
 // agentForArtifact returns the agent name to use for an artefact.
