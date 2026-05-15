@@ -114,11 +114,18 @@ func doPermissionRequest(t *testing.T, env *testEnv, runID, secret string, body 
 	return resp
 }
 
-// permDecision reads the response body as JSON and returns the "decision" field.
+// permDecision reads the response body as JSON and returns the
+// hookSpecificOutput.permissionDecision field (Claude Code's PreToolUse hook
+// response schema). The earlier flat `{"decision":"allow"}` shape was silently
+// ignored by Claude — see plans/PROJECT_PLAN.md 2026-05-15.
 func permDecision(t *testing.T, resp *http.Response) string {
 	t.Helper()
 	data := readJSON(t, resp)
-	dec, _ := data["decision"].(string)
+	hso, _ := data["hookSpecificOutput"].(map[string]any)
+	if hso == nil {
+		return ""
+	}
+	dec, _ := hso["permissionDecision"].(string)
 	return dec
 }
 
@@ -254,11 +261,18 @@ func TestPermission_DisallowedWrite_ReturnsDeny(t *testing.T) {
 	requireStatus(t, resp, http.StatusOK)
 
 	data := readJSON(t, resp)
-	if dec, _ := data["decision"].(string); dec != "deny" {
-		t.Errorf("decision = %q, want deny", dec)
+	hso, _ := data["hookSpecificOutput"].(map[string]any)
+	if hso == nil {
+		t.Fatal("response missing hookSpecificOutput envelope")
 	}
-	if reason, _ := data["reason"].(string); reason == "" {
-		t.Error("expected non-empty reason on deny")
+	if dec, _ := hso["permissionDecision"].(string); dec != "deny" {
+		t.Errorf("permissionDecision = %q, want deny", dec)
+	}
+	if reason, _ := hso["permissionDecisionReason"].(string); reason == "" {
+		t.Error("expected non-empty permissionDecisionReason on deny")
+	}
+	if name, _ := hso["hookEventName"].(string); name != "PreToolUse" {
+		t.Errorf("hookEventName = %q, want PreToolUse", name)
 	}
 }
 

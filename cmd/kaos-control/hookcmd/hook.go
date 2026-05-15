@@ -110,11 +110,27 @@ func writeDeny(reason string) {
 	writeResponse("deny", reason)
 }
 
+// writeResponse emits a Claude-Code-compatible PreToolUse hook response on
+// stdout. Schema (per Claude's hooks API):
+//
+//   {"hookSpecificOutput":{
+//     "hookEventName":"PreToolUse",
+//     "permissionDecision":"allow"|"deny"|"ask",
+//     "permissionDecisionReason":"..."
+//   }}
+//
+// The simpler `{"decision":"..."}` shape that prior versions emitted is
+// silently ignored by Claude, which falls back to interactive prompts and —
+// in headless `-p` mode — surfaces as "you haven't granted it yet" errors.
 func writeResponse(decision, reason string) {
-	out := map[string]string{"decision": decision}
-	if reason != "" {
-		out["reason"] = reason
+	inner := map[string]string{
+		"hookEventName":      "PreToolUse",
+		"permissionDecision": decision,
 	}
+	if reason != "" {
+		inner["permissionDecisionReason"] = reason
+	}
+	out := map[string]any{"hookSpecificOutput": inner}
 	b, _ := json.Marshal(out)
 	_, _ = os.Stdout.Write(b)
 }

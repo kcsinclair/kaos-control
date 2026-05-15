@@ -21,10 +21,31 @@ type hookPermissionRequest struct {
 	ToolInput map[string]any `json:"tool_input"`
 }
 
-// hookPermissionResponse is what the hook helper writes to stdout.
+// hookPermissionResponse is the response shape Claude Code expects on the
+// hook's stdout for a PreToolUse event. The schema is wrapped in
+// `hookSpecificOutput` per Claude's hooks API contract; sending the simpler
+// `{"decision":"allow"}` shape makes Claude ignore the response and fall back
+// to interactive permission prompts (which fail in headless -p mode).
 type hookPermissionResponse struct {
-	Decision string `json:"decision"`
-	Reason   string `json:"reason,omitempty"`
+	HookSpecificOutput hookSpecificOutput `json:"hookSpecificOutput"`
+}
+
+type hookSpecificOutput struct {
+	HookEventName            string `json:"hookEventName"`
+	PermissionDecision       string `json:"permissionDecision"`               // "allow" | "deny" | "ask"
+	PermissionDecisionReason string `json:"permissionDecisionReason,omitempty"`
+}
+
+// newHookResponse builds the Claude-compatible response for a PreToolUse hook.
+// decisionAction is the policy module's "allow" or "deny" verdict.
+func newHookResponse(decisionAction, reason string) hookPermissionResponse {
+	return hookPermissionResponse{
+		HookSpecificOutput: hookSpecificOutput{
+			HookEventName:            "PreToolUse",
+			PermissionDecision:       decisionAction,
+			PermissionDecisionReason: reason,
+		},
+	}
 }
 
 // permissionDecisionLog is the structured envelope written to the run log file
@@ -142,7 +163,7 @@ func (s *Server) handleHookPermission(w http.ResponseWriter, r *http.Request) {
 
 	// --- Observe-only mode: log but always allow (FR17) ---
 	if policy.ObserveOnly {
-		writeJSON(w, http.StatusOK, hookPermissionResponse{Decision: "allow", Reason: "observe_only mode"})
+		writeJSON(w, http.StatusOK, newHookResponse("allow", "observe_only mode"))
 		return
 	}
 
@@ -157,10 +178,7 @@ func (s *Server) handleHookPermission(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, hookPermissionResponse{
-		Decision: decision.Action,
-		Reason:   decision.Reason,
-	})
+	writeJSON(w, http.StatusOK, newHookResponse(decision.Action, decision.Reason))
 }
 
 // extractBearerToken returns the token from "Authorization: Bearer <token>", or "".
