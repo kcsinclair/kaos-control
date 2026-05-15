@@ -5,6 +5,7 @@ import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MessageSquarePlus, Bug } from 'lucide-vue-next'
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
+import AgentRunningBanner from '@/components/dashboard/AgentRunningBanner.vue'
 import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
 import { useBrainDumpStore } from '@/stores/brainDump'
 import { useUiStore } from '@/stores/ui'
@@ -60,6 +61,7 @@ function onBrainDumpCreated(path: string) {
         </button>
       </div>
     </header>
+    <AgentRunningBanner :project="project" />
     <DashboardGrid :project="project" />
 
     <BrainDumpModal

@@ -1,7 +1,7 @@
 ---
 title: Projects Page CRUD Operations — Test Plan
 type: plan-test
-status: in-development
+status: done
 lineage: projects-crud-ui
 parent: requirements/projects-crud-ui-2.md
 ---
