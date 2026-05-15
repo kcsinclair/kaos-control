@@ -387,7 +387,7 @@ type GitConfig struct {
 // AgentConfig is one configured agent binding.
 type AgentConfig struct {
 	Name            string            `yaml:"name"`
-	Roles           []string          `yaml:"role"`
+	Roles           []string          `yaml:"-"` // populated by UnmarshalYAML from "role" or "roles"
 	Driver          string            `yaml:"driver"`
 	Model           string            `yaml:"model,omitempty"`
 	Endpoint        string            `yaml:"endpoint,omitempty"`
@@ -422,6 +422,75 @@ type AgentConfig struct {
 	// It is the shell command to run as the agent process.
 	// If empty, the stub emits one synthetic result event and exits 0.
 	ShellCommand string `yaml:"shell_command,omitempty"`
+}
+
+// agentConfigRaw is used internally to unmarshal AgentConfig and accept both
+// "role" (canonical) and "roles" (alias) YAML keys for the roles list.
+type agentConfigRaw struct {
+	Name               string            `yaml:"name"`
+	Role               []string          `yaml:"role"`
+	Roles              []string          `yaml:"roles"`
+	Driver             string            `yaml:"driver"`
+	Model              string            `yaml:"model,omitempty"`
+	Endpoint           string            `yaml:"endpoint,omitempty"`
+	AllowedPaths       []string          `yaml:"allowed_write_paths,omitempty"`
+	TimeoutMinutes     int               `yaml:"timeout_minutes,omitempty"`
+	GitIdentity        GitIdentity       `yaml:"git_identity"`
+	PromptTemplates    map[string]string `yaml:"prompt_templates,omitempty"`
+	ActiveStatus       string            `yaml:"active_status,omitempty"`
+	DoneOnSuccess      bool              `yaml:"done_on_success,omitempty"`
+	SourceTypes        []string          `yaml:"source_types,omitempty"`
+	OllamaInstanceName string            `yaml:"ollama_instance,omitempty"`
+	OllamaEndpoint     string            `yaml:"ollama_endpoint,omitempty"`
+	BashAllowlist      []string          `yaml:"bash_allowlist,omitempty"`
+	BashDenylist       []string          `yaml:"bash_denylist,omitempty"`
+	OnDenial           string            `yaml:"on_denial,omitempty"`
+	ObserveOnly        bool              `yaml:"observe_only,omitempty"`
+	ShellCommand       string            `yaml:"shell_command,omitempty"`
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler so that AgentConfig accepts both
+// "role:" (canonical singular key) and "roles:" (plural alias) for the agent
+// roles list. Values from both keys are merged with duplicates removed.
+func (a *AgentConfig) UnmarshalYAML(value *yaml.Node) error {
+	var raw agentConfigRaw
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	a.Name = raw.Name
+	a.Driver = raw.Driver
+	a.Model = raw.Model
+	a.Endpoint = raw.Endpoint
+	a.AllowedPaths = raw.AllowedPaths
+	a.TimeoutMinutes = raw.TimeoutMinutes
+	a.GitIdentity = raw.GitIdentity
+	a.PromptTemplates = raw.PromptTemplates
+	a.ActiveStatus = raw.ActiveStatus
+	a.DoneOnSuccess = raw.DoneOnSuccess
+	a.SourceTypes = raw.SourceTypes
+	a.OllamaInstanceName = raw.OllamaInstanceName
+	a.OllamaEndpoint = raw.OllamaEndpoint
+	a.BashAllowlist = raw.BashAllowlist
+	a.BashDenylist = raw.BashDenylist
+	a.OnDenial = raw.OnDenial
+	a.ObserveOnly = raw.ObserveOnly
+	a.ShellCommand = raw.ShellCommand
+
+	// Merge "role" and "roles" entries, preserving order and deduplicating.
+	seen := make(map[string]bool)
+	for _, r := range raw.Role {
+		if !seen[r] {
+			a.Roles = append(a.Roles, r)
+			seen[r] = true
+		}
+	}
+	for _, r := range raw.Roles {
+		if !seen[r] {
+			a.Roles = append(a.Roles, r)
+			seen[r] = true
+		}
+	}
+	return nil
 }
 
 // GitIdentity is the git author identity for an agent or user commit.
