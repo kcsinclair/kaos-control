@@ -3,6 +3,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { ArtifactDetail, GraphEdge } from '@/types/api'
+import { edgeLabel } from '@/components/map/graphConstants'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
@@ -178,14 +179,14 @@ function fmt(v: string | undefined): string {
       <div v-if="outbound.length" class="rel-group">
         <div class="rel-group-label">Outbound</div>
         <div v-for="e in outbound" :key="e.target + e.kind" class="rel-item">
-          <span class="rel-kind">{{ e.kind }}</span>
+          <span class="rel-kind">{{ edgeLabel(e.kind, 'outbound') }}</span>
           <span class="rel-path">{{ e.target }}</span>
         </div>
       </div>
       <div v-if="inbound.length" class="rel-group">
         <div class="rel-group-label">Inbound</div>
         <div v-for="e in inbound" :key="e.source + e.kind" class="rel-item">
-          <span class="rel-kind">{{ e.kind }}</span>
+          <span class="rel-kind">{{ edgeLabel(e.kind, 'inbound') }}</span>
           <span class="rel-path">{{ e.source }}</span>
         </div>
       </div>
