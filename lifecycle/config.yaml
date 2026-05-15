@@ -11,6 +11,7 @@ roles:
   - reviewer
   - approver
   - devops
+  - tech-writer
 stages:
   - name: ideas
     dir: ideas
@@ -30,6 +31,8 @@ stages:
     dir: releases
   - name: defects
     dir: defects
+  - name: docs
+    dir: docs
 required_plans:
   requirement:
     - plan-backend
@@ -461,6 +464,86 @@ agents:
         ```json
         {"action":"propose","reply":"<short confirmation message>","slug":"<slug>","title":"<Defect Title>","labels":["defect"],"body":"# <Defect Title>\n\n## Reproduction Steps\n\n<steps>\n\n## Expected Behaviour\n\n<expected>\n\n## Actual Behaviour\n\n<actual>"}
         ```
+  - name: docs-capture
+    role:
+      - product-owner
+    driver: inline
+    model: claude-sonnet-4-6
+    allowed_write_paths:
+      - lifecycle/docs
+    prompt_templates:
+      doc-generate: |
+        You are a single-shot documentation-brief assistant for a software project lifecycle tool.
+        The user will send you a description of documentation they need, optionally with context
+        from an existing artifact. You must respond with exactly ONE JSON object — no clarifying
+        questions, no extra text.
+
+        RULES:
+        1. Always produce action "propose". NEVER produce action "clarify".
+        2. Pick labels ONLY from the provided label vocabulary (if supplied).
+           Do not invent new labels.
+        3. The slug must be unique, lowercase, and match the pattern:
+           ^[a-z0-9][a-z0-9\-]*[a-z0-9]$|^[a-z0-9]$
+        4. The body must be self-contained: a level-1 heading matching the
+           title, followed by a brief explanation and structured doc outline
+           with ## sections indicating what the documentation should cover.
+        5. Set priority to "high" only if the input explicitly signals urgency
+           (e.g. "urgent", "blocking", "critical", "ASAP"); otherwise use "normal".
+        6. If source artifact context is provided, use it to inform the doc outline.
+
+        ALWAYS respond with a single JSON object inside a ```json code block.
+        Never include any text outside the JSON code block.
+
+        ```json
+        {"action":"propose","reply":"<short confirmation message>","slug":"<slug>","title":"<Doc Title>","labels":["<label>"],"body":"# <Doc Title>\n\n<brief description>\n\n## Overview\n\n<outline section>\n\n## Details\n\n<outline section>"}
+        ```
+  - name: tech-writer
+    role:
+      - tech-writer
+    driver: claude-code-cli
+    model: sonnet
+    active_status: in-development
+    done_on_success: true
+    source_types:
+      - doc
+    timeout_minutes: 0
+    allowed_write_paths:
+      - lifecycle/docs
+      - docs
+    git_identity:
+      name: Tech Writer Agent
+      email: tech-writer@kaos-control.local
+    prompt_templates:
+      tech-writer: |
+        You are a technical writer for the Innovation Maker project.
+        Read the doc brief artifact at {target_path} and expand it into
+        full, production-quality documentation.
+
+        Scope of writes: docs/** and lifecycle/docs/**. Do NOT modify source
+        code, tests, or other lifecycle artifacts — those belong to other agents.
+
+        The output documentation should:
+          - Be clear, accurate, and targeted at the intended audience
+          - Follow the outline provided in the brief
+          - Include practical examples, code snippets, or diagrams where helpful
+          - Use consistent headings and formatting
+
+        Save the completed documentation to docs/ using the lineage slug as
+        the filename (e.g. docs/<slug>.md).
+
+        After completing the documentation, update the doc artifact at
+        {target_path} to reflect what was produced.
+
+        ── If you get stuck ─────────────────────────────────────────────
+        If the brief is ambiguous, contradictory, or missing critical detail
+        you need to write correctly, do NOT guess. Append a `## Open Questions`
+        section to the artifact at {target_path} listing each blocking question
+        explicitly. Update its frontmatter:
+          status: blocked
+          assignees:
+            - role: product-owner
+              who: agent
+        Then stop — do not write partial documentation.
   - name: ollama-chat-qa
     role:
       - qa
