@@ -8,6 +8,7 @@ roles:
   - frontend-developer
   - test-developer
   - qa
+  - tech-writer
 stages:
   - name: ideas
     dir: ideas
@@ -17,6 +18,8 @@ stages:
     dir: defects
   - name: releases
     dir: releases
+  - name: docs
+    dir: docs
 required_plans:
   requirement:
     - plan-backend
@@ -27,11 +30,15 @@ users:
     roles:
       - product-owner
       - analyst
+  - email: techwriter@kaos-e2e.local
+    roles:
+      - tech-writer
 dashboard:
   tracked_types:
     - idea
     - requirement
     - defect
+    - doc
 agents:
   - name: stub-agent
     role:
@@ -42,3 +49,13 @@ agents:
       name: Stub Agent
       email: stub@kaos-e2e.local
     allowed_write_paths: []
+  - name: tech-writer
+    roles:
+      - tech-writer
+    driver: shell-stub
+    shell_command: "sleep 1 && printf '{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false}\\n'"
+    git_identity:
+      name: Tech Writer Agent
+      email: techwriter-agent@kaos-e2e.local
+    allowed_write_paths:
+      - lifecycle/docs
