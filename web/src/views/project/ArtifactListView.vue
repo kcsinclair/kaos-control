@@ -37,11 +37,18 @@ useTextFilterShortcut(textFilterRef)
 
 const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination()
 
-const visibleItems = computed(() =>
-  showCompleted.value
+const visibleItems = computed(() => {
+  const base = showCompleted.value
     ? store.items
     : store.items.filter(r => !(TERMINAL_STATUSES as readonly string[]).includes(r.status))
-)
+  if (!searchText.value) return base
+  const q = searchText.value.toLowerCase()
+  return base.filter(r => {
+    const titleMatch = (r.title || r.slug || '').toLowerCase().includes(q)
+    const labelMatch = (r.frontmatter?.labels ?? []).some(l => l.toLowerCase().includes(q))
+    return titleMatch || labelMatch
+  })
+})
 
 function priorityOrder(value: string | undefined): number {
   switch (value) {
@@ -115,7 +122,7 @@ function applyFilters() {
     type: selectedType.value || undefined,
     priority: selectedPriority.value || undefined,
     release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
-    q: searchText.value || undefined,
+    q: undefined,
     limit: 0,
     offset: undefined,
   })
@@ -199,7 +206,7 @@ onMounted(async () => {
       type: selectedType.value || undefined,
       priority: selectedPriority.value || undefined,
       release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
-      q: searchText.value || undefined,
+      q: undefined,
       limit: 0,
       offset: undefined,
     }),
