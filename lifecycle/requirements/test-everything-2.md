@@ -1,7 +1,7 @@
 ---
 title: Run all tests and auto-file defects for failures — Requirements
 type: requirement
-status: approved
+status: planning
 lineage: test-everything
 priority: high
 parent: lifecycle/ideas/test-everything.md
