@@ -404,6 +404,11 @@ func New(
 	if err := m.recoverOrphanedTests(); err != nil {
 		slog.Warn("agent manager: error recovering orphaned test artifacts", "err", err)
 	}
+
+	// Non-blocking version check: warn if Claude Code is below the minimum
+	// version required for hooks API support (NFR5).
+	go checkClaudeVersion()
+
 	return m
 }
 
@@ -1186,6 +1191,79 @@ func mergeDenylist(perAgent []string) []string {
 	merged := make([]string, len(DefaultBashDenylist), len(DefaultBashDenylist)+len(perAgent))
 	copy(merged, DefaultBashDenylist)
 	return append(merged, perAgent...)
+}
+
+// MinClaudeVersion is the minimum Claude Code version required for the hooks
+// API (PreToolUse) used by the claude-mediated driver (NFR5).
+const MinClaudeVersion = "1.9.0"
+
+// checkClaudeVersion runs `claude --version`, parses the output, and logs a
+// warning if the version is below MinClaudeVersion. It is called in a
+// goroutine so it never blocks startup.
+func checkClaudeVersion() {
+	out, err := exec.Command("claude", "--version").Output()
+	if err != nil {
+		slog.Warn("agent: could not determine Claude Code version; hooks may be unavailable",
+			"err", err, "min_version", MinClaudeVersion)
+		return
+	}
+	verStr := strings.TrimSpace(string(out))
+	if compareVersions(verStr, MinClaudeVersion) < 0 {
+		slog.Warn("agent: Claude Code version may not support hooks API",
+			"detected", verStr, "min_required", MinClaudeVersion,
+			"hint", "upgrade Claude Code to enable the claude-mediated driver")
+	} else {
+		slog.Debug("agent: Claude Code version check passed", "version", verStr, "min_required", MinClaudeVersion)
+	}
+}
+
+// compareVersions compares two "MAJOR.MINOR.PATCH" version strings.
+// Returns -1 if a < b, 0 if a == b, 1 if a > b.
+// Non-numeric version strings (e.g. "claude 1.9.0") are parsed leniently —
+// we scan for the first numeric segment.
+func compareVersions(a, b string) int {
+	return cmpSemver(parseVersion(a), parseVersion(b))
+}
+
+func parseVersion(s string) [3]int {
+	// Find first digit in the string to handle "claude/1.9.0" or "Claude Code 1.9.0".
+	start := strings.IndexAny(s, "0123456789")
+	if start < 0 {
+		return [3]int{}
+	}
+	s = s[start:]
+	// Trim anything after the first space or non-semver character.
+	if idx := strings.IndexAny(s, " \t\n"); idx >= 0 {
+		s = s[:idx]
+	}
+	var v [3]int
+	parts := strings.SplitN(s, ".", 3)
+	for i, p := range parts {
+		if i >= 3 {
+			break
+		}
+		n := 0
+		for _, c := range p {
+			if c < '0' || c > '9' {
+				break
+			}
+			n = n*10 + int(c-'0')
+		}
+		v[i] = n
+	}
+	return v
+}
+
+func cmpSemver(a, b [3]int) int {
+	for i := 0; i < 3; i++ {
+		if a[i] < b[i] {
+			return -1
+		}
+		if a[i] > b[i] {
+			return 1
+		}
+	}
+	return 0
 }
 
 // ConfigureHookDriver sets the ServerAddr and BinaryPath on the
