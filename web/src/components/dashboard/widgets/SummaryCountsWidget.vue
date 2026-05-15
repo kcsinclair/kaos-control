@@ -1,9 +1,10 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '@/api/client'
 import { useWebSocket } from '@/composables/useWebSocket'
+import { useQueueStore } from '@/stores/queue'
 import type { WsEvent } from '@/types/api'
 import SummaryCountCard from './SummaryCountCard.vue'
 import { Ticket, Play, AlertOctagon, CheckCircle } from 'lucide-vue-next'
@@ -18,6 +19,7 @@ interface DashboardStats {
 }
 
 const stats = ref<DashboardStats>({ total_tickets: 0, in_progress: 0, blocked: 0, completed_this_week: 0 })
+const queueStore = useQueueStore()
 
 async function fetchStats() {
   try {
@@ -30,7 +32,20 @@ async function fetchStats() {
   }
 }
 
-onMounted(fetchStats)
+// Count queue jobs for this project (pending + running) so the "In Progress"
+// stat reflects items actively being worked on, not just artifact statuses.
+const queueInProgressCount = computed(() => {
+  const pending = queueStore.snapshot.pending.filter((j) => j.project === props.project).length
+  const running = queueStore.snapshot.running?.project === props.project ? 1 : 0
+  return pending + running
+})
+
+const inProgressTotal = computed(() => stats.value.in_progress + queueInProgressCount.value)
+
+onMounted(() => {
+  void fetchStats()
+  void queueStore.fetch()
+})
 
 useWebSocket(props.project, 'artifact.indexed', (_e: WsEvent) => {
   void fetchStats()
@@ -46,7 +61,7 @@ useWebSocket(props.project, 'artifact.indexed', (_e: WsEvent) => {
   />
   <SummaryCountCard
     label="In Progress"
-    :value="stats.in_progress"
+    :value="inProgressTotal"
     :icon="Play"
     :to="null"
   />
