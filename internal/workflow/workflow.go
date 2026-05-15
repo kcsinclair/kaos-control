@@ -15,18 +15,25 @@ type Engine struct {
 }
 
 type rule struct {
-	from  string   // empty means "any non-terminal status"
-	to    string
-	roles []string
-	types []string // empty means "any artifact type"; non-empty restricts the rule to listed types
+	from         string   // empty means "any non-terminal status"
+	to           string
+	roles        []string
+	types        []string // empty means "any artifact type"; non-empty restricts the rule to listed types
+	excludeTypes []string // types that are explicitly excluded from this rule (takes precedence over types)
 }
 
 // defaultRules implement the spec §6.2 transition matrix.
 var defaultRules = []rule{
-	{from: "draft", to: "clarifying", roles: []string{"product-owner", "analyst"}},
-	{from: "clarifying", to: "planning", roles: []string{"product-owner", "reviewer", "analyst"}},
-	{from: "planning", to: "in-development", roles: []string{"approver"}},
+	{from: "draft", to: "clarifying", roles: []string{"product-owner", "analyst"}, excludeTypes: []string{"doc"}},
+	{from: "clarifying", to: "planning", roles: []string{"product-owner", "reviewer", "analyst"}, excludeTypes: []string{"doc"}},
+	{from: "planning", to: "in-development", roles: []string{"approver"}, excludeTypes: []string{"doc"}},
 	{from: "in-development", to: "in-qa", roles: []string{"backend-developer", "frontend-developer", "test-developer"}},
+	// doc artifact pipeline: draft → approved → in-development → in-qa → done.
+	{from: "draft", to: "approved", roles: []string{"product-owner"}, types: []string{"doc"}},
+	{from: "approved", to: "in-development", roles: []string{"tech-writer"}, types: []string{"doc"}},
+	{from: "in-development", to: "in-qa", roles: []string{"tech-writer"}, types: []string{"doc"}},
+	{from: "in-qa", to: "done", roles: []string{"qa"}, types: []string{"doc"}},
+	{from: "in-qa", to: "in-development", roles: []string{"qa"}, types: []string{"doc"}},
 	{from: "in-qa", to: "approved", roles: []string{"qa"}},
 	{from: "approved", to: "done", roles: []string{"approver"}},
 	// Terminal fallbacks: clarifying ↔ draft (so product-owner / analyst can retract)
@@ -103,11 +110,21 @@ func HasProductOwner(roles []string) bool {
 // ruleMatchesType reports whether a rule applies to the given artifact type.
 // Rules with an empty types list apply to all artifact types.
 // Rules with a non-empty types list only apply when artifactType is in the list.
+// Rules with a non-empty excludeTypes list never apply when artifactType is in
+// that list, even if types is empty (excludeTypes takes precedence).
 // When artifactType is empty (caller does not know the type), type-restricted
-// rules are never matched.
+// rules are never matched and exclude-restricted rules are always matched.
 func ruleMatchesType(r rule, artifactType string) bool {
+	// Check exclusions first — they take precedence.
+	if artifactType != "" && len(r.excludeTypes) > 0 {
+		for _, t := range r.excludeTypes {
+			if t == artifactType {
+				return false
+			}
+		}
+	}
 	if len(r.types) == 0 {
-		return true // type-agnostic rule — applies to everything
+		return true // type-agnostic rule (after exclusion check) — applies to everything
 	}
 	if artifactType == "" {
 		return false // type-restricted rule but caller has no type context
