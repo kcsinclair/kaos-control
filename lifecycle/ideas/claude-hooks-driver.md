@@ -1,8 +1,9 @@
 ---
 title: Claude Driver with Permission Hooks (alternate, hardened)
 type: idea
-status: blocked
+status: approved
 lineage: claude-hooks-driver
+created: "2026-05-15T08:00:00+10:00"
 priority: medium
 labels:
     - agent
@@ -175,26 +176,43 @@ etc.).
   carry hook-config confirmation; need to check what Claude
   actually emits in non-bypass mode.
 
-## Open Questions
+## Resolved Questions
 
 - What's the default deny-list shipped with the binary? Should it
   include things like `rm -rf`, `curl … | sh`, `sudo`, network
   egress, anything writing outside the project root?
+
+> That list is a good start.
+
 - Should there be a "dry run" / observe-only mode where the
   permission endpoint logs decisions but doesn't enforce them, so
   operators can see what an agent *would have done* before turning
   on strict mode?
+
+> Yes
+
 - Per-tool deny vs. abort-run: if a Write is denied, does the
   agent get the deny response and keep going (current Claude
   hooks contract), or does Kaos Control kill the run on the first
   denial? Probably configurable, but what's the default?
+
+> Make it configurable, default behaviour, log what happen to the job log, agent gets the deny response and keeps going.
+
 - How does this interact with `auto-commit on success`? If most
   tool calls succeeded but a few were denied, do we still commit
   the partial work, or roll back?
+
+> Do not commit work with any denials.  Tell the human and pause any further work, e.g. pause the queue, until the human starts it.
+
 - Should the permission decisions feed into the UI run timeline
   the way `agent.progress` events already do? (Probably yes —
   "denied: Write to /etc/passwd" is exactly the kind of thing
   operators want to see.)
+
+> Yes
+
 - Does the existing `RequireBypassPermissions` config flag become
   per-driver, or do we deprecate it in favour of "your driver
   choice implies the bypass posture"?
+
+> Leave in place for existing claude driver.
