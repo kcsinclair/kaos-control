@@ -37,8 +37,17 @@ type Server struct {
 
 	// projects is the live map of registered projects.
 	// All reads and writes must be done under projectsMu.
-	projectsMu sync.RWMutex
-	projects   map[string]*project.Project
+	// projectCancels holds the cancel function for each project's background context.
+	// servCtx is set in ListenAndServe; new project goroutines are children of it.
+	projectsMu     sync.RWMutex
+	projects       map[string]*project.Project
+	projectCancels map[string]context.CancelFunc
+	servCtx        context.Context
+
+	// Project CRUD runtime state.
+	projectsDir string
+	dataDir     string
+	openOpts    project.OpenOptions
 
 	// App-level config mutation (Ollama instance CRUD).
 	appCfgMu   sync.RWMutex
@@ -66,6 +75,16 @@ type ServerConfig struct {
 	// AppHub is the app-level WebSocket hub used by the /api/ws endpoint
 	// to broadcast queue-level events (queue.added, queue.paused, etc.).
 	AppHub *hub.Hub
+
+	// ProjectsDir is the directory where project YAML registration files live
+	// (e.g. ~/.kaos-control/projects/). Required for project CRUD endpoints.
+	ProjectsDir string
+	// DataDir is the app-level data directory used when opening new projects
+	// (e.g. ~/.kaos-control/data/). Required for project CRUD endpoints.
+	DataDir string
+	// ProjectOpenOptions are the options forwarded to project.Open when a new
+	// project is registered at runtime. Required for project CRUD endpoints.
+	ProjectOpenOptions project.OpenOptions
 }
 
 // allowedWSOrigins returns the set of hostnames that are permitted as the
@@ -89,12 +108,16 @@ func (s *Server) allowedWSOrigins() []string {
 // New constructs and wires the server. projects maps project name → project.Project.
 func New(cfg ServerConfig, projects map[string]*project.Project) *Server {
 	s := &Server{
-		cfg:        cfg,
-		projects:   projects,
-		queue:      cfg.Queue,
-		appHub:     cfg.AppHub,
-		appCfg:     cfg.AppCfg,
-		appCfgPath: cfg.AppCfgPath,
+		cfg:            cfg,
+		projects:       projects,
+		projectCancels: make(map[string]context.CancelFunc),
+		queue:          cfg.Queue,
+		appHub:         cfg.AppHub,
+		appCfg:         cfg.AppCfg,
+		appCfgPath:     cfg.AppCfgPath,
+		projectsDir:    cfg.ProjectsDir,
+		dataDir:        cfg.DataDir,
+		openOpts:       cfg.ProjectOpenOptions,
 	}
 	s.router = s.buildRouter()
 	s.httpSrv = &http.Server{
@@ -138,6 +161,7 @@ func (s *Server) buildRouter() chi.Router {
 
 		// Project registry
 		r.Get("/projects", s.handleListProjects)
+		r.Post("/projects", s.handleCreateProject)
 		r.Get("/projects/{project}", s.handleGetProject)
 
 		// App-level WebSocket (queue events, etc.)
@@ -313,8 +337,20 @@ func (s *Server) buildRouter() chi.Router {
 	return r
 }
 
+// SetQueue wires the queue dispatcher into the server. Must be called before
+// ListenAndServe when the queue is created after New().
+func (s *Server) SetQueue(q *queue.Dispatcher) {
+	s.queue = q
+}
+
 // ListenAndServe starts the server and blocks until ctx is cancelled.
 func (s *Server) ListenAndServe(ctx context.Context) error {
+	// Store the server context so that projects registered at runtime can derive
+	// their goroutine contexts from it and be cancelled on shutdown.
+	s.projectsMu.Lock()
+	s.servCtx = ctx
+	s.projectsMu.Unlock()
+
 	ln, err := net.Listen("tcp", s.cfg.Listen)
 	if err != nil {
 		return fmt.Errorf("listening on %s: %w", s.cfg.Listen, err)
@@ -367,6 +403,45 @@ func (s *Server) getProject(name string) (*project.Project, bool) {
 // GetProject is the exported variant used by external callers (e.g. queue dispatcher).
 func (s *Server) GetProject(name string) (*project.Project, bool) {
 	return s.getProject(name)
+}
+
+// RegisterProject opens a project, starts its goroutines, and adds it to the
+// server's live project map. The project's goroutines run until
+// UnregisterProject is called or the server shuts down.
+func (s *Server) RegisterProject(entry *config.ProjectEntry) error {
+	// Snapshot the server context under the read-lock.
+	s.projectsMu.RLock()
+	parent := s.servCtx
+	s.projectsMu.RUnlock()
+	if parent == nil {
+		parent = context.Background()
+	}
+	pCtx, cancel := context.WithCancel(parent)
+
+	p, err := project.Open(entry, s.dataDir, s.openOpts)
+	if err != nil {
+		cancel()
+		return fmt.Errorf("opening project %q: %w", entry.Name, err)
+	}
+	p.StartWatcher(pCtx)
+	p.StartLockReaper(pCtx)
+	p.StartSessionReaper(pCtx)
+	p.StartScheduler(pCtx)
+
+	s.projectsMu.Lock()
+	s.projects[entry.Name] = p
+	s.projectCancels[entry.Name] = cancel
+	s.projectsMu.Unlock()
+	return nil
+}
+
+// TrackCancel records a cancel function for a project that was opened and
+// started externally (e.g. during server startup in main). This ensures that
+// UnregisterProject can cleanly stop those goroutines too.
+func (s *Server) TrackCancel(name string, cancel context.CancelFunc) {
+	s.projectsMu.Lock()
+	s.projectCancels[name] = cancel
+	s.projectsMu.Unlock()
 }
 
 // handleFrontend serves the embedded Vue SPA.

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -258,7 +259,8 @@ func loadProjectEntry(path string) (*ProjectEntry, error) {
 	return &e, nil
 }
 
-// SaveProjectEntry writes a project entry to projects_dir/<name>.yaml.
+// SaveProjectEntry atomically writes a project entry to projects_dir/<name>.yaml
+// using a write-to-temp-then-rename pattern.
 func SaveProjectEntry(dir string, e *ProjectEntry) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("creating projects dir: %w", err)
@@ -267,7 +269,85 @@ func SaveProjectEntry(dir string, e *ProjectEntry) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, e.Name+".yaml"), data, 0o644)
+	dest := filepath.Join(dir, e.Name+".yaml")
+	tmp := dest + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return fmt.Errorf("writing tmp project entry: %w", err)
+	}
+	if err := os.Rename(tmp, dest); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("renaming tmp project entry: %w", err)
+	}
+	return nil
+}
+
+// ValidateProjectName returns an error if name is not a valid project slug:
+// lowercase alphanumeric and hyphens only, 3–80 characters.
+func ValidateProjectName(name string) error {
+	if len(name) < 3 {
+		return fmt.Errorf("name must be at least 3 characters")
+	}
+	if len(name) > 80 {
+		return fmt.Errorf("name must be at most 80 characters")
+	}
+	for _, c := range name {
+		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+			return fmt.Errorf("name must contain only lowercase letters, digits, and hyphens")
+		}
+	}
+	return nil
+}
+
+// kaosControlConfigDir returns the kaos-control app configuration directory,
+// honouring XDG_CONFIG_HOME.
+func kaosControlConfigDir() (string, error) {
+	if base := os.Getenv("XDG_CONFIG_HOME"); base != "" {
+		return filepath.Join(base, "kaos-control"), nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".kaos-control"), nil
+}
+
+// ValidatePathFormat checks that path is absolute and does not resolve into
+// the kaos-control config directory. It does NOT check whether the path exists.
+func ValidatePathFormat(path string) error {
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf("path must be absolute")
+	}
+	clean := filepath.Clean(path)
+	cfgDir, err := kaosControlConfigDir()
+	if err == nil {
+		sep := string(filepath.Separator)
+		if clean == cfgDir || strings.HasPrefix(clean+sep, cfgDir+sep) {
+			return fmt.Errorf("path must not be inside the kaos-control config directory")
+		}
+	}
+	return nil
+}
+
+// ValidatePath validates path format, resolves symlinks, and returns the
+// canonicalised path. Returns an error if the path does not exist, is relative,
+// or falls inside the kaos-control config directory.
+func ValidatePath(path string) (string, error) {
+	if err := ValidatePathFormat(path); err != nil {
+		return "", err
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", fmt.Errorf("path does not exist: %w", err)
+	}
+	// Re-check the resolved path against the config dir (symlinks can redirect).
+	cfgDir, err2 := kaosControlConfigDir()
+	if err2 == nil {
+		sep := string(filepath.Separator)
+		if resolved == cfgDir || strings.HasPrefix(resolved+sep, cfgDir+sep) {
+			return "", fmt.Errorf("path must not be inside the kaos-control config directory")
+		}
+	}
+	return resolved, nil
 }
 
 // DeleteProjectEntry removes a project registration file.

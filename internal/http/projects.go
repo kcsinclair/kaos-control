@@ -3,6 +3,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -53,4 +54,60 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, projectToSummary(p))
+}
+
+// handleCreateProject registers a new project and persists it to the registry.
+func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Name        string `json:"name"`
+		Path        string `json:"path"`
+		Description string `json:"description"`
+		Owner       string `json:"owner"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_body", "invalid JSON: "+err.Error()))
+		return
+	}
+
+	if err := config.ValidateProjectName(body.Name); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_name", err.Error()))
+		return
+	}
+
+	if _, exists := s.getProject(body.Name); exists {
+		writeJSON(w, http.StatusConflict, apiError("conflict", "project already exists: "+body.Name))
+		return
+	}
+
+	if body.Path == "" {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", "path must not be empty"))
+		return
+	}
+	resolved, err := config.ValidatePath(body.Path)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+		return
+	}
+
+	entry := &config.ProjectEntry{
+		Name:        body.Name,
+		Path:        resolved,
+		Description: body.Description,
+		Owner:       body.Owner,
+	}
+
+	if err := config.SaveProjectEntry(s.projectsDir, entry); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("save_failed", "saving project entry: "+err.Error()))
+		return
+	}
+
+	if err := s.RegisterProject(entry); err != nil {
+		// Roll back: remove the saved YAML file since registration failed.
+		_ = config.DeleteProjectEntry(s.projectsDir, entry.Name)
+		writeJSON(w, http.StatusInternalServerError, apiError("register_failed", "registering project: "+err.Error()))
+		return
+	}
+
+	p, _ := s.getProject(entry.Name)
+	writeJSON(w, http.StatusCreated, projectToSummary(p))
 }
