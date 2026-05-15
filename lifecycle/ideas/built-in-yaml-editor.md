@@ -15,6 +15,8 @@ release: KC-Release2
 
 # Enable the Built-in YAML Editor DevOps Pipelines
 
+**this was done with other ideas**
+
 The editor should support managing DevOps pipeline definitions (e.g. CI/CD YAML files such as GitHub Actions workflows or similar), with syntax highlighting, validation, and schema-aware autocompletion where possible. Errors should be surfaced inline before changes are saved.
 
 This reduces friction for operators configuring the tool or managing pipeline definitions, keeping the entire workflow within a single interface and lowering the barrier to entry for new users getting the system set up correctly.
