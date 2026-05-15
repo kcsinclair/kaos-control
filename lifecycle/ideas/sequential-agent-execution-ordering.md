@@ -4,16 +4,17 @@ type: idea
 status: planning
 lineage: sequential-agent-execution-ordering
 created: "2026-05-06T18:51:21+10:00"
-priority: normal
+priority: medium
 labels:
     - agent
     - agent-runner
     - architecture
     - workflow
-release: KC-Release1
 ---
 
 # Sequential Agent Execution Ordering to Prevent Race Conditions
+
+**queue work feature helps with this, needs enforcement**
 
 On a given kaos-control instance, allowing multiple agent types to run concurrently introduces race conditions — particularly when agents write to shared lineage artifacts or depend on outputs produced by earlier agents in the same lineage. To avoid this, the system should enforce that only one agent type runs at a time per instance.
 
