@@ -29,6 +29,7 @@ function isOllama(agent: AgentSummary): boolean {
 function driverLabel(agent: AgentSummary): string {
   if (agent.driver === 'ollama') return 'Ollama'
   if (agent.driver === 'claude-code-cli') return 'Claude Code'
+  if (agent.driver === 'claude-mediated') return 'Claude Mediated'
   if (agent.driver === 'inline') return ''
   return agent.driver
 }
@@ -294,6 +295,10 @@ function runningCount(agent: AgentSummary): number {
 .panel-driver[data-driver="claude-code-cli"] {
   background: #f3e8ff;
   color: #7e22ce;
+}
+.panel-driver[data-driver="claude-mediated"] {
+  background: #fef3c7;
+  color: #92400e;
 }
 .panel-inline-label {
   font-size: 10px;

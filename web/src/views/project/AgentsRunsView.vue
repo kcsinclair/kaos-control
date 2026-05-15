@@ -28,6 +28,7 @@ function agentDriver(agentName: string, agents: AgentSummary[]): string {
   if (!a) return ''
   if (a.driver === 'ollama') return 'Ollama'
   if (a.driver === 'claude-code-cli') return 'Claude Code'
+  if (a.driver === 'claude-mediated') return 'Claude Mediated'
   return a.driver
 }
 
