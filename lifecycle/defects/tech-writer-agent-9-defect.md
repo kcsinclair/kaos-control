@@ -1,7 +1,7 @@
 ---
 title: "Transitioning doc to in-qa does not populate assignees with qa/agent"
 type: defect
-status: draft
+status: approved
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
 labels: [defect]
