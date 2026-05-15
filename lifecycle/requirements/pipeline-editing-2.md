@@ -123,5 +123,13 @@ Users can create and run DevOps pipelines, but there is no way to modify an exis
 ## Open Questions
 
 1. Should the edit dialog support a "diff view" showing changes against the saved version before confirming, or is the raw editor sufficient for v1?
+
+> raw view for v1
+
 2. Should editing be blocked while *any* pipeline is running (global lock), or only while *that specific pipeline* is running? (This requirement assumes per-pipeline locking.)
+
+> yes, disable while any pipeline is running
+
 3. Should the GET endpoint for fetching raw YAML return the file verbatim, or should it strip/normalise whitespace?
+
+> file verbatim
