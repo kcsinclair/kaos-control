@@ -56,6 +56,7 @@ const DARK_PALETTE: GraphPalette = {
     test:            '#06b6d4',  // cyan-500
     prototype:       '#14b8a6',  // teal-500
     defect:          '#f43f5e',  // rose-500
+    doc:             '#2dd4bf',  // teal-400
     label:           '#a855f7',  // purple-500
     release:         '#93c5fd',  // blue-300
     backlog:         '#6b7280',  // gray-500
@@ -114,6 +115,7 @@ const LIGHT_PALETTE: GraphPalette = {
     test:            '#0891b2',  // cyan-600
     prototype:       '#0d9488',  // teal-600
     defect:          '#e11d48',  // rose-600
+    doc:             '#0d9488',  // teal-600
     label:           '#9333ea',  // purple-600
     release:         '#3b82f6',  // blue-500
     backlog:         '#4b5563',  // gray-600
