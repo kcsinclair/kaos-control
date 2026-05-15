@@ -24,6 +24,7 @@ var KnownTypes = map[string]bool{
 	"idea": true, "requirement": true,
 	"plan-backend": true, "plan-frontend": true, "plan-test": true,
 	"test": true, "prototype": true, "defect": true,
+	"doc": true,
 }
 
 // KnownStatuses is the allowed vocabulary for the status field.
@@ -367,6 +368,8 @@ func stageToType(stage string) string {
 		return "prototype"
 	case "defects":
 		return "defect"
+	case "docs":
+		return "doc"
 	default:
 		return "requirement"
 	}

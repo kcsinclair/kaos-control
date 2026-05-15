@@ -29,6 +29,7 @@ var stageSuffix = map[string]string{
 	"backend-plans":  "be",
 	"frontend-plans": "fe",
 	"test-plans":     "test",
+	"docs":           "doc",
 }
 
 // handleCreateArtifact handles POST /api/p/:project/artifacts
