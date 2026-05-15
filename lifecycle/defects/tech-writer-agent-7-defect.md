@@ -1,7 +1,7 @@
 ---
 title: "lifecycle/docs directory not auto-created when writing doc artifacts"
 type: defect
-status: draft
+status: approved
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
 labels: [defect]
