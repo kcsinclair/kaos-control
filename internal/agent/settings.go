@@ -12,8 +12,18 @@ import (
 
 // hookSettings is the structure written to the Claude Code settings.json that
 // wires the PreToolUse hook to the kaos-control hook-helper binary (FR6).
+//
+// Claude Code's PreToolUse schema requires a matcher wrapper: each entry in
+// the PreToolUse array is a matcher object containing its own hooks list.
+// Without the wrapper, Claude silently ignores the hook config and falls
+// back to interactive-prompt mode (which fails in headless -p runs).
 type hookSettings struct {
-	Hooks map[string][]hookEntry `json:"hooks"`
+	Hooks map[string][]hookMatcher `json:"hooks"`
+}
+
+type hookMatcher struct {
+	Matcher string      `json:"matcher"`
+	Hooks   []hookEntry `json:"hooks"`
 }
 
 type hookEntry struct {
@@ -33,9 +43,12 @@ func WriteHookSettings(dir, binary, serverAddr, runID string) (path string, clea
 
 	cmd := fmt.Sprintf("%s hook-helper --server %s --run-id %s", binary, serverAddr, runID)
 	settings := hookSettings{
-		Hooks: map[string][]hookEntry{
+		Hooks: map[string][]hookMatcher{
 			"PreToolUse": {
-				{Type: "command", Command: cmd},
+				{
+					Matcher: "*",
+					Hooks:   []hookEntry{{Type: "command", Command: cmd}},
+				},
 			},
 		},
 	}
