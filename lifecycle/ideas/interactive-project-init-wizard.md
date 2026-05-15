@@ -11,7 +11,7 @@ labels:
     - backend
     - usability
     - v1
-release: KC-Release1
+release: KC-Release2
 ---
 
 # Interactive Project Initialisation Wizard

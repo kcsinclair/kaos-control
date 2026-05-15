@@ -10,7 +10,6 @@ labels:
     - frontend
     - workflow
     - operability
-release: KC-Release1
 ---
 
 # Clear stuck lineage locks from the UI

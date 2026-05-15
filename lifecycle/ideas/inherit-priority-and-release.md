@@ -4,12 +4,12 @@ type: idea
 status: planning
 lineage: inherit-priority-and-release
 created: "2026-05-10T10:12:41+10:00"
-priority: normal
+priority: medium
 labels:
     - feature
     - workflow
     - artefacts
-release: KC-Release1
+release: KC-Release3
 ---
 
 # Inherit Priority and Release Through Lineage

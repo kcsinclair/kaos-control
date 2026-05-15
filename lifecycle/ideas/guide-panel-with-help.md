@@ -8,7 +8,7 @@ labels:
     - onboarding
     - usability
     - feature
-release: KC-Release2
+release: KC-Release3
 ---
 
 # Guide Panel on Right with help for current screen

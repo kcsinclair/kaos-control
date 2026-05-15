@@ -9,7 +9,7 @@ labels:
     - testing
     - qa
     - feature
-release: KC-Release1
+release: KC-Release2
 assignees:
     - role: product-owner
       who: agent

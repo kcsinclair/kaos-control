@@ -9,7 +9,7 @@ labels:
     - feature
     - frontend
     - vue
-release: KC-Release2
+release: KC-Release3
 ---
 
 # Activity Feed Graph with Stacked Bars

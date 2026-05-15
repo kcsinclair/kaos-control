@@ -4,7 +4,7 @@ type: idea
 status: clarifying
 lineage: artefact-relationship-labels-and-links
 created: "2026-05-10T09:35:28+10:00"
-priority: medium
+priority: high
 labels:
     - artefacts
     - frontend
