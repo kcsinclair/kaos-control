@@ -1,7 +1,7 @@
 ---
 title: Projects Page CRUD Operations — Backend Plan
 type: plan-backend
-status: draft
+status: approved
 lineage: projects-crud-ui
 parent: requirements/projects-crud-ui-2.md
 ---
