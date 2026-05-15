@@ -46,6 +46,9 @@ async function handleLogout() {
     <div class="header-brand">
       <RouterLink to="/projects" class="brand-link">kaos-control</RouterLink>
     </div>
+    <nav class="header-nav">
+      <RouterLink to="/projects" class="nav-link" active-class="nav-link--active">Projects</RouterLink>
+    </nav>
     <div class="header-actions">
       <!-- Queue badge: always visible when authenticated so /queue is reachable
            regardless of queue state. Amber when there's pending work, red when
@@ -118,6 +121,26 @@ async function handleLogout() {
   letter-spacing: -0.02em;
 }
 .brand-link:hover {
+  color: #fff;
+}
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--space-5);
+}
+.nav-link {
+  font-size: var(--text-sm);
+  color: var(--color-sidebar-text-muted);
+  text-decoration: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+.nav-link:hover {
+  color: #fff;
+}
+.nav-link--active {
   color: #fff;
 }
 .header-actions {
