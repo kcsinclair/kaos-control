@@ -1,17 +1,26 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
 import { ApiError } from '@/api/client'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import CreateProjectModal from '@/components/project/CreateProjectModal.vue'
+import EditProjectModal from '@/components/project/EditProjectModal.vue'
+import DeleteProjectModal from '@/components/project/DeleteProjectModal.vue'
+import InitProjectModal from '@/components/project/InitProjectModal.vue'
 import type { ProjectSummary } from '@/types/api'
 
 const router = useRouter()
 const projectStore = useProjectStore()
 const ui = useUiStore()
+
+const showCreate = ref(false)
+const editTarget = ref<ProjectSummary | null>(null)
+const deleteTarget = ref<ProjectSummary | null>(null)
+const initTarget = ref<ProjectSummary | null>(null)
 
 onMounted(async () => {
   try {
@@ -28,24 +37,24 @@ function openProject(name: string) {
   router.push(`/p/${encodeURIComponent(name)}`)
 }
 
-// Placeholders — modals wired in Milestone 8
-const showCreate = defineModel<boolean>('showCreate', { default: false })
-void showCreate
-
-function onNewProject() {
-  ui.info('Create project dialog coming in a later milestone.')
+function onCreated() {
+  showCreate.value = false
 }
 
-function onEdit(_project: ProjectSummary) {
-  ui.info('Edit project dialog coming in a later milestone.')
+function onUpdated() {
+  editTarget.value = null
 }
 
-function onDelete(_project: ProjectSummary) {
-  ui.info('Delete project dialog coming in a later milestone.')
+async function onDeleted() {
+  const wasActive = deleteTarget.value?.name === projectStore.current?.name
+  deleteTarget.value = null
+  if (wasActive) {
+    await router.push('/projects')
+  }
 }
 
-function onInit(_project: ProjectSummary) {
-  ui.info('Initialise project dialog coming in a later milestone.')
+function onInitialised() {
+  initTarget.value = null
 }
 </script>
 
@@ -56,7 +65,7 @@ function onInit(_project: ProjectSummary) {
       <div class="projects-content">
         <div class="projects-header">
           <h2 class="projects-heading">Projects</h2>
-          <button class="btn-primary" @click="onNewProject">New Project</button>
+          <button class="btn-primary" @click="showCreate = true">New Project</button>
         </div>
 
         <div v-if="projectStore.loading" class="projects-empty">Loading…</div>
@@ -70,9 +79,9 @@ function onInit(_project: ProjectSummary) {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Description</th>
-                <th>Owner</th>
-                <th>Path</th>
+                <th class="col-desc">Description</th>
+                <th class="col-owner">Owner</th>
+                <th class="col-path">Path</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -86,9 +95,9 @@ function onInit(_project: ProjectSummary) {
                     @click.prevent="openProject(p.name)"
                   >{{ p.name }}</a>
                 </td>
-                <td class="td-desc">{{ p.description || '—' }}</td>
-                <td>{{ p.owner || '—' }}</td>
-                <td class="td-path">
+                <td class="col-desc td-muted">{{ p.description || '—' }}</td>
+                <td class="col-owner td-muted">{{ p.owner || '—' }}</td>
+                <td class="col-path">
                   <span class="path-text" :title="p.path">{{ p.path }}</span>
                 </td>
                 <td>
@@ -99,13 +108,13 @@ function onInit(_project: ProjectSummary) {
                 </td>
                 <td>
                   <div class="row-actions">
-                    <button class="btn-action" @click="onEdit(p)">Edit</button>
+                    <button class="btn-action" @click="editTarget = p">Edit</button>
                     <button
                       v-if="!p.initialised"
                       class="btn-action btn-action--init"
-                      @click="onInit(p)"
+                      @click="initTarget = p"
                     >Initialise</button>
-                    <button class="btn-action btn-action--danger" @click="onDelete(p)">Delete</button>
+                    <button class="btn-action btn-action--danger" @click="deleteTarget = p">Delete</button>
                   </div>
                 </td>
               </tr>
@@ -114,6 +123,34 @@ function onInit(_project: ProjectSummary) {
         </div>
       </div>
     </main>
+
+    <!-- Modals -->
+    <CreateProjectModal
+      v-if="showCreate"
+      @created="onCreated"
+      @close="showCreate = false"
+    />
+
+    <EditProjectModal
+      v-if="editTarget"
+      :project="editTarget"
+      @updated="onUpdated"
+      @close="editTarget = null"
+    />
+
+    <DeleteProjectModal
+      v-if="deleteTarget"
+      :project="deleteTarget"
+      @confirmed="onDeleted"
+      @close="deleteTarget = null"
+    />
+
+    <InitProjectModal
+      v-if="initTarget"
+      :project="initTarget"
+      @initialised="onInitialised"
+      @close="initTarget = null"
+    />
   </div>
 </template>
 
@@ -198,13 +235,12 @@ function onInit(_project: ProjectSummary) {
   text-decoration: none;
 }
 .project-name-link:hover { text-decoration: underline; }
-.td-desc {
+.td-muted {
   color: var(--color-text-muted);
-  max-width: 220px;
 }
-.td-path {
-  max-width: 240px;
-}
+.col-desc { max-width: 220px; }
+.col-owner { max-width: 140px; }
+.col-path { max-width: 240px; }
 .path-text {
   font-family: monospace;
   font-size: 12px;
@@ -247,25 +283,21 @@ function onInit(_project: ProjectSummary) {
   white-space: nowrap;
   transition: background 0.15s, border-color 0.15s;
 }
-.btn-action:hover {
-  background: var(--color-border);
-}
+.btn-action:hover { background: var(--color-border); }
 .btn-action--init {
   border-color: #f59e0b;
   color: #92400e;
 }
-.btn-action--init:hover {
-  background: #fef3c7;
-}
+.btn-action--init:hover { background: #fef3c7; }
 .btn-action--danger {
   border-color: #fca5a5;
   color: #991b1b;
 }
-.btn-action--danger:hover {
-  background: #fee2e2;
-}
+.btn-action--danger:hover { background: #fee2e2; }
+
 @media (max-width: 768px) {
-  .td-desc { display: none; }
-  .projects-table th:nth-child(2) { display: none; }
+  .col-desc, .col-owner { display: none; }
+  .projects-table th.col-desc,
+  .projects-table th.col-owner { display: none; }
 }
 </style>
