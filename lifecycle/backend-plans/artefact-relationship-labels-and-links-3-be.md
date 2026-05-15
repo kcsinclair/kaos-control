@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Artefact Relationship Labels and Clickable Links'
 type: plan-backend
-status: in-development
+status: done
 lineage: artefact-relationship-labels-and-links
 parent: lifecycle/requirements/artefact-relationship-labels-and-links-2.md
 ---
