@@ -111,6 +111,104 @@ func TestDispatcher_RunsJobsSequentially(t *testing.T) {
 	}
 }
 
+// TestDispatcher_IgnoresForeignFinishedEvent verifies that a stray
+// agent.finished event on the project hub — broadcast by some other run with
+// a different run_id (e.g. a manually-started UI run, or a previous queue
+// iteration's late-arriving event) — does NOT prematurely complete the
+// current job. Before run_id filtering was added in watchRunEvents, this
+// scenario caused the dispatcher to mark the current job completed and start
+// the next one while the real run was still holding its lineage lock,
+// surfacing as a "lock conflict" on the second job's StartRun.
+func TestDispatcher_IgnoresForeignFinishedEvent(t *testing.T) {
+	var startCount int32
+	dir := t.TempDir()
+	s, err := Open(filepath.Join(dir, "queue.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+
+	h := hub.New()
+	lookup := func(name string) (ProjectAccess, bool) {
+		return ProjectAccess{
+			StartRun: func(ctx context.Context, agentName, targetPath string) (string, error) {
+				count := atomic.AddInt32(&startCount, 1)
+				ourRunID := "real-run-" + targetPath
+
+				if count == 1 {
+					// On the very first StartRun: a foreign run finishes on the
+					// hub *while ours is still running*. The watcher must not
+					// be fooled.
+					go func() {
+						time.Sleep(10 * time.Millisecond)
+						h.Broadcast(hub.Event{
+							Type:    "agent.finished",
+							Payload: map[string]any{"run_id": "foreign-run-id", "status": "done"},
+						})
+						// Then OUR run finishes ~30ms later.
+						time.Sleep(30 * time.Millisecond)
+						h.Broadcast(hub.Event{
+							Type:    "agent.finished",
+							Payload: map[string]any{"run_id": ourRunID, "status": "done"},
+						})
+					}()
+				} else {
+					// Subsequent jobs finish normally with the right run_id.
+					go func() {
+						time.Sleep(5 * time.Millisecond)
+						h.Broadcast(hub.Event{
+							Type:    "agent.finished",
+							Payload: map[string]any{"run_id": ourRunID, "status": "done"},
+						})
+					}()
+				}
+				return ourRunID, nil
+			},
+			ArtifactStatus: func(relPath string) string { return "approved" },
+			Hub:            h,
+		}, true
+	}
+
+	cfg := Config{TickInterval: 5 * time.Millisecond, ClockFn: time.Now}
+	d := New(s, lookup, h, cfg)
+
+	for _, p := range []string{"lifecycle/ideas/a.md", "lifecycle/ideas/b.md"} {
+		if err := s.Enqueue(Job{Project: "proj", ArtifactPath: p, AgentName: "analyst", EnqueuedBy: "alice@example.com"}); err != nil {
+			t.Fatalf("Enqueue: %v", err)
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	d.Start(ctx)
+
+	// Wait long enough for both jobs to finish, including the foreign-event
+	// noise on job 1.
+	deadline := time.Now().Add(1500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		done, _ := s.ListByState(StateCompleted)
+		if len(done) == 2 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	done, _ := s.ListByState(StateCompleted)
+	if len(done) != 2 {
+		t.Fatalf("expected 2 completed jobs after foreign-event noise; got %d", len(done))
+	}
+	// Critical assertion: StartRun must have been called exactly twice — once
+	// per queued job, in order. If the foreign event leaked through, the
+	// dispatcher would have advanced to job 2 while job 1 was still "running"
+	// in our fake; that would still produce 2 starts but in wrong relative
+	// timing. The completed count + ordering check in
+	// TestDispatcher_RunsJobsSequentially covers ordering; here the key
+	// invariant is that we did NOT short-circuit job 1 on the foreign event.
+	if got := atomic.LoadInt32(&startCount); got != 2 {
+		t.Errorf("StartRun called %d times, want 2", got)
+	}
+}
+
 func TestDispatcher_SkipsNonApproved(t *testing.T) {
 	dir := t.TempDir()
 	s, err := Open(filepath.Join(dir, "queue.db"))

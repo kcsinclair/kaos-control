@@ -235,12 +235,21 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 	d.broadcastJobEvent("queue.started", job, "running")
 
 	// Subscribe to the project hub BEFORE starting the run so we don't miss
-	// any events emitted between Start and our subscription.
+	// any events emitted between Start and our subscription. The watcher is
+	// gated by runIDCh: it ignores all events until we know our run_id, then
+	// only accepts events whose payload run_id matches. Without this filter,
+	// a concurrent agent run (e.g. a manually-started UI run, or a previous
+	// queue iteration that completed slightly late) emitting agent.finished
+	// would be mis-attributed to *this* job — the dispatcher would mark this
+	// job completed and start the next one while the real run is still
+	// holding its lineage lock, surfacing as a "lock conflict" on the next
+	// job's StartRun.
 	runDone := make(chan runResult, 1)
+	runIDCh := make(chan string, 1)
 	if pa.Hub != nil {
 		evCh := make(chan []byte, 64)
 		pa.Hub.Register(evCh) // registers the send side
-		go d.watchRunEvents(ctx, evCh, pa.Hub, runDone)
+		go d.watchRunEvents(ctx, evCh, pa.Hub, runDone, runIDCh)
 	}
 
 	runID, err := pa.StartRun(ctx, job.AgentName, job.ArtifactPath)
@@ -249,7 +258,8 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 		_ = d.store.MarkTerminal(job.ID, StateFailed, "start_failed:"+err.Error())
 		d.broadcastJobEvent("queue.finished", job, "failed")
 		if pa.Hub != nil {
-			// Close runDone so the watcher goroutine exits.
+			// Unblock the watcher (so it exits cleanly), then close runDone.
+			close(runIDCh)
 			select {
 			case runDone <- runResult{kind: "cancelled"}:
 			default:
@@ -258,8 +268,12 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 		return
 	}
 
-	// If no hub is available (e.g. in tests without a hub), send a synthetic done.
-	if pa.Hub == nil {
+	// Hand the run_id to the watcher so it can start accepting events.
+	if pa.Hub != nil {
+		runIDCh <- runID
+		close(runIDCh)
+	} else {
+		// No hub (e.g. in tests): send a synthetic done.
 		go func() { runDone <- runResult{kind: "completed"} }()
 	}
 
@@ -296,11 +310,18 @@ type runResult struct {
 	rawText string // for rate_limit: the raw rate-limit message text
 }
 
-// watchRunEvents listens on evCh for agent.finished / agent.failed events and
-// routes the result to runDone. When the appropriate event is received (or ctx
-// is cancelled), it unregisters from the hub.
-func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hub.Hub, done chan<- runResult) {
+// watchRunEvents listens on evCh for agent.finished / agent.failed /
+// queue.rate_limit events scoped to ourRunID (received via runIDCh after
+// StartRun returns). Events that lack a payload.run_id, or whose run_id does
+// not match ourRunID, are ignored — they belong to other concurrent runs.
+//
+// Before ourRunID is known we still drain evCh (so the hub channel never
+// blocks Broadcast), but we never signal `done` for terminal events received
+// in that window, since those terminal events are by definition for an
+// earlier or parallel run, not the one we're about to start.
+func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hub.Hub, done chan<- runResult, runIDCh <-chan string) {
 	defer h.Unregister(evCh)
+	var ourRunID string
 	for {
 		select {
 		case <-ctx.Done():
@@ -309,6 +330,13 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 			default:
 			}
 			return
+		case rid, ok := <-runIDCh:
+			if !ok {
+				// runIDCh closed without a value — StartRun errored. Exit.
+				return
+			}
+			ourRunID = rid
+			runIDCh = nil // disable this case after first delivery
 		case data, ok := <-evCh:
 			if !ok {
 				return
@@ -323,6 +351,16 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 			}
 			if err := json.Unmarshal(data, &evt); err != nil {
 				continue
+			}
+			// Filter: terminal/dispatch-relevant events must match ourRunID.
+			// Until we know our run_id, drop these — they cannot be ours.
+			isRelevant := evt.Type == "agent.finished" ||
+				evt.Type == "agent.failed" ||
+				evt.Type == "queue.rate_limit"
+			if isRelevant {
+				if ourRunID == "" || evt.Payload.RunID != ourRunID {
+					continue
+				}
 			}
 			switch evt.Type {
 			case "agent.finished":
