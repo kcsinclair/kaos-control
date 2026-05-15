@@ -4,10 +4,12 @@ type: defect
 status: approved
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release2
 assignees:
-  - role: frontend-developer
-    who: agent
+    - role: frontend-developer
+      who: agent
 ---
 
 # "New Docs" creation modal submit never fires POST /artifacts

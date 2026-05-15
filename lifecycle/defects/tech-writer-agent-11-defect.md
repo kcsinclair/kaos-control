@@ -1,7 +1,7 @@
 ---
 title: '"Request docs" button not implemented on done artifact view'
 type: defect
-status: approved
+status: draft
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
 labels: [defect]

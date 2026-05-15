@@ -1,14 +1,16 @@
 ---
-title: "hook-helper test assertions use obsolete simple JSON format"
+title: hook-helper test assertions use obsolete simple JSON format
 type: defect
 status: approved
 lineage: claude-hooks-driver
-parent: lifecycle/tests/claude-hooks-driver-6-test.md
-labels: [defect]
-assignees:
-  - role: test-developer
-    who: agent
 created: "2026-05-16T00:00:00+10:00"
+parent: lifecycle/tests/claude-hooks-driver-6-test.md
+labels:
+    - defect
+release: KC-Release2
+assignees:
+    - role: test-developer
+      who: agent
 ---
 
 # hook-helper test assertions use obsolete simple JSON format
