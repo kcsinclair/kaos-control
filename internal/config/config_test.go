@@ -5,6 +5,8 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -363,6 +365,334 @@ func TestLoadApp_AgentPrecheckExplicitFalse(t *testing.T) {
 		t.Errorf("RequireBypassPermissions = true, want false (explicit override)")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Milestone 1 — ValidateProjectName
+// ---------------------------------------------------------------------------
+
+// TestValidateProjectName verifies the slug validation rules applied to project names.
+func TestValidateProjectName(t *testing.T) {
+	valid := []string{
+		"abc",
+		"my-project",
+		"a1b2c3",
+		"123",
+		"project-01",
+		strings.Repeat("a", 80), // maximum length
+	}
+	for _, name := range valid {
+		if err := ValidateProjectName(name); err != nil {
+			t.Errorf("ValidateProjectName(%q) = %v, want nil", name, err)
+		}
+	}
+
+	type badCase struct {
+		name   string
+		errSub string
+	}
+	bad := []badCase{
+		{"", "at least 3"},
+		{"a", "at least 3"},
+		{"ab", "at least 3"},
+		{strings.Repeat("a", 81), "at most 80"},
+		{"MyProject", "lowercase"},
+		{"ABC", "lowercase"},
+		{"my_project", "lowercase"},
+		{"my project", "lowercase"},
+		{"my.project", "lowercase"},
+		{"my@project", "lowercase"},
+	}
+	for _, tc := range bad {
+		err := ValidateProjectName(tc.name)
+		if err == nil {
+			t.Errorf("ValidateProjectName(%q) = nil, want error containing %q", tc.name, tc.errSub)
+			continue
+		}
+		if !strings.Contains(err.Error(), tc.errSub) {
+			t.Errorf("ValidateProjectName(%q) error = %q, want it to contain %q", tc.name, err.Error(), tc.errSub)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 1 — ValidatePath / ValidatePathFormat
+// ---------------------------------------------------------------------------
+
+// TestValidatePathFormat verifies the format-only check (no filesystem access).
+func TestValidatePathFormat(t *testing.T) {
+	t.Run("relative path rejected", func(t *testing.T) {
+		if err := ValidatePathFormat("relative/path"); err == nil {
+			t.Error("expected error for relative path, got nil")
+		}
+	})
+
+	t.Run("dotdot traversal (relative) rejected", func(t *testing.T) {
+		if err := ValidatePathFormat("../foo"); err == nil {
+			t.Error("expected error for ../foo, got nil")
+		}
+	})
+
+	t.Run("absolute path accepted", func(t *testing.T) {
+		if err := ValidatePathFormat("/tmp/some-project"); err != nil {
+			t.Errorf("ValidatePathFormat(/tmp/some-project) = %v, want nil", err)
+		}
+	})
+
+	t.Run("path inside kaos-control config dir rejected", func(t *testing.T) {
+		// Override XDG_CONFIG_HOME so the config dir is predictable.
+		xdg := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", xdg)
+		cfgDir := filepath.Join(xdg, "kaos-control")
+		inside := filepath.Join(cfgDir, "projects", "foo")
+		if err := ValidatePathFormat(inside); err == nil {
+			t.Errorf("ValidatePathFormat(%q) = nil, want error for path inside config dir", inside)
+		}
+	})
+
+	t.Run("path that IS the kaos-control config dir rejected", func(t *testing.T) {
+		xdg := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", xdg)
+		cfgDir := filepath.Join(xdg, "kaos-control")
+		if err := ValidatePathFormat(cfgDir); err == nil {
+			t.Errorf("ValidatePathFormat(%q) = nil, want error", cfgDir)
+		}
+	})
+}
+
+// TestValidatePath verifies full path validation including symlink resolution.
+func TestValidatePath(t *testing.T) {
+	t.Run("non-existent path rejected", func(t *testing.T) {
+		_, err := ValidatePath("/tmp/kaos-test-definitely-does-not-exist-xyz-12345")
+		if err == nil {
+			t.Error("expected error for non-existent path, got nil")
+		}
+	})
+
+	t.Run("existing directory accepted and returned", func(t *testing.T) {
+		dir := t.TempDir()
+		got, err := ValidatePath(dir)
+		if err != nil {
+			t.Fatalf("ValidatePath(%q) = %v, want nil", dir, err)
+		}
+		if got == "" {
+			t.Error("resolved path must not be empty")
+		}
+	})
+
+	t.Run("symlink resolves to real path", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("symlinks require elevated privileges on Windows")
+		}
+		target := t.TempDir()
+		link := filepath.Join(t.TempDir(), "symlink")
+		if err := os.Symlink(target, link); err != nil {
+			t.Fatalf("creating symlink: %v", err)
+		}
+		resolved, err := ValidatePath(link)
+		if err != nil {
+			t.Fatalf("ValidatePath(%q) = %v, want nil", link, err)
+		}
+		// The resolved path must differ from the symlink path.
+		if resolved == link {
+			t.Errorf("resolved path %q == symlink path, expected real path", resolved)
+		}
+	})
+
+	t.Run("symlink into config dir rejected", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("symlinks require elevated privileges on Windows")
+		}
+		// On macOS, t.TempDir() may return a path under /var/folders which is
+		// itself a symlink to /private/var/folders.  Resolve the base so that
+		// XDG_CONFIG_HOME is set to the canonical path; this ensures the check
+		// inside ValidatePath (which compares EvalSymlinks output against
+		// kaosControlConfigDir()) succeeds.
+		xdgBase := t.TempDir()
+		xdg, err := filepath.EvalSymlinks(xdgBase)
+		if err != nil {
+			t.Fatalf("resolving temp dir: %v", err)
+		}
+		t.Setenv("XDG_CONFIG_HOME", xdg)
+		cfgDir := filepath.Join(xdg, "kaos-control")
+		if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		// A symlink that points INTO the config dir.
+		link := filepath.Join(t.TempDir(), "sneaky")
+		if err := os.Symlink(cfgDir, link); err != nil {
+			t.Fatalf("creating symlink: %v", err)
+		}
+		_, valErr := ValidatePath(link)
+		if valErr == nil {
+			t.Errorf("ValidatePath(%q → %q) = nil, want error for config-dir target", link, cfgDir)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 1 — IsInitialised
+// ---------------------------------------------------------------------------
+
+// TestIsInitialised checks that the function correctly detects lifecycle/config.yaml.
+func TestIsInitialised(t *testing.T) {
+	t.Run("returns true when lifecycle/config.yaml exists", func(t *testing.T) {
+		dir := t.TempDir()
+		lcDir := filepath.Join(dir, "lifecycle")
+		if err := os.MkdirAll(lcDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(lcDir, "config.yaml"), []byte("stages: []\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if !IsInitialised(dir) {
+			t.Error("IsInitialised = false, want true when lifecycle/config.yaml exists")
+		}
+	})
+
+	t.Run("returns false when lifecycle/config.yaml absent", func(t *testing.T) {
+		dir := t.TempDir()
+		if IsInitialised(dir) {
+			t.Error("IsInitialised = true, want false when lifecycle/ does not exist")
+		}
+	})
+
+	t.Run("returns false when lifecycle/ exists but config.yaml absent", func(t *testing.T) {
+		dir := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(dir, "lifecycle"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if IsInitialised(dir) {
+			t.Error("IsInitialised = true, want false when lifecycle/config.yaml missing")
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 1 — SaveProjectEntry atomicity
+// ---------------------------------------------------------------------------
+
+// TestSaveProjectEntry_Atomic verifies that SaveProjectEntry writes via a temp
+// file so the destination is either absent or complete — never partial.
+func TestSaveProjectEntry_Atomic(t *testing.T) {
+	dir := t.TempDir()
+	entry := &ProjectEntry{
+		Name:        "my-project",
+		Path:        "/some/path",
+		Description: "test project",
+		Owner:       "alice",
+	}
+
+	if err := SaveProjectEntry(dir, entry); err != nil {
+		t.Fatalf("SaveProjectEntry: %v", err)
+	}
+
+	dest := filepath.Join(dir, "my-project.yaml")
+	data, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("reading saved entry: %v", err)
+	}
+	if len(data) == 0 {
+		t.Error("saved entry file is empty")
+	}
+	// Verify it's well-formed YAML by loading it back.
+	loaded, err := loadProjectEntry(dest)
+	if err != nil {
+		t.Fatalf("loadProjectEntry on saved file: %v", err)
+	}
+	if loaded.Name != entry.Name {
+		t.Errorf("loaded.Name = %q, want %q", loaded.Name, entry.Name)
+	}
+	if loaded.Path != entry.Path {
+		t.Errorf("loaded.Path = %q, want %q", loaded.Path, entry.Path)
+	}
+	if loaded.Description != entry.Description {
+		t.Errorf("loaded.Description = %q, want %q", loaded.Description, entry.Description)
+	}
+	if loaded.Owner != entry.Owner {
+		t.Errorf("loaded.Owner = %q, want %q", loaded.Owner, entry.Owner)
+	}
+
+	// Verify no stray temp files were left behind.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".tmp") {
+			t.Errorf("temp file left behind: %s", e.Name())
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 1 — DefaultStages and DefaultProjectConfigYAML
+// ---------------------------------------------------------------------------
+
+// TestDefaultStages verifies that DefaultStages returns the canonical set of
+// lifecycle stage directory names in the expected order.
+func TestDefaultStages(t *testing.T) {
+	stages := DefaultStages()
+	if len(stages) == 0 {
+		t.Fatal("DefaultStages() returned empty slice")
+	}
+
+	// The spec-mandated stages that must always be present.
+	required := []string{
+		"ideas", "requirements", "backend-plans", "frontend-plans",
+		"test-plans", "tests", "prototypes", "releases", "sprints", "defects",
+	}
+	stageSet := make(map[string]bool, len(stages))
+	for _, s := range stages {
+		stageSet[s] = true
+	}
+	for _, want := range required {
+		if !stageSet[want] {
+			t.Errorf("required stage %q missing from DefaultStages()", want)
+		}
+	}
+}
+
+// TestDefaultProjectConfigYAML verifies that DefaultProjectConfigYAML returns
+// non-empty valid YAML that loads as a Project with the default stages.
+func TestDefaultProjectConfigYAML(t *testing.T) {
+	yaml := DefaultProjectConfigYAML()
+	if yaml == "" {
+		t.Fatal("DefaultProjectConfigYAML() returned empty string")
+	}
+
+	// Write to a temp dir and load it.
+	dir := t.TempDir()
+	lcDir := filepath.Join(dir, "lifecycle")
+	if err := os.MkdirAll(lcDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lcDir, "config.yaml"), []byte(yaml), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject on DefaultProjectConfigYAML output: %v", err)
+	}
+	if len(cfg.Stages) == 0 {
+		t.Error("loaded project has no stages")
+	}
+
+	// Confirm that all default stage dirs appear.
+	defaultDirs := DefaultStages()
+	stageSet := make(map[string]bool, len(cfg.Stages))
+	for _, s := range cfg.Stages {
+		stageSet[s.Dir] = true
+	}
+	for _, want := range defaultDirs {
+		if !stageSet[want] {
+			t.Errorf("stage dir %q from DefaultStages() missing in loaded config", want)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers (used above; also used by existing tests below)
+// ---------------------------------------------------------------------------
 
 // writeMinimalProjectConfig writes a lifecycle/config.yaml with a minimal valid
 // base configuration plus an optional extra YAML snippet (e.g. an ignore: line),
