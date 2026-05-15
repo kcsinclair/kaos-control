@@ -291,6 +291,14 @@ onMounted(() => {
               <!-- Permission events -->
               <div v-if="store.permissionEvents.get(run.run_id)?.length" class="detail-section">
                 <div class="detail-label">Permission Events</div>
+                <!-- Observe-only mode notice -->
+                <div
+                  v-if="store.agents.find(a => a.name === run.agent_name)?.observe_only"
+                  class="observe-notice"
+                >
+                  Observe-only mode — all tool calls were allowed.
+                  Decisions shown are what would have been enforced.
+                </div>
                 <div class="perm-event-list">
                   <div
                     v-for="(ev, idx) in store.permissionEvents.get(run.run_id)"
@@ -326,6 +334,7 @@ onMounted(() => {
               <RunDenialSummary
                 v-if="run.denied_tool_calls?.length"
                 :denials="run.denied_tool_calls"
+                :observe-only="store.agents.find(a => a.name === run.agent_name)?.observe_only"
               />
               <!-- Run summary (terminal runs only) -->
               <div v-if="TERMINAL_RUN_STATUSES.has(run.status)" class="detail-section">
@@ -572,6 +581,16 @@ onMounted(() => {
 .driver-badge[data-driver="ollama"] { background: #dbeafe; color: #1d4ed8; }
 .driver-badge[data-driver="claude-code-cli"] { background: #f3e8ff; color: #7e22ce; }
 .driver-badge[data-driver="claude-mediated"] { background: #fef3c7; color: #92400e; }
+/* Observe-only notice */
+.observe-notice {
+  font-size: 12px;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+}
 /* Permission events */
 .perm-event-list {
   display: flex;

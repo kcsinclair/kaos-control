@@ -187,6 +187,7 @@ function handleOverlayClick(e: MouseEvent) {
           <RunDenialSummary
             v-if="run.denied_tool_calls?.length"
             :denials="run.denied_tool_calls"
+            :observe-only="agentsStore.agents.find(a => a.name === run.agent_name)?.observe_only"
           />
 
           <!-- Run summary card (terminal runs only) -->

@@ -120,7 +120,10 @@ function runningCount(agent: AgentSummary): number {
         </div>
       </div>
       <span class="panel-roles">{{ agent.roles.join(', ') }}</span>
-      <span v-if="!isInline(agent)" class="panel-driver" :data-driver="agent.driver">{{ driverLabel(agent) }}</span>
+      <div class="panel-driver-row">
+        <span v-if="!isInline(agent)" class="panel-driver" :data-driver="agent.driver">{{ driverLabel(agent) }}</span>
+        <span v-if="agent.observe_only" class="panel-observe-badge">observe</span>
+      </div>
       <span v-if="agent.model" class="panel-model">{{ agent.model }}</span>
       <span v-if="isOllama(agent) && agent.ollama_instance" class="panel-model">{{ agent.ollama_instance }}</span>
       <span v-if="isInline(agent)" class="panel-inline-label">Externally driven</span>
@@ -299,6 +302,23 @@ function runningCount(agent: AgentSummary): number {
 .panel-driver[data-driver="claude-mediated"] {
   background: #fef3c7;
   color: #92400e;
+}
+.panel-driver-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+.panel-observe-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
+  border: 1px solid #92400e;
+  color: #92400e;
+  background: transparent;
+  align-self: flex-start;
 }
 .panel-inline-label {
   font-size: 10px;
