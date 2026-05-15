@@ -166,6 +166,9 @@ func (s *Server) buildRouter() chi.Router {
 		r.Put("/projects/{project}", s.handleUpdateProject)
 		r.Delete("/projects/{project}", s.handleDeleteProject)
 		r.Post("/projects/{project}/init", s.handleInitProject)
+		// check-directory must be registered before /{project} to avoid
+		// "check-directory" being matched as a project name.
+		r.Post("/projects/check-directory", s.handleCheckDirectory)
 
 		// App-level WebSocket (queue events, etc.)
 		r.Get("/ws", s.handleAppWebSocket)

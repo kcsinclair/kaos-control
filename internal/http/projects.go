@@ -176,6 +176,48 @@ func (s *Server) handleInitProject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// handleCheckDirectory validates a filesystem path before form submission.
+// Does not require the project to be registered.
+func (s *Server) handleCheckDirectory(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Path string `json:"path"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_body", "invalid JSON: "+err.Error()))
+		return
+	}
+
+	if err := config.ValidatePathFormat(body.Path); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+		return
+	}
+
+	info, statErr := os.Stat(body.Path)
+	exists := statErr == nil && info.IsDir()
+	writable := false
+	if exists {
+		writable = isWritable(body.Path)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"exists":      exists,
+		"writable":    writable,
+		"initialised": config.IsInitialised(body.Path),
+	})
+}
+
+// isWritable reports whether the directory at path is writable by the current process.
+func isWritable(path string) bool {
+	probe := filepath.Join(path, ".kaos-write-probe")
+	f, err := os.OpenFile(probe, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o600)
+	if err != nil {
+		return false
+	}
+	f.Close()
+	_ = os.Remove(probe)
+	return true
+}
+
 // handleDeleteProject unloads a project from the server and removes its registry file.
 // No on-disk project files are deleted.
 func (s *Server) handleDeleteProject(w http.ResponseWriter, r *http.Request) {
