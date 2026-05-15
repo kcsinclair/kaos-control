@@ -11,7 +11,7 @@ import TransitionDialog from './TransitionDialog.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
-import { useGraphTheme } from '@/components/map/graphConstants'
+import { useGraphTheme, edgeLabel } from '@/components/map/graphConstants'
 import StatusCheckPanel from './StatusCheckPanel.vue'
 import type { GraphNode, ArtifactDetail, GraphEdge } from '@/types/api'
 
@@ -251,14 +251,14 @@ const STATUS_TEXT: Record<string, string> = {
           <div v-if="outbound.length" class="edge-group">
             <div class="edge-group-label">Outbound</div>
             <div v-for="e in outbound" :key="e.target + e.kind" class="edge-item">
-              <span class="edge-kind">{{ e.kind }}</span>
+              <span class="edge-kind">{{ edgeLabel(e.kind, 'outbound') }}</span>
               <span class="edge-path">{{ e.target }}</span>
             </div>
           </div>
           <div v-if="inbound.length" class="edge-group">
             <div class="edge-group-label">Inbound</div>
             <div v-for="e in inbound" :key="e.source + e.kind" class="edge-item">
-              <span class="edge-kind">{{ e.kind }}</span>
+              <span class="edge-kind">{{ edgeLabel(e.kind, 'inbound') }}</span>
               <span class="edge-path">{{ e.source }}</span>
             </div>
           </div>
