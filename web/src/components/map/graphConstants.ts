@@ -162,6 +162,26 @@ const LIGHT_PALETTE: GraphPalette = {
   dimBlend:             '#d1d5db',
 }
 
+// ─── Edge label map ───────────────────────────────────────────────────────────
+
+export interface EdgeLabelPair {
+  outbound: string  // current artifact is source
+  inbound: string   // current artifact is target
+}
+
+export const EDGE_LABEL_MAP: Record<string, EdgeLabelPair> = {
+  parent:     { outbound: 'CHILD OF',        inbound: 'PARENT OF' },
+  depends_on: { outbound: 'DEPENDS ON',      inbound: 'DEPENDED ON BY' },
+  blocks:     { outbound: 'BLOCKS',          inbound: 'BLOCKED BY' },
+  related_to: { outbound: 'RELATED TO',      inbound: 'RELATED TO' },
+  members:    { outbound: 'MEMBER OF',       inbound: 'HAS MEMBER' },
+  wiki:       { outbound: 'LINKS TO',        inbound: 'LINKED FROM' },
+}
+
+export function edgeLabel(kind: string, direction: 'inbound' | 'outbound'): string {
+  return EDGE_LABEL_MAP[kind]?.[direction] ?? kind.toUpperCase()
+}
+
 // ─── Composable ───────────────────────────────────────────────────────────────
 
 export function useGraphTheme() {
