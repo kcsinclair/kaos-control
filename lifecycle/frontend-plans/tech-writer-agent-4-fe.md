@@ -1,7 +1,7 @@
 ---
 title: "Tech Writer Agent — Frontend Plan"
 type: plan-frontend
-status: draft
+status: approved
 lineage: tech-writer-agent
 parent: lifecycle/requirements/tech-writer-agent-2.md
 ---
