@@ -59,6 +59,14 @@ type OpenOptions struct {
 	// <appHome>/devops/<project> (e.g. ~/.kaos-control/devops/<project> when
 	// dbDir = ~/.kaos-control/data).
 	DevopsLogDir string
+
+	// HookServerAddr is the address the hook-helper binary should POST
+	// permission requests to (e.g. "127.0.0.1:9600"). Required for
+	// claude-mediated agents; ignored by other drivers.
+	HookServerAddr string
+	// HookBinaryPath is the absolute path to the kaos-control binary used as
+	// the hook-helper command. If empty, os.Executable() is used at run time.
+	HookBinaryPath string
 }
 
 // Open loads the project config, opens the SQLite index, scans the lifecycle tree,
@@ -130,6 +138,9 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	if len(cfg.Agents) > 0 {
 		runsLogDir := filepath.Join(dbDir, entry.Name, "runs")
 		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, wf, entry.Path, runsLogDir, opts.OllamaInstances, opts.AgentCfg)
+		if opts.HookServerAddr != "" {
+			agentMgr.ConfigureHookDriver(opts.HookServerAddr, opts.HookBinaryPath)
+		}
 	}
 
 	// Determine the base directory for devops run logs.

@@ -178,10 +178,17 @@ func (d *ClaudeCodeDriver) buildArgs(run Run) []string {
 
 func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) {
 	args := d.buildArgs(run)
-
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	cmd.Dir = run.ProjectRoot
+	return startClaudeProcess(ctx, cmd, run, args)
+}
 
+// startClaudeProcess is the shared subprocess launcher used by both
+// ClaudeCodeDriver and ClaudeHooksDriver. It takes an already-configured
+// exec.Cmd (with Dir and Env set by the caller) plus the arg list (only used
+// for the log-file header) and returns a claudeProcess with stdout/stderr
+// piped, progress events streaming, and the log file open (FR3).
+func startClaudeProcess(_ context.Context, cmd *exec.Cmd, run Run, args []string) (Process, error) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("stdout pipe: %w", err)
@@ -331,6 +338,7 @@ type Manager struct {
 // ollamaInstances is the app-level list of registered Ollama servers.
 // wf is the optional workflow engine used for type-aware transition validation.
 // agentCfg supplies the precheck timeout and bypass-permissions requirement.
+// serverAddr is the listen address used by the HTTP server (for hook-helper).
 func New(
 	agents []config.AgentConfig,
 	maxConcurrent int,
@@ -356,11 +364,7 @@ func New(
 		requireBypass = *agentCfg.RequireBypassPermissions
 	}
 	m := &Manager{
-		agents: agents,
-		drivers: map[string]Driver{
-			"claude-code-cli": &ClaudeCodeDriver{},
-			"ollama":          &OllamaDriver{Instances: ollamaInstances},
-		},
+		agents:             agents,
 		sem:                make(chan struct{}, maxConcurrent),
 		active:             make(map[string]*activeRun),
 		runSecrets:         make(map[string]string),
@@ -376,6 +380,16 @@ func New(
 		initEventTimeout:   timeout,
 		requireBypassPerms: requireBypass,
 		killer:             defaultProcessKiller{},
+	}
+
+	// Build hook driver with a StoreSecret callback into this Manager.
+	hookDriver := &ClaudeHooksDriver{
+		StoreSecret: m.StoreRunSecret,
+	}
+	m.drivers = map[string]Driver{
+		"claude-code-cli":  &ClaudeCodeDriver{},
+		"ollama":           &OllamaDriver{Instances: ollamaInstances},
+		"claude-mediated":  hookDriver,
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
 	if err := idx.RecoverRunningRuns(); err != nil {
@@ -548,6 +562,19 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		}
 	}
 
+	// For claude-mediated runs, build and store the PolicyConfig before
+	// starting the driver so the permission endpoint is ready immediately.
+	if ag.Driver == "claude-mediated" {
+		bashDenylist := mergeDenylist(ag.BashDenylist)
+		policy := &PolicyConfig{
+			AllowedPaths:  ag.AllowedPaths,
+			BashAllowlist: ag.BashAllowlist,
+			BashDenylist:  bashDenylist,
+			ObserveOnly:   ag.ObserveOnly,
+		}
+		m.StoreRunPolicy(runID, policy)
+	}
+
 	// Start the driver process. timeout_minutes=0 disables the timeout.
 	var runCtx context.Context
 	var cancel context.CancelFunc
@@ -667,6 +694,9 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	_, wasActive := m.active[run.RunID]
 	delete(m.active, run.RunID)
 	m.mu.Unlock()
+
+	// Release per-run secret and policy state (denial records handled later).
+	m.cleanupRunState(run.RunID)
 
 	// Release semaphore.
 	<-m.sem
@@ -1096,6 +1126,27 @@ func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// mergeDenylist returns the union of DefaultBashDenylist and perAgent entries
+// (duplicates are harmless — each pattern is checked independently).
+func mergeDenylist(perAgent []string) []string {
+	merged := make([]string, len(DefaultBashDenylist), len(DefaultBashDenylist)+len(perAgent))
+	copy(merged, DefaultBashDenylist)
+	return append(merged, perAgent...)
+}
+
+// ConfigureHookDriver sets the ServerAddr and BinaryPath on the
+// ClaudeHooksDriver registered under the "claude-mediated" key. Must be called
+// before any claude-mediated runs are started. Typically invoked after New()
+// once the HTTP server's listen address is known.
+func (m *Manager) ConfigureHookDriver(serverAddr, binaryPath string) {
+	if drv, ok := m.drivers["claude-mediated"]; ok {
+		if hd, ok := drv.(*ClaudeHooksDriver); ok {
+			hd.ServerAddr = serverAddr
+			hd.BinaryPath = binaryPath
+		}
+	}
 }
 
 // extractRateLimitText inspects a decoded agent.progress event payload and

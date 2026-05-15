@@ -94,6 +94,13 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Resolve the binary path once so hook-helper invocations are stable.
+	selfBinary, err := os.Executable()
+	if err != nil {
+		slog.Warn("could not resolve binary path; claude-mediated agents will use os.Executable() at run time", "err", err)
+		selfBinary = ""
+	}
+
 	// Open each project (loads config + opens/scans SQLite index).
 	projects := make(map[string]*project.Project, len(entries))
 	opts := project.OpenOptions{
@@ -105,7 +112,9 @@ func run() error {
 		// DevopsLogDir: store pipeline run logs at <appHome>/devops/<project>,
 		// e.g. ~/.kaos-control/devops/<project>. This is the directory that
 		// contains config.yaml, which is the app home directory.
-		DevopsLogDir: filepath.Dir(cfgPath),
+		DevopsLogDir:   filepath.Dir(cfgPath),
+		HookServerAddr: appCfg.Server.Listen,
+		HookBinaryPath: selfBinary,
 	}
 	for _, e := range entries {
 		slog.Info("opening project", "name", e.Name, "path", e.Path)
