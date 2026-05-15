@@ -1,7 +1,7 @@
 ---
 title: Artifact Relationship Links Not Clickable in Right Panel
 type: defect
-status: approved
+status: in-development
 lineage: artifact-relationship-links-not-clickable
 created: "2026-05-16T08:09:06+10:00"
 priority: normal
@@ -10,6 +10,7 @@ labels:
     - frontend
     - artefacts
     - vue
+release: KC-Release2
 ---
 
 # Artifact Relationship Links Not Clickable in Right Panel
