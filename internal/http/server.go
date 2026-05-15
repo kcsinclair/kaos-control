@@ -165,6 +165,7 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/projects/{project}", s.handleGetProject)
 		r.Put("/projects/{project}", s.handleUpdateProject)
 		r.Delete("/projects/{project}", s.handleDeleteProject)
+		r.Post("/projects/{project}/init", s.handleInitProject)
 
 		// App-level WebSocket (queue events, etc.)
 		r.Get("/ws", s.handleAppWebSocket)
