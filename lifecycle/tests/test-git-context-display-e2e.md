@@ -1,7 +1,7 @@
 ---
 title: "Git Context Display — Integration and Component Tests"
 type: test
-status: approved
+status: in-qa
 lineage: git-context-display
 parent: lifecycle/test-plans/git-context-display-5-test.md
 ---
