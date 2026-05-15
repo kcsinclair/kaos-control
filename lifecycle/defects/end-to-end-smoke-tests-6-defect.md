@@ -1,7 +1,7 @@
 ---
 title: "Fixture config.yaml uses `roles:` instead of `role:` for tech-writer agent — project.Open fails, all 14 E2E tests see "project not found""
 type: defect
-status: draft
+status: approved
 lineage: end-to-end-smoke-tests
 parent: lifecycle/tests/end-to-end-smoke-tests-4-test.md
 labels: [defect]
