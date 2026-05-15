@@ -1,7 +1,7 @@
 ---
 title: 'Artefacts View: Agent Run Count Column'
 type: requirement
-status: blocked
+status: approved
 lineage: artefacts-agent-run-count-column
 created: "2026-05-16"
 priority: normal
@@ -68,7 +68,12 @@ This forces product owners and QA to click through artefacts one by one to ident
 - [ ] `pnpm exec vue-tsc --noEmit` and `pnpm build` pass after frontend changes.
 - [ ] Related: [[artefacts-agent-run-count-column]]
 
-## Open Questions
+## Resolved Questions
 
 - Q1: Should the count include all run statuses (done, failed, killed, killed-timeout, running) or only completed runs? The idea says "total number of times an agent has been run" which implies all statuses. Recommend: count all statuses.
+
+> It should be the total of all runs.  If there is a job running or queued for an artefact, something in the row should indicate that.  A pill beside the name work work, "Agent Running" or "Work Queued"
+
 - Q2: Should the column header be "Agent Runs", "Runs", or something shorter? Recommend: "Runs" for compactness with a tooltip showing "Agent Run Count".
+
+> Runs works.
