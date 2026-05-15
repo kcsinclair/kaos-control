@@ -1,7 +1,7 @@
 ---
 title: "Tech Writer Agent — Test Suite"
 type: test
-status: approved
+status: in-qa
 lineage: tech-writer-agent
 parent: lifecycle/test-plans/tech-writer-agent-5-test.md
 ---
