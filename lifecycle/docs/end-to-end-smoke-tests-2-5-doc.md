@@ -1,11 +1,13 @@
 ---
 title: End-to-End Smoke Tests
 type: doc
-status: in-development
+status: done
 lineage: end-to-end-smoke-tests
 created: "2026-05-16T08:00:44+10:00"
+completed: "2026-05-16"
 priority: normal
 parent: lifecycle/ideas/end-to-end-smoke-tests.md
+output: docs/end-to-end-smoke-tests.md
 labels:
     - playwright
     - testing
@@ -19,38 +21,16 @@ labels:
 
 Documentation covering the design, setup, and execution of Playwright-based end-to-end smoke tests that drive the full system: Go binary, Vue SPA, WebSocket, and auth — together in a real browser.
 
-## Overview
+## Produced
 
-Explain the distinction between the existing Vitest + happy-dom component tests (~337 tests in `tests/web/`) and these E2E smoke tests. Clarify that smoke tests prove the system is wired up end-to-end; they are not regression coverage. Reference the `plans/PROJECT_PLAN.md` line that conflated the two and note that component tests are done while smoke tests are not yet started.
+Full documentation written to `docs/end-to-end-smoke-tests.md`.
 
-## Why Playwright
+### Sections covered
 
-Document the rationale for choosing Playwright over Vitest browser mode: flows must span an out-of-process Go backend (auth, WebSocket, file I/O), which is an E2E job. Note that Playwright adds a dependency but stays cleanly isolated from the component test stack.
-
-## Test Environment Setup
-
-Describe how the test environment is bootstrapped:
-- Whether tests run against a freshly-built `./dist/kaos-control` binary with a temp `~/.kaos-control` config, or against `make run`.
-- How the `lifecycle/` fixture directory is seeded (own fixture or reuse `tests/fixtures/`).
-- Any required environment variables or config files.
-
-## Covered Flows
-
-Document each of the five initial smoke test flows:
-1. **Login → project picker → open project** — auth round-trip, session cookie, project listing.
-2. **Open an artifact, edit, save** — file written to disk, re-indexed, WebSocket `artifact.indexed` event received and reflected in the UI.
-3. **Transition an artifact** — role-gated transition succeeds, status persists, commit created.
-4. **Start an agent run** — run dialog → run starts → progress events stream over WS → run appears in run history.
-5. **Open the 3D graph and click a node** — graph loads with real data, node click navigates to the editor.
-
-## Running the Tests
-
-Document the `make test-e2e` target: how to invoke it, what it builds/starts, how to read results, and how to run a single flow in isolation. Note that these are gated behind `make test-e2e` rather than wired into CI as an automatic job.
-
-## CI Integration
-
-Describe the CI strategy: whether these run as a separate slower job with a real browser, what triggers them, and any caching considerations for the Playwright browser binaries.
-
-## Extending the Suite
-
-Guidance for adding new smoke test flows: naming conventions, fixture patterns, how to assert on WebSocket events, and when a new flow warrants a smoke test versus a component test.
+- **Overview** — distinction between the Vitest + happy-dom component test suite (`tests/web/`, ≈337 tests) and the Playwright E2E smoke tests; clarification that smoke tests prove end-to-end wiring, not regression coverage.
+- **Why Playwright** — rationale for choosing Playwright over Vitest browser mode; flows must span an out-of-process Go backend (auth, WebSocket, disk I/O), which requires a real browser and a real binary.
+- **Test Environment Setup** — step-by-step bootstrap: binary compilation, temp home/project directories, fixture copy (`tests/e2e/fixtures/lifecycle/`), git init, free-port binding, app config and project registration, `/api/health` poll, admin user bootstrap. No environment variables required.
+- **Covered Flows** — detailed writeups for all six flows (00–05): harness smoke, login/project access, edit-and-save with `file.changed` WS assertion, status transition with frontmatter + git verification, stub agent run with `agent.started` WS event and `done` status poll, and graph node click navigation.
+- **Running the Tests** — `make test-e2e`, interactive UI (`pnpm --dir tests/e2e test:ui`), debugger mode (`test:debug`), single-flow targeting by file or grep, reading the HTML report, trace inspection.
+- **CI Integration** — rationale for keeping smoke tests out of the default PR CI job; example GitHub Actions job YAML; Playwright browser caching strategy.
+- **Extending the Suite** — naming conventions, skeleton template, fixture data guidelines, `connectProjectWs` helper usage with annotated example, smoke test vs component test decision heuristic.
