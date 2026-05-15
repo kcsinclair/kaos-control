@@ -308,6 +308,19 @@ type AgentConfig struct {
 	// Ollama-specific fields (only used when Driver == "ollama").
 	OllamaInstanceName string `yaml:"ollama_instance,omitempty"` // name of OllamaInstance in app config
 	OllamaEndpoint     string `yaml:"ollama_endpoint,omitempty"` // "chat" (default) or "generate"
+	// claude-mediated driver fields.
+	// BashAllowlist is a list of glob patterns; when non-empty only matching
+	// commands are permitted. Checked after BashDenylist.
+	BashAllowlist []string `yaml:"bash_allowlist,omitempty"`
+	// BashDenylist is a list of glob patterns; matching commands are denied
+	// regardless of BashAllowlist. Merged with the built-in default denylist.
+	BashDenylist []string `yaml:"bash_denylist,omitempty"`
+	// OnDenial controls what happens when a tool call is denied: "continue"
+	// (default) lets the agent keep running; "abort" kills it immediately.
+	OnDenial string `yaml:"on_denial,omitempty"`
+	// ObserveOnly puts the permission endpoint in log-only mode: every tool
+	// call is logged but always allowed. Useful for auditing without blocking.
+	ObserveOnly bool `yaml:"observe_only,omitempty"`
 }
 
 // GitIdentity is the git author identity for an agent or user commit.
@@ -487,6 +500,13 @@ func validateProject(cfg *Project) error {
 				a.OllamaEndpoint = "chat"
 			} else if a.OllamaEndpoint != "chat" && a.OllamaEndpoint != "generate" {
 				return fmt.Errorf("project config: agent %q ollama_endpoint must be \"chat\" or \"generate\", got %q", a.Name, a.OllamaEndpoint)
+			}
+		}
+		if a.Driver == "claude-mediated" {
+			if a.OnDenial == "" {
+				a.OnDenial = "continue"
+			} else if a.OnDenial != "continue" && a.OnDenial != "abort" {
+				return fmt.Errorf("project config: agent %q on_denial must be \"continue\" or \"abort\", got %q", a.Name, a.OnDenial)
 			}
 		}
 	}
