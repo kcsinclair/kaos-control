@@ -654,10 +654,10 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		}
 	}
 
-	// The init-event/permission-mode precheck is Claude-Code-specific — only
-	// `claude` emits system/init events with a permissionMode field. For any
-	// other driver, just forward events to the hub until the channel closes.
-	if run.Driver == "claude-code-cli" {
+	// Branch on driver type for the init-event precheck.
+	switch run.Driver {
+	case "claude-code-cli":
+		// Full bypass-permissions check: fail if mode is not bypassPermissions.
 		precheckResult, observedMode := runPrecheck(
 			proc.Progress(),
 			m.initEventTimeout,
@@ -666,12 +666,27 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 			broadcast,
 			func() { m.killer.Kill(proc) },
 		)
-
 		if precheckResult == precheckFailedMode || precheckResult == precheckFailedTimeout {
 			m.killAndFail(run, row, proc, lineage, precheckResult, observedMode)
 			return
 		}
-	} else {
+
+	case "claude-mediated":
+		// Mediated precheck: fail if mode IS bypassPermissions (hooks not active).
+		precheckResult, observedMode := runMediatedPrecheck(
+			proc.Progress(),
+			m.initEventTimeout,
+			run.RunID,
+			broadcast,
+			func() { m.killer.Kill(proc) },
+		)
+		if precheckResult == precheckFailedMode || precheckResult == precheckFailedTimeout {
+			m.killAndFail(run, row, proc, lineage, precheckResult, observedMode)
+			return
+		}
+
+	default:
+		// Non-Claude drivers: just drain and forward events.
 		for ev := range proc.Progress() {
 			payload := map[string]any{
 				"run_id": run.RunID,
@@ -874,11 +889,16 @@ func (m *Manager) killAndFail(
 	var remediation []string
 	switch state {
 	case precheckFailedMode:
-		reason = "permission_mode_default"
-		if observedMode == "acceptEdits" {
-			reason = "permission_mode_accept_edits"
+		if run.Driver == "claude-mediated" && observedMode == "bypassPermissions" {
+			reason = "precheck_mediated_bypass"
+			remediation = mediatedBypassRemediation
+		} else {
+			reason = "permission_mode_default"
+			if observedMode == "acceptEdits" {
+				reason = "permission_mode_accept_edits"
+			}
+			remediation = modeRemediation
 		}
-		remediation = modeRemediation
 	case precheckFailedTimeout:
 		reason = "precheck_timeout"
 		remediation = timeoutRemediation

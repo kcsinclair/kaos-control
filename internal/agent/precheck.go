@@ -36,6 +36,14 @@ var timeoutRemediation = []string{
 	"Increase 'init_event_timeout_seconds' under 'agent:' in ~/.kaos-control/config.yaml if needed.",
 }
 
+// mediatedBypassRemediation is returned when a claude-mediated run reports
+// bypassPermissions mode, meaning the hooks settings file was not applied.
+var mediatedBypassRemediation = []string{
+	"The Claude Code process reported bypassPermissions mode on a claude-mediated run.",
+	"This means the --settings file was ignored or Claude Code was started with bypass flags.",
+	"Ensure the kaos-control settings.json path is not overridden by a global Claude Code configuration.",
+}
+
 // runPrecheck drives the init-event permission-mode precheck alongside event
 // forwarding. It reads from events, calls broadcast for each forwarded event,
 // and applies the precheck when the first system/init event arrives.
@@ -122,6 +130,82 @@ func runPrecheck(
 						"run_id", runID, "mode", mode)
 					killFunc()
 					return precheckFailedMode, mode
+				}
+			}
+		}
+	}
+}
+
+// runMediatedPrecheck is the precheck for claude-mediated runs (FR18).
+// It reads the system/init event and fails the run if Claude Code reports
+// bypassPermissions mode (which would mean our hooks are not being used).
+//
+// Unlike runPrecheck, this function does NOT fail on non-bypass modes — those
+// are expected and desirable. It only fails on bypassPermissions.
+func runMediatedPrecheck(
+	events <-chan ProgressEvent,
+	timeout time.Duration,
+	runID string,
+	broadcast func(hub.Event),
+	killFunc func(),
+) (precheckState, string) {
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	pending := true
+
+	for {
+		select {
+		case <-timer.C:
+			if pending {
+				slog.Warn("agent: mediated precheck timeout: no system/init event received",
+					"run_id", runID, "timeout", timeout)
+				killFunc()
+				return precheckFailedTimeout, ""
+			}
+
+		case ev, ok := <-events:
+			if !ok {
+				if pending {
+					timer.Stop()
+				}
+				return precheckPassed, ""
+			}
+
+			// Forward event to hub subscribers.
+			if broadcast != nil {
+				payload := map[string]any{
+					"run_id": runID,
+					"line":   ev.Raw,
+					"raw":    ev.Raw,
+				}
+				if ev.Event != nil {
+					payload["event"] = ev.Event
+				}
+				broadcast(hub.Event{Type: "agent.progress", Payload: payload})
+			}
+
+			if pending && ev.Event != nil {
+				evType, _ := ev.Event["type"].(string)
+				evSubtype, _ := ev.Event["subtype"].(string)
+				if evType == "system" && evSubtype == "init" {
+					pending = false
+					timer.Stop()
+
+					mode, _ := ev.Event["permissionMode"].(string)
+					if mode == "bypassPermissions" {
+						// Hooks are not in effect — fail the run (AC13).
+						slog.Warn("agent: mediated precheck failed: claude reported bypassPermissions (hooks not active)",
+							"run_id", runID)
+						killFunc()
+						return precheckFailedMode, mode
+					}
+					slog.Info("agent: mediated precheck passed",
+						"run_id", runID, "permission_mode", mode)
+					return precheckPassed, mode
 				}
 			}
 		}
