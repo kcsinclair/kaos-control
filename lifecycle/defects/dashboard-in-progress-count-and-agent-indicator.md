@@ -1,7 +1,7 @@
 ---
 title: Dashboard In-Progress Count Shows 0 and Running Agent Not Displayed
 type: defect
-status: draft
+status: approved
 lineage: dashboard-in-progress-count-and-agent-indicator
 created: "2026-05-15T18:19:03+10:00"
 priority: normal
