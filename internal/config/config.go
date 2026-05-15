@@ -259,8 +259,10 @@ func loadProjectEntry(path string) (*ProjectEntry, error) {
 	return &e, nil
 }
 
-// SaveProjectEntry atomically writes a project entry to projects_dir/<name>.yaml
-// using a write-to-temp-then-rename pattern.
+// SaveProjectEntry atomically writes a project entry to projects_dir/<name>.yaml.
+// It uses os.CreateTemp + os.Rename so that a crash mid-write never leaves a
+// corrupt destination file and concurrent writes to different projects do not
+// interfere with each other.
 func SaveProjectEntry(dir string, e *ProjectEntry) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("creating projects dir: %w", err)
@@ -270,12 +272,27 @@ func SaveProjectEntry(dir string, e *ProjectEntry) error {
 		return err
 	}
 	dest := filepath.Join(dir, e.Name+".yaml")
-	tmp := dest + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	tmp, err := os.CreateTemp(dir, e.Name+"-*.yaml.tmp")
+	if err != nil {
+		return fmt.Errorf("creating temp project entry: %w", err)
+	}
+	tmpName := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		_ = os.Remove(tmpName)
 		return fmt.Errorf("writing tmp project entry: %w", err)
 	}
-	if err := os.Rename(tmp, dest); err != nil {
-		_ = os.Remove(tmp)
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("chmod tmp project entry: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("closing tmp project entry: %w", err)
+	}
+	if err := os.Rename(tmpName, dest); err != nil {
+		_ = os.Remove(tmpName)
 		return fmt.Errorf("renaming tmp project entry: %w", err)
 	}
 	return nil
