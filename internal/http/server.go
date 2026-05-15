@@ -109,11 +109,18 @@ func (s *Server) buildRouter() chi.Router {
 	r.Use(middleware.RealIP)
 	r.Use(slogMiddleware)
 	r.Use(middleware.Recoverer)
-	r.Use(s.sessionMiddleware)
-	r.Use(s.csrfMiddleware)
-	r.Use(s.requireAuth)
 
-	r.Route("/api", func(r chi.Router) {
+	// Hook permission endpoint: exempt from session auth and CSRF.
+	// It authenticates via the per-run secret instead (FR8).
+	r.Post("/api/agent/{run_id}/permission", s.handleHookPermission)
+
+	// All remaining routes require session authentication and CSRF protection.
+	r.Group(func(r chi.Router) {
+		r.Use(s.sessionMiddleware)
+		r.Use(s.csrfMiddleware)
+		r.Use(s.requireAuth)
+
+		r.Route("/api", func(r chi.Router) {
 		r.Get("/health", s.handleHealth)
 		r.Get("/version", s.handleVersion)
 
@@ -293,9 +300,11 @@ func (s *Server) buildRouter() chi.Router {
 				r.Get("/jobs/{name}/runs/{id}/log", s.handleGetSchedulerRunLog)
 			})
 		})
-	})
+		})
 
-	r.Get("/*", s.handleFrontend)
+		r.Get("/*", s.handleFrontend)
+	}) // end auth group
+
 	return r
 }
 
