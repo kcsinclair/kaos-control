@@ -1,13 +1,15 @@
 ---
-title: "Queue Work button missing on approved doc artifact; tech-writer agent not routed"
+title: Queue Work button missing on approved doc artifact; tech-writer agent not routed
 type: defect
 status: approved
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release2
 assignees:
-  - role: frontend-developer
-    who: agent
+    - role: frontend-developer
+      who: agent
 ---
 
 # Queue Work button missing on approved doc artifact; tech-writer agent not routed
