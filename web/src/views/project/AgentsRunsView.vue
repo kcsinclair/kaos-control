@@ -22,6 +22,7 @@ import SortHeader from '@/components/SortHeader.vue'
 import type { AgentSummary, AgentRunRow } from '@/types/api'
 import type { AgentFormData } from '@/components/agent/AgentConfigForm.vue'
 import { useProjectConfigStore } from '@/stores/projectConfig'
+import { useQueueStore } from '@/stores/queue'
 
 function agentDriver(agentName: string, agents: AgentSummary[]): string {
   const a = agents.find((ag) => ag.name === agentName)
@@ -37,6 +38,7 @@ const router = useRouter()
 const store = useAgentsStore()
 const ui = useUiStore()
 const configStore = useProjectConfigStore()
+const queueStore = useQueueStore()
 const project = route.params.project as string
 
 const showRunDialog = ref(false)
@@ -202,6 +204,7 @@ onMounted(() => {
   // badges would read 0 until the first artifact.indexed WebSocket event.
   void store.fetchReadyCounts(project)
   configStore.fetchRoles(project)
+  void queueStore.fetch()
 })
 </script>
 
@@ -213,6 +216,15 @@ onMounted(() => {
         <button class="btn-secondary" @click="openNewAgent">New Agent</button>
         <button class="btn-primary" @click="showRunDialog = true">Run Agent</button>
       </div>
+    </div>
+
+    <!-- Queue pause banner -->
+    <div v-if="queueStore.isPaused" class="queue-pause-banner" role="alert">
+      <span class="queue-pause-banner__icon" aria-hidden="true">&#9888;</span>
+      <span class="queue-pause-banner__text">
+        Agent queue is paused due to denied tool calls. Review the denied calls and resume the queue.
+      </span>
+      <button class="queue-pause-banner__btn" @click="queueStore.resume()">Resume Queue</button>
     </div>
 
     <AgentPanelRow
@@ -581,6 +593,36 @@ onMounted(() => {
 .driver-badge[data-driver="ollama"] { background: #dbeafe; color: #1d4ed8; }
 .driver-badge[data-driver="claude-code-cli"] { background: #f3e8ff; color: #7e22ce; }
 .driver-badge[data-driver="claude-mediated"] { background: #fef3c7; color: #92400e; }
+/* Queue pause banner */
+.queue-pause-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  background: var(--badge-blocked-bg);
+  border-bottom: 1px solid var(--color-error, #dc2626);
+  color: var(--badge-blocked-text);
+  font-size: var(--text-sm);
+}
+.queue-pause-banner__icon {
+  font-size: var(--text-base, 1rem);
+  flex-shrink: 0;
+}
+.queue-pause-banner__text {
+  flex: 1;
+}
+.queue-pause-banner__btn {
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-error, #dc2626);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.queue-pause-banner__btn:hover { opacity: 0.85; }
 /* Observe-only notice */
 .observe-notice {
   font-size: 12px;
