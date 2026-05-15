@@ -1,7 +1,7 @@
 ---
 title: Dashboard Action Buttons in Wrong Order
 type: defect
-status: in-development
+status: done
 lineage: dashboard-button-order
 created: "2026-05-15T17:59:22+10:00"
 priority: normal

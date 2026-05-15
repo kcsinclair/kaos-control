@@ -10,7 +10,6 @@ labels:
     - artefacts
     - frontend
     - usability
-release: KC-Release1
 assignees:
     - role: frontend-developer
       who: agent

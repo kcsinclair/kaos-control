@@ -11,7 +11,7 @@ labels:
     - artefacts
     - vue
     - usability
-release: KC-Release1
+release: KC-Release2
 ---
 
 # Markdown Tables Not Rendering Correctly in Artefact View
