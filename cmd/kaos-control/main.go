@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/authcmd"
+	"github.com/kaos-control/kaos-control/cmd/kaos-control/hookcmd"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
 	khttp "github.com/kaos-control/kaos-control/internal/http"
@@ -29,9 +30,10 @@ var version = "dev"
 const usage = `Usage: kaos-control <command> [flags]
 
 Commands:
-  serve    Start the HTTP server (default)
-  init     Initialise a new project directory
-  auth     Manage users, passwords, and API tokens
+  serve        Start the HTTP server (default)
+  init         Initialise a new project directory
+  auth         Manage users, passwords, and API tokens
+  hook-helper  PreToolUse hook helper (called by Claude Code)
 
 Run 'kaos-control <command> --help' for command-specific usage.
 `
@@ -47,6 +49,9 @@ func main() {
 			return
 		case "auth":
 			os.Exit(authcmd.Run(os.Args[2:]))
+		case "hook-helper":
+			hookcmd.Run(os.Args[2:])
+			return
 		case "serve":
 			// Strip "serve" so the server's flag.Parse sees only its own flags.
 			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
