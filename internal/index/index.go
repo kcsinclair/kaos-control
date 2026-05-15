@@ -980,6 +980,9 @@ type AgentRunRow struct {
 	ExitCode          *int       `json:"exit_code,omitempty"`
 	StderrTail        string     `json:"stderr_tail"`
 	ArtifactsProduced []string   `json:"artifacts_produced"`
+	// DeniedToolCalls holds any tool calls that were denied by the permission
+	// policy during a claude-mediated run (FR21). Empty for other drivers.
+	DeniedToolCalls []map[string]any `json:"denied_tool_calls,omitempty"`
 }
 
 // LockRow is a record in the lineage_locks table.
@@ -994,11 +997,12 @@ type LockRow struct {
 // InsertAgentRun inserts a new agent run record with status=running.
 func (idx *Index) InsertAgentRun(r *AgentRunRow) error {
 	produced, _ := json.Marshal(r.ArtifactsProduced)
+	denied, _ := json.Marshal(r.DeniedToolCalls)
 	_, err := idx.db.Exec(
-		`INSERT INTO agent_runs (run_id, agent_name, role, target_path, started_at, status, stderr_tail, artifacts_produced_json)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO agent_runs (run_id, agent_name, role, target_path, started_at, status, stderr_tail, artifacts_produced_json, denied_tool_calls_json)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.RunID, r.AgentName, r.Role, r.TargetPath,
-		r.StartedAt.Unix(), r.Status, r.StderrTail, string(produced),
+		r.StartedAt.Unix(), r.Status, r.StderrTail, string(produced), string(denied),
 	)
 	return err
 }
@@ -1006,15 +1010,16 @@ func (idx *Index) InsertAgentRun(r *AgentRunRow) error {
 // UpdateAgentRun updates the mutable fields of an existing run record.
 func (idx *Index) UpdateAgentRun(r *AgentRunRow) error {
 	produced, _ := json.Marshal(r.ArtifactsProduced)
+	denied, _ := json.Marshal(r.DeniedToolCalls)
 	var finishedAt *int64
 	if r.FinishedAt != nil {
 		v := r.FinishedAt.Unix()
 		finishedAt = &v
 	}
 	_, err := idx.db.Exec(
-		`UPDATE agent_runs SET status=?, finished_at=?, exit_code=?, stderr_tail=?, artifacts_produced_json=?
+		`UPDATE agent_runs SET status=?, finished_at=?, exit_code=?, stderr_tail=?, artifacts_produced_json=?, denied_tool_calls_json=?
 		 WHERE run_id=?`,
-		r.Status, finishedAt, r.ExitCode, r.StderrTail, string(produced), r.RunID,
+		r.Status, finishedAt, r.ExitCode, r.StderrTail, string(produced), string(denied), r.RunID,
 	)
 	return err
 }
@@ -1022,7 +1027,7 @@ func (idx *Index) UpdateAgentRun(r *AgentRunRow) error {
 // GetAgentRun retrieves a single run by ID, or nil if not found.
 func (idx *Index) GetAgentRun(runID string) (*AgentRunRow, error) {
 	row := idx.db.QueryRow(
-		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
+		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]')
 		 FROM agent_runs WHERE run_id = ?`, runID,
 	)
 	return scanAgentRun(row)
@@ -1031,7 +1036,7 @@ func (idx *Index) GetAgentRun(runID string) (*AgentRunRow, error) {
 // ListAgentRuns returns runs optionally filtered by status, newest first.
 // When limit <= 0 all matching runs are returned (no server-side truncation).
 func (idx *Index) ListAgentRuns(status string, limit int) ([]*AgentRunRow, error) {
-	const sel = `SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
+	const sel = `SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]')
 			 FROM agent_runs`
 	var rows *sql.Rows
 	var err error
@@ -1066,7 +1071,7 @@ func (idx *Index) ListAgentRuns(status string, limit int) ([]*AgentRunRow, error
 // ListAgentRunsByTargetPath returns all runs whose target_path matches the given path, newest first.
 func (idx *Index) ListAgentRunsByTargetPath(targetPath string) ([]*AgentRunRow, error) {
 	rows, err := idx.db.Query(
-		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json
+		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]')
 		 FROM agent_runs WHERE target_path = ? ORDER BY started_at DESC`, targetPath,
 	)
 	if err != nil {
@@ -1099,10 +1104,11 @@ func scanAgentRun(row *sql.Row) (*AgentRunRow, error) {
 	var finishedAt sql.NullInt64
 	var exitCode sql.NullInt64
 	var producedJSON string
+	var deniedJSON string
 	err := row.Scan(
 		&r.RunID, &r.AgentName, &r.Role, &r.TargetPath,
 		&startedAt, &finishedAt, &r.Status, &exitCode,
-		&r.StderrTail, &producedJSON,
+		&r.StderrTail, &producedJSON, &deniedJSON,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -1120,6 +1126,7 @@ func scanAgentRun(row *sql.Row) (*AgentRunRow, error) {
 		r.ExitCode = &v
 	}
 	_ = json.Unmarshal([]byte(producedJSON), &r.ArtifactsProduced)
+	_ = json.Unmarshal([]byte(deniedJSON), &r.DeniedToolCalls)
 	return &r, nil
 }
 
@@ -1129,10 +1136,11 @@ func scanAgentRunRow(rows *sql.Rows) (*AgentRunRow, error) {
 	var finishedAt sql.NullInt64
 	var exitCode sql.NullInt64
 	var producedJSON string
+	var deniedJSON string
 	err := rows.Scan(
 		&r.RunID, &r.AgentName, &r.Role, &r.TargetPath,
 		&startedAt, &finishedAt, &r.Status, &exitCode,
-		&r.StderrTail, &producedJSON,
+		&r.StderrTail, &producedJSON, &deniedJSON,
 	)
 	if err != nil {
 		return nil, err
@@ -1147,6 +1155,7 @@ func scanAgentRunRow(rows *sql.Rows) (*AgentRunRow, error) {
 		r.ExitCode = &v
 	}
 	_ = json.Unmarshal([]byte(producedJSON), &r.ArtifactsProduced)
+	_ = json.Unmarshal([]byte(deniedJSON), &r.DeniedToolCalls)
 	return &r, nil
 }
 
@@ -1307,7 +1316,8 @@ func (idx *Index) dropAndRecreate() error {
 	return idx.createSchema()
 }
 
-// ensureAgentRunsTable creates the agent_runs table if it doesn't already exist.
+// ensureAgentRunsTable creates the agent_runs table if it doesn't already exist,
+// and adds any columns that were added after the initial schema (migrations).
 // It is called unconditionally on Open so the table survives schema rebuilds.
 func (idx *Index) ensureAgentRunsTable() error {
 	_, err := idx.db.Exec(`CREATE TABLE IF NOT EXISTS agent_runs (
@@ -1325,8 +1335,12 @@ func (idx *Index) ensureAgentRunsTable() error {
 	if err != nil {
 		return err
 	}
-	_, err = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_target_path ON agent_runs(target_path)`)
-	return err
+	if _, err = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_target_path ON agent_runs(target_path)`); err != nil {
+		return err
+	}
+	// Migration: add denied_tool_calls_json column if not present (no-op if exists).
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN denied_tool_calls_json TEXT`)
+	return nil
 }
 
 // ensureEventsTable creates the events table and its indices if they don't already exist.

@@ -200,6 +200,14 @@ func run() error {
 	if queueStore != nil {
 		queueDispatcher = queue.New(queueStore, projectLookup, appHub, queue.Config{})
 		queueDispatcher.Start(ctx)
+		// Wire PauseQueue callbacks into all project agent managers so that
+		// runs with denied tool calls pause the queue (FR16).
+		for _, p := range projects {
+			if p.Agents != nil {
+				d := queueDispatcher
+				p.Agents.PauseQueue = func(reason string) { d.Pause(reason) }
+			}
+		}
 	}
 
 	srv := khttp.New(khttp.ServerConfig{

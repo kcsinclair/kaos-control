@@ -319,6 +319,11 @@ type Manager struct {
 	runPolicies map[string]*PolicyConfig // runID → policy config
 	deniedCalls map[string][]DenialRecord
 
+	// PauseQueue is an optional callback invoked when a run completes with
+	// denied tool calls (FR16). Typically set to queueDispatcher.Pause().
+	// nil means queue pausing is not configured.
+	PauseQueue func(reason string)
+
 	idx     *index.Index
 	git     *kgit.Repo
 	hub     *hub.Hub
@@ -755,9 +760,14 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		}
 	}
 
-	// Commit any files produced within allowed paths (even on failure = partial commit).
+	// Check for denied tool calls from claude-mediated runs (FR15/FR16).
+	denials := m.DeniedCalls(run.RunID)
+	hasDenials := len(denials) > 0
+
+	// Commit any files produced within allowed paths — unless the run had
+	// denied tool calls, in which case we skip auto-commit (FR15).
 	var produced []string
-	if m.git != nil {
+	if m.git != nil && !hasDenials {
 		files, err := m.git.ModifiedFiles(run.AllowedPaths)
 		if err != nil {
 			slog.Warn("agent: git status failed", "run_id", run.RunID, "err", err)
@@ -800,6 +810,22 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	// Release lock.
 	_ = m.locks.Release(lineage)
 
+	// Persist denial records in the run row (FR21).
+	if hasDenials {
+		denialMaps := make([]map[string]any, len(denials))
+		for i, d := range denials {
+			denialMaps[i] = map[string]any{
+				"tool_name": d.ToolName,
+				"path":      d.Path,
+				"command":   d.Command,
+				"reason":    d.Reason,
+				"rule":      d.Rule,
+			}
+		}
+		row.DeniedToolCalls = denialMaps
+	}
+	m.clearDeniedCalls(run.RunID)
+
 	// Update run record.
 	row.Status = status
 	row.FinishedAt = &finishedAt
@@ -811,6 +837,11 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	row.StderrTail = proc.StderrTail()
 	row.ArtifactsProduced = produced
 	_ = m.idx.UpdateAgentRun(row)
+
+	// Pause queue if there were denials (FR16).
+	if hasDenials && m.PauseQueue != nil {
+		m.PauseQueue("denied_tool_calls: run " + run.RunID)
+	}
 
 	eventType := "agent.finished"
 	feedEventType := "agent_finished"
@@ -834,13 +865,14 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	m.hub.Broadcast(hub.Event{
 		Type: eventType,
 		Payload: map[string]any{
-			"run_id":      run.RunID,
-			"agent":       run.AgentName,
-			"lineage":     lineage,
-			"status":      status,
-			"artifacts":   produced,
-			"target_path": row.TargetPath,
-			"result":      runResult,
+			"run_id":             run.RunID,
+			"agent":              run.AgentName,
+			"lineage":            lineage,
+			"status":             status,
+			"artifacts":          produced,
+			"target_path":        row.TargetPath,
+			"result":             runResult,
+			"denied_tool_calls":  row.DeniedToolCalls,
 		},
 	})
 
