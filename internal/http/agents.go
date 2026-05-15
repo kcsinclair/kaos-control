@@ -191,6 +191,17 @@ func hasDeveloperSourceType(types []string) bool {
 	return false
 }
 
+// hasDocSourceType reports whether any of the given source types is "doc",
+// identifying a tech-writer agent that also picks up defects assigned to it.
+func hasDocSourceType(types []string) bool {
+	for _, t := range types {
+		if t == "doc" {
+			return true
+		}
+	}
+	return false
+}
+
 // countAssignedDefects returns the number of approved defect artifacts whose
 // frontmatter assignees include at least one of the given agent roles. Mirrors
 // the JS-side filter in web/src/components/agent/AgentLaunchModal.vue so the
@@ -261,8 +272,8 @@ func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 				total += n
 			}
 		}
-		// Developer agents also pick up approved defects assigned to their role.
-		if hasDeveloperSourceType(ag.SourceTypes) {
+		// Developer and tech-writer agents also pick up approved defects assigned to their role.
+		if hasDeveloperSourceType(ag.SourceTypes) || hasDocSourceType(ag.SourceTypes) {
 			n, err := countAssignedDefects(p.Idx, ag.Roles)
 			if err != nil {
 				writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))

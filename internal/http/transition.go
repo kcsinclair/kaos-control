@@ -191,6 +191,17 @@ func applyTransition(p *project.Project, row *index.ArtifactRow, relPath, toStat
 	if !ok {
 		return fmt.Errorf("status field not found in frontmatter of %s", relPath)
 	}
+	// For doc artifacts transitioning to in-qa, also set assignees to QA agent
+	// so the QA agent picks up the artifact automatically.
+	if row.Type == "doc" && toStatus == "in-qa" {
+		a := artifact.Parse(patched, relPath, time.Time{})
+		a.FM.Status = toStatus
+		a.FM.Assignees = []artifact.Assignee{{Role: "qa", Who: "agent"}}
+		rebuilt, err := buildMarkdown(a.FM, a.Body)
+		if err == nil {
+			patched = []byte(rebuilt)
+		}
+	}
 	if err := os.WriteFile(absPath, patched, 0o644); err != nil {
 		return fmt.Errorf("write file: %w", err)
 	}
