@@ -1,15 +1,16 @@
 ---
 title: Projects Page CRUD Operations
 type: idea
-status: approved
+status: clarifying
 lineage: projects-crud-ui
 created: "2026-05-15T18:02:41+10:00"
-priority: normal
+priority: high
 labels:
     - feature
     - frontend
     - backend
     - v1
+release: KC-Release2
 ---
 
 # Projects Page CRUD Operations
