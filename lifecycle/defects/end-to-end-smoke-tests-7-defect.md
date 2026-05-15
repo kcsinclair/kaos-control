@@ -1,13 +1,15 @@
 ---
-title: "Test 01 uses wrong CSS selector `.stat-card` — SummaryCountCard renders `.summary-card`"
+title: Test 01 uses wrong CSS selector `.stat-card` — SummaryCountCard renders `.summary-card`
 type: defect
 status: approved
 lineage: end-to-end-smoke-tests
 parent: lifecycle/tests/end-to-end-smoke-tests-4-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release2
 assignees:
-  - role: test-developer
-    who: agent
+    - role: test-developer
+      who: agent
 ---
 
 # Test 01 uses wrong CSS selector `.stat-card`
