@@ -1,7 +1,7 @@
 ---
 title: Artefact Relationship Labels and Clickable Links
 type: requirement
-status: planning
+status: in-development
 lineage: artefact-relationship-labels-and-links
 parent: ideas/artefact-relationship-labels-and-links.md
 labels:
