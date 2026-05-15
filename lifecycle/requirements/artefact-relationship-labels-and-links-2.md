@@ -1,7 +1,7 @@
 ---
 title: Artefact Relationship Labels and Clickable Links
 type: requirement
-status: blocked
+status: approved
 lineage: artefact-relationship-labels-and-links
 parent: ideas/artefact-relationship-labels-and-links.md
 labels:
@@ -99,7 +99,12 @@ The outbound/inbound label pairs must be defined in a single lookup structure (o
 - [ ] No new API endpoints or changes to the `GraphEdge` response shape are required.
 - [ ] Existing relationship display styling (font, size, colour) is preserved apart from the added interactivity.
 
-## Open Questions
+## Resolved Questions
 
 - Should the link text display the artefact **title** (from frontmatter) instead of the file path, when available? The current UI shows paths; titles may be more user-friendly but require the data to be present on the edge or fetched from the index.
+
+> file path is OK for v1
+
 - Should `wiki`-type links (inline `[[slug]]` references) be included in this work, or deferred to a separate enhancement?
+
+> yes, they can be included.
