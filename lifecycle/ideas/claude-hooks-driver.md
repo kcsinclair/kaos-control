@@ -1,7 +1,7 @@
 ---
 title: Claude Driver with Permission Hooks (alternate, hardened)
 type: idea
-status: clarifying
+status: done
 lineage: claude-hooks-driver
 created: "2026-05-15T08:00:00+10:00"
 priority: medium
