@@ -1,7 +1,7 @@
 ---
 title: Artefact Relationship Labels and Clickable Links
 type: idea
-status: approved
+status: clarifying
 lineage: artefact-relationship-labels-and-links
 created: "2026-05-10T09:35:28+10:00"
 priority: medium
