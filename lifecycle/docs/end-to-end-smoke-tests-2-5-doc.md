@@ -1,7 +1,7 @@
 ---
 title: End-to-End Smoke Tests
 type: doc
-status: approved
+status: in-development
 lineage: end-to-end-smoke-tests
 created: "2026-05-16T08:00:44+10:00"
 priority: normal
