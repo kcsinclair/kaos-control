@@ -71,8 +71,16 @@ func Run(args []string) {
 		return
 	}
 
-	// Pass the response through to stdout unchanged.
-	_, _ = os.Stdout.Write(respBody)
+	// Translate the server response to the Claude-native hookSpecificOutput format.
+	var serverResp struct {
+		Decision string `json:"decision"`
+		Reason   string `json:"reason"`
+	}
+	if err := json.Unmarshal(respBody, &serverResp); err != nil || serverResp.Decision == "" {
+		writeDeny("malformed server response")
+		return
+	}
+	writeResponse(serverResp.Decision, serverResp.Reason)
 }
 
 // postWithRetry POSTs to the endpoint with the secret in the Authorization
