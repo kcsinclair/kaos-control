@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/devops"
+	"github.com/kaos-control/kaos-control/internal/hub"
 )
 
 var pipelineSlugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*[a-z0-9]$|^[a-z0-9]$`)
@@ -258,12 +259,17 @@ func (s *Server) handleUpdatePipeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
+	summary := map[string]any{
 		"slug":       pl.Slug,
 		"name":       pl.Name,
 		"type":       pl.Type,
 		"step_count": len(pl.Steps),
-	})
+	}
+
+	// Notify connected clients that the pipeline definition has changed.
+	p.Hub.Broadcast(hub.Event{Type: "pipeline.updated", Payload: summary})
+
+	writeJSON(w, http.StatusOK, summary)
 }
 
 // handleCreatePipeline handles POST /api/p/{project}/devops/pipelines.
