@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Make Pipelines Editable"
 type: plan-frontend
-status: draft
+status: approved
 lineage: pipeline-editing
 parent: lifecycle/requirements/pipeline-editing-2.md
 created: "2026-05-15T00:00:00+10:00"
