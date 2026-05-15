@@ -540,6 +540,13 @@ func validateProject(cfg *Project) error {
 	return nil
 }
 
+// IsInitialised reports whether a project at projectPath has been initialised
+// (i.e. lifecycle/config.yaml exists on disk).
+func IsInitialised(projectPath string) bool {
+	_, err := os.Stat(filepath.Join(projectPath, "lifecycle", "config.yaml"))
+	return err == nil
+}
+
 // ShouldIgnore reports whether the file at path should be excluded from indexing.
 // It matches the base name of path against each glob pattern using filepath.Match.
 func ShouldIgnore(path string, patterns []string) bool {

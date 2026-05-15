@@ -19,7 +19,7 @@ const projectKey contextKey = "project"
 func (s *Server) projectMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "project")
-		p, ok := s.projects[name]
+		p, ok := s.getProject(name)
 		if !ok {
 			writeJSON(w, http.StatusNotFound, apiError("project_not_found", "project not found: "+name))
 			return

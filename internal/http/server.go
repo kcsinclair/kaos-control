@@ -32,9 +32,13 @@ type Server struct {
 	cfg      ServerConfig
 	router   chi.Router
 	httpSrv  *http.Server
-	projects map[string]*project.Project
 	queue    *queue.Dispatcher // nil when queue not configured
 	appHub   *hub.Hub          // app-level hub for queue.* broadcast; nil if unconfigured
+
+	// projects is the live map of registered projects.
+	// All reads and writes must be done under projectsMu.
+	projectsMu sync.RWMutex
+	projects   map[string]*project.Project
 
 	// App-level config mutation (Ollama instance CRUD).
 	appCfgMu   sync.RWMutex
@@ -134,6 +138,7 @@ func (s *Server) buildRouter() chi.Router {
 
 		// Project registry
 		r.Get("/projects", s.handleListProjects)
+		r.Get("/projects/{project}", s.handleGetProject)
 
 		// App-level WebSocket (queue events, etc.)
 		r.Get("/ws", s.handleAppWebSocket)
@@ -351,22 +356,17 @@ func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"version": Version})
 }
 
-// handleListProjects returns all registered projects.
-func (s *Server) handleListProjects(w http.ResponseWriter, r *http.Request) {
-	type projectSummary struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Path        string `json:"path"`
-	}
-	var out []projectSummary
-	for _, p := range s.projects {
-		out = append(out, projectSummary{
-			Name:        p.Entry.Name,
-			Description: p.Entry.Description,
-			Path:        p.Entry.Path,
-		})
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"projects": out})
+// getProject returns the named project under the read-lock.
+func (s *Server) getProject(name string) (*project.Project, bool) {
+	s.projectsMu.RLock()
+	p, ok := s.projects[name]
+	s.projectsMu.RUnlock()
+	return p, ok
+}
+
+// GetProject is the exported variant used by external callers (e.g. queue dispatcher).
+func (s *Server) GetProject(name string) (*project.Project, bool) {
+	return s.getProject(name)
 }
 
 // handleFrontend serves the embedded Vue SPA.
