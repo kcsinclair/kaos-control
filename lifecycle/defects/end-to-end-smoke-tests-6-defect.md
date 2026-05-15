@@ -4,6 +4,9 @@ type: defect
 status: approved
 lineage: end-to-end-smoke-tests
 release: KC-Release2
+assignees:
+    - role: backend-developer
+      who: agent
 ---
 
 # Fixture config.yaml uses `roles:` instead of `role:` for tech-writer agent
