@@ -9,10 +9,12 @@ labels:
     - defect
     - security
     - testing
-release: KC-Release2
+release: KC-Release3
 ---
 
 # Moderate Dependency Vulnerabilities (Deferred — See Vitest Upgrade Plan)
+
+**only possible if attacker can reach pnpm localhost during testing: low risk**
 
 ## Reproduction Steps
 
