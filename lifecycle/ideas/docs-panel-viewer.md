@@ -10,6 +10,7 @@ labels:
     - frontend
     - vue
     - usability
+release: KC-Release3
 ---
 
 # Documentation Panel Viewer

@@ -11,6 +11,7 @@ labels:
     - frontend
     - vue
     - usability
+release: KC-Release3
 assignees:
     - role: product-owner
       who: agent
