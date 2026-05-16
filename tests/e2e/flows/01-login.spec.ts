@@ -14,11 +14,11 @@ test.describe('Flow 01 — Login and project access', () => {
     await page.waitForURL(`${kctest.baseURL}/p/testproject/dashboard`)
 
     // Wait for the SummaryCountsWidget to render with data
-    const lifecycleTotal = page.locator('.stat-card', { hasText: 'Lifecycle Total' })
+    const lifecycleTotal = page.locator('.summary-card', { hasText: 'Lifecycle Total' })
     await expect(lifecycleTotal).toBeVisible({ timeout: 10_000 })
 
     // The value should be non-zero (14 fixture items total)
-    const valueLocator = lifecycleTotal.locator('.stat-value, .stat-number, [class*="value"]').first()
+    const valueLocator = lifecycleTotal.locator('.summary-card-value').first()
     await expect(valueLocator).not.toHaveText('0', { timeout: 10_000 })
   })
 })
