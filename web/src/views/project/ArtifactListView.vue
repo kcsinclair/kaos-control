@@ -612,12 +612,24 @@ onMounted(async () => {
   50%       { opacity: 0.55; }
 }
 .cell-release  { white-space: nowrap; min-width: 80px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.cell-runs {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 56px;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
 /* Priority = 4th column, Release = 5th column — hide on narrow viewports */
 @media (max-width: 1023px) {
   .artifact-table thead tr th:nth-child(4),
   .artifact-table thead tr th:nth-child(5),
   .cell-priority,
   .cell-release { display: none; }
+}
+/* Runs column hidden on narrow viewports */
+@media (max-width: 767px) {
+  .artifact-table thead tr th:nth-child(7),
+  .cell-runs { display: none; }
 }
 .btn-check-status {
   display: inline-flex;
