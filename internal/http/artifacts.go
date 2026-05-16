@@ -65,6 +65,21 @@ func (s *Server) handleListArtifacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	counts, err := p.Idx.AgentRunCountsByTargetPath()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+	activeStatuses, err := p.Idx.ActiveAgentStatusByTargetPath()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+	for _, item := range items {
+		item.AgentRunCount = counts[item.Path]
+		item.ActiveAgentStatus = activeStatuses[item.Path]
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"items": items,
 		"total": total,

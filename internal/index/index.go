@@ -624,18 +624,20 @@ func (f *Filter) withDefaults() Filter {
 
 // ArtifactRow is a lightweight summary row returned from list/graph queries.
 type ArtifactRow struct {
-	Path      string               `json:"path"`
-	Slug      string               `json:"slug"`
-	Lineage   string               `json:"lineage"`
-	Index     int                  `json:"index"`
-	Stage     string               `json:"stage"`
-	Type      string               `json:"type"`
-	Status    string               `json:"status"`
-	Title     string               `json:"title"`
-	Assignees []artifact.Assignee  `json:"assignees,omitempty"`
-	FM        artifact.Frontmatter `json:"frontmatter"`
-	Mtime     time.Time            `json:"mtime"`
-	Created   time.Time            `json:"created"`
+	Path              string               `json:"path"`
+	Slug              string               `json:"slug"`
+	Lineage           string               `json:"lineage"`
+	Index             int                  `json:"index"`
+	Stage             string               `json:"stage"`
+	Type              string               `json:"type"`
+	Status            string               `json:"status"`
+	Title             string               `json:"title"`
+	Assignees         []artifact.Assignee  `json:"assignees,omitempty"`
+	FM                artifact.Frontmatter `json:"frontmatter"`
+	Mtime             time.Time            `json:"mtime"`
+	Created           time.Time            `json:"created"`
+	AgentRunCount     int                  `json:"agent_run_count"`
+	ActiveAgentStatus string               `json:"active_agent_status,omitempty"`
 }
 
 // List returns a filtered, paginated list of artifacts and the total matching count.
