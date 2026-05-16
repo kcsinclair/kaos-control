@@ -1,0 +1,47 @@
+{
+  "numTotalTests": 4,
+  "numPassedTests": 2,
+  "numFailedTests": 1,
+  "numPendingTests": 1,
+  "testResults": [
+    {
+      "testFilePath": "/project/tests/web/widget.spec.ts",
+      "assertionResults": [
+        {
+          "ancestorTitles": ["WidgetSuite"],
+          "title": "renders correctly",
+          "status": "passed",
+          "failureMessages": [],
+          "duration": 5.2
+        },
+        {
+          "ancestorTitles": ["WidgetSuite", "validation"],
+          "title": "rejects empty input",
+          "status": "failed",
+          "failureMessages": ["Expected: true\nReceived: false"],
+          "duration": 3.1,
+          "location": { "line": 42, "column": 5 }
+        }
+      ]
+    },
+    {
+      "testFilePath": "/project/tests/web/auth.spec.ts",
+      "assertionResults": [
+        {
+          "ancestorTitles": ["AuthSuite"],
+          "title": "logs in successfully",
+          "status": "passed",
+          "failureMessages": [],
+          "duration": 12.0
+        },
+        {
+          "ancestorTitles": ["AuthSuite"],
+          "title": "redirects unauthenticated",
+          "status": "pending",
+          "failureMessages": [],
+          "duration": 0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# example.com/widget
+./widget.go:5:2: undefined: Bar
+./widget.go:12:9: cannot use x (variable of type int) as type string
+FAIL	example.com/widget [build failed]

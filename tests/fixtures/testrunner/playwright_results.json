@@ -1,0 +1,77 @@
+{
+  "suites": [
+    {
+      "title": "login.spec.ts",
+      "file": "login.spec.ts",
+      "suites": [],
+      "specs": [
+        {
+          "title": "logs in with valid credentials",
+          "ok": true,
+          "tests": [
+            { "results": [{ "status": "passed", "duration": 1234 }] }
+          ],
+          "location": { "file": "login.spec.ts", "line": 5, "column": 0 }
+        }
+      ]
+    },
+    {
+      "title": "dashboard.spec.ts",
+      "file": "dashboard.spec.ts",
+      "suites": [
+        {
+          "title": "navigation",
+          "suites": [],
+          "specs": [
+            {
+              "title": "shows project list",
+              "ok": false,
+              "tests": [
+                {
+                  "results": [
+                    {
+                      "status": "failed",
+                      "duration": 3200,
+                      "error": {
+                        "message": "Locator 'text=My Project' not found",
+                        "location": { "file": "dashboard.spec.ts", "line": 38, "column": 4 }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "location": { "file": "dashboard.spec.ts", "line": 35, "column": 2 }
+            }
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "title": "loads in under 3 seconds",
+          "ok": false,
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "timedOut",
+                  "duration": 5000,
+                  "error": {
+                    "message": "Test timeout of 3000ms exceeded",
+                    "location": { "file": "dashboard.spec.ts", "line": 12, "column": 2 }
+                  }
+                }
+              ]
+            }
+          ],
+          "location": { "file": "dashboard.spec.ts", "line": 10, "column": 0 }
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "total": 3,
+    "expected": 1,
+    "unexpected": 2,
+    "skipped": 0
+  }
+}

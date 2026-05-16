@@ -1,0 +1,13 @@
+{"Action":"run","Package":"example.com/widget","Test":"TestWidgetPasses"}
+{"Action":"output","Package":"example.com/widget","Test":"TestWidgetPasses","Output":"=== RUN   TestWidgetPasses\n"}
+{"Action":"pass","Package":"example.com/widget","Test":"TestWidgetPasses","Elapsed":0.001}
+{"Action":"run","Package":"example.com/widget","Test":"TestWidgetFails"}
+{"Action":"output","Package":"example.com/widget","Test":"TestWidgetFails","Output":"=== RUN   TestWidgetFails\n"}
+{"Action":"output","Package":"example.com/widget","Test":"TestWidgetFails","Output":"    widget_test.go:14: widget not initialised: fixture failure\n"}
+{"Action":"fail","Package":"example.com/widget","Test":"TestWidgetFails","Elapsed":0.002}
+{"Action":"run","Package":"example.com/widget","Test":"TestWidgetSkipped"}
+{"Action":"skip","Package":"example.com/widget","Test":"TestWidgetSkipped","Elapsed":0.000}
+{"Action":"run","Package":"example.com/widget","Test":"TestWidgetFails/subcase"}
+{"Action":"output","Package":"example.com/widget","Test":"TestWidgetFails/subcase","Output":"    widget_test.go:20: subcase error\n"}
+{"Action":"fail","Package":"example.com/widget","Test":"TestWidgetFails/subcase","Elapsed":0.001}
+{"Action":"fail","Package":"example.com/widget","Elapsed":0.015}
