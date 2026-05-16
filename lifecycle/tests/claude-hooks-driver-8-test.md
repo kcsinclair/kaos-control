@@ -1,7 +1,7 @@
 ---
 title: "Test Fix: hook-helper assertions updated to Claude-native output format"
 type: test
-status: draft
+status: approved
 lineage: claude-hooks-driver
 parent: lifecycle/defects/claude-hooks-driver-7-defect.md
 created: "2026-05-16T00:00:00+10:00"
