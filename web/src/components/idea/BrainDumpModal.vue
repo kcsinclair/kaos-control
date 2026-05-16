@@ -131,7 +131,10 @@ async function onAccept() {
 
 async function onCreateDoc() {
   if (!store.canSubmit) return
-  const path = await store.createDoc(props.project)
+  const path = await store.createDoc(props.project, {
+    sourceLineage: props.sourceLineage,
+    sourcePath: props.sourcePath,
+  })
   if (path) {
     store.reset()
     emit('created', path)

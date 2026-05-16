@@ -114,27 +114,27 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     return true
   }
 
-  async function createDoc(project: string): Promise<string | null> {
+  async function createDoc(
+    project: string,
+    opts?: { sourceLineage?: string; sourcePath?: string },
+  ): Promise<string | null> {
     const raw = input.value.trim()
     if (!raw) return null
     error.value = null
     phase.value = 'generating'
     try {
-      const slug = slugify(raw)
+      const slug = opts?.sourceLineage ?? slugify(raw)
       const title = deriveTitle(raw)
+      const frontmatter: Record<string, unknown> = {
+        title,
+        type: 'doc',
+        status: 'draft',
+        lineage: slug,
+      }
+      if (opts?.sourcePath) frontmatter.parent = opts.sourcePath
       const res = await api.post<{ artifact: { path: string } }>(
         `/p/${encodeURIComponent(project)}/artifacts`,
-        {
-          stage: 'docs',
-          slug,
-          frontmatter: {
-            title,
-            type: 'doc',
-            status: 'draft',
-            lineage: slug,
-          },
-          body: raw,
-        },
+        { stage: 'docs', slug, frontmatter, body: raw },
       )
       return res.artifact.path
     } catch (e: unknown) {
