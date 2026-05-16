@@ -1,7 +1,7 @@
 ---
 title: Test Everything
 type: idea
-status: in-development
+status: done
 lineage: test-everything
 created: "2026-05-08T17:47:27+10:00"
 priority: high
