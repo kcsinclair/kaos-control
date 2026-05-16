@@ -1,9 +1,9 @@
 ---
 title: 'Artefacts View: Agent Run Count Column'
 type: requirement
-status: planning
+status: done
 lineage: artefacts-agent-run-count-column
-created: "2026-05-16"
+created: "2026-05-16T00:00:00+10:00"
 priority: normal
 parent: lifecycle/ideas/artefacts-agent-run-count-column.md
 labels:
