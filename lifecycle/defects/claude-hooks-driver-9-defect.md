@@ -1,7 +1,7 @@
 ---
 title: "Defect: HappyPath and PassesDenyDecision tests still assert old flat JSON format"
 type: defect
-status: draft
+status: approved
 lineage: claude-hooks-driver
 parent: lifecycle/tests/claude-hooks-driver-8-test.md
 labels: [defect]
