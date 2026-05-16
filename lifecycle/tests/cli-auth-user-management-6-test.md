@@ -1,7 +1,7 @@
 ---
 title: CLI Auth User Management — Integration & Unit Test Suite
 type: test
-status: approved
+status: in-qa
 lineage: cli-auth-user-management
 parent: lifecycle/test-plans/cli-auth-user-management-5-test.md
 ---
