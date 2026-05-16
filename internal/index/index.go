@@ -964,6 +964,66 @@ func (idx *Index) ListAllGroupedByLineage() (map[string][]*ArtifactRow, error) {
 	return grouped, nil
 }
 
+// AgentRunCountsByTargetPath returns a map of target_path → total run count
+// across all statuses. A single GROUP BY query is used; callers treat a
+// missing key as 0.
+func (idx *Index) AgentRunCountsByTargetPath() (map[string]int, error) {
+	rows, err := idx.db.Query(
+		`SELECT target_path, COUNT(*) FROM agent_runs
+		 WHERE target_path IS NOT NULL AND target_path != ''
+		 GROUP BY target_path`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make(map[string]int)
+	for rows.Next() {
+		var path string
+		var count int
+		if err := rows.Scan(&path, &count); err != nil {
+			return nil, err
+		}
+		out[path] = count
+	}
+	return out, rows.Err()
+}
+
+// ActiveAgentStatusByTargetPath returns a map of target_path → active status.
+// The value is "running" if any run for that path has status=running,
+// "queued" if any run is queued and none are running, or absent otherwise.
+func (idx *Index) ActiveAgentStatusByTargetPath() (map[string]string, error) {
+	rows, err := idx.db.Query(
+		`SELECT target_path,
+		        MAX(CASE WHEN status = 'running' THEN 2
+		                 WHEN status = 'queued'  THEN 1
+		                 ELSE 0 END) AS priority
+		 FROM agent_runs
+		 WHERE target_path IS NOT NULL AND target_path != ''
+		   AND status IN ('running', 'queued')
+		 GROUP BY target_path`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make(map[string]string)
+	for rows.Next() {
+		var path string
+		var priority int
+		if err := rows.Scan(&path, &priority); err != nil {
+			return nil, err
+		}
+		switch priority {
+		case 2:
+			out[path] = "running"
+		case 1:
+			out[path] = "queued"
+		}
+	}
+	return out, rows.Err()
+}
+
 // ----- agent runs -----
 
 // ErrLocked is returned when a lineage lock is already held.
