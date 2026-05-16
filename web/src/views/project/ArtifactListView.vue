@@ -15,7 +15,7 @@ import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
 import TextFilter from '@/components/TextFilter.vue'
 import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 import { useUiStore } from '@/stores/ui'
-import { MessageSquarePlus, Bug, ShieldCheck, BookOpen } from 'lucide-vue-next'
+import { MessageSquarePlus, Bug, ShieldCheck, BookOpen, Bot } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
@@ -325,7 +325,17 @@ onMounted(async () => {
             @keydown.enter="openArtifact(row.path)"
           >
             <td class="cell-path">
-              <span class="artifact-title" v-html="highlightMatch(row.title || row.slug)" />
+              <span class="cell-path-title-row">
+                <span class="artifact-title" v-html="highlightMatch(row.title || row.slug)" />
+                <span
+                  v-if="row.type === 'defect' && row.frontmatter?.labels?.includes('auto-filed')"
+                  class="auto-filed-badge"
+                  title="Auto-filed by test-runner agent"
+                  aria-label="Auto-filed by test-runner agent"
+                >
+                  <Bot :size="11" />
+                </span>
+              </span>
               <span
                 v-if="row.active_agent_status"
                 class="agent-status-pill"
@@ -530,10 +540,23 @@ onMounted(async () => {
   flex-direction: column;
   gap: 1px;
 }
+.cell-path-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
 .artifact-title {
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text);
+}
+.auto-filed-badge {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  opacity: 0.7;
+  cursor: default;
 }
 .artifact-path {
   font-size: 11px;
