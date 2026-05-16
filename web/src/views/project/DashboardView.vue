@@ -46,18 +46,18 @@ function onBrainDumpCreated(path: string) {
       <h2 class="dashboard-title">Dashboard</h2>
       <div class="header-actions">
         <button
-          class="btn-new-idea"
-          @click="openBrainDump('idea', $event.currentTarget as HTMLButtonElement)"
-        >
-          <MessageSquarePlus :size="15" />
-          New Idea
-        </button>
-        <button
           class="btn-new-defect"
           @click="openBrainDump('defect', $event.currentTarget as HTMLButtonElement)"
         >
           <Bug :size="15" />
           New Defect
+        </button>
+        <button
+          class="btn-new-idea"
+          @click="openBrainDump('idea', $event.currentTarget as HTMLButtonElement)"
+        >
+          <MessageSquarePlus :size="15" />
+          New Idea
         </button>
         <button
           class="btn-new-docs"
