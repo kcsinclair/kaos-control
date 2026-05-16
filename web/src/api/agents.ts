@@ -7,10 +7,13 @@ export function listAgents(project: string) {
   return api.get<{ agents: AgentSummary[] }>(`/p/${encodeURIComponent(project)}/agents`)
 }
 
-export function startRun(project: string, agentName: string, targetPath: string, role?: string) {
+export function startRun(project: string, agentName: string, targetPath?: string, role?: string) {
+  const body: Record<string, unknown> = {}
+  if (targetPath) body.target_path = targetPath
+  if (role) body.role = role
   return api.post<{ run_id: string }>(
     `/p/${encodeURIComponent(project)}/agents/${encodeURIComponent(agentName)}/run`,
-    { target_path: targetPath, role },
+    body,
   )
 }
 

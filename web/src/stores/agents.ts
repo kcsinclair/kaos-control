@@ -133,7 +133,7 @@ export const useAgentsStore = defineStore('agents', () => {
   async function startRun(
     project: string,
     agentName: string,
-    targetPath: string,
+    targetPath?: string,
     role?: string,
   ): Promise<string> {
     const data = await agentsApi.startRun(project, agentName, targetPath, role)

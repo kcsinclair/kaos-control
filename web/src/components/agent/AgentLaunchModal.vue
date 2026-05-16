@@ -34,11 +34,17 @@ const agentInputTypeMap: Record<string, string> = Object.fromEntries(
 
 const inputType = computed(() => agentInputTypeMap[props.agent.name])
 
+// An agent with source_types: [] explicitly requires no target artifact.
+const needsTarget = computed(
+  () => !props.agent.source_types || props.agent.source_types.length > 0,
+)
+
 const selectedArtifact = computed(
   () => artifacts.value.find((a) => a.path === selectedPath.value) ?? null,
 )
 
 async function fetchArtifacts() {
+  if (!needsTarget.value) return
   loading.value = true
   try {
     const results: ArtifactRow[] = []
@@ -73,13 +79,14 @@ async function fetchArtifacts() {
 }
 
 async function confirmRun() {
-  if (!selectedArtifact.value) return
+  if (needsTarget.value && !selectedArtifact.value) return
   running.value = true
   try {
+    const targetPath = needsTarget.value ? selectedArtifact.value!.path : undefined
     const runId = await agentsStore.startRun(
       props.project,
       props.agent.name,
-      selectedArtifact.value.path,
+      targetPath,
       props.agent.roles[0],
     )
     ui.success(`Agent run started (${runId.slice(0, 8)}…)`)
@@ -103,36 +110,43 @@ onMounted(fetchArtifacts)
       </div>
 
       <div class="modal-body">
-        <div v-if="loading" class="state-msg">Loading artifacts…</div>
+        <!-- Target-less agent: show informational message instead of picker -->
+        <div v-if="!needsTarget" class="state-msg state-msg--info">
+          This agent runs all test suites — no target artifact required.
+        </div>
 
-        <template v-else-if="artifacts.length">
-          <div class="artifact-list" role="listbox" :aria-label="`Artifacts for ${agent.name}`">
-            <button
-              v-for="artifact in artifacts"
-              :key="artifact.path"
-              class="artifact-item"
-              :class="{ 'artifact-item--selected': selectedPath === artifact.path }"
-              role="option"
-              :aria-selected="selectedPath === artifact.path"
-              @click="selectedPath = artifact.path"
-            >
-              <span class="artifact-title">{{ artifact.title }}</span>
-              <span class="artifact-meta">
-                <span class="artifact-lineage">{{ artifact.lineage }}</span>
-                <span class="artifact-status">{{ artifact.status }}</span>
-              </span>
-              <span class="artifact-path">{{ artifact.path }}</span>
-            </button>
-          </div>
+        <template v-else>
+          <div v-if="loading" class="state-msg">Loading artifacts…</div>
+
+          <template v-else-if="artifacts.length">
+            <div class="artifact-list" role="listbox" :aria-label="`Artifacts for ${agent.name}`">
+              <button
+                v-for="artifact in artifacts"
+                :key="artifact.path"
+                class="artifact-item"
+                :class="{ 'artifact-item--selected': selectedPath === artifact.path }"
+                role="option"
+                :aria-selected="selectedPath === artifact.path"
+                @click="selectedPath = artifact.path"
+              >
+                <span class="artifact-title">{{ artifact.title }}</span>
+                <span class="artifact-meta">
+                  <span class="artifact-lineage">{{ artifact.lineage }}</span>
+                  <span class="artifact-status">{{ artifact.status }}</span>
+                </span>
+                <span class="artifact-path">{{ artifact.path }}</span>
+              </button>
+            </div>
+          </template>
+
+          <div v-else class="state-msg">No eligible artifacts for this agent.</div>
         </template>
-
-        <div v-else class="state-msg">No eligible artifacts for this agent.</div>
       </div>
 
       <div class="modal-footer">
         <button
           class="btn-primary"
-          :disabled="running || !selectedArtifact"
+          :disabled="running || (needsTarget && !selectedArtifact)"
           @click="confirmRun"
         >
           {{ running ? 'Starting…' : 'Run' }}
@@ -206,6 +220,14 @@ onMounted(fetchArtifacts)
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   text-align: center;
+}
+.state-msg--info {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+  border-radius: var(--radius-sm);
+  margin: var(--space-2);
+  padding: var(--space-4);
 }
 
 .artifact-list {
