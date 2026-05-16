@@ -8,21 +8,23 @@ import type { LockRow } from '@/types/api'
 
 const HEARTBEAT_MS = 30_000
 
-export function useLock(project: string, lineage: string) {
+export function useLock(project: string, lineage: string | (() => string)) {
+  const getLineage = typeof lineage === 'function' ? lineage : () => lineage
   const locksStore = useLocksStore()
   const acquired = ref(false)
   const conflictLock = ref<LockRow | null>(null)
   let timer: ReturnType<typeof setInterval> | null = null
 
   async function acquire(): Promise<boolean> {
+    const lin = getLineage()
     try {
-      const data = await locksApi.acquireLock(project, lineage)
+      const data = await locksApi.acquireLock(project, lin)
       locksStore.setLock(data.lock)
       acquired.value = true
       conflictLock.value = null
       timer = setInterval(async () => {
         try {
-          await locksApi.heartbeatLock(project, lineage)
+          await locksApi.heartbeatLock(project, getLineage())
         } catch {
           acquired.value = false
         }
@@ -43,9 +45,10 @@ export function useLock(project: string, lineage: string) {
   async function release(): Promise<void> {
     if (!acquired.value) return
     if (timer) { clearInterval(timer); timer = null }
+    const lin = getLineage()
     try {
-      await locksApi.releaseLock(project, lineage)
-      locksStore.removeLock(lineage)
+      await locksApi.releaseLock(project, lin)
+      locksStore.removeLock(lin)
     } catch {
       // best-effort
     }

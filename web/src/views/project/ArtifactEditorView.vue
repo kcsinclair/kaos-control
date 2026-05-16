@@ -132,7 +132,7 @@ function scrollToOpenQuestions() {
 
 const { acquired: lockAcquired, conflictLock, acquire: acquireLock, release: releaseLock } = useLock(
   project.value,
-  computed(() => artifact.value?.lineage ?? '').value,
+  () => artifact.value?.lineage ?? '',
 )
 
 // ── external change detection ────────────────────────────────────────────────
@@ -256,9 +256,12 @@ useWebSocket(project.value, 'artifact.indexed', async (e: WsEvent) => {
   }
 })
 
-watch(artifactPath, load, { immediate: false })
-onMounted(() => {
-  load()
+watch(artifactPath, () => load(), { immediate: false })
+onMounted(async () => {
+  await load()
+  if (artifact.value) {
+    await enterEdit()
+  }
   if (graphStore.rawEdges.length === 0) {
     graphStore.fetchGraph(project.value)
   }
