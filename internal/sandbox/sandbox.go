@@ -44,16 +44,25 @@ func Resolve(projectRoot, userPath string) (string, error) {
 		return resolved, nil
 	}
 
-	// Target doesn't exist yet — check the parent directory instead.
-	parentAbs := filepath.Dir(abs)
-	resolvedParent, err := filepath.EvalSymlinks(parentAbs)
-	if err != nil {
-		return "", fmt.Errorf("resolving parent directory: %w", err)
+	// Target doesn't exist yet — walk up to the nearest existing ancestor and
+	// verify it stays inside the root. This handles the case where the stage
+	// directory itself (e.g. lifecycle/docs) hasn't been created yet.
+	ancestor := filepath.Dir(abs)
+	for {
+		resolvedAncestor, aerr := filepath.EvalSymlinks(ancestor)
+		if aerr == nil {
+			if !hasPrefix(resolvedAncestor, resolvedRoot) {
+				return "", ErrPathTraversal
+			}
+			return abs, nil
+		}
+		next := filepath.Dir(ancestor)
+		if next == ancestor {
+			// Reached the filesystem root without finding an existing directory.
+			return "", fmt.Errorf("resolving parent directory: %w", aerr)
+		}
+		ancestor = next
 	}
-	if !hasPrefix(resolvedParent, resolvedRoot) {
-		return "", ErrPathTraversal
-	}
-	return abs, nil
 }
 
 // hasPrefix returns true if path is equal to root or is rooted within root.
