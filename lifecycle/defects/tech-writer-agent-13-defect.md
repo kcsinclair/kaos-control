@@ -1,7 +1,7 @@
 ---
 title: Queue Work button missing on approved doc artifact; tech-writer agent not routed
 type: defect
-status: in-development
+status: done
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
 labels:
