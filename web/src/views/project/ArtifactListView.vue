@@ -63,11 +63,12 @@ function priorityOrder(value: string | undefined): number {
 const { sortColumn, sortDirection, sortedRows, toggleSort, resetSort } = useSortableTable(
   visibleItems,
   {
-    title:    { type: 'string' },
-    stage:    { type: 'string' },
-    status:   { type: 'string' },
-    type:     { type: 'string' },
-    created:  { type: 'date' },
+    title:           { type: 'string' },
+    stage:           { type: 'string' },
+    status:          { type: 'string' },
+    type:            { type: 'string' },
+    agent_run_count: { type: 'number' },
+    created:         { type: 'date' },
     mtime:    { type: 'date' },
     priority: {
       type: 'number',
@@ -303,6 +304,7 @@ onMounted(async () => {
             <SortHeader label="Priority" column="priority" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Release" column="release" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Type" column="type" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
+            <SortHeader label="Runs" column="agent_run_count" title="Agent Run Count" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Created" column="created" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Modified" column="mtime" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
           </tr>
@@ -332,6 +334,7 @@ onMounted(async () => {
             </td>
             <td class="cell-release muted">{{ row.frontmatter?.release || '—' }}</td>
             <td class="muted">{{ row.type }}</td>
+            <td class="cell-runs">{{ row.agent_run_count }}</td>
             <td class="muted cell-date">
               <span :title="formatFullDateTime(row.created)">{{ formatShortDate(row.created) }}</span>
             </td>
