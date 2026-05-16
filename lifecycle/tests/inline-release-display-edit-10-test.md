@@ -1,7 +1,7 @@
 ---
 title: "Test Coverage: Frontend Component Tests for Inline Release Display and Editing"
 type: test
-status: approved
+status: done
 lineage: inline-release-display-edit
 parent: lifecycle/test-plans/inline-release-display-edit-5-test.md
 ---
