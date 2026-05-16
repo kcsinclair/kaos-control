@@ -1,7 +1,7 @@
 ---
 title: Artifact List View — "Runs" Column Header and Cell Missing from Table
 type: defect
-status: approved
+status: in-development
 lineage: artifact-list-runs-column-not-present
 created: "2026-05-16T14:00:00+10:00"
 priority: high
