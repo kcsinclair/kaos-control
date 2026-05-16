@@ -1,7 +1,7 @@
 ---
 title: Test infrastructure for inline-release-display-edit not committed (vitest.config.ts and package.json scripts missing)
 type: defect
-status: approved
+status: in-development
 lineage: inline-release-display-edit
 parent: lifecycle/tests/inline-release-display-edit-10-test.md
 labels:
