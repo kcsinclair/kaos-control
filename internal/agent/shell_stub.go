@@ -27,7 +27,7 @@ type stubProcess struct {
 func (d *ShellStubDriver) Start(ctx context.Context, run Run) (Process, error) {
 	command := run.ShellCommand
 	if command == "" {
-		command = fmt.Sprintf(`printf '{"type":"result","subtype":"success","is_error":false}\n'`)
+		command = `printf '{"type":"result","subtype":"success","is_error":false}\n'`
 	}
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
 	cmd.Dir = run.ProjectRoot

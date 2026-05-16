@@ -130,6 +130,7 @@ func run() error {
 			continue
 		}
 		projects[e.Name] = p
+		// #nosec G118 -- cancel is stored in startupCancels and handed to srv.TrackCancel below
 		pCtx, cancel := context.WithCancel(ctx)
 		startupCancels[e.Name] = cancel
 		p.StartWatcher(pCtx)

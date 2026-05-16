@@ -1254,6 +1254,7 @@ func parseVersion(s string) [3]int {
 			}
 			n = n*10 + int(c-'0')
 		}
+		// #nosec G602 -- guarded by `if i >= 3 { break }` above; v is [3]int
 		v[i] = n
 	}
 	return v
