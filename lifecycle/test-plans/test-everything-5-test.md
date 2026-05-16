@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Run All Tests and Auto-file Defects'
 type: plan-test
-status: approved
+status: in-development
 lineage: test-everything
 parent: lifecycle/requirements/test-everything-2.md
 ---
