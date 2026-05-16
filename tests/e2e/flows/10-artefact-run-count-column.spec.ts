@@ -112,7 +112,7 @@ test.describe('Flow 10 — Artefact run count column', () => {
     await page.goto(`${kctest.baseURL}/p/testproject/artifacts`)
 
     // Column header "Runs" is visible
-    const runsHeader = page.locator('th.sort-th, th[role="columnheader"]').filter({ hasText: /^Runs$/ })
+    const runsHeader = page.locator('th.sort-th, th[role="columnheader"]').filter({ hasText: /^runs$/i })
     await expect(runsHeader).toBeVisible({ timeout: 10_000 })
 
     // "Runs" appears after "Type" and before "Created" in the header row
@@ -149,7 +149,7 @@ test.describe('Flow 10 — Artefact run count column', () => {
     // Wait for the table to load
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10_000 })
 
-    const runsHeader = page.locator('th.sort-th, th[role="columnheader"]').filter({ hasText: /^Runs$/ })
+    const runsHeader = page.locator('th.sort-th, th[role="columnheader"]').filter({ hasText: /^runs$/i })
     await expect(runsHeader).toBeVisible({ timeout: 5_000 })
 
     // Click once → ascending sort

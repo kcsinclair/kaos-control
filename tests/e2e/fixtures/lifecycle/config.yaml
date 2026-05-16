@@ -49,6 +49,8 @@ agents:
       name: Stub Agent
       email: stub@kaos-e2e.local
     allowed_write_paths: []
+    prompt_templates:
+      product-owner: "Process {target_path}"
   - name: tech-writer
     roles:
       - tech-writer
