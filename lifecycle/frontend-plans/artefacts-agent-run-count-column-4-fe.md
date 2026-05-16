@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Artefacts Agent Run Count Column"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: artefacts-agent-run-count-column
 parent: lifecycle/requirements/artefacts-agent-run-count-column-2.md
 ---
