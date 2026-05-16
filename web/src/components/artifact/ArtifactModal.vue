@@ -228,7 +228,6 @@ const STATUS_TEXT: Record<string, string> = {
           <div v-else-if="error" class="state-msg error">{{ error }}</div>
           <MarkdownPreview
             v-else-if="detail"
-            :html="detail.body_html"
             :source="detail.body"
             :project="project"
           />

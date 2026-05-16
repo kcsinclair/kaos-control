@@ -345,7 +345,7 @@ onMounted(() => {
           This artifact is blocked pending answers to open questions below.
           <a href="#open-questions" class="oq-link" @click.prevent="scrollToOpenQuestions">Jump to questions ↓</a>
         </div>
-        <MarkdownPreview :html="artifact.body_html" :source="artifact.body" :project="project" />
+        <MarkdownPreview :source="artifact.body" :project="project" />
       </div>
       <FrontmatterPanel
         :artifact="artifact"
