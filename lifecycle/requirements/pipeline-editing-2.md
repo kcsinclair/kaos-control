@@ -1,7 +1,7 @@
 ---
 title: Make Pipelines Editable
 type: requirement
-status: planning
+status: done
 lineage: pipeline-editing
 created: "2026-05-15T00:00:00+10:00"
 priority: medium
