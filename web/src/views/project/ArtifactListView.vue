@@ -123,7 +123,7 @@ function applyFilters() {
     type: selectedType.value || undefined,
     priority: selectedPriority.value || undefined,
     release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
-    q: undefined,
+    q: searchText.value || undefined,
     limit: 0,
     offset: undefined,
   })
@@ -213,7 +213,7 @@ onMounted(async () => {
       type: selectedType.value || undefined,
       priority: selectedPriority.value || undefined,
       release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
-      q: undefined,
+      q: searchText.value || undefined,
       limit: 0,
       offset: undefined,
     }),
