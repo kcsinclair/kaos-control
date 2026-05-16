@@ -7,3 +7,8 @@ web/dist/
 /.vite/
 tests/web/node_modules/
 tests/web/dist/
+# Playwright auto-generated artefacts (regen on every `pnpm test` run)
+tests/e2e/node_modules/
+tests/e2e/playwright-report/
+tests/e2e/test-results/
+.vscode
