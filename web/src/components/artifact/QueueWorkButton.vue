@@ -45,11 +45,12 @@ const queuedJob = computed(() => {
 // Whether the current user has a role that permits enqueueing this agent.
 const userCanEnqueue = computed(() => {
   if (!agentName.value) return false
+  const userRoles = authStore.rolesForProject(props.project)
+  // product-owner is always allowed (mirrors backend logic). Check first so
+  // the button is enabled even if agentsStore hasn't finished loading yet.
+  if (userRoles.includes('product-owner')) return true
   const agent = agentsStore.agents.find((a) => a.name === agentName.value)
   if (!agent) return false
-  const userRoles = authStore.rolesForProject(props.project)
-  // product-owner is always allowed (mirrors backend logic)
-  if (userRoles.includes('product-owner')) return true
   return agent.roles.some((r) => userRoles.includes(r))
 })
 
