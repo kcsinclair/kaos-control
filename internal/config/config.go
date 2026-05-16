@@ -604,7 +604,7 @@ func defaultProject() Project {
 			BranchTemplate: "requirement/{slug}",
 		},
 		Roles:         defaultRoles,
-		RequiredPlans: RequiredPlans{"requirement": {}},
+		RequiredPlans: RequiredPlans{"requirement": {"plan-backend", "plan-frontend", "plan-test"}},
 		Ignore:        []string{"README.md"},
 		Scheduler:     SchedulerConfig{DefaultTimeout: 30 * time.Minute},
 		Dashboard:     DashboardConfig{TrackedTypes: []string{"ticket"}},
@@ -622,8 +622,26 @@ func LoadProject(projectRoot string) (*Project, error) {
 		return nil, fmt.Errorf("reading project config: %w", err)
 	}
 	if err == nil {
+		// Snapshot defaults before unmarshal — yaml may replace the map
+		// when the YAML has a required_plans block that omits some types.
+		defaultRequiredPlans := make(RequiredPlans, len(cfg.RequiredPlans))
+		for k, v := range cfg.RequiredPlans {
+			defaultRequiredPlans[k] = v
+		}
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
 			return nil, fmt.Errorf("parsing project config: %w", err)
+		}
+		// Restore default entries for types the YAML did not explicitly configure.
+		// This ensures canonical types (e.g. "requirement") retain their default
+		// plan gate even when the project config only names other types (e.g. "ticket").
+		if cfg.RequiredPlans == nil {
+			cfg.RequiredPlans = defaultRequiredPlans
+		} else {
+			for k, v := range defaultRequiredPlans {
+				if _, ok := cfg.RequiredPlans[k]; !ok {
+					cfg.RequiredPlans[k] = v
+				}
+			}
 		}
 	}
 
