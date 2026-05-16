@@ -214,7 +214,7 @@ onMounted(() => {
       <h2 class="runs-title">Agent Runs</h2>
       <div class="runs-header-actions">
         <button class="btn-secondary" @click="openNewAgent">New Agent</button>
-        <button class="btn-primary" @click="showRunDialog = true">Run Agent</button>
+        <button class="btn-run-agent" @click="showRunDialog = true">Run Agent</button>
       </div>
     </div>
 
@@ -449,7 +449,7 @@ onMounted(() => {
   margin: 0;
   color: var(--color-text);
 }
-.btn-primary {
+.btn-run-agent {
   padding: var(--space-2) var(--space-4);
   background: var(--color-accent);
   color: #fff;
@@ -459,7 +459,7 @@ onMounted(() => {
   font-weight: 500;
   cursor: pointer;
 }
-.btn-primary:hover { opacity: 0.88; }
+.btn-run-agent:hover { opacity: 0.88; }
 .state-msg {
   padding: var(--space-8) var(--space-6);
   color: var(--color-text-muted);
