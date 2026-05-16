@@ -1,7 +1,7 @@
 ---
 title: Artifact detail view renders 'project not found' when docs-stage fixtures are active
 type: defect
-status: blocked
+status: abandoned
 lineage: tech-writer-agent
 parent: lifecycle/tests/tech-writer-agent-6-test.md
 labels:
@@ -13,6 +13,8 @@ assignees:
 ---
 
 # Artifact detail view renders "project not found" when docs-stage fixtures are active
+
+**closing as this is not relevant**
 
 ## Reproduction Steps
 
@@ -65,7 +67,7 @@ After thorough investigation of `web/src/**`, the frontend developer has determi
 
 4. **No frontend code change can fix this.** The error occurs because the project does not exist in the backend's live map. Retry logic or better error messages would not make the E2E tests pass; they require the artifact to actually load.
 
-## Open Questions
+## Resolved Questions
 
 1. **Should this defect be closed or re-assigned?** The root cause was a backend bug in `AgentConfig` YAML parsing, resolved by commit `ffaba80d`. Now that the backend fix is in place, the failing flows (06 TC1/TC2, 08 TC1/TC2) should pass without any frontend changes. Please confirm whether this defect can be marked `done` (resolved by the backend fix) or whether it needs re-assignment to the backend developer who applied the fix.
 
