@@ -138,13 +138,15 @@ func TestHookHelper_HappyPath(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &resp); err != nil {
 		t.Fatalf("stdout is not valid JSON: %v (stdout=%q)", err, stdout)
 	}
-	if dec, _ := resp["decision"].(string); dec != "allow" {
-		t.Errorf("decision = %q, want allow", dec)
+	inner, _ := resp["hookSpecificOutput"].(map[string]any)
+	if dec, _ := inner["permissionDecision"].(string); dec != "allow" {
+		t.Errorf("permissionDecision = %q, want allow", dec)
 	}
 }
 
 // TestHookHelper_PassesDenyDecision verifies that a deny response from the
-// server is forwarded unchanged to stdout and exit code is still 0.
+// server is translated into the Claude-native hookSpecificOutput shape and
+// exit code is still 0.
 func TestHookHelper_PassesDenyDecision(t *testing.T) {
 	bin := requireHookBin(t)
 
@@ -166,8 +168,9 @@ func TestHookHelper_PassesDenyDecision(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &resp); err != nil {
 		t.Fatalf("stdout is not valid JSON: %v (stdout=%q)", err, stdout)
 	}
-	if dec, _ := resp["decision"].(string); dec != "deny" {
-		t.Errorf("decision = %q, want deny", dec)
+	inner, _ := resp["hookSpecificOutput"].(map[string]any)
+	if dec, _ := inner["permissionDecision"].(string); dec != "deny" {
+		t.Errorf("permissionDecision = %q, want deny", dec)
 	}
 }
 
