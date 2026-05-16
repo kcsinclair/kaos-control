@@ -4,10 +4,12 @@ package http
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/devops"
@@ -95,13 +97,74 @@ func (s *Server) handleRunPipeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	runID, err := p.DevopsRunner.Start(*found, p.Entry.Path, p.Hub, p.Entry.Name)
+	extraEnv := s.pipelineRunEnv(r, p.Entry.Name, *found)
+
+	runID, err := p.DevopsRunner.Start(*found, p.Entry.Path, p.Hub, p.Entry.Name, extraEnv)
 	if err != nil {
 		writeJSON(w, http.StatusConflict, apiError("conflict", err.Error()))
 		return
 	}
 
 	writeJSON(w, http.StatusAccepted, map[string]any{"run_id": runID})
+}
+
+// pipelineRunEnv builds the "KEY=VALUE" env entries injected into every step
+// of a pipeline run so that steps can call back into the kaos-control API.
+//
+//	KC_PROJECT  — project name (matches the URL segment used in /api/p/{name}/...)
+//	KC_PORT     — port the server is currently listening on
+//	KC_API_TOKEN — short-lived bearer token tied to the user who triggered the run
+//
+// KC_API_TOKEN is omitted when no auth store is configured (e.g. minimal test
+// environments) or when token creation fails — pipelines that need it should
+// guard with `: "${KC_API_TOKEN:?missing}"` in their YAML.
+func (s *Server) pipelineRunEnv(r *http.Request, projectName string, pl devops.Pipeline) []string {
+	env := []string{"KC_PROJECT=" + projectName}
+
+	if port := serverPort(r, s.cfg.Listen); port != "" {
+		env = append(env, "KC_PORT="+port)
+	}
+
+	if s.cfg.Auth != nil {
+		if user := userFromCtx(r.Context()); user != nil {
+			expiry := time.Now().Add(pipelineTokenLifetime(pl))
+			if token, err := s.cfg.Auth.CreateToken(user.Email, &expiry); err == nil {
+				env = append(env, "KC_API_TOKEN="+token)
+			}
+		}
+	}
+
+	return env
+}
+
+// pipelineTokenLifetime returns how long the per-run bearer token should be
+// valid: the sum of every step's timeout plus a 5-minute grace, capped at 24h.
+// The token expires naturally — no explicit revocation is required.
+func pipelineTokenLifetime(pl devops.Pipeline) time.Duration {
+	const grace = 5 * time.Minute
+	const cap = 24 * time.Hour
+	total := grace
+	for _, st := range pl.Steps {
+		total += st.Timeout
+	}
+	if total > cap {
+		return cap
+	}
+	return total
+}
+
+// serverPort returns the port the server is reachable on, derived first from
+// the inbound request's Host header (most reliable: whatever the caller used
+// to reach us is, by definition, a working address) and falling back to the
+// configured listen address.
+func serverPort(r *http.Request, listen string) string {
+	if _, port, err := net.SplitHostPort(r.Host); err == nil && port != "" {
+		return port
+	}
+	if _, port, err := net.SplitHostPort(listen); err == nil && port != "" {
+		return port
+	}
+	return ""
 }
 
 // handleCancelPipeline handles POST /api/p/{project}/devops/pipelines/{slug}/cancel.

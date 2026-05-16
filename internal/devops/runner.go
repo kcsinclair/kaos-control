@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -84,7 +85,12 @@ func (r *Runner) ActiveRunID(slug string) (string, bool) {
 
 // Start launches pipeline in a background goroutine. It returns the run_id
 // immediately. Returns an error if the pipeline slug is already running.
-func (r *Runner) Start(pipeline Pipeline, projectDir string, h *hub.Hub, projectID string) (string, error) {
+//
+// extraEnv is appended to the inherited environment of each step's subprocess.
+// Each entry must be in "KEY=VALUE" form. Callers pass auth/locator vars here
+// (KC_API_TOKEN, KC_PORT, KC_PROJECT) so pipeline steps can call back into
+// the kaos-control API.
+func (r *Runner) Start(pipeline Pipeline, projectDir string, h *hub.Hub, projectID string, extraEnv []string) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -111,7 +117,7 @@ func (r *Runner) Start(pipeline Pipeline, projectDir string, h *hub.Hub, project
 			delete(r.byRunID, runID)
 			r.mu.Unlock()
 		}()
-		executeRun(ctx, runID, pipeline, projectDir, h, projectID, hook)
+		executeRun(ctx, runID, pipeline, projectDir, h, projectID, extraEnv, hook)
 	}()
 
 	return runID, nil
@@ -153,6 +159,7 @@ func executeRun(
 	projectDir string,
 	h *hub.Hub,
 	projectID string,
+	extraEnv []string,
 	hook func(string, string, any),
 ) {
 	start := time.Now()
@@ -182,7 +189,7 @@ func executeRun(
 		})
 
 		stepStart := time.Now()
-		stepStatus, exitCode := runStep(ctx, runID, pipeline.Slug, step, i, projectDir, h, hook)
+		stepStatus, exitCode := runStep(ctx, runID, pipeline.Slug, step, i, projectDir, extraEnv, h, hook)
 
 		duration := time.Since(stepStart).Seconds()
 		slog.Info("devops: step completed",
@@ -227,6 +234,7 @@ func runStep(
 	step Step,
 	stepIdx int,
 	workDir string,
+	extraEnv []string,
 	h *hub.Hub,
 	hook func(string, string, any),
 ) (StepStatus, int) {
@@ -238,6 +246,9 @@ func runStep(
 	// interpolated, so there is no shell injection risk.
 	cmd := exec.CommandContext(stepCtx, "sh", "-c", step.Command)
 	cmd.Dir = workDir
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
