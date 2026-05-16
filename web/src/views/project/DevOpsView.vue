@@ -28,7 +28,7 @@ const hasAccess = computed(() => {
   return roles.includes('product-owner') || roles.includes('devops')
 })
 
-const columnOrder = ['build', 'deploy', 'release']
+const columnOrder = ['build', 'test', 'deploy', 'release']
 
 const orderedTypes = computed((): string[] => {
   const types = Object.keys(devops.pipelinesByType)
