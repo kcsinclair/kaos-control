@@ -10,6 +10,7 @@ labels:
     - agent
     - frontend
     - vue
+release: KC-Release1
 ---
 
 # Agent Panel Ready Counts Show Same Value Instead of Role-Specific Counts

@@ -1,7 +1,7 @@
 ---
 title: ArtifactListView — Release Filter and Text Search Not Combined; q Param Missing from fetchList Call
 type: defect
-status: in-development
+status: done
 lineage: artifact-list-release-text-search-q-not-combined
 created: "2026-05-16T14:00:00+10:00"
 priority: normal

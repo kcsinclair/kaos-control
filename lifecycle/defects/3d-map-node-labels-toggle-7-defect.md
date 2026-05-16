@@ -1,13 +1,15 @@
 ---
 title: 'GraphView.labels tests fail: ForceGraph3D never rendered because view defaults to 2d'
 type: defect
-status: in-development
+status: done
 lineage: 3d-map-node-labels-toggle
 parent: lifecycle/tests/3d-map-node-labels-toggle-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release2
 assignees:
-  - role: test-developer
-    who: agent
+    - role: test-developer
+      who: agent
 ---
 
 ## Reproduction Steps

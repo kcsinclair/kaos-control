@@ -10,6 +10,7 @@ labels:
     - frontend
     - usability
     - vue
+release: KC-Release2
 ---
 
 # Dashboard Action Buttons in Wrong Order

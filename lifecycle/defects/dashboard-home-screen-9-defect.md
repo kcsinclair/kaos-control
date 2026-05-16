@@ -1,14 +1,15 @@
 ---
-title: 'DashboardGrid chart section aria-label changed; tests expect "Charts" but component renders "Charts top"/"Charts bottom"'
+title: DashboardGrid chart section aria-label changed; tests expect "Charts" but component renders "Charts top"/"Charts bottom"
 type: defect
 status: done
 lineage: dashboard-home-screen
 parent: lifecycle/tests/dashboard-home-screen-6-test.md
 labels:
-  - defect
+    - defect
+release: KC-Release0
 assignees:
-  - role: frontend-developer
-    who: agent
+    - role: frontend-developer
+      who: agent
 ---
 
 # DashboardGrid chart section aria-label changed: tests expect "Charts" but component renders "Charts top"/"Charts bottom"

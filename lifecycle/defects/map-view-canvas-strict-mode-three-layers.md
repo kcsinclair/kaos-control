@@ -1,7 +1,7 @@
 ---
 title: Map View — locator('canvas') Fails in Strict Mode; Cytoscape Renders Three Canvas Layers
 type: defect
-status: in-development
+status: done
 lineage: map-view-canvas-strict-mode-three-layers
 created: "2026-05-16T14:00:00+10:00"
 priority: high

@@ -10,6 +10,7 @@ labels:
     - frontend
     - agent
     - queue
+release: KC-Release2
 assignees:
     - role: frontend-developer
       who: agent

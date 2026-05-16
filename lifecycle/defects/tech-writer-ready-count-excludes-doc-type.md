@@ -1,7 +1,7 @@
 ---
 title: tech-writer Agent ready_count Returns 0 for Approved Doc Artifacts
 type: defect
-status: in-development
+status: done
 lineage: tech-writer-ready-count-excludes-doc-type
 created: "2026-05-16T14:00:00+10:00"
 priority: normal

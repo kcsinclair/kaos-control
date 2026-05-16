@@ -1,7 +1,7 @@
 ---
 title: Artifact Editor — CodeMirror Not Rendered; file.changed WS Event Not Received After Save
 type: defect
-status: in-development
+status: done
 lineage: artifact-editor-codemirror-not-rendering
 created: "2026-05-16T14:00:00+10:00"
 priority: high

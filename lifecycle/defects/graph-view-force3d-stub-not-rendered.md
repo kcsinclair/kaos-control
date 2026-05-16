@@ -1,7 +1,7 @@
 ---
 title: MapView — ForceGraph3D Stub Not Rendered in Unit Tests; showNodeTitles/showNodeLineage Props Untestable
 type: defect
-status: in-development
+status: done
 lineage: graph-view-force3d-stub-not-rendered
 created: "2026-05-16T14:00:00+10:00"
 priority: normal

@@ -1,7 +1,7 @@
 ---
 title: E2E Stub Agent Returns 409 — No Prompt Template for product-owner Role
 type: defect
-status: in-development
+status: done
 lineage: stub-agent-no-prompt-for-product-owner
 created: "2026-05-16T14:00:00+10:00"
 priority: normal

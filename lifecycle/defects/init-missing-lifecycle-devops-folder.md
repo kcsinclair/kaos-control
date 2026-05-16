@@ -10,6 +10,7 @@ labels:
     - onboarding
     - backend
     - go
+release: KC-Release1
 ---
 
 # Init Does Not Create lifecycle/devops Folder
