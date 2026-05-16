@@ -1,7 +1,7 @@
 ---
 title: Agent Run Dialog — rad-overlay Intercepts Pointer Events on Run Button
 type: defect
-status: draft
+status: approved
 lineage: agent-run-dialog-overlay-intercepts-run-button
 created: "2026-05-16T14:00:00+10:00"
 priority: high
