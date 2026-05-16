@@ -32,9 +32,15 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 		AllowedPaths       []string `json:"allowed_write_paths,omitempty"`
 		OllamaInstanceName string   `json:"ollama_instance,omitempty"`
 		OllamaEndpoint     string   `json:"ollama_endpoint,omitempty"`
+		ReadyCount         int      `json:"ready_count"`
 	}
 	var out []agentSummary
 	for _, ag := range p.Agents.Agents() {
+		rc, err := agentReadyCount(p.Idx, ag)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
+		}
 		out = append(out, agentSummary{
 			Name:               ag.Name,
 			Roles:              ag.Roles,
@@ -44,6 +50,7 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 			AllowedPaths:       ag.AllowedPaths,
 			OllamaInstanceName: ag.OllamaInstanceName,
 			OllamaEndpoint:     ag.OllamaEndpoint,
+			ReadyCount:         rc,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"agents": out})
@@ -179,6 +186,51 @@ func (s *Server) handleKillAgentRun(w http.ResponseWriter, r *http.Request) {
 // *during-run* status — the wrong column to count for a "ready" badge.
 const readyInputStatus = "approved"
 
+// lifecycleStageTypes maps lifecycle stage directory names to their canonical
+// artifact type. Only stage dirs with unambiguous, distinct types are listed;
+// this map is used to infer source types from allowed_write_paths when an agent
+// has no explicit source_types configured.
+var lifecycleStageTypes = map[string]string{
+	"ideas":          "idea",
+	"requirements":   "requirement",
+	"backend-plans":  "plan-backend",
+	"frontend-plans": "plan-frontend",
+	"test-plans":     "plan-test",
+	"tests":          "test",
+	"prototypes":     "prototype",
+	"defects":        "defect",
+	"docs":           "doc",
+}
+
+// effectiveSourceTypes returns the artifact types an agent should be counted
+// against for ready-count purposes. When ag.SourceTypes is set it is returned
+// directly. Otherwise types are inferred from lifecycle/ paths in
+// ag.AllowedPaths using lifecycleStageTypes. Returns nil when nothing can be
+// inferred — the caller should report ready_count 0 rather than count all
+// artifacts.
+func effectiveSourceTypes(ag config.AgentConfig) []string {
+	if len(ag.SourceTypes) > 0 {
+		return ag.SourceTypes
+	}
+	var types []string
+	seen := make(map[string]bool)
+	for _, p := range ag.AllowedPaths {
+		if !strings.HasPrefix(p, "lifecycle/") {
+			continue
+		}
+		rest := strings.TrimPrefix(p, "lifecycle/")
+		dir := rest
+		if i := strings.IndexByte(rest, '/'); i >= 0 {
+			dir = rest[:i]
+		}
+		if t, ok := lifecycleStageTypes[dir]; ok && !seen[t] {
+			types = append(types, t)
+			seen[t] = true
+		}
+	}
+	return types
+}
+
 // hasDeveloperSourceType reports whether any of the given source types is a
 // plan-* type, identifying a developer agent that also picks up assigned
 // defects (matching the AgentLaunchModal's plan-* branch).
@@ -200,6 +252,35 @@ func hasDocSourceType(types []string) bool {
 		}
 	}
 	return false
+}
+
+// agentReadyCount returns the number of approved artifacts ready for ag.
+// It uses effectiveSourceTypes to determine which artifact types to count, and
+// returns 0 without a DB query when no types can be determined. For agents
+// whose effective types include plan-* or doc, approved defects assigned to
+// the agent's roles are added — mirroring the AgentLaunchModal filter so that
+// the badge count matches the dialog's list size.
+func agentReadyCount(idx *index.Index, ag config.AgentConfig) (int, error) {
+	types := effectiveSourceTypes(ag)
+	if len(types) == 0 {
+		return 0, nil
+	}
+	var total int
+	for _, t := range types {
+		n, err := idx.Count(index.Filter{Status: readyInputStatus, Type: t})
+		if err != nil {
+			return 0, err
+		}
+		total += n
+	}
+	if hasDeveloperSourceType(types) || hasDocSourceType(types) {
+		n, err := countAssignedDefects(idx, ag.Roles)
+		if err != nil {
+			return 0, err
+		}
+		total += n
+	}
+	return total, nil
 }
 
 // countAssignedDefects returns the number of approved defect artifacts whose
@@ -240,6 +321,8 @@ func countAssignedDefects(idx *index.Index, agentRoles []string) (int, error) {
 // count also includes approved defect artifacts whose assignees match the
 // agent's roles — matching the AgentLaunchModal's plan-* branch so the badge
 // agrees with the launch dialog.
+// Agents with no ActiveStatus are omitted; they are not part of the run
+// lifecycle and have no active-status transition to drive.
 // GET /api/p/:project/agents/ready-counts
 func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
@@ -254,34 +337,12 @@ func (s *Server) handleGetReadyCounts(w http.ResponseWriter, r *http.Request) {
 		if ag.ActiveStatus == "" {
 			continue
 		}
-		var total int
-		if len(ag.SourceTypes) == 0 {
-			n, err := p.Idx.Count(index.Filter{Status: readyInputStatus})
-			if err != nil {
-				writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-				return
-			}
-			total = n
-		} else {
-			for _, t := range ag.SourceTypes {
-				n, err := p.Idx.Count(index.Filter{Status: readyInputStatus, Type: t})
-				if err != nil {
-					writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-					return
-				}
-				total += n
-			}
+		rc, err := agentReadyCount(p.Idx, ag)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
 		}
-		// Developer and tech-writer agents also pick up approved defects assigned to their role.
-		if hasDeveloperSourceType(ag.SourceTypes) || hasDocSourceType(ag.SourceTypes) {
-			n, err := countAssignedDefects(p.Idx, ag.Roles)
-			if err != nil {
-				writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-				return
-			}
-			total += n
-		}
-		counts[ag.Name] = total
+		counts[ag.Name] = rc
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"counts": counts})
 }
