@@ -277,13 +277,12 @@ func newQueueTestEnvFromDataDir(t *testing.T, seeds []seedArtifact, existingData
 		t.Fatal(err)
 	}
 	addr := ln.Addr().String()
-	ln.Close()
 
 	srv := kaoshttp.New(kaoshttp.ServerConfig{
-		Listen: addr,
-		Auth:   authStore,
-		Queue:  dispatcher,
-		AppHub: appHub,
+		Listener: ln,
+		Auth:     authStore,
+		Queue:    dispatcher,
+		AppHub:   appHub,
 	}, map[string]*project.Project{
 		"testproject": proj,
 	})

@@ -233,10 +233,9 @@ func newNonGitTestEnv(t *testing.T) *testEnv {
 		t.Fatal(err)
 	}
 	addr := ln.Addr().String()
-	ln.Close()
 
 	srv := kaoshttp.New(kaoshttp.ServerConfig{
-		Listen:   addr,
+		Listener: ln,
 		Auth:     authStore,
 		Frontend: nil,
 	}, map[string]*project.Project{

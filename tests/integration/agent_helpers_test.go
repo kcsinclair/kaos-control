@@ -236,11 +236,10 @@ func newAgentTestEnvWithCfg(t *testing.T, cfgYAML string, seeds []seedArtifact) 
 		t.Fatal(err)
 	}
 	addr := ln.Addr().String()
-	ln.Close()
 
 	srv := kaoshttp.New(kaoshttp.ServerConfig{
-		Listen: addr,
-		Auth:   authStore,
+		Listener: ln,
+		Auth:     authStore,
 	}, map[string]*project.Project{
 		"testproject": proj,
 	})

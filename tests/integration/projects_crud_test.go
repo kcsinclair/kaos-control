@@ -127,7 +127,6 @@ func newCRUDTestEnv(t *testing.T, seeds []crudSeedProject) *crudTestEnv {
 		t.Fatal(err)
 	}
 	addr := ln.Addr().String()
-	ln.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -136,7 +135,7 @@ func newCRUDTestEnv(t *testing.T, seeds []crudSeedProject) *crudTestEnv {
 		DevopsLogDir:        dataDir,
 	}
 	srv := kaoshttp.New(kaoshttp.ServerConfig{
-		Listen:             addr,
+		Listener:           ln,
 		Auth:               authStore,
 		ProjectsDir:        projectsDir,
 		DataDir:            dataDir,

@@ -236,11 +236,10 @@ func newTestEnvFull(t *testing.T, seeds []seedArtifact, frontendFS fs.FS, cfgYAM
 		t.Fatal(err)
 	}
 	addr := ln.Addr().String()
-	ln.Close()
 
 	// Start HTTP server.
 	srv := kaoshttp.New(kaoshttp.ServerConfig{
-		Listen:   addr,
+		Listener: ln,
 		Auth:     authStore,
 		Frontend: frontendFS,
 	}, map[string]*project.Project{

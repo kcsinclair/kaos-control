@@ -121,11 +121,10 @@ func newOllamaAPITestEnv(t *testing.T, initialInstances []config.OllamaInstance)
 		t.Fatal(err)
 	}
 	addr := ln.Addr().String()
-	ln.Close()
 
 	// Start HTTP server with AppCfg wired.
 	srv := kaoshttp.New(kaoshttp.ServerConfig{
-		Listen:     addr,
+		Listener:   ln,
 		Auth:       authStore,
 		AppCfg:     appCfg,
 		AppCfgPath: appCfgPath,
