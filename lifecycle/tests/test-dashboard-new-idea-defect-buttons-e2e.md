@@ -1,7 +1,7 @@
 ---
 title: "Test — Dashboard New Idea & Defect Buttons E2E"
 type: test
-status: approved
+status: done
 lineage: dashboard-new-idea-defect-buttons
 parent: lifecycle/test-plans/dashboard-new-idea-defect-buttons-5-test.md
 created: "2026-05-13T00:00:00+10:00"
