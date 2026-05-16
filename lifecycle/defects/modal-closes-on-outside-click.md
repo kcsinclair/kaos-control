@@ -11,6 +11,9 @@ labels:
     - usability
     - vue
 release: KC-Release3
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Modals Dismiss on Outside Click Instead of Explicit Action
