@@ -1,7 +1,7 @@
 ---
 title: 'Artefacts View: Agent Run Count Column'
 type: idea
-status: planning
+status: done
 lineage: artefacts-agent-run-count-column
 created: "2026-05-16T08:50:35+10:00"
 priority: normal
