@@ -8,6 +8,7 @@ import RunSummaryCard from './RunSummaryCard.vue'
 import RunDenialSummary from './RunDenialSummary.vue'
 import RunFailureBanner from './RunFailureBanner.vue'
 import RawLogModal from './RawLogModal.vue'
+import TestRunSummaryCard from './TestRunSummaryCard.vue'
 import { useAgentsStore } from '@/stores/agents'
 
 const props = defineProps<{
@@ -199,6 +200,12 @@ function handleOverlayClick(e: MouseEvent) {
               :driver-available="true"
             />
           </div>
+
+          <!-- Test-runner run summary -->
+          <TestRunSummaryCard
+            v-if="run.run_summary"
+            :summary="run.run_summary"
+          />
 
           <!-- Permission events -->
           <div v-if="agentsStore.permissionEvents.get(props.runId)?.length" class="rdm-field">

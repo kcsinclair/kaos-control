@@ -147,6 +147,24 @@ export interface DenialRecord {
   rule: string
 }
 
+export interface RunSuiteSummary {
+  name: string
+  total: number
+  passed: number
+  failed: number
+  skipped: number
+  elapsed: number
+}
+
+export interface RunSummary {
+  suites: RunSuiteSummary[]
+  defectsCreated: number
+  duplicatesFound: number
+  orphanedFailures: number
+  coverageGaps: string[]
+  elapsed: number
+}
+
 export interface AgentRunRow {
   run_id: string
   agent_name: string
@@ -166,6 +184,8 @@ export interface AgentRunRow {
   remediation?: string[] | null
   /** Tool calls denied by the mediated driver permission hooks. */
   denied_tool_calls?: DenialRecord[] | null
+  /** Populated for test-runner agent runs. */
+  run_summary?: RunSummary
 }
 
 export interface ArtifactFilter {
