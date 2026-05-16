@@ -1,13 +1,15 @@
 ---
-title: "E2E stub-agent missing prompt_templates causes 409 on triggerRun (TC1, TC3, TC4)"
+title: E2E stub-agent missing prompt_templates causes 409 on triggerRun (TC1, TC3, TC4)
 type: defect
-status: approved
+status: in-development
 lineage: artefacts-agent-run-count-column
 parent: lifecycle/tests/artefacts-agent-run-count-column-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release2
 assignees:
-  - role: test-developer
-    who: agent
+    - role: test-developer
+      who: agent
 ---
 
 # E2E stub-agent missing prompt_templates causes 409 on triggerRun (TC1, TC3, TC4)
