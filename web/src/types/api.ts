@@ -87,6 +87,8 @@ export interface ArtifactRow {
   frontmatter: ArtifactFrontmatter
   mtime: string
   created: string
+  agent_run_count: number
+  active_agent_status?: 'running' | 'queued'
 }
 
 export interface ArtifactDetail extends ArtifactRow {
