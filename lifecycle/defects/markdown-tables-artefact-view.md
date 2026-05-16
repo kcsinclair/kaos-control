@@ -1,7 +1,7 @@
 ---
 title: Markdown Tables Not Rendering Correctly in Artefact View
 type: defect
-status: approved
+status: in-development
 lineage: markdown-tables-artefact-view
 created: "2026-05-11T13:10:28+10:00"
 priority: normal
