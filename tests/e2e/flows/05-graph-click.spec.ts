@@ -9,7 +9,7 @@ test.describe('Flow 05 — Graph node click', () => {
     await page.goto(`${kctest.baseURL}/p/testproject/map`)
 
     // Wait for Cytoscape canvas to render
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('canvas[data-id="layer2-node"]')).toBeVisible({ timeout: 15_000 })
 
     // Wait for __cy to be exposed
     await page.waitForFunction(() => !!(window as any).__cy, { timeout: 15_000 })

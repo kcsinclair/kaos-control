@@ -20,7 +20,7 @@ test.describe('Flow 09 — Graph rendering for doc nodes (NFR1)', () => {
     await page.goto(`${kctest.baseURL}/p/testproject/map`)
 
     // Wait for Cytoscape canvas and __cy to be ready
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('canvas[data-id="layer2-node"]')).toBeVisible({ timeout: 15_000 })
     await page.waitForFunction(() => !!(window as any).__cy, { timeout: 15_000 })
 
     // Wait for layout to stabilise with at least one positioned node
@@ -54,7 +54,7 @@ test.describe('Flow 09 — Graph rendering for doc nodes (NFR1)', () => {
   }) => {
     await page.goto(`${kctest.baseURL}/p/testproject/map`)
 
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('canvas[data-id="layer2-node"]')).toBeVisible({ timeout: 15_000 })
     await page.waitForFunction(() => !!(window as any).__cy, { timeout: 15_000 })
     await page.waitForFunction(
       () => {
@@ -100,7 +100,7 @@ test.describe('Flow 09 — Graph rendering for doc nodes (NFR1)', () => {
   }) => {
     await page.goto(`${kctest.baseURL}/p/testproject/map`)
 
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('canvas[data-id="layer2-node"]')).toBeVisible({ timeout: 15_000 })
     await page.waitForFunction(() => !!(window as any).__cy, { timeout: 15_000 })
     await page.waitForFunction(
       () => {
