@@ -12,6 +12,9 @@ labels:
     - vue
     - usability
 release: KC-Release2
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Markdown Tables Not Rendering Correctly in Artefact View
