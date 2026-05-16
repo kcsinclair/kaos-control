@@ -259,9 +259,6 @@ useWebSocket(project.value, 'artifact.indexed', async (e: WsEvent) => {
 watch(artifactPath, () => load(), { immediate: false })
 onMounted(async () => {
   await load()
-  if (artifact.value) {
-    await enterEdit()
-  }
   if (graphStore.rawEdges.length === 0) {
     graphStore.fetchGraph(project.value)
   }

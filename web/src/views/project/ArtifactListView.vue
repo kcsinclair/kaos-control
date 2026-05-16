@@ -186,6 +186,14 @@ useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
   store.fetchList(project, { limit: 0, offset: undefined })
 })
 
+// Re-fetch immediately when an agent run starts so the "Agent Running" pill
+// shows on the target artifact. Without this, the pill would only ever
+// appear if an `artifact.indexed` event happened to fire mid-run.
+useWebSocket(project, 'agent.started', (_e: WsEvent) => {
+  store.invalidate()
+  store.fetchList(project, { limit: 0, offset: undefined })
+})
+
 // Re-fetch immediately when an agent run finishes so counts and pills update
 useWebSocket(project, 'agent.finished', (_e: WsEvent) => {
   store.invalidate()

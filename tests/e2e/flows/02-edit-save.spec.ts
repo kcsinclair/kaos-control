@@ -10,11 +10,17 @@ test.describe('Flow 02 — Edit and save artifact', () => {
     kctest,
     loggedInPage: page,
   }) => {
+    // Log in first so we have a cookie to authenticate the WS subscription.
+    // Server closes unauthenticated WS with close code 4401.
+    const cookies = await page.context().cookies()
+    const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
+
     // Subscribe to WS before navigating so we catch the event
     const wsURL =
       kctest.baseURL.replace(/^http/, 'ws') + '/api/p/testproject/ws'
     const wsEvents: { type: string; payload: unknown }[] = []
-    const ws = new WebSocket(wsURL)
+    const wsOpts = { headers: { Cookie: cookieHeader } } as unknown as string[]
+    const ws = new WebSocket(wsURL, wsOpts)
     const fileChangedPromise = new Promise<void>((resolve, reject) => {
       const timer = setTimeout(
         () => reject(new Error('Timed out waiting for file.changed WS event')),
@@ -38,6 +44,12 @@ test.describe('Flow 02 — Edit and save artifact', () => {
     // Navigate to artifact editor
     const encodedPath = ARTIFACT_REL.split('/').join('/')
     await page.goto(`${kctest.baseURL}/p/testproject/artifacts/${encodedPath}`)
+
+    // Editor mounts in read mode — click Edit to reveal CodeMirror.
+    await expect(page.locator('.status-badge, [data-status]').first()).toBeVisible({
+      timeout: 10_000,
+    })
+    await page.click('button.btn-primary:has-text("Edit")')
 
     // Wait for CodeMirror to be ready
     const editor = page.locator('.cm-content').first()

@@ -29,7 +29,7 @@ test.describe('Flow 05 — Graph node click', () => {
     const nodeCount = await page.evaluate(() => (window as any).__cy.nodes().length)
     expect(nodeCount).toBeGreaterThan(0)
 
-    // Click on the smoke-req-01 node
+    // Click on the smoke-req-01 node — opens the ArtifactModal preview.
     await page.evaluate(() => {
       const cy = (window as any).__cy
       // Find node whose data path matches our artifact
@@ -41,6 +41,11 @@ test.describe('Flow 05 — Graph node click', () => {
         node.trigger('tap')
       }
     })
+
+    // Modal opens — click its Edit button to navigate to the artifact page.
+    const editBtn = page.locator('.action-btn--primary', { hasText: 'Edit' })
+    await expect(editBtn).toBeVisible({ timeout: 5_000 })
+    await editBtn.click()
 
     // Assert URL changed to the artifact page
     await page.waitForURL(

@@ -5,10 +5,14 @@ test.describe('Flow 04 — Agent run', () => {
     kctest,
     loggedInPage: page,
   }) => {
-    // Subscribe to WS for agent.started event
+    // Subscribe to WS for agent.started event. Server requires auth on WS;
+    // pass the browser-context session cookie via undici's headers extension.
+    const cookies = await page.context().cookies()
+    const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
     const wsURL = kctest.baseURL.replace(/^http/, 'ws') + '/api/p/testproject/ws'
+    const wsOpts = { headers: { Cookie: cookieHeader } } as unknown as string[]
     const agentStartedPromise = new Promise<{ run_id: string }>((resolve, reject) => {
-      const ws = new WebSocket(wsURL)
+      const ws = new WebSocket(wsURL, wsOpts)
       const timer = setTimeout(
         () => reject(new Error('Timed out waiting for agent.started WS event')),
         8_000,
@@ -68,8 +72,9 @@ test.describe('Flow 04 — Agent run', () => {
         },
       )
       if (res.ok) {
-        const data = (await res.json()) as { status?: string }
-        finalStatus = data.status ?? ''
+        // API returns { run: { ...row..., status } } — extract from nested run.
+        const data = (await res.json()) as { run?: { status?: string } }
+        finalStatus = data.run?.status ?? ''
         if (finalStatus === 'done' || finalStatus === 'failed') break
       }
       await new Promise((r) => setTimeout(r, 500))

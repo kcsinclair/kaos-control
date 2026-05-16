@@ -62,10 +62,16 @@ function wsURL(baseURL: string): string {
 function waitForWsEvent(
   url: string,
   eventType: string,
+  cookieHeader: string,
   timeoutMs = 12_000,
 ): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(url)
+    // Server closes unauthenticated WS with code 4401; pass session cookie
+    // via undici's headers extension (not in the WHATWG WebSocket types).
+    const wsOpts = cookieHeader
+      ? ({ headers: { Cookie: cookieHeader } } as unknown as string[])
+      : undefined
+    const ws = new WebSocket(url, wsOpts)
     const timer = setTimeout(() => {
       ws.close()
       reject(new Error(`Timed out waiting for WS event ${eventType}`))
@@ -111,8 +117,10 @@ test.describe('Flow 10 — Artefact run count column', () => {
 
     await page.goto(`${kctest.baseURL}/p/testproject/artifacts`)
 
-    // Column header "Runs" is visible
-    const runsHeader = page.locator('th.sort-th, th[role="columnheader"]').filter({ hasText: /^runs$/i })
+    // Column header "Runs" is visible. Use getByRole to match the accessible
+    // name — the th's textContent includes whitespace + the SortHeader icon,
+    // so a strict `hasText: /^runs$/i` filter on the raw element misses it.
+    const runsHeader = page.getByRole('columnheader', { name: 'Runs' })
     await expect(runsHeader).toBeVisible({ timeout: 10_000 })
 
     // "Runs" appears after "Type" and before "Created" in the header row
@@ -149,7 +157,7 @@ test.describe('Flow 10 — Artefact run count column', () => {
     // Wait for the table to load
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10_000 })
 
-    const runsHeader = page.locator('th.sort-th, th[role="columnheader"]').filter({ hasText: /^runs$/i })
+    const runsHeader = page.getByRole('columnheader', { name: 'Runs' })
     await expect(runsHeader).toBeVisible({ timeout: 5_000 })
 
     // Click once → ascending sort
@@ -187,9 +195,12 @@ test.describe('Flow 10 — Artefact run count column', () => {
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10_000 })
 
     const headers = await getRunHeaders(page, kctest.baseURL)
+    const cookieHeader = (await page.context().cookies())
+      .map((c) => `${c.name}=${c.value}`)
+      .join('; ')
 
     // Listen for agent.started before triggering so we don't miss it
-    const agentStarted = waitForWsEvent(wsURL(kctest.baseURL), 'agent.started')
+    const agentStarted = waitForWsEvent(wsURL(kctest.baseURL), 'agent.started', cookieHeader)
 
     const runId = await triggerRun(kctest.baseURL, headers, RC_PILL)
 
@@ -224,6 +235,9 @@ test.describe('Flow 10 — Artefact run count column', () => {
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10_000 })
 
     const headers = await getRunHeaders(page, kctest.baseURL)
+    const cookieHeader = (await page.context().cookies())
+      .map((c) => `${c.name}=${c.value}`)
+      .join('; ')
     const wsRow = page
       .locator('tr')
       .filter({ has: page.locator('.artifact-path', { hasText: 'rc-ws.md' }) })
@@ -236,7 +250,7 @@ test.describe('Flow 10 — Artefact run count column', () => {
     const beforeURL = page.url()
 
     // Listen for agent.finished so we know when to check the DOM
-    const agentFinished = waitForWsEvent(wsURL(kctest.baseURL), 'agent.finished', 15_000)
+    const agentFinished = waitForWsEvent(wsURL(kctest.baseURL), 'agent.finished', cookieHeader, 15_000)
 
     await triggerRun(kctest.baseURL, headers, RC_WS)
 
