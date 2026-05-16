@@ -1,0 +1,21 @@
+name: Run All Tests
+type: test
+
+# Invoke the test-runner agent via the kaos-control API. The agent runs all
+# configured test suites (Go, Vitest, Playwright), parses failures, and
+# auto-files defect artifacts in lifecycle/defects/ for each failure found.
+#
+# Prerequisites:
+#   KC_PORT    — kaos-control HTTP port (default: 8042)
+#   KC_PROJECT — project ID registered in kaos-control
+#   KC_SESSION — valid session cookie value
+
+steps:
+  - name: Run test-runner agent
+    description: Execute all test suites and file defects for failures
+    command: |
+      curl -s -X POST "http://localhost:${KC_PORT:-8042}/api/p/${KC_PROJECT}/agents/test-runner/run" \
+        -H "Content-Type: application/json" \
+        -H "Cookie: session=${KC_SESSION}" \
+        -d '{}'
+    timeout: 30m
