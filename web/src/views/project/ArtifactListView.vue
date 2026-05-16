@@ -186,6 +186,12 @@ useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
   store.fetchList(project, { limit: 0, offset: undefined })
 })
 
+// Re-fetch immediately when an agent run finishes so counts and pills update
+useWebSocket(project, 'agent.finished', (_e: WsEvent) => {
+  store.invalidate()
+  store.fetchList(project, { limit: 0, offset: undefined })
+})
+
 function initFiltersFromQuery() {
   const q = route.query
   if (typeof q.status === 'string') selectedStatus.value = q.status
