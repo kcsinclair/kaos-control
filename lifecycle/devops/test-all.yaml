@@ -1,4 +1,4 @@
-name: Run All Tests
+name: Test Runner for Everything
 type: test
 
 # Invoke the test-runner agent via the kaos-control API. The agent runs all
@@ -8,14 +8,13 @@ type: test
 # Prerequisites:
 #   KC_PORT    — kaos-control HTTP port (default: 8042)
 #   KC_PROJECT — project ID registered in kaos-control
-#   KC_SESSION — valid session cookie value
+#   KC_API_TOKEN — dynamic token, lives for job.
 
 steps:
   - name: Run test-runner agent
-    description: Execute all test suites and file defects for failures
     command: |
-      curl -s -X POST "http://localhost:${KC_PORT:-8042}/api/p/${KC_PROJECT}/agents/test-runner/run" \
+      curl -s -X POST "http://127.0.0.1:${KC_PORT}/api/p/${KC_PROJECT}/agents/test-runner/run" \
         -H "Content-Type: application/json" \
-        -H "Cookie: session=${KC_SESSION}" \
+        -H "Authorization: Bearer ${KC_API_TOKEN}" \
         -d '{}'
     timeout: 30m

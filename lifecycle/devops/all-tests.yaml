@@ -25,3 +25,8 @@ steps:
     description: Integration tests behind the `integration` build tag (slowest step).
     command: make test-integration
     timeout: 15m
+
+  - name: E2E smoke tests
+    description: Playwright flows against a fresh ./dist/kaos-control binary
+    command: make test-e2e
+    timeout: 5m

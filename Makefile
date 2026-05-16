@@ -56,6 +56,14 @@ test-integration:
 ## test: run all backend tests
 test: test-unit test-integration
 
+## test-e2e: run Playwright e2e smoke tests (builds binary first)
+test-e2e: build
+	cd tests/e2e && pnpm install && pnpm test
+
+## test-all: run all test suites
+test-all: test-unit test-integration test-e2e
+	cd tests/web && pnpm test
+
 ## lint: run go vet, staticcheck, govulncheck, gosec, and gitleaks
 ##       Go security tooling requires GOBIN on PATH (handled by the
 ##       `export PATH` near the top of this file).

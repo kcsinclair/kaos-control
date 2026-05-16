@@ -1,0 +1,8 @@
+name: Run E2E Smoke Tests
+type: test
+
+steps:
+  - name: E2E smoke tests
+    description: Playwright flows against a fresh ./dist/kaos-control binary
+    command: make test-e2e
+    timeout: 5m
