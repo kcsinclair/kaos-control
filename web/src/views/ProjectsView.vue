@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
@@ -31,6 +31,10 @@ onMounted(async () => {
     }
   }
 })
+
+const sortedProjects = computed(() =>
+  [...projectStore.projects].sort((a, b) => a.name.localeCompare(b.name))
+)
 
 function openProject(name: string) {
   projectStore.setCurrent(name)
@@ -87,7 +91,7 @@ function onInitialised() {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="p in projectStore.projects" :key="p.name">
+              <tr v-for="p in sortedProjects" :key="p.name">
                 <td>
                   <a
                     class="project-name-link"
