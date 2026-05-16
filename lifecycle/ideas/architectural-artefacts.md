@@ -8,9 +8,18 @@ labels:
     - architecture
     - artefacts
     - enhancement
+release: KC-Release3
 ---
 
 # Architectural Artefacts
+
+See new related [[architecture-templates]]
+
+The goal of architecture artefacts is that the agents should be referring to these when designing, etc.  This should cover some of the non-functional things, and how secrets are handled, minimum options for user accounts, etc.
+
+There should also be a set of standards, policies, rules for usability, etc, like always sort lists alphabetically
+
+People with less technical experience can still get an enterprise class application (get closer to).
 
 New directory in lifecycle which defines any architectural artefacts.
 
