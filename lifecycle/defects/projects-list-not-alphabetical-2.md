@@ -1,7 +1,7 @@
 ---
 title: Projects List Not Sorted Alphabetically
 type: defect
-status: approved
+status: in-development
 lineage: projects-list-not-alphabetical-2
 created: "2026-05-16T07:43:29+10:00"
 priority: normal
