@@ -62,7 +62,11 @@ function onTextareaKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault()
     if (store.canSubmit) {
-      store.generate(props.project, docOpts())
+      if (props.artifactType === 'doc') {
+        onCreateDoc()
+      } else {
+        store.generate(props.project, docOpts())
+      }
     }
   }
 }
@@ -119,6 +123,15 @@ async function onGenerate() {
 
 async function onAccept() {
   const path = await store.acceptProposal(props.project)
+  if (path) {
+    store.reset()
+    emit('created', path)
+  }
+}
+
+async function onCreateDoc() {
+  if (!store.canSubmit) return
+  const path = await store.createDoc(props.project)
   if (path) {
     store.reset()
     emit('created', path)
@@ -200,6 +213,7 @@ watch(
           </div>
           <div class="bdm-footer">
             <button
+              v-if="props.artifactType !== 'doc'"
               class="btn-primary"
               :disabled="!store.canSubmit || store.phase === 'generating'"
               @click="onGenerate"
@@ -208,6 +222,18 @@ watch(
                 <span class="bdm-dot" /><span class="bdm-dot" /><span class="bdm-dot" />
               </template>
               <template v-else>Generate</template>
+            </button>
+            <button
+              v-else
+              type="submit"
+              class="btn-primary"
+              :disabled="!store.canSubmit || store.phase === 'generating'"
+              @click="onCreateDoc"
+            >
+              <template v-if="store.phase === 'generating'">
+                <span class="bdm-dot" /><span class="bdm-dot" /><span class="bdm-dot" />
+              </template>
+              <template v-else>Create</template>
             </button>
           </div>
         </template>

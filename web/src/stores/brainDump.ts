@@ -7,6 +7,24 @@ import { api } from '@/api/client'
 import { ApiError } from '@/api/client'
 import type { IdeaGenerateResponse } from '@/types/api'
 
+function slugify(text: string): string {
+  const slug = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/, '')
+  return slug && /^[a-z0-9]/.test(slug) ? slug : `doc-${Date.now()}`
+}
+
+function deriveTitle(text: string): string {
+  const first = text.split(/[\n.!?]/)[0].trim()
+  return (first || text).slice(0, 120)
+}
+
 export type BrainDumpPhase = 'input' | 'generating' | 'preview' | 'editing'
 
 export const useBrainDumpStore = defineStore('brainDump', () => {
@@ -96,6 +114,40 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     return true
   }
 
+  async function createDoc(project: string): Promise<string | null> {
+    const raw = input.value.trim()
+    if (!raw) return null
+    error.value = null
+    phase.value = 'generating'
+    try {
+      const slug = slugify(raw)
+      const title = deriveTitle(raw)
+      const res = await api.post<{ artifact: { path: string } }>(
+        `/p/${encodeURIComponent(project)}/artifacts`,
+        {
+          stage: 'docs',
+          slug,
+          frontmatter: {
+            title,
+            type: 'doc',
+            status: 'draft',
+            lineage: slug,
+          },
+          body: raw,
+        },
+      )
+      return res.artifact.path
+    } catch (e: unknown) {
+      if (e instanceof ApiError) {
+        error.value = e.message
+      } else {
+        error.value = 'Something went wrong — please try again.'
+      }
+      phase.value = 'input'
+      return null
+    }
+  }
+
   function discard(): void {
     input.value = ''
     artifactType.value = 'idea'
@@ -119,6 +171,7 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     canSubmit,
     generate,
     acceptProposal,
+    createDoc,
     startEdit,
     applyEdit,
     discard,
