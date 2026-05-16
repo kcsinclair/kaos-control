@@ -1,7 +1,7 @@
 ---
 title: 'Tests: 3D Map Node Labels Toggle'
 type: test
-status: in-qa
+status: approved
 lineage: 3d-map-node-labels-toggle
 parent: lifecycle/test-plans/3d-map-node-labels-toggle-5-test.md
 ---

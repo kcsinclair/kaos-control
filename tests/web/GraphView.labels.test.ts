@@ -92,7 +92,7 @@ const GraphFiltersStub = {
 }
 
 // ---------------------------------------------------------------------------
-// Mount helper — spyOn before mount so template captures spy references
+// Mount helpers — spyOn before mount so template captures spy references
 // ---------------------------------------------------------------------------
 
 async function mountMapView(
@@ -148,6 +148,28 @@ async function mountMapView(
   return { wrapper, store, titleSpy, lineageSpy }
 }
 
+/**
+ * mountMapView3D — same as mountMapView but switches the view to '3d' after
+ * loading so that the ForceGraph3D branch (v-if="view === '3d'") is rendered.
+ * MapView defaults to '2d', so tests that assert on ForceGraph3D must use
+ * this variant. See defect lifecycle/defects/3d-map-node-labels-toggle-7-defect.md
+ */
+async function mountMapView3D(
+  storeSetup?: (store: ReturnType<typeof useGraphStore>) => void,
+) {
+  const result = await mountMapView(storeSetup)
+  const { wrapper } = result
+
+  // Click the '3D' toggle button (first button in .view-toggle) to switch view
+  const btn3d = wrapper.find('.view-toggle button')
+  if (btn3d.exists()) {
+    await btn3d.trigger('click')
+    await flushPromises()
+  }
+
+  return result
+}
+
 // ---------------------------------------------------------------------------
 // Cleanup
 // ---------------------------------------------------------------------------
@@ -198,26 +220,26 @@ describe('MapView — ForceGraph3D label prop bindings (M5)', () => {
   beforeEach(() => { setActivePinia(createPinia()) })
 
   it('ForceGraph3D receives showNodeTitles=false (store default)', async () => {
-    const { wrapper } = await mountMapView()
+    const { wrapper } = await mountMapView3D()
     const graphStub = wrapper.findComponent(ForceGraph3DStub)
     expect(graphStub.exists(), 'ForceGraph3D stub not found — check rawNodes/loading state').toBe(true)
     expect(graphStub.props('showNodeTitles')).toBe(false)
   })
 
   it('ForceGraph3D receives showNodeLineage=false (store default)', async () => {
-    const { wrapper } = await mountMapView()
+    const { wrapper } = await mountMapView3D()
     const graphStub = wrapper.findComponent(ForceGraph3DStub)
     expect(graphStub.props('showNodeLineage')).toBe(false)
   })
 
   it('ForceGraph3D receives showNodeTitles=true when store has it set', async () => {
-    const { wrapper } = await mountMapView((store) => { store.showNodeTitles = true })
+    const { wrapper } = await mountMapView3D((store) => { store.showNodeTitles = true })
     const graphStub = wrapper.findComponent(ForceGraph3DStub)
     expect(graphStub.props('showNodeTitles')).toBe(true)
   })
 
   it('ForceGraph3D receives showNodeLineage=true when store has it set', async () => {
-    const { wrapper } = await mountMapView((store) => { store.showNodeLineage = true })
+    const { wrapper } = await mountMapView3D((store) => { store.showNodeLineage = true })
     const graphStub = wrapper.findComponent(ForceGraph3DStub)
     expect(graphStub.props('showNodeLineage')).toBe(true)
   })
@@ -231,7 +253,7 @@ describe('MapView — ForceGraph3D label props update reactively (M5)', () => {
   beforeEach(() => { setActivePinia(createPinia()) })
 
   it('showNodeTitles prop updates when store.toggleShowNodeTitles() is called', async () => {
-    const { wrapper, store } = await mountMapView()
+    const { wrapper, store } = await mountMapView3D()
     const graphStub = wrapper.findComponent(ForceGraph3DStub)
     expect(graphStub.exists(), 'ForceGraph3D stub not rendered').toBe(true)
     expect(graphStub.props('showNodeTitles')).toBe(false)
@@ -243,7 +265,7 @@ describe('MapView — ForceGraph3D label props update reactively (M5)', () => {
   })
 
   it('showNodeLineage prop updates when store.toggleShowNodeLineage() is called', async () => {
-    const { wrapper, store } = await mountMapView()
+    const { wrapper, store } = await mountMapView3D()
     const graphStub = wrapper.findComponent(ForceGraph3DStub)
     expect(graphStub.exists(), 'ForceGraph3D stub not rendered').toBe(true)
     expect(graphStub.props('showNodeLineage')).toBe(false)
