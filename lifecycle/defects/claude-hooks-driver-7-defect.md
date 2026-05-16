@@ -1,7 +1,7 @@
 ---
 title: hook-helper test assertions use obsolete simple JSON format
 type: defect
-status: in-development
+status: done
 lineage: claude-hooks-driver
 created: "2026-05-16T00:00:00+10:00"
 parent: lifecycle/tests/claude-hooks-driver-6-test.md

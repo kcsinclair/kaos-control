@@ -1,7 +1,7 @@
 ---
 title: Dashboard header btn-new-idea precedes btn-new-defect, violating FR-4 DOM order
 type: defect
-status: in-development
+status: done
 lineage: dashboard-new-idea-defect-buttons
 parent: lifecycle/tests/test-dashboard-new-idea-defect-buttons-e2e.md
 labels:

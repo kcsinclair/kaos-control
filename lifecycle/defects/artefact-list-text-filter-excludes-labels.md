@@ -1,7 +1,7 @@
 ---
 title: Artefact List Text Filter Does Not Include Labels
 type: defect
-status: in-development
+status: done
 lineage: artefact-list-text-filter-excludes-labels
 created: "2026-05-09T16:32:20+10:00"
 priority: low

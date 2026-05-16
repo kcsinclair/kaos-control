@@ -1,7 +1,7 @@
 ---
 title: Fixture config.yaml uses `roles:` instead of `role:` for tech-writer agent
 type: defect
-status: in-development
+status: done
 lineage: end-to-end-smoke-tests
 release: KC-Release2
 assignees:
