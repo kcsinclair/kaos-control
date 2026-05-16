@@ -1,13 +1,15 @@
 ---
-title: "TC2 Runs column header locator fails — CSS text-transform:uppercase breaks case-sensitive regex"
+title: TC2 Runs column header locator fails — CSS text-transform:uppercase breaks case-sensitive regex
 type: defect
-status: approved
+status: in-development
 lineage: artefacts-agent-run-count-column
 parent: lifecycle/tests/artefacts-agent-run-count-column-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release2
 assignees:
-  - role: test-developer
-    who: agent
+    - role: test-developer
+      who: agent
 ---
 
 # TC2 Runs column header locator fails — CSS text-transform:uppercase breaks case-sensitive regex
