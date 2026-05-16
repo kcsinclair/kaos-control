@@ -1,7 +1,7 @@
 ---
 title: Tech Writer Agent
 type: requirement
-status: in-development
+status: done
 lineage: tech-writer-agent
 parent: ideas/tech-writer-agent.md
 labels:
