@@ -26,7 +26,7 @@ const store = useGraphData(project)
 
 const selectedNode = ref<GraphNode | null>(null)
 const selectedLabelName = ref<string | null>(null)
-const view = ref<'3d' | '2d'>('3d')
+const view = ref<'3d' | '2d'>('2d')
 const showStatusPanel = ref(false)
 
 const graphFiltersRef = ref<{ focus: () => void } | null>(null)
