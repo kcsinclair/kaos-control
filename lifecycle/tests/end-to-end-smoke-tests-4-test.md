@@ -1,7 +1,7 @@
 ---
 title: "Tests: End-to-end Smoke Tests"
 type: test
-status: approved
+status: done
 lineage: end-to-end-smoke-tests
 parent: lifecycle/test-plans/end-to-end-smoke-tests-3-test.md
 ---
