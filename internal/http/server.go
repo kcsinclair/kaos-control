@@ -57,10 +57,15 @@ type Server struct {
 
 // ServerConfig holds what the HTTP layer needs.
 type ServerConfig struct {
-	Listen     string
-	TLSCert    string
-	TLSKey     string
-	TLSOn      bool
+	Listen string
+	// Listener, when non-nil, is used directly by ListenAndServe instead of
+	// binding Listen via net.Listen. Tests pass a pre-bound 127.0.0.1:0
+	// listener to avoid a race where the ephemeral port is grabbed by another
+	// goroutine between the test's probe-bind and the server's real bind.
+	Listener net.Listener
+	TLSCert  string
+	TLSKey   string
+	TLSOn    bool
 	Frontend   fs.FS
 	Auth       *auth.Store  // nil when auth is not configured
 	AppCfg     *config.App  // may be nil; required for Ollama instance management
@@ -359,9 +364,13 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	s.servCtx = ctx
 	s.projectsMu.Unlock()
 
-	ln, err := net.Listen("tcp", s.cfg.Listen)
-	if err != nil {
-		return fmt.Errorf("listening on %s: %w", s.cfg.Listen, err)
+	ln := s.cfg.Listener
+	if ln == nil {
+		var err error
+		ln, err = net.Listen("tcp", s.cfg.Listen)
+		if err != nil {
+			return fmt.Errorf("listening on %s: %w", s.cfg.Listen, err)
+		}
 	}
 	slog.Info("kaos-control started", "addr", ln.Addr().String(), "version", Version)
 

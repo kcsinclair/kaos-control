@@ -9,6 +9,123 @@ import (
 	"github.com/kaos-control/kaos-control/internal/artifact"
 )
 
+// TestAgentRunCountsByTargetPath verifies the GROUP BY query that returns
+// run counts keyed by target_path. Missing keys mean 0 runs (caller convention).
+func TestAgentRunCountsByTargetPath(t *testing.T) {
+	idx := openTestIndex(t)
+
+	now := time.Now()
+
+	// Path A: 3 runs across done/failed/killed — all statuses must be counted.
+	for _, r := range []*AgentRunRow{
+		{RunID: "arc-a-0", AgentName: "test-agent", Role: "developer", TargetPath: "lifecycle/ideas/arc-a.md", StartedAt: now, Status: "done"},
+		{RunID: "arc-a-1", AgentName: "test-agent", Role: "developer", TargetPath: "lifecycle/ideas/arc-a.md", StartedAt: now, Status: "failed"},
+		{RunID: "arc-a-2", AgentName: "test-agent", Role: "developer", TargetPath: "lifecycle/ideas/arc-a.md", StartedAt: now, Status: "killed"},
+	} {
+		if err := idx.InsertAgentRun(r); err != nil {
+			t.Fatalf("InsertAgentRun: %v", err)
+		}
+	}
+
+	// Path B: 1 run (running).
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID: "arc-b-0", AgentName: "test-agent", Role: "developer",
+		TargetPath: "lifecycle/ideas/arc-b.md", StartedAt: now, Status: "running",
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+
+	// Path C: 1 run (queued).
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID: "arc-c-0", AgentName: "test-agent", Role: "developer",
+		TargetPath: "lifecycle/ideas/arc-c.md", StartedAt: now, Status: "queued",
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+
+	// Path D: no runs — must be absent from map.
+
+	counts, err := idx.AgentRunCountsByTargetPath()
+	if err != nil {
+		t.Fatalf("AgentRunCountsByTargetPath: %v", err)
+	}
+
+	if got := counts["lifecycle/ideas/arc-a.md"]; got != 3 {
+		t.Errorf("arc-a: want 3 runs, got %d", got)
+	}
+	if got := counts["lifecycle/ideas/arc-b.md"]; got != 1 {
+		t.Errorf("arc-b: want 1 run, got %d", got)
+	}
+	if got := counts["lifecycle/ideas/arc-c.md"]; got != 1 {
+		t.Errorf("arc-c: want 1 run, got %d", got)
+	}
+	if _, present := counts["lifecycle/ideas/arc-d.md"]; present {
+		t.Error("arc-d: must be absent from map (caller treats missing key as 0)")
+	}
+}
+
+// TestActiveAgentStatusByTargetPath verifies that "running" trumps "queued",
+// completed runs are excluded, and paths with no active runs are absent.
+func TestActiveAgentStatusByTargetPath(t *testing.T) {
+	idx := openTestIndex(t)
+
+	now := time.Now()
+
+	// Path A: running only → "running".
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID: "sts-a-0", AgentName: "test-agent", Role: "developer",
+		TargetPath: "lifecycle/ideas/sts-a.md", StartedAt: now, Status: "running",
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+
+	// Path B: running + queued → "running" (running trumps queued).
+	for _, r := range []*AgentRunRow{
+		{RunID: "sts-b-0", AgentName: "test-agent", Role: "developer", TargetPath: "lifecycle/ideas/sts-b.md", StartedAt: now, Status: "running"},
+		{RunID: "sts-b-1", AgentName: "test-agent", Role: "developer", TargetPath: "lifecycle/ideas/sts-b.md", StartedAt: now, Status: "queued"},
+	} {
+		if err := idx.InsertAgentRun(r); err != nil {
+			t.Fatalf("InsertAgentRun: %v", err)
+		}
+	}
+
+	// Path C: queued only → "queued".
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID: "sts-c-0", AgentName: "test-agent", Role: "developer",
+		TargetPath: "lifecycle/ideas/sts-c.md", StartedAt: now, Status: "queued",
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+
+	// Path D: only completed runs → absent from map.
+	for _, r := range []*AgentRunRow{
+		{RunID: "sts-d-0", AgentName: "test-agent", Role: "developer", TargetPath: "lifecycle/ideas/sts-d.md", StartedAt: now, Status: "done"},
+		{RunID: "sts-d-1", AgentName: "test-agent", Role: "developer", TargetPath: "lifecycle/ideas/sts-d.md", StartedAt: now, Status: "failed"},
+	} {
+		if err := idx.InsertAgentRun(r); err != nil {
+			t.Fatalf("InsertAgentRun: %v", err)
+		}
+	}
+
+	statuses, err := idx.ActiveAgentStatusByTargetPath()
+	if err != nil {
+		t.Fatalf("ActiveAgentStatusByTargetPath: %v", err)
+	}
+
+	if got := statuses["lifecycle/ideas/sts-a.md"]; got != "running" {
+		t.Errorf("sts-a: want running, got %q", got)
+	}
+	if got := statuses["lifecycle/ideas/sts-b.md"]; got != "running" {
+		t.Errorf("sts-b (running+queued): want running, got %q", got)
+	}
+	if got := statuses["lifecycle/ideas/sts-c.md"]; got != "queued" {
+		t.Errorf("sts-c: want queued, got %q", got)
+	}
+	if _, present := statuses["lifecycle/ideas/sts-d.md"]; present {
+		t.Error("sts-d: must be absent (completed runs only)")
+	}
+}
+
 // makeTypedArtifact builds an Artifact with the given path, type, and status
 // for use in Count/filter unit tests.
 func makeTypedArtifact(path, typ, status string) *artifact.Artifact {
