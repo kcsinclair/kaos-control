@@ -624,17 +624,18 @@ func (f *Filter) withDefaults() Filter {
 
 // ArtifactRow is a lightweight summary row returned from list/graph queries.
 type ArtifactRow struct {
-	Path     string               `json:"path"`
-	Slug     string               `json:"slug"`
-	Lineage  string               `json:"lineage"`
-	Index    int                  `json:"index"`
-	Stage    string               `json:"stage"`
-	Type     string               `json:"type"`
-	Status   string               `json:"status"`
-	Title    string               `json:"title"`
-	FM       artifact.Frontmatter `json:"frontmatter"`
-	Mtime    time.Time            `json:"mtime"`
-	Created  time.Time            `json:"created"`
+	Path      string               `json:"path"`
+	Slug      string               `json:"slug"`
+	Lineage   string               `json:"lineage"`
+	Index     int                  `json:"index"`
+	Stage     string               `json:"stage"`
+	Type      string               `json:"type"`
+	Status    string               `json:"status"`
+	Title     string               `json:"title"`
+	Assignees []artifact.Assignee  `json:"assignees,omitempty"`
+	FM        artifact.Frontmatter `json:"frontmatter"`
+	Mtime     time.Time            `json:"mtime"`
+	Created   time.Time            `json:"created"`
 }
 
 // List returns a filtered, paginated list of artifacts and the total matching count.
@@ -2011,6 +2012,7 @@ func scanRows(rows *sql.Rows) ([]*ArtifactRow, int, error) {
 			r.Created = time.Unix(createdUnix, 0)
 		}
 		_ = json.Unmarshal([]byte(fmJSON), &r.FM)
+		r.Assignees = r.FM.Assignees
 		out = append(out, &r)
 	}
 	return out, len(out), rows.Err()
