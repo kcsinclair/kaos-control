@@ -320,6 +320,11 @@ onMounted(async () => {
           >
             <td class="cell-path">
               <span class="artifact-title" v-html="highlightMatch(row.title || row.slug)" />
+              <span
+                v-if="row.active_agent_status"
+                class="agent-status-pill"
+                :data-status="row.active_agent_status"
+              >{{ row.active_agent_status === 'running' ? 'Agent Running' : 'Work Queued' }}</span>
               <span class="artifact-path">{{ row.path }}</span>
             </td>
             <td><span class="stage-tag">{{ row.stage }}</span></td>
@@ -584,6 +589,28 @@ onMounted(async () => {
 .priority-normal   { background: #dbeafe; color: #1d4ed8; }
 .priority-low      { background: var(--color-surface); color: var(--color-text-muted); border: 1px solid var(--color-border); }
 .cell-priority { white-space: nowrap; min-width: 72px; }
+.agent-status-pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-left: var(--space-2);
+}
+.agent-status-pill[data-status="running"] {
+  background: var(--badge-in-progress-bg);
+  color: var(--badge-in-progress-text);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+.agent-status-pill[data-status="queued"] {
+  background: var(--badge-planning-bg);
+  color: var(--badge-planning-text);
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
 .cell-release  { white-space: nowrap; min-width: 80px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
 /* Priority = 4th column, Release = 5th column — hide on narrow viewports */
 @media (max-width: 1023px) {
