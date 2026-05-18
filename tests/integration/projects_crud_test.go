@@ -849,8 +849,10 @@ func TestDeleteProject_NoGoroutineLeaks(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // TestInitProject_CreatesScaffolding verifies that calling init on an
-// uninitialised project creates lifecycle/config.yaml and all default stage
-// directories.
+// uninitialised project performs the full kaos-control scaffold (config +
+// CLAUDE.md + .claude/settings.json + .gitignore + devops/sample.yaml +
+// every lifecycle stage including docs) and auto-populates the logged-in
+// user into config.yaml's users: section.
 func TestInitProject_CreatesScaffolding(t *testing.T) {
 	env := newCRUDTestEnv(t, []crudSeedProject{
 		{name: "init-scaffold", initialised: false},
@@ -867,18 +869,33 @@ func TestInitProject_CreatesScaffolding(t *testing.T) {
 
 	projDir := env.projectDirs["init-scaffold"]
 
-	// lifecycle/config.yaml must exist.
-	cfgPath := filepath.Join(projDir, "lifecycle", "config.yaml")
-	if _, err := os.Stat(cfgPath); err != nil {
-		t.Errorf("lifecycle/config.yaml not created: %v", err)
+	// Landmark files / dirs must exist after init.
+	landmarks := []string{
+		"lifecycle/config.yaml",
+		"CLAUDE.md",
+		".claude/settings.json",
+		".gitignore",
+		"devops/sample.yaml",
+		"lifecycle/ideas/.gitkeep",
+		"lifecycle/requirements/.gitkeep",
+		"lifecycle/docs/.gitkeep",
+		"lifecycle/defects/.gitkeep",
+	}
+	for _, rel := range landmarks {
+		if _, err := os.Stat(filepath.Join(projDir, rel)); err != nil {
+			t.Errorf("expected %s after init: %v", rel, err)
+		}
 	}
 
-	// Every default stage directory must exist.
-	for _, stage := range config.DefaultStages() {
-		stageDir := filepath.Join(projDir, "lifecycle", stage)
-		if _, err := os.Stat(stageDir); err != nil {
-			t.Errorf("stage directory %q not created: %v", stage, err)
-		}
+	// The logged-in test user (admin@test.local; see newCRUDTestEnv)
+	// must appear in config.yaml's users: section so RolesFor() returns
+	// the owner role set for workflow gates.
+	cfgBytes, err := os.ReadFile(filepath.Join(projDir, "lifecycle", "config.yaml"))
+	if err != nil {
+		t.Fatalf("reading rendered config.yaml: %v", err)
+	}
+	if !strings.Contains(string(cfgBytes), "admin@test.local") {
+		t.Errorf("rendered config.yaml does not contain the logged-in user's email; got:\n%s", cfgBytes)
 	}
 }
 

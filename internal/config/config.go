@@ -735,21 +735,10 @@ func IsInitialised(projectPath string) bool {
 	return err == nil
 }
 
-// DefaultStages returns the directory names for the default lifecycle stages.
-func DefaultStages() []string {
-	dirs := make([]string, len(defaultStages))
-	for i, s := range defaultStages {
-		dirs[i] = s.Dir
-	}
-	return dirs
-}
-
-// DefaultProjectConfigYAML returns the content for a freshly-initialised
-// lifecycle/config.yaml, derived from the built-in project defaults.
-func DefaultProjectConfigYAML() string {
-	data, _ := yaml.Marshal(defaultProject())
-	return string(data)
-}
+// Note: `kaos-control init` (CLI and GUI) renders lifecycle/config.yaml from
+// the embedded template at internal/initcmd/templates/config.yaml.tmpl —
+// not from defaultProject() above. defaultProject() remains as the in-memory
+// fallback used by LoadProject when a project has no config.yaml on disk.
 
 // ShouldIgnore reports whether the file at path should be excluded from indexing.
 // It matches the base name of path against each glob pattern using filepath.Match.

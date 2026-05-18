@@ -38,6 +38,76 @@ type Result struct {
 	Created bool   // true = created/written, false = skipped
 }
 
+// ScaffoldOptions configures ScaffoldProject. Only ProjectRoot is required;
+// the rest are optional template inputs and force overrides.
+type ScaffoldOptions struct {
+	// ProjectRoot is the absolute (or to-be-absolutised) path to the project
+	// directory. It is created with 0755 if it does not exist.
+	ProjectRoot string
+	// ProjectName is interpolated into the rendered templates. Defaults to
+	// filepath.Base(ProjectRoot) when empty.
+	ProjectName string
+	// Language is an optional hint passed to the CLAUDE.md template.
+	Language string
+	// OwnerEmail populates the users: section of the rendered
+	// lifecycle/config.yaml. When empty, the template emits a clearly-marked
+	// TODO placeholder so the file still parses as valid config.
+	OwnerEmail string
+	// Force controls which existing seed files may be overwritten. Zero value
+	// is fully idempotent.
+	Force ForceFlags
+}
+
+// ScaffoldResult is the outcome of a ScaffoldProject call, partitioned into
+// directories and seed files so callers can render or filter independently.
+type ScaffoldResult struct {
+	Dirs  []Result // from scaffoldDirs (lifecycle/* plus tests/, devops/)
+	Files []Result // from writeSeedFiles (config.yaml, CLAUDE.md, etc.)
+}
+
+// ScaffoldProject creates the standard kaos-control project layout at
+// opts.ProjectRoot: lifecycle subdirectories, top-level tests/ and devops/,
+// plus rendered seed files (lifecycle/config.yaml, CLAUDE.md,
+// .claude/settings.json, .gitignore, devops/sample.yaml). It is idempotent
+// unless overridden via opts.Force.
+//
+// It does NOT touch the auth database; OwnerEmail is purely a template input
+// that lands in lifecycle/config.yaml's users: section. The CLI's `init`
+// subcommand wraps this with --owner-email password prompting plus an
+// optional auth-DB user creation step.
+func ScaffoldProject(opts ScaffoldOptions) (ScaffoldResult, error) {
+	abs, err := filepath.Abs(opts.ProjectRoot)
+	if err != nil {
+		return ScaffoldResult{}, fmt.Errorf("resolving project root %q: %w", opts.ProjectRoot, err)
+	}
+	if err := os.MkdirAll(abs, 0o755); err != nil {
+		return ScaffoldResult{}, fmt.Errorf("creating project root %q: %w", abs, err)
+	}
+
+	projectName := opts.ProjectName
+	if projectName == "" {
+		projectName = filepath.Base(abs)
+	}
+
+	data := TemplateData{
+		ProjectName: projectName,
+		Language:    opts.Language,
+		OwnerEmail:  opts.OwnerEmail,
+	}
+
+	dirs, err := scaffoldDirs(abs)
+	if err != nil {
+		return ScaffoldResult{}, fmt.Errorf("scaffolding directories: %w", err)
+	}
+
+	files, err := writeSeedFiles(abs, data, opts.Force)
+	if err != nil {
+		return ScaffoldResult{Dirs: dirs}, fmt.Errorf("writing seed files: %w", err)
+	}
+
+	return ScaffoldResult{Dirs: dirs, Files: files}, nil
+}
+
 // Run is the entrypoint for the `kaos-control init` subcommand.
 func Run(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
@@ -79,18 +149,10 @@ func Run(args []string) error {
 		targetPath = fs.Arg(0)
 	}
 
-	// Resolve to an absolute path and create it if absent.
+	// Resolve to an absolute path so we can show it in the summary.
 	absPath, err := filepath.Abs(targetPath)
 	if err != nil {
 		return fmt.Errorf("resolving path %q: %w", targetPath, err)
-	}
-	if err := os.MkdirAll(absPath, 0o755); err != nil {
-		return fmt.Errorf("creating directory %q: %w", absPath, err)
-	}
-
-	// Default project name to the directory basename.
-	if projectName == "" {
-		projectName = filepath.Base(absPath)
 	}
 
 	// --force implies all granular force flags.
@@ -101,49 +163,41 @@ func Run(args []string) error {
 		forceGitignore = true
 	}
 
-	ff := ForceFlags{
-		Config:    forceConfig,
-		ClaudeMd:  forceClaudeMd,
-		Settings:  forceSettings,
-		Gitignore: forceGitignore,
-	}
-
-	data := TemplateData{
-		ProjectName: projectName,
-		Language:    language,
-	}
-
-	// If an owner email was supplied, create the user in the auth database and
-	// populate OwnerEmail so the config template emits the users: section.
+	// If an owner email was supplied, create the user in the auth database
+	// BEFORE scaffolding so the OwnerEmail in config.yaml's users: section
+	// always corresponds to a real account.
 	if ownerEmail != "" {
 		if err := createOwnerUser(ownerEmail, ownerName, ownerPasswordStdin); err != nil {
 			return fmt.Errorf("creating owner user: %w", err)
 		}
-		data.OwnerEmail = ownerEmail
 	}
 
-	// Scaffold lifecycle directories.
-	dirResults, err := scaffoldDirs(absPath)
+	res, err := ScaffoldProject(ScaffoldOptions{
+		ProjectRoot: absPath,
+		ProjectName: projectName,
+		Language:    language,
+		OwnerEmail:  ownerEmail,
+		Force: ForceFlags{
+			Config:    forceConfig,
+			ClaudeMd:  forceClaudeMd,
+			Settings:  forceSettings,
+			Gitignore: forceGitignore,
+		},
+	})
 	if err != nil {
-		return fmt.Errorf("scaffolding directories: %w", err)
-	}
-
-	// Write seed files.
-	fileResults, err := writeSeedFiles(absPath, data, ff)
-	if err != nil {
-		return fmt.Errorf("writing seed files: %w", err)
+		return err
 	}
 
 	// Print summary (FR-7).
 	fmt.Printf("Initialized kaos-control project at %s\n", absPath)
-	for _, r := range dirResults {
+	for _, r := range res.Dirs {
 		if r.Created {
 			fmt.Printf("  created  %s\n", r.Path)
 		} else {
 			fmt.Printf("  skipped  %s (already exists)\n", r.Path)
 		}
 	}
-	for _, r := range fileResults {
+	for _, r := range res.Files {
 		if r.Created {
 			fmt.Printf("  created  %s\n", r.Path)
 		} else {

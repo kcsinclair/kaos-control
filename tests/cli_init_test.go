@@ -68,8 +68,9 @@ func runInit(t *testing.T, args ...string) (stdout, stderr string, code int) {
 	return outBuf.String(), errBuf.String(), code
 }
 
-// lifecycleDirs lists the eleven directories that `init` must create
+// lifecycleDirs lists the directories that `init` must create
 // (forward-slash paths; use filepath.FromSlash for OS-native paths).
+// Kept in sync with internal/initcmd/scaffold.go:lifecycleDirs.
 var lifecycleDirs = []string{
 	"lifecycle/ideas",
 	"lifecycle/requirements",
@@ -79,18 +80,22 @@ var lifecycleDirs = []string{
 	"lifecycle/tests",
 	"lifecycle/prototypes",
 	"lifecycle/releases",
-	"lifecycle/sprints",
 	"lifecycle/defects",
+	"lifecycle/docs",
+	"lifecycle/devops",
 	"tests",
+	"devops",
 }
 
-// seedFiles lists the four seed files that `init` writes
+// seedFiles lists the seed files that `init` writes
 // (forward-slash paths as they appear in stdout output).
+// Kept in sync with internal/initcmd/seedfiles.go:seedFileSpecs.
 var seedFiles = []string{
 	"lifecycle/config.yaml",
 	"CLAUDE.md",
 	".claude/settings.json",
 	".gitignore",
+	"devops/sample.yaml",
 }
 
 // claudeMdSections are the five required top-level sections in CLAUDE.md.

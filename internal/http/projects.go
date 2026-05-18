@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/config"
 	kgit "github.com/kaos-control/kaos-control/internal/git"
+	"github.com/kaos-control/kaos-control/internal/initcmd"
 	"github.com/kaos-control/kaos-control/internal/project"
 )
 
@@ -63,8 +64,12 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleInitProject creates kaos-control scaffolding inside a registered
-// project's path (lifecycle/config.yaml + default stage directories).
-// The operation is idempotent: existing files and directories are left untouched.
+// project's path. Delegates to initcmd.ScaffoldProject so the GUI path
+// produces the same layout as `kaos-control init` (full agent config,
+// CLAUDE.md, .claude/settings.json, .gitignore, devops/sample.yaml,
+// lifecycle/docs/, etc.). The logged-in session user is auto-populated
+// as the project owner in the rendered config.yaml's users: section.
+// Operation is idempotent: existing files and directories are skipped.
 func (s *Server) handleInitProject(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "project")
 	p, ok := s.getProject(name)
@@ -73,47 +78,40 @@ func (s *Server) handleInitProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectPath := p.Entry.Path
-	lifecycleDir := filepath.Join(projectPath, "lifecycle")
-	var created []string
-
-	// Create lifecycle/config.yaml if absent.
-	cfgPath := filepath.Join(lifecycleDir, "config.yaml")
-	if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(lifecycleDir, 0o755); err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("init_failed", "creating lifecycle dir: "+err.Error()))
-			return
-		}
-		if err := os.WriteFile(cfgPath, []byte(config.DefaultProjectConfigYAML()), 0o644); err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("init_failed", "writing config.yaml: "+err.Error()))
-			return
-		}
-		created = append(created, "lifecycle/config.yaml")
+	// requireAuth covers /api/* already, but be explicit — the session
+	// user's email is critical (it becomes the project owner) so a
+	// nil here is a programmer error worth surfacing loudly.
+	user := userFromCtx(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "init requires an authenticated session"))
+		return
 	}
 
-	// Create one subdirectory (+ .gitkeep) per default stage.
-	for _, stage := range config.DefaultStages() {
-		stageDir := filepath.Join(lifecycleDir, stage)
-		gitkeep := filepath.Join(stageDir, ".gitkeep")
+	projectPath := p.Entry.Path
 
-		newDir := false
-		if _, err := os.Stat(stageDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(stageDir, 0o755); err != nil {
-				writeJSON(w, http.StatusInternalServerError, apiError("init_failed", fmt.Sprintf("creating %s: %s", stage, err)))
-				return
-			}
-			newDir = true
+	res, err := initcmd.ScaffoldProject(initcmd.ScaffoldOptions{
+		ProjectRoot: projectPath,
+		ProjectName: name,
+		OwnerEmail:  user.Email,
+		// Force left zero — idempotent.
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("init_failed", err.Error()))
+		return
+	}
+
+	// Flatten Dirs + Files into the single 'created' list the
+	// InitProjectModal renders, preserving the directories-first ordering
+	// the CLI uses in its summary.
+	var created []string
+	for _, r := range res.Dirs {
+		if r.Created {
+			created = append(created, r.Path)
 		}
-		if _, err := os.Stat(gitkeep); os.IsNotExist(err) {
-			if err := os.WriteFile(gitkeep, []byte{}, 0o644); err != nil {
-				writeJSON(w, http.StatusInternalServerError, apiError("init_failed", fmt.Sprintf("writing .gitkeep in %s: %s", stage, err)))
-				return
-			}
-			if newDir {
-				created = append(created, filepath.Join("lifecycle", stage))
-			} else {
-				created = append(created, filepath.Join("lifecycle", stage, ".gitkeep"))
-			}
+	}
+	for _, r := range res.Files {
+		if r.Created {
+			created = append(created, r.Path)
 		}
 	}
 

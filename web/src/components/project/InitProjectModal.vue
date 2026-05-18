@@ -86,22 +86,22 @@ function handleDone() {
           <div class="modal-body">
             <p class="intro">
               Initialising <strong class="project-name">{{ project.name }}</strong> will create the
-              following structure inside <code class="inline-path">{{ project.path }}</code>:
+              following structure inside <code class="inline-path">{{ project.path }}</code>.
+              You'll be added to <code>lifecycle/config.yaml</code> as the initial owner.
             </p>
             <ul class="will-create">
-              <li><code>lifecycle/config.yaml</code> — default project configuration</li>
-              <li><code>lifecycle/ideas/</code></li>
-              <li><code>lifecycle/requirements/</code></li>
-              <li><code>lifecycle/backend-plans/</code></li>
-              <li><code>lifecycle/frontend-plans/</code></li>
-              <li><code>lifecycle/test-plans/</code></li>
-              <li><code>lifecycle/defects/</code></li>
-              <li><code>lifecycle/releases/</code></li>
-              <li><code>lifecycle/sprints/</code></li>
+              <li><code>lifecycle/config.yaml</code> — roles, stages, agents, owner</li>
+              <li><code>CLAUDE.md</code> — guidance for Claude Code agents</li>
+              <li><code>.claude/settings.json</code></li>
+              <li><code>.gitignore</code></li>
+              <li><code>devops/sample.yaml</code> — example pipeline</li>
+              <li><code>lifecycle/{ideas, requirements, backend-plans, frontend-plans,</code></li>
+              <li class="indent"><code>test-plans, tests, prototypes, releases, defects, docs, devops}/</code></li>
+              <li><code>tests/</code>, <code>devops/</code></li>
             </ul>
             <p class="git-note">
-              If the directory is not already a git repository, one will be initialised and the
-              scaffolding committed automatically.
+              Existing files are left untouched (idempotent). If the directory is not already a git
+              repository, one will be initialised and the scaffolding committed automatically.
             </p>
 
             <div v-if="error" class="general-error">{{ error }}</div>
@@ -238,6 +238,10 @@ function handleDone() {
   font-family: monospace;
   font-size: 12px;
   color: var(--color-accent);
+}
+.will-create li.indent {
+  list-style: none;
+  padding-left: var(--space-4);
 }
 .git-note {
   margin: 0;
