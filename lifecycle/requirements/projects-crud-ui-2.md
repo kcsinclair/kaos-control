@@ -1,7 +1,7 @@
 ---
 title: Projects Page CRUD Operations — Requirements
 type: requirement
-status: planning
+status: done
 lineage: projects-crud-ui
 priority: high
 parent: ideas/projects-crud-ui.md
