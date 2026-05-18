@@ -1,7 +1,7 @@
 ---
 title: "Tests: Artefacts Agent Run Count Column"
 type: test
-status: approved
+status: done
 lineage: artefacts-agent-run-count-column
 parent: lifecycle/test-plans/artefacts-agent-run-count-column-5-test.md
 ---
