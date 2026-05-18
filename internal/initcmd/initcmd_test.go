@@ -42,14 +42,19 @@ func TestConfigTemplateLoadsCleanly(t *testing.T) {
 		t.Fatalf("config.LoadProject returned error: %v", err)
 	}
 
-	// Assert agent count.
-	if got := len(proj.Agents); got != 7 {
-		t.Errorf("expected 7 agents, got %d", got)
+	// Assert agent count. Default template ships ten agents:
+	// requirements-analyst, planning-analyst, backend-developer,
+	// frontend-developer, test-developer, qa, tech-writer, test-runner,
+	// idea-capture, docs-capture.
+	if got := len(proj.Agents); got != 10 {
+		t.Errorf("expected 10 agents, got %d", got)
 	}
 
-	// Assert role count.
-	if got := len(proj.Roles); got != 7 {
-		t.Errorf("expected 7 roles, got %d", got)
+	// Assert role count. Default template ships ten roles:
+	// product-owner, analyst, backend-developer, frontend-developer,
+	// test-developer, qa, reviewer, approver, devops, tech-writer.
+	if got := len(proj.Roles); got != 10 {
+		t.Errorf("expected 10 roles, got %d", got)
 	}
 
 	// Assert required_plans.ticket contains all three plan types.

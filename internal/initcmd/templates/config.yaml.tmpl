@@ -13,6 +13,9 @@ roles:
   - test-developer
   - qa
   - reviewer
+  - approver
+  - devops
+  - tech-writer
 
 stages:
   - name: ideas
@@ -31,26 +34,29 @@ stages:
     dir: prototypes
   - name: releases
     dir: releases
-  - name: sprints
-    dir: sprints
   - name: defects
     dir: defects
+  - name: docs
+    dir: docs
 
 required_plans:
   ticket:
     - plan-backend
     - plan-frontend
     - plan-test
-{{if .OwnerEmail}}
+
+# The initial user. `kaos-control init -owner-email …` populates this
+# with the supplied email; otherwise edit the placeholder below before
+# starting the server — every project needs at least one user.
 users:
-  - email: {{.OwnerEmail}}
+  - email: {{if .OwnerEmail}}{{.OwnerEmail}}{{else}}TODO@example.com{{end}}
     roles:
       - product-owner
       - analyst
       - reviewer
       - approver
       - devops
-{{end}}
+
 dashboard:
   tracked_types:
     - requirement
@@ -146,6 +152,8 @@ agents:
     active_status: in-development
     done_on_success: true
     timeout_minutes: 0
+    # allowed_write_paths is stack-specific — these defaults match a Go
+    # project. Customise to your stack (e.g. `src`, `api`, `server`, …).
     allowed_write_paths:
       - internal
       - cmd
@@ -169,6 +177,8 @@ agents:
     active_status: in-development
     done_on_success: true
     timeout_minutes: 0
+    # allowed_write_paths is stack-specific — these defaults match a
+    # Vue/SPA project in `web/`. Customise to your stack.
     allowed_write_paths:
       - web/src
       - lifecycle/frontend-plans
@@ -191,6 +201,9 @@ agents:
     active_status: in-development
     done_on_success: true
     timeout_minutes: 0
+    # allowed_write_paths is stack-specific — these defaults assume tests
+    # live under `tests/`. Customise to your stack (e.g. `*_test.go`,
+    # `__tests__`, `spec/`, …).
     allowed_write_paths:
       - tests
       - lifecycle/tests
@@ -236,6 +249,58 @@ agents:
 
         Body sections: Reproduction Steps, Expected Behaviour, Actual Behaviour,
         Logs / Output.
+
+  - name: tech-writer
+    role:
+      - tech-writer
+    driver: claude-code-cli
+    model: sonnet
+    active_status: in-development
+    done_on_success: true
+    source_types:
+      - doc
+    timeout_minutes: 0
+    # allowed_write_paths: docs live in `docs/` by default. Customise if
+    # your project ships docs from a different directory (e.g. `website/`).
+    allowed_write_paths:
+      - lifecycle/docs
+      - docs
+    git_identity:
+      name: Tech Writer Agent
+      email: tech-writer@kaos-control.local
+    prompt_templates:
+      tech-writer: |
+        You are a technical writer for the {{.ProjectName}} project.
+        Read the doc brief artifact at {target_path} and expand it into
+        full, production-quality documentation.
+
+        Scope of writes: docs/** and lifecycle/docs/**. Do NOT modify source
+        code, tests, or other lifecycle artifacts — those belong to other
+        agents.
+
+        Save the completed documentation to docs/ using the lineage slug
+        as the filename (e.g. docs/<slug>.md). After completing the
+        documentation, update the doc artifact at {target_path} to reflect
+        what was produced.
+
+  - name: test-runner
+    role:
+      - qa
+    driver: claude-code-cli
+    model: sonnet
+    active_status: ""
+    source_types: []
+    timeout_minutes: 30
+    allowed_write_paths:
+      - lifecycle/defects
+    git_identity:
+      name: Test Runner Agent
+      email: test-runner@kaos-control.local
+    prompt_templates:
+      qa: |
+        Run all test suites, parse failures, map them to artefacts, and
+        file defect artifacts in lifecycle/defects/ for new failures —
+        deduplicating against existing defects.
 
   - name: idea-capture
     role:
@@ -296,4 +361,38 @@ agents:
 
         ```json
         {"action":"propose","reply":"<short confirmation message>","slug":"<slug>","title":"<Idea Title>","labels":["<label>"],"body":"# <Idea Title>\n\n<paragraph 1>\n\n<paragraph 2>"}
+        ```
+
+  - name: docs-capture
+    role:
+      - product-owner
+    driver: inline
+    model: claude-sonnet-4-6
+    allowed_write_paths:
+      - lifecycle/docs
+    prompt_templates:
+      doc-generate: |
+        You are a single-shot documentation-brief assistant for a software project lifecycle tool.
+        The user will send you a description of documentation they need, optionally with context
+        from an existing artifact. You must respond with exactly ONE JSON object — no clarifying
+        questions, no extra text.
+
+        RULES:
+        1. Always produce action "propose". NEVER produce action "clarify".
+        2. Pick labels ONLY from the provided label vocabulary (if supplied).
+           Do not invent new labels.
+        3. The slug must be unique, lowercase, and match the pattern:
+           ^[a-z0-9][a-z0-9\-]*[a-z0-9]$|^[a-z0-9]$
+        4. The body must be self-contained: a level-1 heading matching the
+           title, followed by a brief explanation and structured doc outline
+           with ## sections indicating what the documentation should cover.
+        5. Set priority to "high" only if the input explicitly signals urgency
+           (e.g. "urgent", "blocking", "critical", "ASAP"); otherwise use "normal".
+        6. If source artifact context is provided, use it to inform the doc outline.
+
+        ALWAYS respond with a single JSON object inside a ```json code block.
+        Never include any text outside the JSON code block.
+
+        ```json
+        {"action":"propose","reply":"<short confirmation message>","slug":"<slug>","title":"<Doc Title>","labels":["<label>"],"body":"# <Doc Title>\n\n<brief description>\n\n## Overview\n\n<outline section>\n\n## Details\n\n<outline section>"}
         ```
