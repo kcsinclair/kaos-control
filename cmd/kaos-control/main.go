@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/authcmd"
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/hookcmd"
 	"github.com/kaos-control/kaos-control/internal/auth"
+	"github.com/kaos-control/kaos-control/internal/backfillcmd"
 	"github.com/kaos-control/kaos-control/internal/config"
 	khttp "github.com/kaos-control/kaos-control/internal/http"
 	"github.com/kaos-control/kaos-control/internal/hub"
@@ -30,10 +32,12 @@ var version = "dev"
 const usage = `Usage: kaos-control <command> [flags]
 
 Commands:
-  serve        Start the HTTP server (default)
-  init         Initialise a new project directory
-  auth         Manage users, passwords, and API tokens
-  hook-helper  PreToolUse hook helper (called by Claude Code)
+  serve              Start the HTTP server (default)
+  init               Initialise a new project directory
+  auth               Manage users, passwords, and API tokens
+  hook-helper        PreToolUse hook helper (called by Claude Code)
+  backfill-created   Add created: frontmatter to legacy artefacts using
+                     filesystem birth time
 
 Run 'kaos-control <command> --help' for command-specific usage.
 `
@@ -51,6 +55,12 @@ func main() {
 			os.Exit(authcmd.Run(os.Args[2:]))
 		case "hook-helper":
 			hookcmd.Run(os.Args[2:])
+			return
+		case "backfill-created":
+			if err := backfillcmd.Run(os.Args[2:]); err != nil {
+				fmt.Fprintln(os.Stderr, "error:", err)
+				os.Exit(1)
+			}
 			return
 		case "serve":
 			// Strip "serve" so the server's flag.Parse sees only its own flags.
@@ -93,6 +103,17 @@ func run() error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// Bind the TCP listener before opening projects so the port is reachable
+	// from the moment startup begins. Index scans on large repos can take
+	// time; previously the UI looked hung because nothing was listening yet.
+	// httpSrv.Serve isn't called until after projects are opened, so requests
+	// land in the OS accept queue and complete once Serve runs.
+	ln, err := net.Listen("tcp", appCfg.Server.Listen)
+	if err != nil {
+		return fmt.Errorf("listening on %s: %w", appCfg.Server.Listen, err)
+	}
+	slog.Info("listener bound; opening projects", "addr", ln.Addr().String())
 
 	// Resolve the binary path once so hook-helper invocations are stable.
 	selfBinary, err := os.Executable()
@@ -180,6 +201,7 @@ func run() error {
 	// concurrent project CRUD requests and queue dispatch.
 	srv := khttp.New(khttp.ServerConfig{
 		Listen:     appCfg.Server.Listen,
+		Listener:   ln, // pre-bound; see net.Listen above
 		TLSOn:      appCfg.Server.TLS.Enabled,
 		TLSCert:    appCfg.Server.TLS.CertFile,
 		TLSKey:     appCfg.Server.TLS.KeyFile,

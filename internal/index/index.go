@@ -446,19 +446,18 @@ func (idx *Index) IndexFile(absPath string) error {
 	}
 
 	// Backfill CreatedAt for artifacts that lack a created: frontmatter field.
-	// The on-disk file is NOT modified; the derived value is index-only.
 	// Order of preference:
 	//   1. Reuse the value stored in the index from a prior scan (free).
-	//   2. git log first-commit date (slow on large histories — only when
-	//      the index has no value yet).
-	//   3. Filesystem mtime (last-resort fallback).
+	//   2. Filesystem mtime (last-resort fallback).
+	// We deliberately do NOT walk git history here: on a fresh index that
+	// path is O(files × commits) and made startup hang for tens of minutes
+	// on repos of a few hundred artefacts with a few thousand commits. The
+	// `kaos-control backfill-created` subcommand offers an explicit,
+	// instant alternative using filesystem birth time for the legacy case
+	// where on-disk artefacts lack a `created:` frontmatter field.
 	if a.FM.Created == "" {
 		if storedCreated != 0 {
 			a.CreatedAt = time.Unix(storedCreated, 0)
-		} else if idx.git != nil {
-			if t, err := idx.git.FirstCommitDate(relPath); err == nil {
-				a.CreatedAt = t
-			}
 		}
 		if a.CreatedAt.IsZero() {
 			a.CreatedAt = info.ModTime()
