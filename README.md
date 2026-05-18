@@ -2,33 +2,50 @@
 
 A single-binary lifecycle management tool that turns ideas into shipped releases. Markdown artifacts on disk are the source of truth; a Go server indexes them into SQLite and serves a Vue 3 SPA with a 3D graph, an editor, and an agent runner that drives Claude Code subprocesses to produce the next artifact in the lineage.
 
-> **Status:** active development. Comprehensive documentation will follow — this README is a quick start only.
+> **Status:** pre-1.0 (v0.1.x). Active development with working releases; comprehensive documentation will follow — this README is a quick start only.
 
 [kaos-control on github](https://github.com/kcsinclair/kaos-control)  
 [kaos-control.io](https://kaos-control.io)
 
 ## What you get
 
-- **Lifecycle directory** (`lifecycle/`) — markdown files with YAML frontmatter, organised by stage (`ideas`, `requirements`, `backend-plans`, `frontend-plans`, `test-plans`, `tests`, `defects`, `releases`, `sprints`).
+- **Lifecycle directory** (`lifecycle/`) — markdown files with YAML frontmatter, organised by stage (`ideas`, `requirements`, `backend-plans`, `frontend-plans`, `test-plans`, `tests`, `prototypes`, `defects`, `releases`, `sprints`).
 - **Lineage tracking** — every artifact in a chain shares a slug and carries a monotonic index across stages.
 - **Workflow state machine** — role-gated transitions (e.g. only `approver` can move a ticket from `planning` to `in-development`); plan-completion gates.
-- **Agents** — pluggable LLM runners (currently `claude-code-cli`) bound to roles, with sandboxed write paths.
+- **Agents** — pluggable LLM runners (`claude-code-cli`, `claude-mediated`, `ollama`, plus a `shell-stub` for test scaffolding) bound to roles, with sandboxed write paths and a per-agent permission policy on the mediated driver.
 - **DevOps pipelines** — declarative YAML pipelines in `lifecycle/devops/` (build, deploy, release, …) that the product owner can trigger from the UI; per-step output streams to the browser over WebSocket and is persisted to `~/.kaos-control/devops/<project>/`.
 - **Web UI** — 3D / 2D graph, artifact editor with markdown preview, agent run dialog with live progress, DevOps page with live pipeline runs, parse-error view, project config editor.
 - **Distribution** — one Go binary with the frontend embedded.
 
 ## Tech stack
 
-- **Backend**: Go 1.25, `chi`, `goldmark`, `modernc.org/sqlite` (pure-Go), `go-git`, `coder/websocket`, `fsnotify`.
+- **Backend**: Go 1.25, `chi`, `goldmark`, `modernc.org/sqlite` (pure-Go), `go-git`, `coder/websocket`, `fsnotify`. Local-model agents talk to Ollama over plain `net/http` (`/api/chat` and `/api/generate`) — no extra library dependency.
 - **Frontend**: Vue 3, Vite 6, TypeScript, Pinia, `markdown-it`, `3d-force-graph` + three.js, Cytoscape.js + fcose, CodeMirror 6.
 
-## Note on Claude Permissions
+## Claude Code permissions
+
+kaos-control ships two Claude drivers, picked per-agent in
+`lifecycle/config.yaml` via the `driver:` field:
+
+- **`claude-code-cli`** — runs `claude --dangerously-skip-permissions -p ...`
+  as a headless subprocess. Fast and simple, ideal for personal use on a
+  trusted machine. **Requires Claude to be in bypass-permissions mode**
+  on every machine that runs kaos-control (one-time setup, below).
+- **`claude-mediated`** — runs `claude` in default permission mode and
+  routes every tool call through kaos-control's PreToolUse hook for
+  allow/deny against per-agent path and bash allow/deny lists. Mandatory
+  in environments where bypass mode is blocked (e.g. Claude Enterprise)
+  or when you want a hard sandbox and an audit trail. No first-machine
+  setup required — kaos-control configures the hooks per run.
+
+### One-time setup for `claude-code-cli` only
+
+> Skip this section if every agent in your `lifecycle/config.yaml`
+> uses `claude-mediated`.
 
 kaos-control runs `claude` as a headless subprocess — there is no human
-at the terminal to approve individual tool calls. The agent runner
-therefore needs Claude Code to be in **bypass-permissions mode**, where
-file writes, shell commands, and other tool calls happen without
-prompting. Without this, every agent run will stall with a message like
+at the terminal to approve individual tool calls. Without
+bypass-permissions mode, every agent run will stall with a message like
 *"I need write permission to create the file"* and produce no work.
 
 **Before your first agent run, on every machine that runs kaos-control:**
@@ -62,10 +79,13 @@ prompting. Without this, every agent run will stall with a message like
    If you see a `Bash` tool call complete successfully (not appear in a
    `permission_denials` block), you're set.
 
-> **Coming in KC-Release1**: kaos-control will detect this condition at
-> agent-run start and fail the run within seconds with a clear,
-> actionable error instead of silently producing nothing. Tracked under
-> the `agent-permission-precheck` lineage in this project's lifecycle.
+### Detection at run-start
+
+kaos-control detects an unconfigured bypass mode within the
+`init_event_timeout_seconds` window (default 10s) and fails the run
+with a clear `precheck_failure` reason plus a remediation list —
+no more silent stalls. Tracked under the `agent-permission-precheck`
+lineage in this project's lifecycle (shipped in v0.1.2).
 
 ## Install from a released binary
 
@@ -81,10 +101,10 @@ source instead, skip ahead to [Install from source](#getting-started-building-fr
 
 Pick the build for your OS and CPU architecture from the
 [Releases page](https://github.com/kcsinclair/kaos-control/releases),
-or from a terminal — replace `0.1.1` with the version you want:
+or from a terminal — replace `0.1.2` with the version you want:
 
 ```sh
-VERSION=0.1.1
+VERSION=0.1.2
 BASE=https://github.com/kcsinclair/kaos-control/releases/download/v${VERSION}
 
 # Pick ONE of the following:
@@ -115,7 +135,7 @@ line says `FAILED`, do not run the binary — re-download the archive.
 ### 3. Unzip and place the binary
 
 The archive extracts to a versioned `kaos-control-<VERSION>/` directory
-containing the binary plus the docs — e.g. `kaos-control-0.1.1/`:
+containing the binary plus the docs — e.g. `kaos-control-0.1.2/`:
 
 ```sh
 unzip kaos-control.zip
@@ -125,7 +145,13 @@ cd kaos-control-${VERSION}
 Two releases unzipped side-by-side won't collide because each gets its
 own versioned directory.
 
-To make `kaos-control` runnable from anywhere, move it onto your PATH.
+To quickly get started, just run it from the unzipped directory:
+
+```sh
+./kaos-control
+```
+
+To make `kaos-control` runnable from anywhere, move it onto your PATH:
 
 ```sh
 # macOS / Linux
@@ -159,9 +185,10 @@ source or downloaded a release:
   on disk as a project so it appears in the picker.
 - [Use it](#4-use-it) — what the SPA looks like once you're in.
 
-If you plan to run agents, the [Note on Claude Permissions](#note-on-claude-permissions)
-section above is required reading. Without it your first agent run
-will stall silently — there's a fix for that landing in KC-Release1.
+If you plan to run agents, the [Claude Code permissions](#claude-code-permissions)
+section above is required reading — especially if any of your agents
+use the `claude-code-cli` driver. The mediated driver is plug-and-play;
+the CLI driver needs a one-time bypass-mode setup per machine.
 
 ## Getting started building from source
 
@@ -221,7 +248,7 @@ cd kaos-control
 make all          # builds web/dist + ./dist/kaos-control
 ```
 
-The Go binary embeds the SPA via `embed.FS`, so `./dist/kaos-control` is a single self-contained executable.
+The Go binary embeds the SPA (single page application) via `embed.FS`, so `./dist/kaos-control` is a single self-contained executable.
 
 ### 2. First run
 
@@ -232,7 +259,7 @@ The Go binary embeds the SPA via `embed.FS`, so `./dist/kaos-control` is a singl
 On first launch, kaos-control writes a default `~/.kaos-control/config.yaml` and starts listening on `:8042`. Open <http://localhost:8042>.
 
 The contents of the config file are:
-```
+```yaml
 server:
     listen: :8042
     tls:
@@ -242,13 +269,21 @@ server:
 auth:
     method: local
     session_ttl: 24h0m0s
-projects_dir: /Users/keith/.kaos-control/projects
+projects_dir: /Users/you/.kaos-control/projects
 limits:
     max_concurrent_agents: 4
     max_concurrent_scheduler_jobs: 2
     scheduler_run_retention_days: 90
-data_dir: /Users/keith/.kaos-control/data
+data_dir: /Users/you/.kaos-control/data
+agent:
+    init_event_timeout_seconds: 10
+    require_bypass_permissions: true
 ```
+
+The `agent:` block controls the `agent-permission-precheck` behaviour
+described earlier — leave the defaults unless you need to extend the
+init-event grace window or you're using only the `claude-mediated`
+driver and want to disable the bypass-mode requirement.
 
 The first user can be created without authentication (bootstrap). Use the in-app sign-up form, or:
 
@@ -295,6 +330,7 @@ Restart the server (or wait for it to pick up the new entry on the next scan) an
 | `~/.kaos-control/config.yaml` | App-level config (server, auth, agents, ollama) |
 | `~/.kaos-control/projects/*.yaml` | One file per registered project |
 | `~/.kaos-control/data/<project>/index.db` | Per-project SQLite cache (rebuilt from disk on startup) |
+| `~/.kaos-control/data/<project>/runs/<run_id>.log` | Per-agent-run log (header, streamed events, summary footer) |
 | `~/.kaos-control/devops/<project>/<run_id>.log` | DevOps pipeline run logs |
 | `<project>/lifecycle/config.yaml` | Per-project: roles, agents, plan gates, dashboard tracked types |
 | `<project>/lifecycle/devops/*.yaml` | DevOps pipeline definitions for this project |
