@@ -39,8 +39,21 @@ Commands:
   backfill-created   Add created: frontmatter to legacy artefacts using
                      filesystem birth time
 
+Flags:
+  --version, -V      Print version, copyright, and licence
+  --help, -h         Print this usage banner
+  -config <path>     Path to app config.yaml (serve only)
+
 Run 'kaos-control <command> --help' for command-specific usage.
 `
+
+// printVersion writes the three-line release header to stdout: project + URL,
+// copyright, licence. Called from the --version / -V CLI flag.
+func printVersion() {
+	fmt.Printf("kaos-control %s      https://github.com/kcsinclair/kaos-control\n", version)
+	fmt.Println("Copyright (c) 2026 Keith Sinclair <keith@sinclair.org.au>")
+	fmt.Println("Licensed under the GNU AGPL v3.0 or later.")
+}
 
 func main() {
 	if len(os.Args) > 1 {
@@ -68,11 +81,25 @@ func main() {
 		case "--help", "-help", "-h":
 			fmt.Print(usage)
 			os.Exit(0)
+		case "--version", "-version", "-V":
+			printVersion()
+			os.Exit(0)
 		default:
-			if !strings.HasPrefix(os.Args[1], "-") {
-				fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n%s", os.Args[1], usage)
+			arg := os.Args[1]
+			if strings.HasPrefix(arg, "-") {
+				// Allow -config / --config (with or without =value) to fall
+				// through to flag.Parse() in run() — that's the implicit
+				// `serve -config /path` form.
+				if arg == "-config" || arg == "--config" ||
+					strings.HasPrefix(arg, "-config=") ||
+					strings.HasPrefix(arg, "--config=") {
+					break
+				}
+				fmt.Fprintf(os.Stderr, "unknown flag %q\n\n%s", arg, usage)
 				os.Exit(1)
 			}
+			fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n%s", arg, usage)
+			os.Exit(1)
 		}
 	}
 	if err := run(); err != nil {
