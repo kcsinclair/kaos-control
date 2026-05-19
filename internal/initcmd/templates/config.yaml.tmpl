@@ -68,6 +68,37 @@ kanban:
     - name: Backlog
       statuses:
         - draft
+    - name: Approved-Ready
+      statuses:
+        - approved
+    - name: In-Progress
+      statuses:
+        - in-progress
+        - clarifying
+        - planning
+        - in-development
+        - in-qa
+    - name: Blocked
+      statuses:
+        - blocked
+    - name: Done
+      statuses:
+        - done
+        - abandoned
+        - rejected
+  uncategorised: true
+  card_fields:
+    - title
+    - type
+    - priority
+    - labels
+    - age
+        
+kanban:
+  columns:
+    - name: Backlog
+      statuses:
+        - draft
     - name: In-Progress
       statuses:
         - clarifying

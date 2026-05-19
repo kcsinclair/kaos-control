@@ -285,7 +285,7 @@ described earlier — leave the defaults unless you need to extend the
 init-event grace window or you're using only the `claude-mediated`
 driver and want to disable the bypass-mode requirement.
 
-The first user can be created without authentication (bootstrap). Use the in-app sign-up form, or:
+The first user can be created without authentication (bootstrap):
 
 ```
 echo STRONGPASSWORD | ./dist/kaos-control auth create-user -admin -email YOUR_EMAIL -name "YOU NAME" -password-stdin
