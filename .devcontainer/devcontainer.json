@@ -25,7 +25,7 @@
     "PNPM_HOME": "/home/vscode/.local/share/pnpm"
   },
   "remoteEnv": {
-    "PATH": "${containerEnv:PNPM_HOME}:${containerEnv:PATH}"
+    "PATH": "${containerEnv:PNPM_HOME}:/go/bin:${containerEnv:PATH}"
   },
   "mounts": [
     "source=kaos-control-claude,target=/home/vscode/.claude,type=volume",
