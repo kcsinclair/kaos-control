@@ -19,6 +19,8 @@ pnpm add --global \
   @anthropic-ai/claude-code \
   @openai/codex
 
+go install github.com/go-delve/delve/cmd/dlv@latest
+
 CLAUDE_INSTALLER="$(pnpm root -g)/@anthropic-ai/claude-code/install.cjs"
 if [[ -f "$CLAUDE_INSTALLER" ]]; then
   node "$CLAUDE_INSTALLER"
