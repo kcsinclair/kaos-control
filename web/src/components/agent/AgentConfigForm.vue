@@ -9,7 +9,7 @@ import type { AgentSummary, OllamaInstance } from '@/types/api'
 export interface AgentFormData {
   name: string
   roles: string[]
-  driver: 'claude-code-cli' | 'ollama'
+  driver: 'claude-code-cli' | 'ollama' | 'gemini'
   model: string
   ollama_instance: string
   ollama_endpoint: 'chat' | 'generate'
@@ -38,8 +38,8 @@ const isEdit = !!props.initial
 // ── Form state ─────────────────────────────────────────────────────────────
 const name = ref(props.initial?.name ?? '')
 const selectedRoles = ref<string[]>(props.initial?.roles ?? [])
-const driver = ref<'claude-code-cli' | 'ollama'>(
-  (props.initial?.driver ?? 'claude-code-cli') as 'claude-code-cli' | 'ollama',
+const driver = ref<'claude-code-cli' | 'ollama' | 'gemini'>(
+  (props.initial?.driver ?? 'claude-code-cli') as 'claude-code-cli' | 'ollama' | 'gemini',
 )
 const model = ref(props.initial?.model ?? '')
 const ollamaInstance = ref(props.initial?.ollama_instance ?? '')
@@ -213,6 +213,10 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
           <input v-model="driver" type="radio" value="ollama" />
           Ollama
         </label>
+        <label class="acf-radio-label">
+          <input v-model="driver" type="radio" value="gemini" />
+          Gemini
+        </label>
       </div>
     </div>
 
@@ -226,6 +230,21 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
         :class="{ 'acf-input--error': errors.model }"
         type="text"
         placeholder="e.g. sonnet, opus, haiku"
+        autocomplete="off"
+      />
+      <p v-if="errors.model" class="acf-error">{{ errors.model }}</p>
+    </div>
+
+    <!-- Gemini model -->
+    <div v-if="driver === 'gemini'" class="acf-field">
+      <label class="acf-label" for="acf-model-gemini">Model</label>
+      <input
+        id="acf-model-gemini"
+        v-model="model"
+        class="acf-input"
+        :class="{ 'acf-input--error': errors.model }"
+        type="text"
+        placeholder="e.g. gemini-2.5-flash, gemini-1.5-pro"
         autocomplete="off"
       />
       <p v-if="errors.model" class="acf-error">{{ errors.model }}</p>

@@ -398,6 +398,7 @@ func New(
 		"ollama":           &OllamaDriver{Instances: ollamaInstances},
 		"claude-mediated":  hookDriver,
 		"shell-stub":       &ShellStubDriver{},
+		"gemini":           &GeminiDriver{},
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
 	if err := idx.RecoverRunningRuns(); err != nil {

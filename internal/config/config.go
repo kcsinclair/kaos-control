@@ -697,6 +697,11 @@ func validateProject(cfg *Project) error {
 				return fmt.Errorf("project config: agent %q on_denial must be \"continue\" or \"abort\", got %q", a.Name, a.OnDenial)
 			}
 		}
+		if a.Driver == "gemini" {
+			if a.Model == "" {
+				return fmt.Errorf("project config: agent %q has driver=gemini but missing model", a.Name)
+			}
+		}
 	}
 	for _, pat := range cfg.Ignore {
 		if _, err := filepath.Match(pat, ""); err != nil {
