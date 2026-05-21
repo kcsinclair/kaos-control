@@ -246,6 +246,10 @@ On Windows, develop from WSL and clone this repository into the Linux filesystem
 
 Keeping the repo off the Windows drive prevents common file-watching, permissions, symlink, and dependency install issues with Go, Node.js, Vite, and pnpm.
 
+### Dev container
+
+VS Code dev container setup is documented in [.devcontainer/README.md](.devcontainer/README.md). The container post-create hook installs project tooling and bootstraps a minimal `~/.kaos-control` config that registers this workspace as a project.
+
 ### 1. Build the binary
 
 ```sh
