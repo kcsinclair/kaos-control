@@ -9,7 +9,7 @@ import type { AgentSummary, OllamaInstance } from '@/types/api'
 export interface AgentFormData {
   name: string
   roles: string[]
-  driver: 'claude-code-cli' | 'ollama' | 'gemini'
+  driver: 'claude-code-cli' | 'ollama' | 'gemini' | 'gemini-cli'
   model: string
   ollama_instance: string
   ollama_endpoint: 'chat' | 'generate'
@@ -38,8 +38,8 @@ const isEdit = !!props.initial
 // ── Form state ─────────────────────────────────────────────────────────────
 const name = ref(props.initial?.name ?? '')
 const selectedRoles = ref<string[]>(props.initial?.roles ?? [])
-const driver = ref<'claude-code-cli' | 'ollama' | 'gemini'>(
-  (props.initial?.driver ?? 'claude-code-cli') as 'claude-code-cli' | 'ollama' | 'gemini',
+const driver = ref<'claude-code-cli' | 'ollama' | 'gemini' | 'gemini-cli'>(
+  (props.initial?.driver ?? 'claude-code-cli') as 'claude-code-cli' | 'ollama' | 'gemini' | 'gemini-cli',
 )
 const model = ref(props.initial?.model ?? '')
 const ollamaInstance = ref(props.initial?.ollama_instance ?? '')
@@ -101,7 +101,7 @@ function validate(): boolean {
   if (driver.value === 'ollama') {
     if (!ollamaInstance.value) e.ollama_instance = 'Select an Ollama instance.'
     if (!model.value.trim()) e.model = 'Model is required for Ollama driver.'
-  } else {
+  } else if (driver.value !== 'gemini-cli') {
     if (!model.value.trim()) e.model = 'Model is required.'
   }
   errors.value = e
@@ -216,6 +216,10 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
         <label class="acf-radio-label">
           <input v-model="driver" type="radio" value="gemini" />
           Gemini
+        </label>
+        <label class="acf-radio-label">
+          <input v-model="driver" type="radio" value="gemini-cli" />
+          Gemini CLI (agy)
         </label>
       </div>
     </div>

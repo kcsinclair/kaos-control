@@ -336,8 +336,8 @@ agents:
   - name: qa
     role:
       - qa
-    driver: claude-code-cli
-    model: sonnet
+    driver: gemini
+    model: gemini-2.5-flash
     active_status: in-qa
     source_types:
       - test

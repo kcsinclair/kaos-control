@@ -399,6 +399,7 @@ func New(
 		"claude-mediated":  hookDriver,
 		"shell-stub":       &ShellStubDriver{},
 		"gemini":           &GeminiDriver{},
+		"gemini-cli":       &GeminiCliDriver{},
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
 	if err := idx.RecoverRunningRuns(); err != nil {

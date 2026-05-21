@@ -31,6 +31,7 @@ function agentDriver(agentName: string, agents: AgentSummary[]): string {
   if (a.driver === 'claude-code-cli') return 'Claude Code'
   if (a.driver === 'claude-mediated') return 'Claude Mediated'
   if (a.driver === 'gemini') return 'Gemini'
+  if (a.driver === 'gemini-cli') return 'Gemini CLI'
   return a.driver
 }
 
@@ -595,6 +596,7 @@ onMounted(() => {
 .driver-badge[data-driver="claude-code-cli"] { background: #f3e8ff; color: #7e22ce; }
 .driver-badge[data-driver="claude-mediated"] { background: #fef3c7; color: #92400e; }
 .driver-badge[data-driver="gemini"] { background: #e0e7ff; color: #4338ca; }
+.driver-badge[data-driver="gemini-cli"] { background: #ccfbf1; color: #0f766e; }
 /* Queue pause banner */
 .queue-pause-banner {
   display: flex;
