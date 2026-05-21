@@ -190,7 +190,7 @@ func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) 
 // exec.Cmd (with Dir and Env set by the caller) plus the arg list (only used
 // for the log-file header) and returns a claudeProcess with stdout/stderr
 // piped, progress events streaming, and the log file open (FR3).
-func startClaudeProcess(_ context.Context, cmd *exec.Cmd, run Run, args []string) (Process, error) {
+func startClaudeProcess(ctx context.Context, cmd *exec.Cmd, run Run, args []string) (Process, error) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("stdout pipe: %w", err)
@@ -229,8 +229,12 @@ func startClaudeProcess(_ context.Context, cmd *exec.Cmd, run Run, args []string
 
 	p := &claudeProcess{cmd: cmd, progress: progressCh, stderr: rb, logFile: logFile}
 
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	// Pipe stdout: tee to log file, parse each line as JSON, send progress events.
 	go func() {
+		defer wg.Done()
 		sc := bufio.NewScanner(stdout)
 		// stream-json events can be larger than the default 64 KiB buffer.
 		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
@@ -246,20 +250,15 @@ func startClaudeProcess(_ context.Context, cmd *exec.Cmd, run Run, args []string
 			}
 			select {
 			case progressCh <- ev:
-			default:
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
 
 	// Pipe stderr: tee to log file and ring buffer.
 	go func() {
-		defer close(progressCh)
-		defer func() {
-			if logFile != nil {
-				fmt.Fprintf(logFile, "\n# finished=%s\n", time.Now().Format(time.RFC3339))
-				_ = logFile.Close()
-			}
-		}()
+		defer wg.Done()
 		buf := make([]byte, 1024)
 		for {
 			n, err := stderr.Read(buf)
@@ -272,6 +271,16 @@ func startClaudeProcess(_ context.Context, cmd *exec.Cmd, run Run, args []string
 			if err != nil {
 				break
 			}
+		}
+	}()
+
+	// Wait and clean up goroutine.
+	go func() {
+		wg.Wait()
+		close(progressCh)
+		if logFile != nil {
+			fmt.Fprintf(logFile, "\n# finished=%s\n", time.Now().Format(time.RFC3339))
+			_ = logFile.Close()
 		}
 	}()
 

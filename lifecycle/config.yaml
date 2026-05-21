@@ -336,7 +336,7 @@ agents:
   - name: qa
     role:
       - qa
-    driver: gemini
+    driver: gemini-cli
     model: gemini-2.5-flash
     active_status: in-qa
     source_types:

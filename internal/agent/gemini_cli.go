@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -88,8 +89,12 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 	default:
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	// Pipe stdout: tee to log file, parse json or wrap raw text, send as progress events.
 	go func() {
+		defer wg.Done()
 		sc := bufio.NewScanner(stdout)
 		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 		for sc.Scan() {
@@ -110,20 +115,15 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 			}
 			select {
 			case progressCh <- ev:
-			default:
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
 
 	// Pipe stderr: tee to log file and ring buffer.
 	go func() {
-		defer close(progressCh)
-		defer func() {
-			if logFile != nil {
-				fmt.Fprintf(logFile, "\n# finished=%s\n", time.Now().Format(time.RFC3339))
-				_ = logFile.Close()
-			}
-		}()
+		defer wg.Done()
 		buf := make([]byte, 1024)
 		for {
 			n, err := stderr.Read(buf)
@@ -136,6 +136,16 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 			if err != nil {
 				break
 			}
+		}
+	}()
+
+	// Wait and clean up goroutine.
+	go func() {
+		wg.Wait()
+		close(progressCh)
+		if logFile != nil {
+			fmt.Fprintf(logFile, "\n# finished=%s\n", time.Now().Format(time.RFC3339))
+			_ = logFile.Close()
 		}
 	}()
 
