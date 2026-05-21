@@ -8,6 +8,8 @@ mkdir -p "$PNPM_HOME"
 sudo mkdir -p "$HOME/.claude" "$HOME/.codex"
 sudo chown -R "$(id -u):$(id -g)" "$HOME/.claude" "$HOME/.codex"
 
+bash .devcontainer/bootstrap-kaos-control.sh
+
 corepack enable --install-directory "$PNPM_HOME"
 corepack prepare "pnpm@$PNPM_VERSION" --activate
 pnpm config set global-bin-dir "$PNPM_HOME" --global
