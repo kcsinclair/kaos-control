@@ -6,6 +6,7 @@ package git
 import (
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -153,6 +154,10 @@ func BranchNameFor(template, slug, lineage string) string {
 // relPath (relative to the repository root). Returns an error if no commit is
 // found (untracked file) or the log cannot be walked.
 func (repo *Repo) FirstCommitDate(relPath string) (time.Time, error) {
+	if t, err := repo.firstCommitDateNative(relPath); err == nil {
+		return t, nil
+	}
+
 	iter, err := repo.r.Log(&gogit.LogOptions{
 		FileName: &relPath,
 		Order:    gogit.LogOrderCommitterTime,
@@ -174,6 +179,25 @@ func (repo *Repo) FirstCommitDate(relPath string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("no commits found for %s", relPath)
 	}
 	return oldest, nil
+}
+
+func (repo *Repo) firstCommitDateNative(relPath string) (time.Time, error) {
+	out, err := exec.Command(
+		"git", "-C", repo.root,
+		"log", "--format=%aI", "--reverse", "-n", "1", "--", relPath,
+	).Output()
+	if err != nil {
+		return time.Time{}, err
+	}
+	s := strings.TrimSpace(string(out))
+	if s == "" {
+		return time.Time{}, fmt.Errorf("no commits found for %s", relPath)
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("parsing git date for %s: %w", relPath, err)
+	}
+	return t, nil
 }
 
 // ModifiedFiles returns project-relative paths of files that are new or modified
