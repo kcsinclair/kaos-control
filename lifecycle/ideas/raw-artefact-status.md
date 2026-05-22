@@ -1,7 +1,7 @@
 ---
 title: Add 'raw' Artefact Status Before Draft
 type: idea
-status: draft
+status: approved
 lineage: raw-artefact-status
 created: "2026-05-22T10:12:16+10:00"
 priority: normal
