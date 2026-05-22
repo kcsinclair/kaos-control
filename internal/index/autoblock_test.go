@@ -412,3 +412,94 @@ func TestAutoBlock_NoCircularReindex(t *testing.T) {
 		t.Error("file mtime changed after second IndexFile: disk was written again (circular reindex detected)")
 	}
 }
+
+// ── Milestone 4 — Auto-block from 'raw' on open questions ────────────────────
+
+// TestAutoBlock_RawWithOpenQuestions verifies that a raw artifact containing a
+// non-empty "## Open Questions" section is automatically transitioned to
+// "blocked" (not kept as "raw"), and that removing the section causes the
+// auto-unblock reactor to transition it to "draft" (not back to "raw").
+//
+// This test covers the Milestone 4 acceptance criterion: the universal
+// any→blocked rule (system actor, empty from-matcher) applies to "raw", and
+// the system-initiated workflow check passes without a log warning.
+func TestAutoBlock_RawWithOpenQuestions(t *testing.T) {
+	idx, _, projRoot := openAutoBlockIndex(t, allowSystemBlockUnblock)
+
+	const name = "aq-raw-oq"
+	relPath := "lifecycle/ideas/" + name + ".md"
+
+	// Step 1: write a raw artifact with an Open Questions section.
+	absPath := writeTestArtifact(t, projRoot, name, "raw",
+		"## Open Questions\n\n- What is the scope of this idea?\n", nil)
+
+	if err := idx.IndexFile(absPath); err != nil {
+		t.Fatalf("IndexFile (step 1): %v", err)
+	}
+
+	// Assert: on-disk status is now "blocked".
+	raw, err := os.ReadFile(absPath)
+	if err != nil {
+		t.Fatalf("reading disk file after block: %v", err)
+	}
+	diskStr := string(raw)
+	if !strings.Contains(diskStr, "status: blocked") {
+		t.Errorf("step 1: on-disk status should be 'blocked'; file:\n%s", diskStr)
+	}
+	if !strings.Contains(diskStr, "role: product-owner") {
+		t.Errorf("step 1: on-disk file should have product-owner assignee; file:\n%s", diskStr)
+	}
+
+	// Assert: SQLite index row reflects blocked.
+	row, err := idx.Get(relPath)
+	if err != nil || row == nil {
+		t.Fatalf("Get after step 1: %v (row=%v)", err, row)
+	}
+	if row.Status != "blocked" {
+		t.Errorf("step 1: index status: got %q, want %q", row.Status, "blocked")
+	}
+
+	// Assert: a status_changed event was inserted.
+	if n := countEventsForPath(t, idx, relPath); n == 0 {
+		t.Error("step 1: expected at least 1 status_changed event after auto-block, got 0")
+	}
+
+	// Step 2: remove the Open Questions section and re-index.
+	// Read the current blocked file and overwrite without the OQ section.
+	rawAfterBlock, err := os.ReadFile(absPath)
+	if err != nil {
+		t.Fatalf("reading blocked file for step 2: %v", err)
+	}
+	// Replace Open Questions section with plain body text.
+	noOQ := strings.ReplaceAll(string(rawAfterBlock),
+		"## Open Questions\n\n- What is the scope of this idea?\n",
+		"No more open questions.\n")
+	if err := os.WriteFile(absPath, []byte(noOQ), 0o644); err != nil {
+		t.Fatalf("writing step-2 file: %v", err)
+	}
+
+	if err := idx.IndexFile(absPath); err != nil {
+		t.Fatalf("IndexFile (step 2): %v", err)
+	}
+
+	// Assert: auto-unblock transitions to "draft" (not back to "raw").
+	raw2, err := os.ReadFile(absPath)
+	if err != nil {
+		t.Fatalf("reading disk file after unblock: %v", err)
+	}
+	diskStr2 := string(raw2)
+	if !strings.Contains(diskStr2, "status: draft") {
+		t.Errorf("step 2: on-disk status should be 'draft' (not 'raw'); file:\n%s", diskStr2)
+	}
+	if strings.Contains(diskStr2, "status: raw") {
+		t.Errorf("step 2: on-disk status must not revert to 'raw'; file:\n%s", diskStr2)
+	}
+
+	row2, err := idx.Get(relPath)
+	if err != nil || row2 == nil {
+		t.Fatalf("Get after step 2: %v (row=%v)", err, row2)
+	}
+	if row2.Status != "draft" {
+		t.Errorf("step 2: index status: got %q, want %q", row2.Status, "draft")
+	}
+}
