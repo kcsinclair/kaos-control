@@ -102,7 +102,7 @@ function onBrainDumpCreated(path: string) {
 const project = route.params.project as string
 
 const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'releases']
-const statusOptions = ['', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa', 'in-progress', 'done', 'approved', 'blocked', 'rejected', 'abandoned']
+const statusOptions = ['', 'raw', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa', 'in-progress', 'done', 'approved', 'blocked', 'rejected', 'abandoned']
 const typeOptions = ['', 'idea', 'requirement', 'plan-backend', 'plan-frontend', 'plan-test', 'test', 'prototype', 'defect']
 
 const selectedStage = ref(store.filter.stage ?? '')

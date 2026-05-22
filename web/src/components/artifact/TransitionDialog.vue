@@ -19,7 +19,7 @@ const emit = defineEmits<{
 const store = useArtifactsStore()
 
 const STATUSES = [
-  'draft', 'clarifying', 'planning', 'in-progress', 'in-development',
+  'raw', 'draft', 'clarifying', 'planning', 'in-progress', 'in-development',
   'in-qa', 'done', 'approved', 'blocked', 'rejected', 'abandoned',
 ].filter((s) => s !== props.currentStatus)
 

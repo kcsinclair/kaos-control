@@ -56,7 +56,7 @@ const allPriorities = computed(() => {
   return [...s].sort()
 })
 
-const statusOptions = ['', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa',
+const statusOptions = ['', 'raw', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa',
   'in-progress', 'done', 'approved', 'blocked', 'rejected', 'abandoned']
 
 function resetFilters() {
