@@ -121,7 +121,7 @@ func TestHookHelper_HappyPath(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"decision":"allow"}`))
+		_, _ = w.Write([]byte(`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}`))
 	}))
 	defer srv.Close()
 
@@ -152,7 +152,7 @@ func TestHookHelper_PassesDenyDecision(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"decision":"deny","reason":"not allowed"}`))
+		_, _ = w.Write([]byte(`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"not allowed"}}`))
 	}))
 	defer srv.Close()
 
@@ -185,7 +185,7 @@ func TestHookHelper_ForwardsSecret(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotSecret = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"decision":"allow"}`))
+		_, _ = w.Write([]byte(`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}`))
 	}))
 	defer srv.Close()
 
@@ -250,7 +250,7 @@ func TestHookHelper_MissingSecret(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Should not be reached when the secret is missing.
-		_, _ = w.Write([]byte(`{"decision":"allow"}`))
+		_, _ = w.Write([]byte(`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}`))
 	}))
 	defer srv.Close()
 
@@ -292,7 +292,7 @@ func TestHookHelper_MalformedStdin(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// The hook-helper forwards raw stdin bytes; the server may return any JSON.
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"decision":"deny","reason":"bad_request"}`))
+		_, _ = w.Write([]byte(`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"bad_request"}}`))
 	}))
 	defer srv.Close()
 
@@ -319,7 +319,7 @@ func TestHookHelper_ExitCodeAlwaysZero(t *testing.T) {
 			dec := decision
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write([]byte(`{"decision":"` + dec + `"}`))
+				_, _ = w.Write([]byte(`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"` + dec + `"}}`))
 			}))
 			defer srv.Close()
 

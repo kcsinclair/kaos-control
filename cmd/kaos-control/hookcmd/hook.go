@@ -71,16 +71,19 @@ func Run(args []string) {
 		return
 	}
 
-	// Translate the server response to the Claude-native hookSpecificOutput format.
+	// The server emits the canonical Claude PreToolUse shape directly:
+	//   {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow|deny|ask","permissionDecisionReason":"..."}}
+	// Validate it parses and carries a decision, then pass through verbatim.
 	var serverResp struct {
-		Decision string `json:"decision"`
-		Reason   string `json:"reason"`
+		HookSpecificOutput struct {
+			PermissionDecision string `json:"permissionDecision"`
+		} `json:"hookSpecificOutput"`
 	}
-	if err := json.Unmarshal(respBody, &serverResp); err != nil || serverResp.Decision == "" {
+	if err := json.Unmarshal(respBody, &serverResp); err != nil || serverResp.HookSpecificOutput.PermissionDecision == "" {
 		writeDeny("malformed server response")
 		return
 	}
-	writeResponse(serverResp.Decision, serverResp.Reason)
+	_, _ = os.Stdout.Write(respBody)
 }
 
 // postWithRetry POSTs to the endpoint with the secret in the Authorization
