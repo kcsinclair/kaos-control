@@ -28,16 +28,43 @@ func init() {
 func TestGeminiCliDriver_BuildArgs(t *testing.T) {
 	driver := &GeminiCliDriver{}
 
-	t.Run("withProjectRoot", func(t *testing.T) {
+	t.Run("withProjectRootAndUnlimitedTimeout", func(t *testing.T) {
 		run := Run{
 			ProjectRoot: "/Users/keith/Code/kaos-control",
 			PromptText:  "Hello Gemini",
+			// TimeoutMinutes=0 → 24h
 		}
 		args := driver.buildArgs(run)
 
 		expectedArgs := []string{
 			"--dangerously-skip-permissions",
 			"--add-dir", "/Users/keith/Code/kaos-control",
+			"--print-timeout", "24h",
+			"--prompt", "Hello Gemini",
+		}
+
+		if len(args) != len(expectedArgs) {
+			t.Fatalf("expected %d args, got %d: %v", len(expectedArgs), len(args), args)
+		}
+		for i, arg := range args {
+			if arg != expectedArgs[i] {
+				t.Errorf("arg %d: expected %q, got %q", i, expectedArgs[i], arg)
+			}
+		}
+	})
+
+	t.Run("withExplicitTimeout", func(t *testing.T) {
+		run := Run{
+			ProjectRoot:    "/tmp/proj",
+			PromptText:     "Hello Gemini",
+			TimeoutMinutes: 30,
+		}
+		args := driver.buildArgs(run)
+
+		expectedArgs := []string{
+			"--dangerously-skip-permissions",
+			"--add-dir", "/tmp/proj",
+			"--print-timeout", "30m",
 			"--prompt", "Hello Gemini",
 		}
 
@@ -59,6 +86,7 @@ func TestGeminiCliDriver_BuildArgs(t *testing.T) {
 
 		expectedArgs := []string{
 			"--dangerously-skip-permissions",
+			"--print-timeout", "24h",
 			"--prompt", "Hello Gemini",
 		}
 

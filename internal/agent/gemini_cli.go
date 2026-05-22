@@ -36,6 +36,17 @@ func (d *GeminiCliDriver) buildArgs(run Run) []string {
 	if run.ProjectRoot != "" {
 		args = append(args, "--add-dir", run.ProjectRoot)
 	}
+	// agy's --print-timeout defaults to 5 min, which is too short for any
+	// non-trivial agent task — the model often finishes the work just past
+	// that deadline and emits a partial reply with `Error: timed out waiting
+	// for response`. Map the agent config's timeout_minutes onto it; 0
+	// (kaos-control's "unlimited") becomes 24h, which is effectively
+	// unbounded for a single print-mode run.
+	if run.TimeoutMinutes > 0 {
+		args = append(args, "--print-timeout", fmt.Sprintf("%dm", run.TimeoutMinutes))
+	} else {
+		args = append(args, "--print-timeout", "24h")
+	}
 	args = append(args, "--prompt", run.PromptText)
 	return args
 }
