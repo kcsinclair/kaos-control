@@ -1,7 +1,7 @@
 ---
 title: Test Plan — Add 'raw' Artefact Status Before Draft
 type: plan-test
-status: in-development
+status: done
 lineage: raw-artefact-status
 parent: lifecycle/requirements/raw-artefact-status-2.md
 ---
