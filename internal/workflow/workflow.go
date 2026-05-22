@@ -24,6 +24,10 @@ type rule struct {
 
 // defaultRules implement the spec §6.2 transition matrix.
 var defaultRules = []rule{
+	// raw: unprocessed quick-capture input; promoted to draft by analyst, product-owner, or system.
+	// product-owner may also demote draft back to raw (e.g. when reclassifying a capture).
+	{from: "raw", to: "draft", roles: []string{"product-owner", "analyst", "system"}},
+	{from: "draft", to: "raw", roles: []string{"product-owner"}},
 	{from: "draft", to: "clarifying", roles: []string{"product-owner", "analyst"}, excludeTypes: []string{"doc"}},
 	{from: "clarifying", to: "planning", roles: []string{"product-owner", "reviewer", "analyst"}, excludeTypes: []string{"doc"}},
 	{from: "planning", to: "in-development", roles: []string{"approver"}, excludeTypes: []string{"doc"}},

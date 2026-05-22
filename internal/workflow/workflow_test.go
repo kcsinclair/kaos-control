@@ -82,7 +82,7 @@ func TestSystemRoleCanBlockFromAnyStatus(t *testing.T) {
 	e := New(nil)
 
 	statuses := []string{
-		"draft", "clarifying", "planning",
+		"raw", "draft", "clarifying", "planning",
 		"in-development", "in-qa", "approved",
 		"rejected", "abandoned", "done",
 	}
@@ -131,7 +131,7 @@ func TestAllowedTargetsForProductOwnerCoversAllStatuses(t *testing.T) {
 	got := e.AllowedTargets("anything", []string{"product-owner"}, "")
 
 	want := []string{
-		"clarifying", "planning", "in-development", "in-qa", "approved",
+		"raw", "clarifying", "planning", "in-development", "in-qa", "approved",
 		"done", "draft", "rejected", "abandoned", "blocked",
 	}
 	if len(got) != len(want) {
@@ -145,5 +145,83 @@ func TestAllowedTargetsForProductOwnerCoversAllStatuses(t *testing.T) {
 		if !set[w] {
 			t.Errorf("expected %q to be in allowed targets, got %v", w, got)
 		}
+	}
+}
+
+// TestRawToDraftTransitions verifies the new raw → draft transition rules.
+func TestRawToDraftTransitions(t *testing.T) {
+	e := New(nil)
+
+	allowed := []string{"product-owner", "analyst", "system"}
+	for _, role := range allowed {
+		if !e.CanTransition("raw", "draft", []string{role}, "idea") {
+			t.Errorf("role %q should be allowed to transition raw → draft", role)
+		}
+	}
+
+	denied := []string{"backend-developer", "qa", "reviewer"}
+	for _, role := range denied {
+		if e.CanTransition("raw", "draft", []string{role}, "idea") {
+			t.Errorf("role %q should NOT be allowed to transition raw → draft", role)
+		}
+	}
+}
+
+// TestDraftToRawTransition verifies that only product-owner may demote draft → raw.
+func TestDraftToRawTransition(t *testing.T) {
+	e := New(nil)
+
+	if !e.CanTransition("draft", "raw", []string{"product-owner"}, "idea") {
+		t.Error("product-owner should be allowed to transition draft → raw")
+	}
+
+	denied := []string{"analyst", "system", "backend-developer", "reviewer"}
+	for _, role := range denied {
+		if e.CanTransition("draft", "raw", []string{role}, "idea") {
+			t.Errorf("role %q should NOT be allowed to transition draft → raw", role)
+		}
+	}
+}
+
+// TestRawEscapeHatches verifies that universal escape hatch transitions apply
+// from raw status without any new explicit rules.
+func TestRawEscapeHatches(t *testing.T) {
+	e := New(nil)
+
+	// reviewer can reject from raw
+	if !e.CanTransition("raw", "rejected", []string{"reviewer"}, "idea") {
+		t.Error("reviewer should be allowed raw → rejected")
+	}
+	// product-owner can abandon from raw
+	if !e.CanTransition("raw", "abandoned", []string{"product-owner"}, "idea") {
+		t.Error("product-owner should be allowed raw → abandoned")
+	}
+	// system can block from raw
+	if !e.CanTransition("raw", "blocked", []string{"system"}, "idea") {
+		t.Error("system should be allowed raw → blocked")
+	}
+	// analyst can block from raw
+	if !e.CanTransition("raw", "blocked", []string{"analyst"}, "idea") {
+		t.Error("analyst should be allowed raw → blocked")
+	}
+}
+
+// TestAllowedTargetsFromRawForAnalyst verifies AllowedTargets from raw for analyst.
+func TestAllowedTargetsFromRawForAnalyst(t *testing.T) {
+	e := New(nil)
+	targets := e.AllowedTargets("raw", []string{"analyst"}, "idea")
+
+	set := map[string]bool{}
+	for _, t := range targets {
+		set[t] = true
+	}
+	if !set["draft"] {
+		t.Error("AllowedTargets from raw for analyst should include 'draft'")
+	}
+	if !set["blocked"] {
+		t.Error("AllowedTargets from raw for analyst should include 'blocked'")
+	}
+	if set["raw"] {
+		t.Error("AllowedTargets from raw for analyst should NOT include 'raw' (self-transition guard)")
 	}
 }
