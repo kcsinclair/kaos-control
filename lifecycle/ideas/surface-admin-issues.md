@@ -1,7 +1,7 @@
 ---
 title: Surface Admin Issues in GUI
 type: idea
-status: draft
+status: raw
 lineage: surface-admin-issues
 created:
   "{ date:YYYY-MM-DD }":
