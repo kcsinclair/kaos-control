@@ -1,10 +1,10 @@
 ---
 title: Add 'raw' Artefact Status Before Draft
 type: requirement
-status: blocked
+status: approved
 lineage: raw-artefact-status
 created: "2026-05-22T10:30:00+10:00"
-priority: normal
+priority: medium
 parent: lifecycle/ideas/raw-artefact-status.md
 labels:
     - artefacts
@@ -12,6 +12,7 @@ labels:
     - feature
     - backend
     - frontend
+release: KC-Release3
 assignees:
     - role: product-owner
       who: agent
@@ -84,10 +85,24 @@ Without an explicit "unprocessed" state, reviewers see every captured fragment a
 - [ ] An integration test creates a `raw` artefact, transitions it to `draft` as an analyst, and asserts the change is reflected in the index and via WebSocket `artifact.indexed` events. Related: [[artefact-inline-status-change]].
 - [ ] No regression in existing transition tests or end-to-end workflow tests.
 
-## Open Questions
+## Resolved Questions
 
 1. **Reverse transition `draft → raw`** — Is the reverse transition actually useful, or does the existing `any → rejected` / `clarifying → draft` machinery already cover the "I made a mistake" recovery path? If not required, drop requirement #3.
+
+> Yes it is useful.
+
 2. **Agent visibility** — Should the `analyst` agent be allowed to *read* `raw` artefacts as input (analogous to how it currently reads `draft` ideas), and if so, should it produce a `clarifying` artefact directly or first promote `raw → draft`? This intersects with [[analyst-agent-sees-draft-ideas]].
+
+> Yes, it can read raw ideas.
+
 3. **Default for agent-produced artefacts** — Should any agent-generated content ever default to `raw` (e.g. transcribed voice notes from a future ingest agent), or is `raw` exclusively reserved for human quick-capture input?
+
+> An agent could produce raw, transcribed voice notes is a good use case.
+
 4. **Badge colour token** — Which exact colour token in `web/src/styles/tokens.css` should represent `raw`? A new token may be needed; alternatively reuse an existing muted-neutral token.
+
+> A new colour would be good.
+
 5. **Auto-block interaction** — When an artefact in `raw` status has open questions in its body, should the existing auto-block-on-open-questions behaviour fire, or is auto-block deferred until the artefact has been promoted to `draft`?
+
+> Yes, if a raw status artefact has Open Questions, they should be flipped to blocked.
