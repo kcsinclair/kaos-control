@@ -24,10 +24,20 @@ type GeminiCliDriver struct {
 }
 
 func (d *GeminiCliDriver) buildArgs(run Run) []string {
-	return []string{
+	args := []string{
 		"--dangerously-skip-permissions",
-		"--prompt", run.PromptText,
 	}
+	// agy ignores cmd.Dir for its workspace context and defaults to
+	// ~/.gemini/antigravity-cli/scratch, so the agent spends the whole run
+	// hunting for the project ("I will list the parent directory…") and
+	// eventually hits --print-timeout. --add-dir tells agy which directory
+	// to include in the workspace; without it agy's log records
+	// workspaceDirs=[] and the model has no project context to work with.
+	if run.ProjectRoot != "" {
+		args = append(args, "--add-dir", run.ProjectRoot)
+	}
+	args = append(args, "--prompt", run.PromptText)
+	return args
 }
 
 func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
