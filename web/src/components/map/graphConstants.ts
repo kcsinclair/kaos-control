@@ -68,6 +68,7 @@ const DARK_PALETTE: GraphPalette = {
     low:    '#3b82f6',  // blue-500
   },
   activeStatusColors: {
+    'raw':            '#cbd5e1',  // slate-300 — matches dark badge text token
     'in-development': '#4ade80',  // green-400
     'in-qa':          '#fbbf24',  // amber-400
     'in-progress':    '#4ade80',  // green-400
@@ -127,6 +128,7 @@ const LIGHT_PALETTE: GraphPalette = {
     low:    '#2563eb',  // blue-600
   },
   activeStatusColors: {
+    'raw':            '#475569',  // slate-600 — matches light badge text token
     'in-development': '#16a34a',  // green-600
     'in-qa':          '#d97706',  // amber-600
     'in-progress':    '#16a34a',  // green-600
