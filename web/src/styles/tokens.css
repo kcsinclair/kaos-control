@@ -42,6 +42,8 @@
   --badge-in-qa-text:       #6b21a8;
   --badge-in-dev-bg:        #ecfdf5;
   --badge-in-dev-text:      #065f46;
+  --badge-raw-bg:           #f1f5f9;
+  --badge-raw-text:         #475569;
   --badge-clarifying-bg:    #eff6ff;
   --badge-clarifying-text:  #1e40af;
   --badge-planning-bg:      #eef2ff;
@@ -123,6 +125,8 @@
   --badge-in-qa-text:       #d8b4fe;
   --badge-in-dev-bg:        #0d3322;
   --badge-in-dev-text:      #6ee7b7;
+  --badge-raw-bg:           #1e293b;
+  --badge-raw-text:         #cbd5e1;
   --badge-clarifying-bg:    #1e3a5f;
   --badge-clarifying-text:  #93c5fd;
   --badge-planning-bg:      #2e1a4a;
@@ -160,6 +164,8 @@
     --badge-in-qa-text:       #d8b4fe;
     --badge-in-dev-bg:        #0d3322;
     --badge-in-dev-text:      #6ee7b7;
+    --badge-raw-bg:           #1e293b;
+    --badge-raw-text:         #cbd5e1;
     --badge-clarifying-bg:    #1e3a5f;
     --badge-clarifying-text:  #93c5fd;
     --badge-planning-bg:      #2e1a4a;
