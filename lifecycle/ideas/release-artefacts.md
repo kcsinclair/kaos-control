@@ -6,7 +6,7 @@ lineage: release-artefacts
 created:
   "{ date:YYYY-MM-DD }":
 priority: high
-release: KC-Release3
+release: KC-Release4
 labels:
 reach:
 impact:
