@@ -12,7 +12,6 @@ labels:
     - v1
 release: KC-Release2
 ---
-
 # Projects Page CRUD Operations
 
 Add full create, read, update, and delete (CRUD) functionality to the projects page in the kaos-control GUI, allowing users to manage their registered projects directly from the web interface without needing to manually edit configuration files under `~/.kaos-control/projects/*.yaml`.

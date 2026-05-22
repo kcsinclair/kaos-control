@@ -2,11 +2,11 @@
 title: Auto Triage New Ideas
 type: idea
 project: kaos-control
-created: "2026-05-21T00:00:00+10:00"
+created: 2026-05-21T00:00:00+10:00
 status: raw
 lineage: auto-triage-new-ideas
 lifecycle-stage: discovery
-priority:
+priority: high
 effort:
 impact:
 ---
