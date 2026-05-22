@@ -1,7 +1,7 @@
 ---
 title: Frontend Plan — Add 'raw' Artefact Status Before Draft
 type: plan-frontend
-status: draft
+status: approved
 lineage: raw-artefact-status
 parent: lifecycle/requirements/raw-artefact-status-2.md
 ---
