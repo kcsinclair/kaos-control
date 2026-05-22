@@ -10,6 +10,7 @@ labels:
     - agent
     - editor
     - frontend
+release: KC-Release3
 ---
 
 # Agent Editor Does Not Load All Data from config.yaml
