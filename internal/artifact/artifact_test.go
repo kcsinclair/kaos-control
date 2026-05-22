@@ -12,6 +12,32 @@ import (
 	"github.com/kaos-control/kaos-control/internal/artifact"
 )
 
+// TestParse_RawStatus verifies that a markdown file with status: raw is parsed
+// without any "unknown status" error and that FM.Status is set to "raw".
+func TestParse_RawStatus(t *testing.T) {
+	raw := []byte("---\ntitle: Quick capture\ntype: idea\nstatus: raw\nlineage: capture-test\n---\n\nBrain dump.\n")
+	a := artifact.Parse(raw, "lifecycle/ideas/capture-test.md", time.Now())
+
+	if a.FM.Status != "raw" {
+		t.Errorf("FM.Status: want %q, got %q", "raw", a.FM.Status)
+	}
+	for _, e := range a.ParseErrs {
+		if strings.Contains(strings.ToLower(e), "unknown status") {
+			t.Errorf("unexpected unknown-status parse error: %s", e)
+		}
+	}
+	if len(a.ParseErrs) > 0 {
+		t.Errorf("unexpected parse errors: %v", a.ParseErrs)
+	}
+}
+
+// TestKnownStatuses_Raw verifies that KnownStatuses["raw"] evaluates to true.
+func TestKnownStatuses_Raw(t *testing.T) {
+	if !artifact.KnownStatuses["raw"] {
+		t.Error("KnownStatuses[\"raw\"] should be true")
+	}
+}
+
 // TestParse_CreatedFieldPresent verifies that a YAML frontmatter block containing
 // a well-formed `created` RFC3339 value is decoded into FM.Created.
 func TestParse_CreatedFieldPresent(t *testing.T) {

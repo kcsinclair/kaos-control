@@ -41,7 +41,7 @@ const (
 
 // KnownStatuses is the allowed vocabulary for the status field.
 var KnownStatuses = map[string]bool{
-	"draft": true, "clarifying": true, "planning": true,
+	"raw": true, "draft": true, "clarifying": true, "planning": true,
 	"in-development": true, "in-qa": true, "approved": true,
 	"rejected": true, "abandoned": true, "done": true,
 	"blocked": true,
