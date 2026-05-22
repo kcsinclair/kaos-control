@@ -30,6 +30,7 @@ const isEmpty = ref(false)
 
 // WCAG 2.1 AA compliant palette against dark/light backgrounds
 const STATUS_COLORS: Record<string, string> = {
+  raw:            '#64748b',
   draft:          '#6366f1',
   clarifying:     '#f59e0b',
   planning:       '#3b82f6',
