@@ -17,7 +17,10 @@ var statusOrder = []string{
 }
 
 // terminalStatuses are excluded from staleness comparison.
+// raw is included because a quick-capture artifact is allowed to sit
+// indefinitely until a human or analyst promotes it to draft.
 var terminalStatuses = map[string]bool{
+	"raw":       true,
 	"rejected":  true,
 	"abandoned": true,
 	"blocked":   true,
