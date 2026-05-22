@@ -128,7 +128,7 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
       const frontmatter: Record<string, unknown> = {
         title,
         type: 'doc',
-        status: 'draft',
+        status: 'raw',
         lineage: slug,
       }
       if (opts?.sourcePath) frontmatter.parent = opts.sourcePath
