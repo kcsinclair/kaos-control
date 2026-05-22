@@ -313,6 +313,7 @@ onMounted(load)
   flex-shrink: 0;
 }
 /* Per-status palette — keep in sync with web/src/components/artifact/StatusDropdown.vue */
+.status-chip[data-status="raw"]            { background: #f1f5f9; color: #475569; }
 .status-chip[data-status="draft"]          { background: #f3f4f6; color: #374151; }
 .status-chip[data-status="clarifying"]     { background: #ede9fe; color: #5b21b6; }
 .status-chip[data-status="planning"]       { background: #fef3c7; color: #92400e; }
@@ -325,6 +326,7 @@ onMounted(load)
 .status-chip[data-status="abandoned"]      { background: #f3f4f6; color: #6b7280; }
 .status-chip[data-status="in-progress"]    { background: #fef3c7; color: #92400e; }
 @media (prefers-color-scheme: dark) {
+  .status-chip[data-status="raw"]            { background: #1e293b; color: #cbd5e1; }
   .status-chip[data-status="draft"]          { background: #374151; color: #d1d5db; }
   .status-chip[data-status="clarifying"]     { background: #3b2f6e; color: #c4b5fd; }
   .status-chip[data-status="planning"]       { background: #422006; color: #fcd34d; }

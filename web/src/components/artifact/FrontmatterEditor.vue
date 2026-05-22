@@ -21,6 +21,7 @@ const STATUS_VOCAB = [
   'in-development',
   'in-qa',
   'planning',
+  'raw',
   'rejected',
 ] as const
 

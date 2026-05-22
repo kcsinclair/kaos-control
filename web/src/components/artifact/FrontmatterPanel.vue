@@ -257,6 +257,7 @@ function fmt(v: string | undefined): string {
   background: var(--color-border);
   color: var(--color-text);
 }
+.badge[data-status="raw"]            { background: #f1f5f9; color: #475569; }
 .badge[data-status="draft"]          { background: #f3f4f6; color: #374151; }
 .badge[data-status="clarifying"]     { background: #ede9fe; color: #5b21b6; }
 .badge[data-status="planning"]       { background: #fef3c7; color: #92400e; }
@@ -269,6 +270,7 @@ function fmt(v: string | undefined): string {
 .badge[data-status="abandoned"]      { background: #f3f4f6; color: #6b7280; }
 .badge[data-status="in-progress"]    { background: #fef3c7; color: #92400e; }
 @media (prefers-color-scheme: dark) {
+  .badge[data-status="raw"]            { background: #1e293b; color: #cbd5e1; }
   .badge[data-status="draft"]          { background: #374151; color: #d1d5db; }
   .badge[data-status="clarifying"]     { background: #3b2f6e; color: #c4b5fd; }
   .badge[data-status="planning"]       { background: #422006; color: #fcd34d; }
