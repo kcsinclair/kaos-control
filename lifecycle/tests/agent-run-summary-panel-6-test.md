@@ -1,7 +1,7 @@
 ---
 title: Test Suite — Agent Run Summary Panel
 type: test
-status: approved
+status: in-qa
 lineage: agent-run-summary-panel
 parent: lifecycle/test-plans/agent-run-summary-panel-5-test.md
 ---
