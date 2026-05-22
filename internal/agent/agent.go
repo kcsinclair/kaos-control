@@ -151,6 +151,14 @@ type claudeProcess struct {
 	progress chan ProgressEvent
 	stderr   *ringBuf
 	logFile  *os.File // nil if no log path was configured
+
+	// waitErr, when non-nil, makes Wait() return the value read from this
+	// channel instead of calling cmd.Wait() directly. Drivers whose binary
+	// detaches grandchildren that hold stdout/stderr open (e.g. agy) must
+	// call cmd.Wait() asynchronously to close the pipes — see gemini_cli.go
+	// — and stash the result here so Wait() can be safely called later by
+	// the supervisor without double-calling cmd.Wait.
+	waitErr chan error
 }
 
 // ProgressEvent is one structured update from the agent. raw is the original
@@ -287,7 +295,12 @@ func startClaudeProcess(ctx context.Context, cmd *exec.Cmd, run Run, args []stri
 	return p, nil
 }
 
-func (p *claudeProcess) Wait() error                     { return p.cmd.Wait() }
+func (p *claudeProcess) Wait() error {
+	if p.waitErr != nil {
+		return <-p.waitErr
+	}
+	return p.cmd.Wait()
+}
 func (p *claudeProcess) Progress() <-chan ProgressEvent  { return p.progress }
 func (p *claudeProcess) StderrTail() string              { return p.stderr.String() }
 

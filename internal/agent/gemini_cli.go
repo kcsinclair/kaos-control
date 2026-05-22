@@ -76,7 +76,8 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 		return nil, fmt.Errorf("starting agy: %w", err)
 	}
 
-	p := &claudeProcess{cmd: cmd, progress: progressCh, stderr: rb, logFile: logFile}
+	waitErr := make(chan error, 1)
+	p := &claudeProcess{cmd: cmd, progress: progressCh, stderr: rb, logFile: logFile, waitErr: waitErr}
 
 	// Stream starts with opening started event to let UI know it initiated.
 	select {
@@ -137,6 +138,20 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 				break
 			}
 		}
+	}()
+
+	// Process-exit watcher: the agy CLI (Antigravity) detaches a grandchild
+	// that inherits stdout/stderr and keeps writing its FDs even after agy
+	// itself exits, so the pipe goroutines above would block on Read forever
+	// waiting for an EOF that never comes. Run cmd.Wait() asynchronously —
+	// it reaps the agy process and closes the parent ends of the pipes,
+	// which unblocks the readers. The result is stashed in waitErr so
+	// claudeProcess.Wait() (called by supervise after the drain loop) can
+	// return it without double-calling cmd.Wait.
+	go func() {
+		err := cmd.Wait()
+		waitErr <- err
+		close(waitErr)
 	}()
 
 	// Wait and clean up goroutine.

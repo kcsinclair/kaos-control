@@ -6,9 +6,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // init intercepts the test execution when spawned as a mock subprocess
@@ -133,5 +135,91 @@ func TestGeminiCliDriver_Start(t *testing.T) {
 	}
 	if !strings.Contains(logContent, "# finished=") {
 		t.Errorf("expected log content to contain finished marker")
+	}
+}
+
+// TestGeminiCliDriver_DetachedChildHoldsPipes is a regression test for the
+// hang where the agy CLI exits but a detached grandchild keeps stdout/stderr
+// FDs open. Real-world impact: supervise() drains the progress channel,
+// which never closes because the pipe-drain goroutines are blocked on
+// Read(), then would call proc.Wait() — but proc.Wait() is exactly the
+// thing that would close the pipes and unblock the readers. The result is
+// a permanent deadlock; the run stays marked "running" until the user
+// manually kills it.
+//
+// The test mirrors supervise()'s sequencing exactly: drain progress FIRST,
+// then call proc.Wait(). With the bug, the drain blocks forever. With the
+// fix, cmd.Wait() runs in its own goroutine, closes the parent-side pipes
+// when the shim exits, the readers EOF, the channel closes, drain exits,
+// then proc.Wait() returns the stashed result.
+//
+// We reproduce the detached-grandchild scenario with a tiny Python script
+// that fork()s an idle grandchild before the parent exits.
+func TestGeminiCliDriver_DetachedChildHoldsPipes(t *testing.T) {
+	python, err := exec.LookPath("python3")
+	if err != nil {
+		t.Skip("python3 not found; skipping detached-child test")
+	}
+
+	tmpDir := t.TempDir()
+	shimPath := filepath.Join(tmpDir, "fake-agy")
+	shim := "#!/usr/bin/env " + python + "\n" +
+		"import os, sys, time\n" +
+		"sys.stderr.write('Error: timed out waiting for response\\n')\n" +
+		"sys.stderr.flush()\n" +
+		"if os.fork() == 0:\n" +
+		"    time.sleep(30)\n" + // grandchild holds inherited stdout/stderr FDs
+		"    sys.exit(0)\n" +
+		"sys.exit(1)\n"
+	if err := os.WriteFile(shimPath, []byte(shim), 0o755); err != nil {
+		t.Fatalf("writing shim: %v", err)
+	}
+
+	driver := &GeminiCliDriver{BinaryPath: shimPath}
+	run := Run{
+		RunID:       "run-detached-child",
+		AgentName:   "qa",
+		Role:        "qa",
+		Model:       "gemini-2.5-flash",
+		PromptText:  "trigger the hang",
+		LogPath:     filepath.Join(tmpDir, "run.log"),
+		ProjectRoot: tmpDir,
+	}
+
+	proc, err := driver.Start(context.Background(), run)
+	if err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	// Mirror supervise(): drain progress first, then Wait. With the bug the
+	// drain blocks forever; we cap it at 5 s.
+	drainDone := make(chan struct{})
+	go func() {
+		for range proc.Progress() {
+		}
+		close(drainDone)
+	}()
+
+	select {
+	case <-drainDone:
+	case <-time.After(5 * time.Second):
+		_ = proc.Kill()
+		t.Fatal("progress channel was not closed within 5s after agy shim exited — daemon-child-holds-pipes regression")
+	}
+
+	waitDone := make(chan error, 1)
+	go func() { waitDone <- proc.Wait() }()
+	select {
+	case <-waitDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("proc.Wait() did not return within 2s after drain completed")
+	}
+
+	logBytes, err := os.ReadFile(run.LogPath)
+	if err != nil {
+		t.Fatalf("reading log: %v", err)
+	}
+	if !strings.Contains(string(logBytes), "# finished=") {
+		t.Errorf("log file missing # finished= footer; content:\n%s", string(logBytes))
 	}
 }
