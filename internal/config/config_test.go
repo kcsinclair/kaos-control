@@ -119,6 +119,30 @@ func TestLoadProjectIgnoreField(t *testing.T) {
 	})
 }
 
+func TestLoadProjectCodexAgent(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: codex-developer
+    role: [analyst]
+    driver: codex-cli
+    allowed_write_paths: [lifecycle/ideas]
+    git_identity:
+      name: Codex Developer Agent
+      email: codex@test.local
+    prompt_templates:
+      analyst: "Analyse {target_path}"
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	if len(cfg.Agents) != 1 {
+		t.Fatalf("expected 1 agent, got %d", len(cfg.Agents))
+	}
+	if got := cfg.Agents[0].Driver; got != "codex-cli" {
+		t.Errorf("driver: got %q, want %q", got, "codex-cli")
+	}
+}
+
 // TestKanbanConfig verifies that the kanban section of lifecycle/config.yaml is
 // correctly parsed (or absent) by LoadProject.
 // Run with: go test ./internal/config/ -run TestKanban
