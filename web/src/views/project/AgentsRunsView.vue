@@ -30,7 +30,14 @@ function agentDriver(agentName: string, agents: AgentSummary[]): string {
   if (a.driver === 'ollama') return 'Ollama'
   if (a.driver === 'claude-code-cli') return 'Claude Code'
   if (a.driver === 'claude-mediated') return 'Claude Mediated'
+  if (a.driver === 'codex-cli') return 'Codex'
   return a.driver
+}
+
+function agentHasTokenMetrics(agentName: string): boolean {
+  const driver = store.agents.find((ag) => ag.name === agentName)?.driver
+  if (!driver) return true
+  return driver === 'claude-code-cli' || driver === 'claude-mediated'
 }
 
 const route = useRoute()
@@ -355,7 +362,7 @@ onMounted(() => {
                 <RunSummaryCard
                   v-else
                   :result="store.runResults.get(run.run_id) ?? null"
-                  :driver-available="true"
+                  :driver-available="agentHasTokenMetrics(run.agent_name)"
                 />
               </div>
               <!-- Full log — opens in a full-height modal (same component
@@ -593,6 +600,7 @@ onMounted(() => {
 .driver-badge[data-driver="ollama"] { background: #dbeafe; color: #1d4ed8; }
 .driver-badge[data-driver="claude-code-cli"] { background: #f3e8ff; color: #7e22ce; }
 .driver-badge[data-driver="claude-mediated"] { background: #fef3c7; color: #92400e; }
+.driver-badge[data-driver="codex-cli"] { background: #dcfce7; color: #166534; }
 /* Queue pause banner */
 .queue-pause-banner {
   display: flex;

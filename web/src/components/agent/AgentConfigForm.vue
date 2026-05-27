@@ -9,7 +9,7 @@ import type { AgentSummary, OllamaInstance } from '@/types/api'
 export interface AgentFormData {
   name: string
   roles: string[]
-  driver: 'claude-code-cli' | 'ollama'
+  driver: 'claude-code-cli' | 'codex-cli' | 'ollama'
   model: string
   ollama_instance: string
   ollama_endpoint: 'chat' | 'generate'
@@ -38,8 +38,8 @@ const isEdit = !!props.initial
 // ── Form state ─────────────────────────────────────────────────────────────
 const name = ref(props.initial?.name ?? '')
 const selectedRoles = ref<string[]>(props.initial?.roles ?? [])
-const driver = ref<'claude-code-cli' | 'ollama'>(
-  (props.initial?.driver ?? 'claude-code-cli') as 'claude-code-cli' | 'ollama',
+const driver = ref<'claude-code-cli' | 'codex-cli' | 'ollama'>(
+  (props.initial?.driver ?? 'claude-code-cli') as 'claude-code-cli' | 'codex-cli' | 'ollama',
 )
 const model = ref(props.initial?.model ?? '')
 const ollamaInstance = ref(props.initial?.ollama_instance ?? '')
@@ -101,7 +101,7 @@ function validate(): boolean {
   if (driver.value === 'ollama') {
     if (!ollamaInstance.value) e.ollama_instance = 'Select an Ollama instance.'
     if (!model.value.trim()) e.model = 'Model is required for Ollama driver.'
-  } else {
+  } else if (driver.value === 'claude-code-cli') {
     if (!model.value.trim()) e.model = 'Model is required.'
   }
   errors.value = e
@@ -210,14 +210,18 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
           Claude Code
         </label>
         <label class="acf-radio-label">
+          <input v-model="driver" type="radio" value="codex-cli" />
+          Codex
+        </label>
+        <label class="acf-radio-label">
           <input v-model="driver" type="radio" value="ollama" />
           Ollama
         </label>
       </div>
     </div>
 
-    <!-- Claude Code model -->
-    <div v-if="driver === 'claude-code-cli'" class="acf-field">
+    <!-- CLI model -->
+    <div v-if="driver === 'claude-code-cli' || driver === 'codex-cli'" class="acf-field">
       <label class="acf-label" for="acf-model-cc">Model</label>
       <input
         id="acf-model-cc"
@@ -225,7 +229,7 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
         class="acf-input"
         :class="{ 'acf-input--error': errors.model }"
         type="text"
-        placeholder="e.g. sonnet, opus, haiku"
+        :placeholder="driver === 'codex-cli' ? 'optional, e.g. gpt-5-codex' : 'e.g. sonnet, opus, haiku'"
         autocomplete="off"
       />
       <p v-if="errors.model" class="acf-error">{{ errors.model }}</p>
