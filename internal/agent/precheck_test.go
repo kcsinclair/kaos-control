@@ -402,10 +402,10 @@ func TestPrecheck_SIGKILLEscalation(t *testing.T) {
 	// Allow the python process to start and install its SIGTERM handler.
 	time.Sleep(700 * time.Millisecond)
 
-	// Wrap in a claudeProcess so defaultProcessKiller uses the Signal+Kill path.
+	// Wrap in a cliProcess so defaultProcessKiller uses the Signal+Kill path.
 	progress := make(chan ProgressEvent)
 	close(progress)
-	proc := &claudeProcess{cmd: cmd, progress: progress, stderr: newRingBuf(1024)}
+	proc := &cliProcess{cmd: cmd, progress: progress, stderr: newRingBuf(1024)}
 
 	start := time.Now()
 	defaultProcessKiller{}.Kill(proc)

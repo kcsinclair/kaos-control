@@ -72,7 +72,7 @@ func (d *ClaudeHooksDriver) Start(ctx context.Context, run Run) (Process, error)
 	slog.Debug("agent: starting claude-mediated", "run_id", run.RunID, "settings", settingsPath, "server", d.ServerAddr)
 
 	// 6. Start the process, reusing shared stream-JSON logic (FR3).
-	proc, err := startClaudeProcess(ctx, cmd, run, args)
+	proc, err := startCommandProcess(ctx, cmd, run, args, "claude")
 	if err != nil {
 		cleanup()
 		return nil, err
@@ -101,7 +101,7 @@ func (d *ClaudeHooksDriver) buildArgs(run Run, settingsPath string) []string {
 // process exits via Wait().
 type mediatedProcess struct {
 	Process
-	cleanup  func()
+	cleanup   func()
 	cleanOnce bool
 }
 
