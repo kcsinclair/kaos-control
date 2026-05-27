@@ -76,6 +76,12 @@ function formatDatetime(iso: string | undefined): string {
   return new Date(iso).toLocaleString()
 }
 
+function agentHasTokenMetrics(agentName: string): boolean {
+  const driver = agentsStore.agents.find((agent) => agent.name === agentName)?.driver
+  if (!driver) return true
+  return driver === 'claude-code-cli' || driver === 'claude-mediated'
+}
+
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     emit('close')
@@ -197,7 +203,7 @@ function handleOverlayClick(e: MouseEvent) {
             <RunSummaryCard
               v-else
               :result="runResult"
-              :driver-available="true"
+              :driver-available="agentHasTokenMetrics(run.agent_name)"
             />
           </div>
 
