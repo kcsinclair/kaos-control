@@ -8,7 +8,7 @@ require (
 	github.com/coder/websocket v1.8.14
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-chi/chi/v5 v5.2.5
-	github.com/go-git/go-git/v5 v5.19.0
+	github.com/go-git/go-git/v5 v5.19.1
 	github.com/yuin/goldmark v1.8.2
 	go.abhg.dev/goldmark/frontmatter v0.3.0
 	golang.org/x/crypto v0.50.0

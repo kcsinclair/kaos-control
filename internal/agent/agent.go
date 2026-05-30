@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Package agent implements the agent runner: driver interface, claude-code-cli
-// driver, run lifecycle management, and scope enforcement.
+// Package agent implements the agent runner: driver interface, CLI drivers,
+// run lifecycle management, and scope enforcement.
 package agent
 
 import (
@@ -26,9 +26,9 @@ import (
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
+	kgit "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
-	kgit "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/lock"
 )
 
@@ -43,7 +43,7 @@ type processKiller interface {
 type defaultProcessKiller struct{}
 
 func (defaultProcessKiller) Kill(proc Process) {
-	cp, ok := proc.(*claudeProcess)
+	cp, ok := proc.(*cliProcess)
 	if !ok || cp.cmd.Process == nil {
 		_ = proc.Kill()
 		return
@@ -74,7 +74,7 @@ type Run struct {
 	RunID        string
 	AgentName    string
 	Role         string
-	Driver       string // "claude-code-cli", "ollama", … — controls supervisor behaviour (e.g. precheck applicability)
+	Driver       string // "claude-code-cli", "codex-cli", "ollama", … — controls supervisor behaviour (e.g. precheck applicability)
 	Model        string // empty → CLI default
 	PromptText   string
 	ProjectRoot  string
@@ -82,10 +82,10 @@ type Run struct {
 	GitIdentity  config.GitIdentity
 	LogPath      string // absolute path; if empty, no log file is written
 	// Status lifecycle fields (copied from AgentConfig).
-	TargetPath    string // project-relative path to the target artifact
-	ActiveStatus  string // status to set on target when run starts (empty = no change)
-	DoneOnSuccess bool   // if true, set target status to "done" on successful completion
-	TimeoutMinutes int   // 0 = driver default
+	TargetPath     string // project-relative path to the target artifact
+	ActiveStatus   string // status to set on target when run starts (empty = no change)
+	DoneOnSuccess  bool   // if true, set target status to "done" on successful completion
+	TimeoutMinutes int    // 0 = driver default
 	// RelatedTestPath is set when the target artifact is a test artifact.
 	// It is passed to the agent prompt via the {related_test} placeholder so
 	// the agent can reference the test in defect frontmatter (related_to field).
@@ -146,7 +146,7 @@ func (rb *ringBuf) String() string {
 // both current and legacy Claude Code binaries enable bypass mode).
 type ClaudeCodeDriver struct{}
 
-type claudeProcess struct {
+type cliProcess struct {
 	cmd      *exec.Cmd
 	progress chan ProgressEvent
 	stderr   *ringBuf
@@ -154,11 +154,12 @@ type claudeProcess struct {
 
 	// waitErr, when non-nil, makes Wait() return the value read from this
 	// channel instead of calling cmd.Wait() directly. Drivers whose binary
-	// detaches grandchildren that hold stdout/stderr open (e.g. agy) must
-	// call cmd.Wait() asynchronously to close the pipes — see gemini_cli.go
-	// — and stash the result here so Wait() can be safely called later by
-	// the supervisor without double-calling cmd.Wait.
-	waitErr chan error
+	// detaches grandchildren that hold stdout/stderr open (agy via the
+	// gemini-cli driver, codex via codex-cli) must call cmd.Wait()
+	// asynchronously to close the pipes and stash the result here so
+	// Wait() can be safely called later by the supervisor without
+	// double-calling cmd.Wait.
+	waitErr <-chan error
 }
 
 // ProgressEvent is one structured update from the agent. raw is the original
@@ -190,15 +191,15 @@ func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) 
 	args := d.buildArgs(run)
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	cmd.Dir = run.ProjectRoot
-	return startClaudeProcess(ctx, cmd, run, args)
+	return startCommandProcess(ctx, cmd, run, args, "claude")
 }
 
-// startClaudeProcess is the shared subprocess launcher used by both
-// ClaudeCodeDriver and ClaudeHooksDriver. It takes an already-configured
-// exec.Cmd (with Dir and Env set by the caller) plus the arg list (only used
-// for the log-file header) and returns a claudeProcess with stdout/stderr
-// piped, progress events streaming, and the log file open (FR3).
-func startClaudeProcess(ctx context.Context, cmd *exec.Cmd, run Run, args []string) (Process, error) {
+// startCommandProcess is the shared subprocess launcher used by CLI drivers.
+// It takes an already-configured exec.Cmd (with Dir and Env set by the caller)
+// plus the arg list (only used for the log-file header) and returns a process
+// with stdout/stderr piped, progress events streaming, and the log file open
+// (FR3).
+func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []string, commandName string) (Process, error) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("stdout pipe: %w", err)
@@ -232,10 +233,11 @@ func startClaudeProcess(ctx context.Context, cmd *exec.Cmd, run Run, args []stri
 		if logFile != nil {
 			_ = logFile.Close()
 		}
-		return nil, fmt.Errorf("starting claude: %w", err)
+		return nil, fmt.Errorf("starting %s: %w", commandName, err)
 	}
 
-	p := &claudeProcess{cmd: cmd, progress: progressCh, stderr: rb, logFile: logFile}
+	waitErr := make(chan error, 1)
+	p := &cliProcess{cmd: cmd, progress: progressCh, stderr: rb, logFile: logFile, waitErr: waitErr}
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -256,11 +258,7 @@ func startClaudeProcess(ctx context.Context, cmd *exec.Cmd, run Run, args []stri
 			if err := json.Unmarshal([]byte(line), &parsed); err == nil {
 				ev.Event = parsed
 			}
-			select {
-			case progressCh <- ev:
-			case <-ctx.Done():
-				return
-			}
+			progressCh <- ev
 		}
 	}()
 
@@ -282,29 +280,40 @@ func startClaudeProcess(ctx context.Context, cmd *exec.Cmd, run Run, args []stri
 		}
 	}()
 
-	// Wait and clean up goroutine.
+	// Watcher goroutine: cmd.Wait() reaps the process and closes the parent
+	// pipe FDs, which unblocks the readers above even if a detached
+	// grandchild is still holding the write ends. Stash the result so
+	// proc.Wait() can return it without double-calling cmd.Wait.
+	go func() {
+		err := cmd.Wait()
+		waitErr <- err
+		close(waitErr)
+	}()
+
+	// Cleanup goroutine: wait for the readers to drain, write the run-log
+	// footer, then close the progress channel so the supervisor exits.
 	go func() {
 		wg.Wait()
-		close(progressCh)
 		if logFile != nil {
 			fmt.Fprintf(logFile, "\n# finished=%s\n", time.Now().Format(time.RFC3339))
 			_ = logFile.Close()
 		}
+		close(progressCh)
 	}()
 
 	return p, nil
 }
 
-func (p *claudeProcess) Wait() error {
+func (p *cliProcess) Wait() error {
 	if p.waitErr != nil {
 		return <-p.waitErr
 	}
 	return p.cmd.Wait()
 }
-func (p *claudeProcess) Progress() <-chan ProgressEvent  { return p.progress }
-func (p *claudeProcess) StderrTail() string              { return p.stderr.String() }
+func (p *cliProcess) Progress() <-chan ProgressEvent { return p.progress }
+func (p *cliProcess) StderrTail() string             { return p.stderr.String() }
 
-func (p *claudeProcess) Kill() error {
+func (p *cliProcess) Kill() error {
 	if p.cmd.Process != nil {
 		return p.cmd.Process.Kill()
 	}
@@ -416,12 +425,13 @@ func New(
 		StoreSecret: m.StoreRunSecret,
 	}
 	m.drivers = map[string]Driver{
-		"claude-code-cli":  &ClaudeCodeDriver{},
-		"ollama":           &OllamaDriver{Instances: ollamaInstances},
-		"claude-mediated":  hookDriver,
-		"shell-stub":       &ShellStubDriver{},
-		"gemini":           &GeminiDriver{},
-		"gemini-cli":       &GeminiCliDriver{},
+		"claude-code-cli": &ClaudeCodeDriver{},
+		"claude-mediated": hookDriver,
+		"codex-cli":       &CodexCLIDriver{},
+		"ollama":          &OllamaDriver{Instances: ollamaInstances},
+		"gemini":          &GeminiDriver{},
+		"gemini-cli":      &GeminiCliDriver{},
+		"shell-stub":      &ShellStubDriver{},
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
 	if err := idx.RecoverRunningRuns(); err != nil {
@@ -899,14 +909,14 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	m.hub.Broadcast(hub.Event{
 		Type: eventType,
 		Payload: map[string]any{
-			"run_id":             run.RunID,
-			"agent":              run.AgentName,
-			"lineage":            lineage,
-			"status":             status,
-			"artifacts":          produced,
-			"target_path":        row.TargetPath,
-			"result":             runResult,
-			"denied_tool_calls":  row.DeniedToolCalls,
+			"run_id":            run.RunID,
+			"agent":             run.AgentName,
+			"lineage":           lineage,
+			"status":            status,
+			"artifacts":         produced,
+			"target_path":       row.TargetPath,
+			"result":            runResult,
+			"denied_tool_calls": row.DeniedToolCalls,
 		},
 	})
 
@@ -1324,7 +1334,7 @@ func (m *Manager) ConfigureHookDriver(serverAddr, binaryPath string) {
 //     message in the "result" field. The model exited normally but the API
 //     replied with a quota message:
 //     {"type":"result","is_error":true,
-//      "result":"You're out of extra usage · resets 11:10pm (Australia/Brisbane)"}
+//     "result":"You're out of extra usage · resets 11:10pm (Australia/Brisbane)"}
 //
 // The raw text is used by the queue dispatcher to parse the reset time; an
 // empty raw_text causes the dispatcher to fall back to the configured

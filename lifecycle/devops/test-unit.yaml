@@ -1,4 +1,4 @@
-name: Run Unit Tests
+name: Run Go Unit Tests
 type: test
 
 steps:

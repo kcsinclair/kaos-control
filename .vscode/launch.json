@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug kaos-control server",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/kaos-control",
+      "cwd": "${workspaceFolder}",
+      "args": ["serve"],
+      "env": {
+        "LOG_LEVEL": "debug"
+      },
+      "console": "internalConsole",
+      "serverReadyAction": {
+        "pattern": "\"addr\":\"(?:\\[::\\]|0\\.0\\.0\\.0|127\\.0\\.0\\.1|localhost):(\\d+)\"",
+        "uriFormat": "http://localhost:%s",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "Debug current Go test",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${fileDirname}"
+    }
+  ]
+}

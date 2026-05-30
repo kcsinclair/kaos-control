@@ -30,6 +30,7 @@ function driverLabel(agent: AgentSummary): string {
   if (agent.driver === 'ollama') return 'Ollama'
   if (agent.driver === 'claude-code-cli') return 'Claude Code'
   if (agent.driver === 'claude-mediated') return 'Claude Mediated'
+  if (agent.driver === 'codex-cli') return 'Codex'
   if (agent.driver === 'gemini') return 'Gemini'
   if (agent.driver === 'gemini-cli') return 'Gemini CLI'
   if (agent.driver === 'inline') return ''
@@ -304,6 +305,10 @@ function runningCount(agent: AgentSummary): number {
 .panel-driver[data-driver="claude-mediated"] {
   background: #fef3c7;
   color: #92400e;
+}
+.panel-driver[data-driver="codex-cli"] {
+  background: #dcfce7;
+  color: #166534;
 }
 .panel-driver[data-driver="gemini"] {
   background: #e0e7ff;

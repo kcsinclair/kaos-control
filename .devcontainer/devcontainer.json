@@ -1,0 +1,66 @@
+{
+  "name": "kaos-control",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "username": "vscode",
+      "upgradePackages": true
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": true
+    },
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.26.3"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24.15.0",
+      "nodeGypDependencies": true
+    }
+  },
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "GOTOOLCHAIN": "auto",
+    "PNPM_HOME": "/home/vscode/.local/share/pnpm"
+  },
+  "remoteEnv": {
+    "PATH": "${containerEnv:PNPM_HOME}:/go/bin:${containerEnv:PATH}"
+  },
+  "mounts": [
+    "source=kaos-control-claude,target=/home/vscode/.claude,type=volume",
+    "source=kaos-control-codex,target=/home/vscode/.codex,type=volume"
+  ],
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [
+    5173,
+    8080
+  ],
+  "portsAttributes": {
+    "5173": {
+      "label": "Vite dev server",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "kaos-control server",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "openai.chatgpt",
+        "golang.go",
+        "Vue.volar",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "go.toolsManagement.autoUpdate": true,
+        "go.useLanguageServer": true,
+        "typescript.tsdk": "web/node_modules/typescript/lib"
+      }
+    }
+  }
+}

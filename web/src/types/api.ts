@@ -125,7 +125,7 @@ export interface OllamaModel {
 export interface AgentSummary {
   name: string
   roles: string[]
-  /** driver: 'ollama' | 'claude-code-cli' | 'claude-mediated' | 'inline' | 'gemini' | 'gemini-cli' */
+  /** driver: 'ollama' | 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'inline' */
   driver: string
   model?: string
   active_status?: string

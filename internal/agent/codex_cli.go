@@ -4,6 +4,7 @@ package agent
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,52 +13,48 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 )
 
-// GeminiCliDriver spawns `agy --dangerously-skip-permissions --prompt "<prompt>"`
-// to execute agents using the Antigravity CLI and automatically skips permission prompts.
-type GeminiCliDriver struct {
-	// BinaryPath is the absolute path to the agy binary. Defaults to "agy" if empty.
+// CodexCLIDriver spawns `codex exec` for a non-interactive agent run.
+type CodexCLIDriver struct {
+	// BinaryPath is the absolute path to the codex binary. Defaults to "codex" if empty.
 	BinaryPath string
 }
 
-func (d *GeminiCliDriver) buildArgs(run Run) []string {
-	args := []string{
-		"--dangerously-skip-permissions",
-	}
-	// agy ignores cmd.Dir for its workspace context and defaults to
-	// ~/.gemini/antigravity-cli/scratch, so the agent spends the whole run
-	// hunting for the project ("I will list the parent directory…") and
-	// eventually hits --print-timeout. --add-dir tells agy which directory
-	// to include in the workspace; without it agy's log records
-	// workspaceDirs=[] and the model has no project context to work with.
+func (d *CodexCLIDriver) buildArgs(run Run) []string {
+	return d.buildArgsWithOptions(run, false)
+}
+
+func (d *CodexCLIDriver) buildArgsWithOptions(run Run, supportsTimeout bool) []string {
+	args := []string{"exec", "--json", "--dangerously-bypass-approvals-and-sandbox"}
 	if run.ProjectRoot != "" {
-		args = append(args, "--add-dir", run.ProjectRoot)
+		args = append(args, "--cd", run.ProjectRoot)
 	}
-	// agy's --print-timeout defaults to 5 min, which is too short for any
-	// non-trivial agent task — the model often finishes the work just past
-	// that deadline and emits a partial reply with `Error: timed out waiting
-	// for response`. Map the agent config's timeout_minutes onto it; 0
-	// (kaos-control's "unlimited") becomes 24h, which is effectively
-	// unbounded for a single print-mode run.
-	if run.TimeoutMinutes > 0 {
-		args = append(args, "--print-timeout", fmt.Sprintf("%dm", run.TimeoutMinutes))
-	} else {
-		args = append(args, "--print-timeout", "24h")
+	if run.Model != "" {
+		args = append(args, "--model", run.Model)
 	}
-	args = append(args, "--prompt", run.PromptText)
+	if supportsTimeout {
+		timeoutSeconds := 24 * 60 * 60
+		if run.TimeoutMinutes > 0 {
+			timeoutSeconds = run.TimeoutMinutes * 60
+		}
+		args = append(args, "--timeout", strconv.Itoa(timeoutSeconds))
+	}
+	args = append(args, run.PromptText)
 	return args
 }
 
-func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
+func (d *CodexCLIDriver) Start(ctx context.Context, run Run) (Process, error) {
 	binary := d.BinaryPath
 	if binary == "" {
-		binary = "agy"
+		binary = "codex"
 	}
 
-	args := d.buildArgs(run)
+	supportsTimeout := d.BinaryPath == "" && codexExecSupportsTimeout(ctx, binary)
+	args := d.buildArgsWithOptions(run, supportsTimeout)
 	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Dir = run.ProjectRoot
 
@@ -73,7 +70,6 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 	rb := newRingBuf(4 * 1024)
 	progressCh := make(chan ProgressEvent, 64)
 
-	// Open the per-run log file if configured.
 	var logFile *os.File
 	if run.LogPath != "" {
 		if err := os.MkdirAll(filepath.Dir(run.LogPath), 0o755); err != nil {
@@ -94,13 +90,12 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 		if logFile != nil {
 			_ = logFile.Close()
 		}
-		return nil, fmt.Errorf("starting agy: %w", err)
+		return nil, fmt.Errorf("starting codex: %w", err)
 	}
 
 	waitErr := make(chan error, 1)
 	p := &cliProcess{cmd: cmd, progress: progressCh, stderr: rb, logFile: logFile, waitErr: waitErr}
 
-	// Stream starts with opening started event to let UI know it initiated.
 	select {
 	case progressCh <- ProgressEvent{
 		Raw: "started",
@@ -114,7 +109,6 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	// Pipe stdout: tee to log file, parse json or wrap raw text, send as progress events.
 	go func() {
 		defer wg.Done()
 		sc := bufio.NewScanner(stdout)
@@ -129,7 +123,6 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 			if err := json.Unmarshal([]byte(line), &parsed); err == nil {
 				ev.Event = parsed
 			} else {
-				// Wrap raw text line as an output progress event.
 				ev.Event = map[string]any{
 					"type": "output",
 					"text": line + "\n",
@@ -143,7 +136,6 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 		}
 	}()
 
-	// Pipe stderr: tee to log file and ring buffer.
 	go func() {
 		defer wg.Done()
 		buf := make([]byte, 1024)
@@ -161,29 +153,35 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 		}
 	}()
 
-	// Process-exit watcher: the agy CLI (Antigravity) detaches a grandchild
-	// that inherits stdout/stderr and keeps writing its FDs even after agy
-	// itself exits, so the pipe goroutines above would block on Read forever
-	// waiting for an EOF that never comes. Run cmd.Wait() asynchronously —
-	// it reaps the agy process and closes the parent ends of the pipes,
-	// which unblocks the readers. The result is stashed in waitErr so
-	// cliProcess.Wait() (called by supervise after the drain loop) can
-	// return it without double-calling cmd.Wait.
 	go func() {
 		err := cmd.Wait()
 		waitErr <- err
 		close(waitErr)
 	}()
 
-	// Wait and clean up goroutine.
 	go func() {
 		wg.Wait()
-		close(progressCh)
 		if logFile != nil {
 			fmt.Fprintf(logFile, "\n# finished=%s\n", time.Now().Format(time.RFC3339))
 			_ = logFile.Close()
 		}
+		close(progressCh)
 	}()
 
 	return p, nil
+}
+
+func codexExecSupportsTimeout(ctx context.Context, binary string) bool {
+	// 10 s rather than 2 s — the probe is one-shot at driver startup, not
+	// perf-critical, and the smaller budget flaked in concurrent test runs
+	// where fork+exec of a shell shim missed the deadline. The wider window
+	// still bounds the worst case if the real codex binary genuinely hangs.
+	probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	out, err := exec.CommandContext(probeCtx, binary, "exec", "--help").CombinedOutput()
+	if err != nil {
+		return false
+	}
+	return bytes.Contains(out, []byte("--timeout"))
 }

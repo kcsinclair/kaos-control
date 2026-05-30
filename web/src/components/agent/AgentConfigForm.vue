@@ -9,7 +9,7 @@ import type { AgentSummary, OllamaInstance } from '@/types/api'
 export interface AgentFormData {
   name: string
   roles: string[]
-  driver: 'claude-code-cli' | 'ollama' | 'gemini' | 'gemini-cli'
+  driver: 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'ollama' | 'gemini' | 'gemini-cli'
   model: string
   ollama_instance: string
   ollama_endpoint: 'chat' | 'generate'
@@ -38,8 +38,9 @@ const isEdit = !!props.initial
 // ── Form state ─────────────────────────────────────────────────────────────
 const name = ref(props.initial?.name ?? '')
 const selectedRoles = ref<string[]>(props.initial?.roles ?? [])
-const driver = ref<'claude-code-cli' | 'ollama' | 'gemini' | 'gemini-cli'>(
-  (props.initial?.driver ?? 'claude-code-cli') as 'claude-code-cli' | 'ollama' | 'gemini' | 'gemini-cli',
+type DriverChoice = 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'ollama' | 'gemini' | 'gemini-cli'
+const driver = ref<DriverChoice>(
+  (props.initial?.driver ?? 'claude-code-cli') as DriverChoice,
 )
 const model = ref(props.initial?.model ?? '')
 const ollamaInstance = ref(props.initial?.ollama_instance ?? '')
@@ -101,7 +102,12 @@ function validate(): boolean {
   if (driver.value === 'ollama') {
     if (!ollamaInstance.value) e.ollama_instance = 'Select an Ollama instance.'
     if (!model.value.trim()) e.model = 'Model is required for Ollama driver.'
-  } else if (driver.value !== 'gemini-cli') {
+  } else if (
+    driver.value === 'claude-code-cli' ||
+    driver.value === 'claude-mediated' ||
+    driver.value === 'gemini'
+  ) {
+    // codex-cli and gemini-cli use the binary's default model when none is given.
     if (!model.value.trim()) e.model = 'Model is required.'
   }
   errors.value = e
@@ -210,6 +216,14 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
           Claude Code
         </label>
         <label class="acf-radio-label">
+          <input v-model="driver" type="radio" value="claude-mediated" />
+          Claude Mediated
+        </label>
+        <label class="acf-radio-label">
+          <input v-model="driver" type="radio" value="codex-cli" />
+          Codex
+        </label>
+        <label class="acf-radio-label">
           <input v-model="driver" type="radio" value="ollama" />
           Ollama
         </label>
@@ -224,8 +238,11 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
       </div>
     </div>
 
-    <!-- Claude Code model -->
-    <div v-if="driver === 'claude-code-cli'" class="acf-field">
+    <!-- CLI model (Claude Code, Claude Mediated, Codex, Gemini CLI) -->
+    <div
+      v-if="driver === 'claude-code-cli' || driver === 'claude-mediated' || driver === 'codex-cli' || driver === 'gemini-cli'"
+      class="acf-field"
+    >
       <label class="acf-label" for="acf-model-cc">Model</label>
       <input
         id="acf-model-cc"
@@ -233,13 +250,17 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
         class="acf-input"
         :class="{ 'acf-input--error': errors.model }"
         type="text"
-        placeholder="e.g. sonnet, opus, haiku"
+        :placeholder="
+          driver === 'codex-cli' ? 'optional, e.g. gpt-5-codex'
+          : driver === 'gemini-cli' ? 'optional — agy uses its configured default'
+          : 'e.g. sonnet, opus, haiku'
+        "
         autocomplete="off"
       />
       <p v-if="errors.model" class="acf-error">{{ errors.model }}</p>
     </div>
 
-    <!-- Gemini model -->
+    <!-- Gemini model (REST API) -->
     <div v-if="driver === 'gemini'" class="acf-field">
       <label class="acf-label" for="acf-model-gemini">Model</label>
       <input

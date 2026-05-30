@@ -1,8 +1,14 @@
 # Contributing to kaos-control
 
 Thanks for taking an interest. This project is **AGPLv3** licensed — see
-[LICENSE](LICENSE) and [licensing-decision.md](licensing-decision.md) for the
-reasoning.
+[LICENSE](LICENSE). AGPL was chosen because it is OSI-approved open source
+*and* its network-use clause is the specific lever that prevents a cloud
+provider from rehosting kaos-control as a paid service without publishing
+their modifications — the SaaS loophole that GPLv3, MIT, and Apache 2 all
+leave open. As the sole copyright holder the maintainer can also offer a
+commercial licence to organisations that can't accept AGPL terms; the DCO
+sign-off model below keeps that relicensing option intact without requiring
+a CLA from contributors.
 
 ## Developer Certificate of Origin (DCO)
 
