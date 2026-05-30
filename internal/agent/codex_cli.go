@@ -172,7 +172,11 @@ func (d *CodexCLIDriver) Start(ctx context.Context, run Run) (Process, error) {
 }
 
 func codexExecSupportsTimeout(ctx context.Context, binary string) bool {
-	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	// 10 s rather than 2 s — the probe is one-shot at driver startup, not
+	// perf-critical, and the smaller budget flaked in concurrent test runs
+	// where fork+exec of a shell shim missed the deadline. The wider window
+	// still bounds the worst case if the real codex binary genuinely hangs.
+	probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	out, err := exec.CommandContext(probeCtx, binary, "exec", "--help").CombinedOutput()
