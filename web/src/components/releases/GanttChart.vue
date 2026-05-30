@@ -78,6 +78,11 @@ function startOfGranularity(d: Date, gran: Granularity): Date {
   }
 }
 
+/** Return d at 23:59:59.999 local time — the end of d's calendar day. */
+function endOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
+}
+
 /** Return the last day of the granularity period containing d. */
 function endOfGranularity(d: Date, gran: Granularity): Date {
   switch (gran) {
@@ -303,7 +308,12 @@ const scheduledBars = computed<BarInfo[]>(() => {
         left,
         width: Math.max(right - left, 1),
         clippedLeft:  s < rangeStart,
-        clippedRight: addDays(e, 1) > rangeEnd,
+        // Compare against end-of-day so a release ending on the same calendar
+        // day as rangeEnd is not flagged clipped. endOfGranularity returns
+        // local-midnight of the last day (e.g. June 30 00:00); release dates
+        // parsed via new Date('YYYY-MM-DD') are UTC-midnight (= 10:00 in AEST),
+        // so a plain `e > rangeEnd` would still wrongly fire in non-UTC zones.
+        clippedRight: e > endOfDay(rangeEnd),
       }
     })
     .filter((b): b is BarInfo => b !== null)
