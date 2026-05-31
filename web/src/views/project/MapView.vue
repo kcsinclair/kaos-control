@@ -4,6 +4,7 @@
 import { ref, defineAsyncComponent, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGraphData } from '@/composables/useGraphData'
+import { useViewport } from '@/composables/useViewport'
 import ForceGraph3D from '@/components/map/ForceGraph3D.vue'
 import GraphFilters from '@/components/map/MapFilters.vue'
 import GraphLegend from '@/components/map/MapLegend.vue'
@@ -48,11 +49,19 @@ function closeModal() {
   selectedLabelName.value = null
 }
 
+const { isMobile } = useViewport()
+const mobileFiltersOpen = ref(false)
+
 // Milestone 5: reset hideTerminal to true on every mount so navigating
 // away and returning always starts with terminal nodes hidden.
 onMounted(() => {
   store.hideTerminal = true
   store.hideTests = true
+  // On phones, force 2D — the 3D force-graph (three.js / WebGL) is
+  // genuinely unplayable on a small touchscreen: orbit controls compete
+  // with browser scroll/zoom, node hits are imprecise, and the framerate
+  // drops on mid-tier phones.
+  if (isMobile.value) view.value = '2d'
 })
 </script>
 
@@ -75,6 +84,7 @@ onMounted(() => {
       :show-node-titles="store.showNodeTitles"
       :show-node-lineage="store.showNodeLineage"
       :search-text="store.searchText"
+      :mobile-open="mobileFiltersOpen"
       @toggle="store.toggleFilterValue"
       @reset="store.setFilter({ types: [], statuses: [], lineages: [], labels: [], priorities: [] })"
       @toggle-label-nodes="store.toggleShowLabelNodes"
@@ -88,7 +98,7 @@ onMounted(() => {
 
     <div class="map-main">
       <div class="view-controls">
-        <div class="view-toggle" role="group" aria-label="Map view mode">
+        <div v-if="!isMobile" class="view-toggle" role="group" aria-label="Map view mode">
           <button
             class="toggle-btn"
             :class="{ active: view === '3d' }"
@@ -105,6 +115,14 @@ onMounted(() => {
         <LayoutSelector v-if="view === '2d'" />
         <button class="check-status-btn" @click="showStatusPanel = true">
           Check all statuses
+        </button>
+        <button
+          v-if="isMobile"
+          class="check-status-btn mobile-filters-toggle"
+          @click="mobileFiltersOpen = !mobileFiltersOpen"
+          :aria-expanded="mobileFiltersOpen"
+        >
+          {{ mobileFiltersOpen ? 'Close filters' : 'Filters' }}
         </button>
       </div>
 

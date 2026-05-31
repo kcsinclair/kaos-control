@@ -21,6 +21,8 @@ const props = defineProps<{
   showNodeTitles: boolean
   showNodeLineage: boolean
   searchText: string
+  /** Whether the filter panel is open on mobile. Ignored on desktop. */
+  mobileOpen?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -55,7 +57,7 @@ const hasFilters = () =>
 </script>
 
 <template>
-  <aside class="graph-filters">
+  <aside class="graph-filters" :class="{ 'filters--mobile-open': mobileOpen }">
     <div class="filter-header">
       <span class="filter-title">Filters</span>
       <button v-if="hasFilters()" class="btn-reset" @click="emit('reset')">Reset</button>
@@ -297,5 +299,28 @@ const hasFilters = () =>
 .graph-text-filter :deep(.text-filter__input) {
   min-width: 0;
   flex: 1;
+}
+
+/* Mobile: the 200 px filter rail leaves 175 px for the map at 375 px
+   viewport — unusable. Slide the filters in as an overlay panel from
+   the right edge instead. Toggle handled by MapView's filters button. */
+@media (max-width: 640px) {
+  .graph-filters {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(280px, 85vw);
+    z-index: var(--z-overlay);
+    transform: translateX(100%);
+    transition: transform 220ms ease;
+    box-shadow: var(--shadow-lg);
+  }
+  .graph-filters.filters--mobile-open {
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .graph-filters { transition: none; }
 }
 </style>
