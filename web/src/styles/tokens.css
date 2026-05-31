@@ -20,6 +20,20 @@
   --sidebar-width-expanded: 220px;
   --sidebar-width-collapsed: 48px;
 
+  /* Responsive breakpoints — used by @media rules and the useViewport composable.
+     Keep these in sync with web/src/composables/useViewport.ts. */
+  --bp-mobile: 640px;   /* phones */
+  --bp-tablet: 1024px;  /* small laptops / tablets */
+
+  /* Touch-target minimum — Apple HIG 44pt, Material 48dp; 44px is the common floor. */
+  --touch-target-min: 44px;
+
+  /* Z-index scale — keeps drawers/overlays predictable. */
+  --z-sidebar:  20;
+  --z-overlay:  40;
+  --z-modal:    50;
+  --z-toast:    60;
+
   /* Sidebar (always dark) */
   --color-sidebar: #1e293b;
   --color-sidebar-text: #e2e8f0;

@@ -33,3 +33,37 @@ a:hover {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* ─── Mobile helpers ─────────────────────────────────────────────────────────
+   Conservative global rules that improve every screen below 640 px without
+   needing per-component opt-in. Individual components may still override.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* Table-overflow wrapper: any element with `.table-scroll` becomes a
+   horizontally-scrollable container, so wide tables don't shove the
+   layout off-screen. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 640px) {
+  /* Interactive controls get a touchable floor on small screens.
+     Buttons keep their text-only height on desktop so we don't bloat
+     toolbar density there. */
+  button,
+  [role="button"],
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  select,
+  textarea {
+    min-height: var(--touch-target-min);
+  }
+
+  /* iOS Safari zooms inputs <16 px on focus; bump to prevent the zoom. */
+  input,
+  select,
+  textarea {
+    font-size: max(var(--text-base), 16px);
+  }
+}
+
