@@ -78,7 +78,7 @@ function onInitialised() {
           No projects registered. Click "New Project" to add one.
         </div>
 
-        <div v-else class="projects-table-wrap">
+        <div v-else class="projects-table-wrap table-scroll">
           <table class="projects-table">
             <thead>
               <tr>

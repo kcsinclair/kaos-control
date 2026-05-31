@@ -23,7 +23,8 @@ function formatElapsed(ms: number): string {
     <div class="trs-header">Test Run Summary</div>
 
     <!-- Per-suite stats table -->
-    <table class="trs-table" v-if="summary.suites.length">
+    <div v-if="summary.suites.length" class="table-scroll">
+    <table class="trs-table">
       <thead>
         <tr>
           <th>Suite</th>
@@ -45,6 +46,7 @@ function formatElapsed(ms: number): string {
         </tr>
       </tbody>
     </table>
+    </div>
     <div v-else class="trs-muted trs-empty">No test suites recorded.</div>
 
     <!-- Summary line -->

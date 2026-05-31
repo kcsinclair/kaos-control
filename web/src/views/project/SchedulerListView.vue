@@ -153,7 +153,7 @@ onMounted(() => store.fetchJobs(project))
     <div v-else-if="!filteredJobs.length" class="state-msg">No jobs match the current filters.</div>
 
     <!-- Table -->
-    <div v-else class="sched-table-wrap">
+    <div v-else class="sched-table-wrap table-scroll">
       <table class="sched-table">
         <thead>
           <tr>

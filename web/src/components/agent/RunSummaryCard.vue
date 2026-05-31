@@ -90,6 +90,7 @@ function fmtTokens(n: number): string {
     </div>
 
     <!-- Token usage table -->
+    <div class="table-scroll">
     <table class="rsc-table">
       <caption class="rsc-table-caption">Token Usage</caption>
       <tbody>
@@ -111,6 +112,7 @@ function fmtTokens(n: number): string {
         </tr>
       </tbody>
     </table>
+    </div>
 
     <!-- Cache hit ratio -->
     <div class="rsc-cache-row">

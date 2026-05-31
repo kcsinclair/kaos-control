@@ -65,7 +65,8 @@ onMounted(load)
       No parse errors — all artifacts are clean.
     </div>
 
-    <table v-else class="errors-table" aria-label="Parse errors">
+    <div v-else class="table-scroll">
+    <table class="errors-table" aria-label="Parse errors">
       <thead>
         <tr>
           <SortHeader label="File"  column="path"    :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
@@ -79,6 +80,7 @@ onMounted(load)
         </tr>
       </tbody>
     </table>
+    </div>
 
     <TablePagination
       v-if="!loading && errors.length > 0"

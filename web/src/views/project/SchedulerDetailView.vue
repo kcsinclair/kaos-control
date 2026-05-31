@@ -228,7 +228,8 @@ watch(
         <h3 class="section-title">Run history</h3>
         <div v-if="store.loadingRuns" class="state-msg">Loading runs…</div>
         <div v-else-if="!store.runs.length" class="state-msg">No runs recorded yet.</div>
-        <table v-else class="runs-table">
+        <div v-else class="table-scroll">
+        <table class="runs-table">
           <thead>
             <tr>
               <th>Run ID</th>
@@ -265,6 +266,7 @@ watch(
             </template>
           </tbody>
         </table>
+        </div>
 
         <TablePagination
           v-if="!store.loadingRuns && store.runsTotal > 0"

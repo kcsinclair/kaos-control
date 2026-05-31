@@ -119,7 +119,8 @@ function healthLabel(name: string): string {
       No Ollama instances configured. Click <strong>Add Instance</strong> to register one.
     </div>
 
-    <table v-else class="osv-table">
+    <div v-else class="table-scroll">
+    <table class="osv-table">
       <thead>
         <tr>
           <th>Name</th>
@@ -148,6 +149,7 @@ function healthLabel(name: string): string {
         </tr>
       </tbody>
     </table>
+    </div>
 
     <!-- Add / Edit modal -->
     <Teleport to="body">

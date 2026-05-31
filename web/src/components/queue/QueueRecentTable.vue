@@ -41,7 +41,8 @@ function stateClass(state: QueueJob['state']): string {
   <section class="recent-section">
     <h3 class="panel-title">Recently finished</h3>
     <div v-if="!jobs.length" class="empty-state">{{ emptyMessage }}</div>
-    <table v-else class="queue-table">
+    <div v-else class="table-scroll">
+    <table class="queue-table">
       <thead>
         <tr>
           <th>State</th>
@@ -76,6 +77,7 @@ function stateClass(state: QueueJob['state']): string {
         </tr>
       </tbody>
     </table>
+    </div>
   </section>
 </template>
 

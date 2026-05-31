@@ -53,7 +53,8 @@ async function handleRemove(id: string) {
   <section class="pending-section">
     <h3 class="panel-title">Pending</h3>
     <div v-if="!jobs.length" class="empty-state">{{ emptyMessage }}</div>
-    <table v-else class="queue-table">
+    <div v-else class="table-scroll">
+    <table class="queue-table">
       <thead>
         <tr>
           <th>#</th>
@@ -94,6 +95,7 @@ async function handleRemove(id: string) {
         </tr>
       </tbody>
     </table>
+    </div>
   </section>
 </template>
 

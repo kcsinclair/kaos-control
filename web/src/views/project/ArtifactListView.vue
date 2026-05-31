@@ -309,7 +309,8 @@ onMounted(async () => {
     <div class="table-wrap">
       <div v-if="store.loading" class="state-msg">Loading…</div>
       <div v-else-if="visibleItems.length === 0" class="state-msg">No artifacts found.</div>
-      <table v-else class="artifact-table">
+      <div v-else class="table-scroll">
+      <table class="artifact-table">
         <thead>
           <tr>
             <SortHeader label="Path" column="title" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
@@ -373,6 +374,7 @@ onMounted(async () => {
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <TablePagination

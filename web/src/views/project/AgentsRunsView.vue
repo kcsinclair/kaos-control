@@ -245,7 +245,8 @@ onMounted(() => {
     <div v-if="store.loading" class="state-msg">Loading…</div>
     <div v-else-if="!store.runs.length" class="state-msg">No runs yet.</div>
 
-    <table v-else class="runs-table">
+    <div v-else class="table-scroll">
+    <table class="runs-table">
       <thead>
         <tr>
           <SortHeader label="Run ID"  column="run_id"      :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
@@ -381,6 +382,7 @@ onMounted(() => {
         </template>
       </tbody>
     </table>
+    </div>
 
     <TablePagination
       v-if="!store.loading && store.runs.length > 0"
