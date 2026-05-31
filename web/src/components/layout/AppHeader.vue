@@ -9,6 +9,7 @@ import { useThemeStore } from '@/stores/theme'
 import { useAgentsStore } from '@/stores/agents'
 import { useQueueStore } from '@/stores/queue'
 import { ApiError } from '@/api/client'
+import { Menu } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -43,6 +44,18 @@ async function handleLogout() {
 
 <template>
   <header class="app-header">
+    <!-- Hamburger: only visible on mobile; opens the sidebar drawer. Project
+         routes get the drawer; non-project routes get an inert button hidden. -->
+    <button
+      v-if="project"
+      class="header-hamburger"
+      type="button"
+      aria-label="Open navigation menu"
+      :aria-expanded="ui.mobileSidebarOpen"
+      @click="ui.toggleMobileSidebar()"
+    >
+      <Menu :size="20" />
+    </button>
     <div class="header-brand">
       <RouterLink to="/projects" class="brand-link">kaos-control</RouterLink>
     </div>
@@ -269,6 +282,42 @@ async function handleLogout() {
 }
 @media (max-width: 768px) {
   .run-label {
+    display: none;
+  }
+}
+
+/* Hamburger — only visible on mobile (≤640px). On desktop the persistent
+   sidebar covers navigation; on mobile the drawer pattern takes over. */
+.header-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin-right: var(--space-2);
+  background: transparent;
+  border: 1px solid var(--color-border-dark);
+  border-radius: var(--radius-md);
+  color: var(--color-sidebar-text);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.header-hamburger:hover {
+  border-color: var(--color-sidebar-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+@media (max-width: 640px) {
+  .header-hamburger {
+    display: inline-flex;
+  }
+  /* Brand stays visible but the secondary nav links can hide on phones. */
+  .header-nav {
+    display: none;
+  }
+  /* User name takes up too much real estate on phones; the sign-out
+     button still works. */
+  .header-user {
     display: none;
   }
 }

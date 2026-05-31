@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
@@ -142,9 +142,34 @@ watch(
     sidebarTransitionDir.value = expanded ? 'expanding' : 'collapsing'
   }
 )
+
+// Mobile drawer: close on route change so tapping a nav link dismisses the
+// drawer instead of leaving it sitting over the new view. Watching params
+// alone (e.g. project) misses sibling-route navigation; watch the full path.
+watch(
+  () => route.fullPath,
+  () => {
+    if (uiStore.mobileSidebarOpen) uiStore.closeMobileSidebar()
+  }
+)
+
+// ESC key closes the drawer.
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && uiStore.mobileSidebarOpen) uiStore.closeMobileSidebar()
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
+  <!-- Mobile backdrop: covers the main content area while the drawer is open
+       so taps outside the drawer dismiss it. Only present at ≤640 px via CSS. -->
+  <div
+    v-if="uiStore.mobileSidebarOpen"
+    class="sidebar-backdrop"
+    role="presentation"
+    @click="uiStore.closeMobileSidebar()"
+  />
   <nav
     class="app-sidebar"
     :class="{
@@ -152,6 +177,7 @@ watch(
       'sidebar--overlay': uiStore.sidebarCollapsed && hoverExpanded,
       'sidebar--expanding': sidebarTransitionDir === 'expanding',
       'sidebar--collapsing': sidebarTransitionDir === 'collapsing',
+      'sidebar--mobile-open': uiStore.mobileSidebarOpen,
     }"
     aria-label="Project navigation"
     @mouseenter="onSidebarMouseEnter"
@@ -443,5 +469,65 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   user-select: none;
+}
+
+/* ─── Mobile drawer ───────────────────────────────────────────────────────
+   On ≤640px the sidebar is hidden by default and slides in from the left
+   as an overlay when uiStore.mobileSidebarOpen is true. The persistent
+   sidebar pattern is bad on phones: a 220px sidebar steals 58% of a 375px
+   viewport even when "collapsed".
+   ─────────────────────────────────────────────────────────────────────── */
+.sidebar-backdrop {
+  display: none;
+}
+@media (max-width: 640px) {
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 85vw);
+    /* Always render at expanded width in drawer mode; the desktop --collapsed
+       class is irrelevant on mobile because the drawer is hidden by default. */
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+    z-index: var(--z-sidebar);
+    box-shadow: var(--shadow-lg);
+  }
+  .app-sidebar.sidebar--collapsed {
+    /* Override desktop collapse width — we want full text labels in the drawer. */
+    width: min(280px, 85vw);
+  }
+  .app-sidebar.sidebar--mobile-open {
+    transform: translateX(0);
+  }
+  /* Force the labels visible in the drawer regardless of the desktop
+     collapsed-fade animations. */
+  .app-sidebar.sidebar--mobile-open .nav-label,
+  .app-sidebar.sidebar--mobile-open .project-label,
+  .app-sidebar.sidebar--mobile-open .project-name {
+    opacity: 1;
+  }
+  /* Hide the desktop collapse toggle on mobile — it's meaningless when the
+     drawer's open/closed state is what matters. */
+  .app-sidebar .sidebar-toggle {
+    display: none;
+  }
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: calc(var(--z-sidebar) - 1);
+    animation: sidebar-backdrop-in 180ms ease;
+  }
+  @keyframes sidebar-backdrop-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar { transition: none; }
+  .sidebar-backdrop { animation: none; }
 }
 </style>

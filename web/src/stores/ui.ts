@@ -25,6 +25,22 @@ export const useUiStore = defineStore('ui', () => {
     localStorage.setItem('sidebar-collapsed', String(sidebarCollapsed.value))
   }
 
+  // Mobile drawer state — separate from sidebarCollapsed (the desktop
+  // expand/collapse preference). On mobile the sidebar is hidden by default
+  // and slides in as a drawer; on desktop this flag is unused.
+  // Session-only; resets to closed on every page load.
+  const mobileSidebarOpen = ref<boolean>(false)
+
+  function openMobileSidebar(): void {
+    mobileSidebarOpen.value = true
+  }
+  function closeMobileSidebar(): void {
+    mobileSidebarOpen.value = false
+  }
+  function toggleMobileSidebar(): void {
+    mobileSidebarOpen.value = !mobileSidebarOpen.value
+  }
+
   // Whether test artifacts are visible in the Kanban board.
   // Session-only (not persisted to localStorage per plan §F3).
   const showTestsOnKanban = ref<boolean>(false)
@@ -49,6 +65,10 @@ export const useUiStore = defineStore('ui', () => {
     dismiss,
     sidebarCollapsed,
     toggleSidebar,
+    mobileSidebarOpen,
+    openMobileSidebar,
+    closeMobileSidebar,
+    toggleMobileSidebar,
     showTestsOnKanban,
   }
 })
