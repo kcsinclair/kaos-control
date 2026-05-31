@@ -736,4 +736,21 @@ onMounted(() => {
   overflow-y: auto;
   padding: var(--space-5) var(--space-6);
 }
+
+/* Mobile: tighter header padding, drop the title size, and let the
+   header-actions wrap below the title if needed. */
+@media (max-width: 640px) {
+  .runs-header {
+    padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .runs-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .modal-body {
+    padding: var(--space-4);
+  }
+}
 </style>

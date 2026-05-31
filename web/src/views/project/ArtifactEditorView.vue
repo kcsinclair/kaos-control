@@ -573,4 +573,21 @@ onMounted(async () => {
   overflow-y: auto;
   padding: var(--space-6) var(--space-8);
 }
+
+/* Mobile: stack editor above preview — side-by-side gives two ~180 px
+   columns at 375 px viewport, both unusable. */
+@media (max-width: 640px) {
+  .editor-split {
+    flex-direction: column;
+  }
+  .split-editor {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    flex: 1 1 50%;
+  }
+  .split-preview {
+    flex: 1 1 50%;
+    padding: var(--space-4);
+  }
+}
 </style>

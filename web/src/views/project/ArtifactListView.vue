@@ -698,4 +698,13 @@ onMounted(async () => {
   box-shadow: var(--shadow-lg);
   border-radius: var(--radius-lg);
 }
+
+/* Mobile: header wraps, padding tightens. The table itself already
+   scrolls inside a .table-scroll wrapper (M3). */
+@media (max-width: 640px) {
+  .list-header {
+    padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
+  }
+}
 </style>
