@@ -65,5 +65,47 @@ a:hover {
   textarea {
     font-size: max(var(--text-base), 16px);
   }
+
+  /* ── Modal panels → full-screen on mobile ─────────────────────────────
+     Overlay+panel modals are centred dialogs with ~24 px overlay padding
+     and a max-width around 600-720 px. On a 375 px phone that leaves a
+     panel barely 327 px wide with an awkward border-radius, and any tall
+     content scrolls inside a small box. On mobile we let the panel fill
+     the viewport instead.
+
+     Classes are enumerated explicitly (rather than via [class$=…]) to
+     avoid catching look-alikes like .fm-panel (FrontmatterPanel sidebar).
+     Add new modal classes here when adding modals.
+     ──────────────────────────────────────────────────────────────── */
+  .modal-overlay,
+  .label-modal-overlay,
+  .bdm-overlay,
+  .rdm-overlay,
+  .rlm-overlay,
+  .cpd-overlay,
+  .epd-overlay,
+  .rad-overlay,
+  .td-overlay {
+    padding: 0 !important;
+    align-items: stretch !important;
+  }
+  .modal-panel,
+  .label-modal-panel,
+  .bdm-panel,
+  .rdm-panel,
+  .rlm-panel,
+  .cpd-panel,
+  .epd-panel,
+  .rad-panel,
+  .td-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    /* Respect notch / safe-area insets so close buttons stay reachable. */
+    padding-top: max(var(--space-4), env(safe-area-inset-top));
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  }
 }
 
