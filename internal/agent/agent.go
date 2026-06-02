@@ -682,6 +682,15 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		return
 	}
 
+	// Result-event tracker — for stream-json drivers (claude-code-cli,
+	// claude-mediated) Claude guarantees a closing `{"type":"result",...}`
+	// event when the agent task completes. If the process exits with code 0
+	// but no result event was ever observed, the stream was truncated mid-run
+	// (Claude binary crashed, network dropped, etc.) and the agent's task
+	// wasn't actually finished — silently marking it "done" hides real
+	// failures. Tracked via the broadcast closure; checked after proc.Wait().
+	var resultEventSeen bool
+
 	// Event-forwarding closure shared by the precheck (Claude) and the plain
 	// drain loop (Ollama and any other non-Claude driver). Also detects
 	// rate-limit payloads (M4) and re-broadcasts them as queue.rate_limit so
@@ -699,6 +708,10 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 							"kind":     string(kind),
 						},
 					})
+				}
+				// Track terminal result events so we can detect truncated streams.
+				if isResultEvent(payload) {
+					resultEventSeen = true
 				}
 			}
 		}
@@ -769,6 +782,7 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	// Determine exit status. Timeouts are distinct from user-initiated kills.
 	exitCode := 0
 	status := "done"
+	failureReason := ""
 	if waitErr != nil {
 		status = "failed"
 		if wasActive {
@@ -779,6 +793,22 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 				status = "killed"
 			}
 		}
+	}
+
+	// Truncated-stream detection (claude-code-cli / claude-mediated only).
+	// Claude's stream-json contract emits a closing `{"type":"result",...}`
+	// event when the agent task completes. If we never saw one despite a
+	// clean exit, the stream was truncated — Claude binary crashed, network
+	// dropped, etc. — and the agent's task did NOT actually complete. Mark
+	// as failed so it can be re-run rather than silently passing. Reported
+	// 2026-06-02 from a batch where two of 28 runs exhibited this: a
+	// 10-second run that died mid-tool_use, and a 30-second run that died
+	// after 5× 529 retries.
+	if status == "done" && driverEmitsResultEvent(run.Driver) && !resultEventSeen {
+		slog.Warn("agent: stream-json run exited cleanly without emitting a terminal result event — marking failed (truncated stream)",
+			"run_id", run.RunID, "agent", run.AgentName, "driver", run.Driver)
+		status = "failed"
+		failureReason = "truncated_stream"
 	}
 
 	// If configured and successful, mark the target artifact done before committing
@@ -907,18 +937,22 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		}
 	}
 
+	failedPayload := map[string]any{
+		"run_id":            run.RunID,
+		"agent":             run.AgentName,
+		"lineage":           lineage,
+		"status":            status,
+		"artifacts":         produced,
+		"target_path":       row.TargetPath,
+		"result":            runResult,
+		"denied_tool_calls": row.DeniedToolCalls,
+	}
+	if failureReason != "" {
+		failedPayload["failure_reason"] = failureReason
+	}
 	m.hub.Broadcast(hub.Event{
-		Type: eventType,
-		Payload: map[string]any{
-			"run_id":            run.RunID,
-			"agent":             run.AgentName,
-			"lineage":           lineage,
-			"status":            status,
-			"artifacts":         produced,
-			"target_path":       row.TargetPath,
-			"result":            runResult,
-			"denied_tool_calls": row.DeniedToolCalls,
-		},
+		Type:    eventType,
+		Payload: failedPayload,
 	})
 
 	// Record feed event and broadcast feed.new.
@@ -1430,6 +1464,32 @@ var quotaExhaustedRE = regexp.MustCompile(`(?i)(out of (extra )?usage|usage[\s\S
 
 func looksLikeQuotaExhausted(text string) bool {
 	return quotaExhaustedRE.MatchString(text)
+}
+
+// driverEmitsResultEvent reports whether the given driver follows the Claude
+// stream-json contract of emitting a terminal `{"type":"result",...}` event
+// when the agent task completes. Drivers that do (claude-code-cli,
+// claude-mediated) can have their runs validated for stream truncation: a
+// clean exit without a result event means the stream was cut mid-run and the
+// task didn't actually complete.
+func driverEmitsResultEvent(driver string) bool {
+	switch driver {
+	case "claude-code-cli", "claude-mediated":
+		return true
+	default:
+		return false
+	}
+}
+
+// isResultEvent reports whether the decoded agent.progress payload's `event`
+// field is a Claude stream-json terminal `result` event.
+func isResultEvent(payload map[string]any) bool {
+	ev, _ := payload["event"].(map[string]any)
+	if ev == nil {
+		return false
+	}
+	t, _ := ev["type"].(string)
+	return t == "result"
 }
 
 // extractMessageText attempts to read a human-readable string from

@@ -146,6 +146,92 @@ func TestExtractRateLimitText(t *testing.T) {
 	}
 }
 
+// TestDriverEmitsResultEvent locks the driver allow-list for truncated-stream
+// detection. claude-code-cli and claude-mediated guarantee a terminal result
+// event per the stream-json contract, so a missing result on a clean exit
+// can be classified as a truncated stream. Other drivers (ollama, gemini-cli,
+// codex-cli, shell-stub) don't carry the same contract and must not be
+// flagged.
+func TestDriverEmitsResultEvent(t *testing.T) {
+	cases := []struct {
+		driver string
+		want   bool
+	}{
+		{"claude-code-cli", true},
+		{"claude-mediated", true},
+		{"ollama", false},
+		{"codex-cli", false},
+		{"gemini", false},
+		{"gemini-cli", false},
+		{"shell-stub", false},
+		{"", false},
+		{"unknown", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.driver, func(t *testing.T) {
+			if got := driverEmitsResultEvent(tc.driver); got != tc.want {
+				t.Errorf("driverEmitsResultEvent(%q) = %v, want %v", tc.driver, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestIsResultEvent verifies the supervise-side observer that decides whether
+// an inbound agent.progress payload carries the terminal result event.
+func TestIsResultEvent(t *testing.T) {
+	cases := []struct {
+		name    string
+		payload map[string]any
+		want    bool
+	}{
+		{
+			name: "result event",
+			payload: map[string]any{"event": map[string]any{
+				"type":     "result",
+				"subtype":  "success",
+				"is_error": false,
+			}},
+			want: true,
+		},
+		{
+			name: "result event with is_error true (the 529 case) is still a result",
+			payload: map[string]any{"event": map[string]any{
+				"type":     "result",
+				"is_error": true,
+				"result":   "API Error: 529 Overloaded",
+			}},
+			want: true,
+		},
+		{
+			name:    "assistant tool_use is NOT a result",
+			payload: map[string]any{"event": map[string]any{"type": "assistant"}},
+			want:    false,
+		},
+		{
+			name:    "system init is NOT a result",
+			payload: map[string]any{"event": map[string]any{"type": "system", "subtype": "init"}},
+			want:    false,
+		},
+		{
+			name:    "missing event",
+			payload: map[string]any{"raw": "some line"},
+			want:    false,
+		},
+		{
+			name:    "empty payload",
+			payload: map[string]any{},
+			want:    false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isResultEvent(tc.payload); got != tc.want {
+				t.Errorf("isResultEvent(%v) = %v, want %v", tc.payload, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestBuildArgs_ModelFlag verifies that --model is appended when run.Model is set.
 func TestBuildArgs_ModelFlag(t *testing.T) {
 	d := &ClaudeCodeDriver{}
