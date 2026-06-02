@@ -592,6 +592,100 @@ func TestDispatcher_FallbackOnUnparseableReset(t *testing.T) {
 	}
 }
 
+// TestDispatcher_OverloadPauseUsedForOverloadedKind verifies that a
+// queue.rate_limit event tagged kind="overloaded" with unparseable rawText
+// uses OverloadPause (default 5 min, here a distinctive 7 min) instead of
+// the longer FallbackPause. Distinguishes Anthropic 529 server-overload
+// (clears in minutes) from true rate-limits / quota exhaustion (hourly/daily).
+func TestDispatcher_OverloadPauseUsedForOverloadedKind(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(filepath.Join(dir, "queue.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	projHub := hub.New()
+	appHub := hub.New()
+
+	lookup := func(name string) (ProjectAccess, bool) {
+		return ProjectAccess{
+			StartRun: func(ctx context.Context, agentName, targetPath string) (string, error) {
+				go func() {
+					time.Sleep(10 * time.Millisecond)
+					projHub.Broadcast(hub.Event{
+						Type: "queue.rate_limit",
+						Payload: map[string]any{
+							"run_id":   "test-run",
+							"raw_text": "API Error: 529 Overloaded",
+							"kind":     "overloaded",
+						},
+					})
+				}()
+				return "test-run", nil
+			},
+			ArtifactStatus: func(relPath string) string { return "approved" },
+			Hub:            projHub,
+		}, true
+	}
+
+	// FallbackPause and OverloadPause set to distinctive non-default values
+	// so we can assert which one was applied.
+	const fallbackPause = 45 * time.Minute
+	const overloadPause = 7 * time.Minute
+	const resumeGrace = 2 * time.Minute
+	now := time.Now()
+	cfg := Config{
+		TickInterval:  20 * time.Millisecond,
+		ClockFn:       func() time.Time { return now },
+		MaxAttempts:   5,
+		FallbackPause: fallbackPause,
+		OverloadPause: overloadPause,
+		ResumeGrace:   resumeGrace,
+	}
+	d := New(s, lookup, appHub, cfg)
+
+	_ = s.Enqueue(Job{
+		Project:      "proj",
+		ArtifactPath: "lifecycle/ideas/a.md",
+		AgentName:    "analyst",
+		EnqueuedBy:   "alice@example.com",
+		Attempts:     1,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	d.Start(ctx)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if p, _, _, _ := s.GetPauseState(); p {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	_, until, _, err := s.GetPauseState()
+	if err != nil {
+		t.Fatalf("GetPauseState: %v", err)
+	}
+
+	// Expect OverloadPause + ResumeGrace, NOT FallbackPause + ResumeGrace.
+	expectedUntil := now.Add(overloadPause + resumeGrace)
+	diff := until.Sub(expectedUntil)
+	if diff < -5*time.Second || diff > 5*time.Second {
+		t.Errorf("paused_until %v differs from expected (now+overload+grace) %v by %v",
+			until, expectedUntil, diff)
+	}
+
+	// Sanity: ensure we did NOT accidentally use fallback (off by 38 min).
+	fallbackUntil := now.Add(fallbackPause + resumeGrace)
+	if until.Sub(fallbackUntil).Abs() < 5*time.Second {
+		t.Errorf("paused_until landed on fallback (%v), not overload (%v) — kind not honoured",
+			fallbackUntil, expectedUntil)
+	}
+}
+
 func TestDispatcher_AutoResume(t *testing.T) {
 	var nowVal atomic.Value
 	start := time.Now()

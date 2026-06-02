@@ -15,8 +15,14 @@ import (
 // Config holds tunable parameters for the Dispatcher.
 type Config struct {
 	// FallbackPause is the pause duration when the rate-limit text cannot be
-	// parsed to extract a reset time.
+	// parsed to extract a reset time (typically quota/usage limits which
+	// reset on the hour or daily cycle — a long pause is the safer default).
 	FallbackPause time.Duration
+	// OverloadPause is the pause duration for transient server-overload
+	// events (HTTP 529, "overloaded_error"). These typically clear within
+	// minutes — Claude's own internal retry budget runs ~3.5 minutes — so a
+	// shorter pause is appropriate. Defaults to 5 minutes when unset.
+	OverloadPause time.Duration
 	// ResumeGrace is added to the parsed reset time to compute paused_until.
 	// Provides a small buffer so the rate limit has definitively cleared before
 	// the queue resumes.
@@ -58,6 +64,13 @@ func (c *Config) fallbackPause() time.Duration {
 		return c.FallbackPause
 	}
 	return 30 * time.Minute
+}
+
+func (c *Config) overloadPause() time.Duration {
+	if c.OverloadPause > 0 {
+		return c.OverloadPause
+	}
+	return 5 * time.Minute
 }
 
 func (c *Config) resumeGrace() time.Duration {
@@ -293,7 +306,7 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 		_ = d.store.MarkTerminal(job.ID, StateCompleted, "")
 		d.broadcastJobEvent("queue.finished", job, "completed")
 	case "rate_limit":
-		d.handleRateLimit(job, result.rawText)
+		d.handleRateLimit(job, result.rawText, result.rlKind)
 	case "cancelled":
 		_ = d.store.MarkTerminal(job.ID, StateFailed, "cancelled")
 		d.broadcastJobEvent("queue.finished", job, "failed")
@@ -308,6 +321,11 @@ type runResult struct {
 	kind    string // "completed", "failed", "rate_limit", "cancelled"
 	reason  string
 	rawText string // for rate_limit: the raw rate-limit message text
+	// rlKind classifies the underlying transient-error variant for the
+	// rate_limit kind: "rate_limit" (default) or "overloaded". The dispatcher
+	// uses this to pick FallbackPause vs OverloadPause when the rawText
+	// doesn't carry an explicit reset time.
+	rlKind string
 }
 
 // watchRunEvents listens on evCh for agent.finished / agent.failed /
@@ -347,6 +365,7 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 					Status  string `json:"status"`
 					RunID   string `json:"run_id"`
 					RawText string `json:"raw_text"` // for rate_limit stream events (M4)
+					Kind    string `json:"kind"`     // "rate_limit" | "overloaded" (M4 follow-up)
 				} `json:"payload"`
 			}
 			if err := json.Unmarshal(data, &evt); err != nil {
@@ -380,7 +399,7 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 				return
 			case "queue.rate_limit": // M4: emitted by agent stream watcher
 				select {
-				case done <- runResult{kind: "rate_limit", rawText: evt.Payload.RawText}:
+				case done <- runResult{kind: "rate_limit", rawText: evt.Payload.RawText, rlKind: evt.Payload.Kind}:
 				default:
 				}
 				return
@@ -389,15 +408,24 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 	}
 }
 
-// handleRateLimit processes a rate-limit failure: marks the job failed,
-// re-enqueues at the head (unless max-attempts exceeded), and pauses the queue.
-func (d *Dispatcher) handleRateLimit(job *Job, rawText string) {
+// handleRateLimit processes a rate-limit / overloaded failure: marks the job
+// failed, re-enqueues at the head (unless max-attempts exceeded), and pauses
+// the queue. The kind argument picks the appropriate fallback when rawText
+// has no parseable reset time — overloads (HTTP 529) get OverloadPause
+// (default 5 min) since they typically clear within minutes; rate limits
+// and quotas get FallbackPause (default 30 min) since those usually align
+// with hourly / daily reset cycles.
+func (d *Dispatcher) handleRateLimit(job *Job, rawText, kind string) {
 	now := d.cfg.clock()
 	resetTime, ok := ParseResetTime(rawText, now)
 	if !ok {
+		pause := d.cfg.fallbackPause()
+		if kind == "overloaded" {
+			pause = d.cfg.overloadPause()
+		}
 		slog.Warn("queue: rate-limit text not parsed; using fallback pause",
-			"job_id", job.ID, "raw_text", rawText)
-		resetTime = now.Add(d.cfg.fallbackPause())
+			"job_id", job.ID, "raw_text", rawText, "kind", kind, "pause", pause)
+		resetTime = now.Add(pause)
 	}
 	pausedUntil := resetTime.Add(d.cfg.resumeGrace())
 

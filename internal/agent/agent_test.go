@@ -32,13 +32,14 @@ func TestBuildArgs_DualFlagOrder(t *testing.T) {
 	}
 }
 
-// TestExtractRateLimitText covers both stream-json rate-limit formats.
+// TestExtractRateLimitText covers all stream-json rate-limit / overload formats.
 func TestExtractRateLimitText(t *testing.T) {
 	type tc struct {
-		name    string
-		rawJSON string
-		wantOK  bool
-		wantTxt string
+		name     string
+		rawJSON  string
+		wantOK   bool
+		wantTxt  string
+		wantKind RateLimitKind
 	}
 
 	// Helper: wrap event JSON in an agent.progress payload map.
@@ -100,16 +101,18 @@ func TestExtractRateLimitText(t *testing.T) {
 			// Real-world payload reported 2026-06-02: subtype:"success" but
 			// is_error:true, with the structured Anthropic error embedded in
 			// the result text. Treat the same as a rate-limit: pause + retry.
-			name:    "format3 result is_error Anthropic 529 overloaded_error",
-			rawJSON: `{"type":"result","subtype":"success","is_error":true,"result":"API Error: 529 {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"},\"request_id\":\"req_011Cbe94zrVN4DmnKKNBhV6b\"}"}`,
-			wantOK:  true,
-			wantTxt: `API Error: 529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"},"request_id":"req_011Cbe94zrVN4DmnKKNBhV6b"}`,
+			name:     "format3 result is_error Anthropic 529 overloaded_error",
+			rawJSON:  `{"type":"result","subtype":"success","is_error":true,"result":"API Error: 529 {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"},\"request_id\":\"req_011Cbe94zrVN4DmnKKNBhV6b\"}"}`,
+			wantOK:   true,
+			wantTxt:  `API Error: 529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"},"request_id":"req_011Cbe94zrVN4DmnKKNBhV6b"}`,
+			wantKind: RateLimitKindOverloaded,
 		},
 		{
-			name:    "format3 result is_error HTTP 429 too many requests",
-			rawJSON: `{"type":"result","is_error":true,"result":"API Error: 429 Too Many Requests"}`,
-			wantOK:  true,
-			wantTxt: "API Error: 429 Too Many Requests",
+			name:     "format3 result is_error HTTP 429 too many requests",
+			rawJSON:  `{"type":"result","is_error":true,"result":"API Error: 429 Too Many Requests"}`,
+			wantOK:   true,
+			wantTxt:  "API Error: 429 Too Many Requests",
+			wantKind: RateLimitKindRateLimit,
 		},
 		{
 			// Don't false-positive on incidental digits in unrelated messages.
@@ -127,12 +130,17 @@ func TestExtractRateLimitText(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			payload := wrap(tc.rawJSON)
-			text, ok := extractRateLimitText(payload)
+			text, kind, ok := extractRateLimitText(payload)
 			if ok != tc.wantOK {
 				t.Fatalf("ok=%v, want %v", ok, tc.wantOK)
 			}
-			if tc.wantOK && text != tc.wantTxt {
-				t.Errorf("text=%q, want %q", text, tc.wantTxt)
+			if tc.wantOK {
+				if text != tc.wantTxt {
+					t.Errorf("text=%q, want %q", text, tc.wantTxt)
+				}
+				if tc.wantKind != "" && kind != tc.wantKind {
+					t.Errorf("kind=%q, want %q", kind, tc.wantKind)
+				}
 			}
 		})
 	}

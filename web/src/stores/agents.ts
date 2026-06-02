@@ -32,6 +32,20 @@ function formatEvent(ev: Record<string, unknown>): string {
   if (type === 'system' && ev.subtype === 'init') {
     return '▸ session started'
   }
+  if (type === 'system' && ev.subtype === 'api_retry') {
+    // Claude's own internal retry on transient API errors (529, 429, etc).
+    // Surfaced so the run doesn't look frozen during multi-minute backoff
+    // sequences — without this the user sees a silent gap until the final
+    // result event.
+    const attempt = ev.attempt as number | undefined
+    const maxRetries = ev.max_retries as number | undefined
+    const delayMs = ev.retry_delay_ms as number | undefined
+    const status = ev.error_status as number | undefined
+    const code = status ? `${status}` : 'API error'
+    const delaySec = typeof delayMs === 'number' ? (delayMs / 1000).toFixed(1) : '?'
+    const counter = attempt !== undefined && maxRetries !== undefined ? `${attempt}/${maxRetries}` : ''
+    return `↻ retrying after ${code} (attempt ${counter}, ${delaySec}s backoff)`
+  }
   if (type === 'assistant') {
     const msg = ev.message as Record<string, unknown> | undefined
     const content = msg?.content as Array<Record<string, unknown>> | undefined

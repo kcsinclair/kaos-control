@@ -690,12 +690,13 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		m.hub.Broadcast(e)
 		if e.Type == "agent.progress" {
 			if payload, ok := e.Payload.(map[string]any); ok {
-				if rawText, isRL := extractRateLimitText(payload); isRL {
+				if rawText, kind, isRL := extractRateLimitText(payload); isRL {
 					m.hub.Broadcast(hub.Event{
 						Type: "queue.rate_limit",
 						Payload: map[string]any{
 							"run_id":   run.RunID,
 							"raw_text": rawText,
+							"kind":     string(kind),
 						},
 					})
 				}
@@ -1319,10 +1320,22 @@ func (m *Manager) ConfigureHookDriver(serverAddr, binaryPath string) {
 	}
 }
 
+// RateLimitKind classifies the underlying transient-error event so the
+// queue dispatcher can pick an appropriate pause duration. "rate_limit"
+// is the conservative default (long pause); "overloaded" is the shorter
+// pause for HTTP 529 / overloaded_error (transient server pressure that
+// typically clears within minutes).
+type RateLimitKind string
+
+const (
+	RateLimitKindRateLimit  RateLimitKind = "rate_limit"
+	RateLimitKindOverloaded RateLimitKind = "overloaded"
+)
+
 // extractRateLimitText inspects a decoded agent.progress event payload and
-// returns (rawText, true) when the underlying stream event signals a
-// rate-limit / quota-exhausted error. It handles three Claude Code stream-json
-// shapes:
+// returns (rawText, kind, true) when the underlying stream event signals a
+// rate-limit / quota-exhausted / overloaded error. It handles three Claude
+// Code stream-json shapes:
 //
 //  1. Top-level "error" == "rate_limit" with message.content[0].text
 //     {"error":"rate_limit","message":{"content":[{"type":"text","text":"..."}]}}
@@ -1339,48 +1352,63 @@ func (m *Manager) ConfigureHookDriver(serverAddr, binaryPath string) {
 // The raw text is used by the queue dispatcher to parse the reset time; an
 // empty raw_text causes the dispatcher to fall back to the configured
 // fallback_pause_minutes.
-func extractRateLimitText(payload map[string]any) (rawText string, ok bool) {
+func extractRateLimitText(payload map[string]any) (rawText string, kind RateLimitKind, ok bool) {
 	ev, _ := payload["event"].(map[string]any)
 	if ev == nil {
-		return "", false
+		return "", "", false
 	}
 
 	// Format 1: top-level error field is the string "rate_limit".
 	if errStr, _ := ev["error"].(string); errStr == "rate_limit" {
 		rawText = extractMessageText(ev)
-		return rawText, true
+		return rawText, RateLimitKindRateLimit, true
 	}
 
-	// Format 2: nested error object whose type contains "rate_limit".
+	// Format 2: nested error object whose type contains "rate_limit" or
+	// "overloaded".
 	if errObj, ok2 := ev["error"].(map[string]any); ok2 {
 		errType, _ := errObj["type"].(string)
-		if strings.Contains(errType, "rate_limit") {
+		if strings.Contains(errType, "rate_limit") || strings.Contains(errType, "overloaded") {
 			// Prefer nested message text; fall back to the error message string.
 			rawText = extractMessageText(ev)
 			if rawText == "" {
 				rawText, _ = errObj["message"].(string)
 			}
-			return rawText, true
+			if strings.Contains(errType, "overloaded") {
+				return rawText, RateLimitKindOverloaded, true
+			}
+			return rawText, RateLimitKindRateLimit, true
 		}
 	}
 
 	// Format 3: terminal "result" event with is_error:true that carries a
 	// quota-exhausted message in the result field. The run completed without
-	// emitting a rate_limit stream event; the quota verdict is only visible
-	// in the wrap-up result line. Match the result text against a small set
-	// of phrases that indicate a usage/quota condition (not every is_error
-	// result is a rate limit — e.g. a generic API error shouldn't be
-	// re-enqueued).
+	// emitting a rate_limit stream event; the verdict is only visible in the
+	// wrap-up result line. Match the result text against a small set of
+	// phrases that indicate a usage/quota/overload condition.
 	if evType, _ := ev["type"].(string); evType == "result" {
 		if isErr, _ := ev["is_error"].(bool); isErr {
 			result, _ := ev["result"].(string)
 			if result != "" && looksLikeQuotaExhausted(result) {
-				return result, true
+				return result, classifyTransient(result), true
 			}
 		}
 	}
 
-	return "", false
+	return "", "", false
+}
+
+// classifyTransient inspects the raw text and picks the right pause profile.
+// Overload (HTTP 529, "overloaded_error") gets the shorter pause; everything
+// else (rate-limit, quota) gets the conservative long pause. Defaults to
+// RateLimitKindRateLimit when ambiguous.
+var overloadedRE = regexp.MustCompile(`(?i)(overloaded|\b529\b)`)
+
+func classifyTransient(text string) RateLimitKind {
+	if overloadedRE.MatchString(text) {
+		return RateLimitKindOverloaded
+	}
+	return RateLimitKindRateLimit
 }
 
 // looksLikeQuotaExhausted returns true when text contains a phrase that
