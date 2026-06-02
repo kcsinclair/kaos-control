@@ -1384,10 +1384,21 @@ func extractRateLimitText(payload map[string]any) (rawText string, ok bool) {
 }
 
 // looksLikeQuotaExhausted returns true when text contains a phrase that
-// indicates a rate-limit or quota condition. Matched case-insensitively.
-// Conservative on purpose: only matches phrases unique to quota / usage
-// exhaustion so generic API errors aren't misclassified as rate limits.
-var quotaExhaustedRE = regexp.MustCompile(`(?i)(out of (extra )?usage|usage[\s\S]*resets?|rate.?limit|message limit|exceeded[\s\S]{0,40}(quota|limit))`)
+// indicates a rate-limit, quota, or transient-overload condition that should
+// trigger a queue pause-and-retry. Matched case-insensitively.
+//
+// Conservative on purpose: only matches phrases that signal "retry the
+// same job later". Generic API errors (4xx that aren't 429, 5xx that isn't
+// 529, malformed responses) are NOT matched, so they fail through as hard
+// failures.
+//
+// Patterns covered:
+//   - Quota / usage exhausted: "out of usage", "usage … resets", "message limit",
+//     "exceeded … quota|limit"
+//   - Rate limited: "rate limit", "rate-limit" — and HTTP 429
+//   - Anthropic 529 "Overloaded" — transient server-overload, retry-after.
+//     Includes both the structured "overloaded_error" type and the bare word.
+var quotaExhaustedRE = regexp.MustCompile(`(?i)(out of (extra )?usage|usage[\s\S]*resets?|rate.?limit|message limit|exceeded[\s\S]{0,40}(quota|limit)|overloaded|\b(429|529)\b)`)
 
 func looksLikeQuotaExhausted(text string) bool {
 	return quotaExhaustedRE.MatchString(text)
