@@ -1,7 +1,7 @@
 ---
 title: Auto Triage New Ideas
 type: idea
-status: approved
+status: clarifying
 lineage: auto-triage-new-ideas
 created: "2026-06-05T11:03:08+10:00"
 priority: medium
