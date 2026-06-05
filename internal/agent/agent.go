@@ -751,16 +751,23 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	default:
 		// Non-Claude drivers: just drain and forward events.
 		for ev := range proc.Progress() {
-			payload := map[string]any{
-				"run_id": run.RunID,
-				"line":   ev.Raw,
-				"raw":    ev.Raw,
-			}
-			if ev.Event != nil {
-				payload["event"] = ev.Event
-			}
-			broadcast(hub.Event{Type: "agent.progress", Payload: payload})
+			broadcast(hub.Event{Type: "agent.progress", Payload: progressPayload(run.RunID, ev)})
 		}
+	}
+
+	// Drain any events emitted after the precheck returned. For Claude drivers
+	// (claude-code-cli / claude-mediated) the precheck stops reading the moment
+	// it sees the system/init event, so every later event — including the
+	// terminal `{"type":"result",...}` — would otherwise sit unread in the
+	// buffered progress channel. Leaving it undrained (a) keeps resultEventSeen
+	// false and trips the truncated-stream check below on perfectly healthy
+	// runs, (b) stalls any run that emits more than the channel's buffer of
+	// events once that buffer fills, and (c) drops post-init events from the
+	// live WebSocket view. For non-Claude drivers the default case above
+	// already drained to close, so this ranges over a closed channel and
+	// returns immediately.
+	for ev := range proc.Progress() {
+		broadcast(hub.Event{Type: "agent.progress", Payload: progressPayload(run.RunID, ev)})
 	}
 
 	// Precheck passed (or was not applicable — process exited before init).
@@ -1479,6 +1486,21 @@ func driverEmitsResultEvent(driver string) bool {
 	default:
 		return false
 	}
+}
+
+// progressPayload builds the agent.progress event payload broadcast for a
+// single streamed line. Shared by the precheck loops and the supervisor drain
+// so the payload shape stays identical across every forwarding path.
+func progressPayload(runID string, ev ProgressEvent) map[string]any {
+	payload := map[string]any{
+		"run_id": runID,
+		"line":   ev.Raw,
+		"raw":    ev.Raw,
+	}
+	if ev.Event != nil {
+		payload["event"] = ev.Event
+	}
+	return payload
 }
 
 // isResultEvent reports whether the decoded agent.progress payload's `event`

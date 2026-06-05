@@ -93,15 +93,7 @@ func runPrecheck(
 
 			// Forward the event to all hub subscribers regardless of precheck state.
 			if broadcast != nil {
-				payload := map[string]any{
-					"run_id": runID,
-					"line":   ev.Raw,
-					"raw":    ev.Raw,
-				}
-				if ev.Event != nil {
-					payload["event"] = ev.Event
-				}
-				broadcast(hub.Event{Type: "agent.progress", Payload: payload})
+				broadcast(hub.Event{Type: "agent.progress", Payload: progressPayload(runID, ev)})
 			}
 
 			// Apply precheck only on the first system/init event.
@@ -177,15 +169,7 @@ func runMediatedPrecheck(
 
 			// Forward event to hub subscribers.
 			if broadcast != nil {
-				payload := map[string]any{
-					"run_id": runID,
-					"line":   ev.Raw,
-					"raw":    ev.Raw,
-				}
-				if ev.Event != nil {
-					payload["event"] = ev.Event
-				}
-				broadcast(hub.Event{Type: "agent.progress", Payload: payload})
+				broadcast(hub.Event{Type: "agent.progress", Payload: progressPayload(runID, ev)})
 			}
 
 			if pending && ev.Event != nil {

@@ -3,6 +3,7 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -29,6 +30,18 @@ func makeEventsCh(events ...ProgressEvent) <-chan ProgressEvent {
 	}
 	close(ch)
 	return ch
+}
+
+// resultEvent builds a ProgressEvent that looks like a Claude stream-json
+// terminal result event.
+func resultEvent(subtype string) ProgressEvent {
+	ev := map[string]any{
+		"type":     "result",
+		"subtype":  subtype,
+		"is_error": subtype != "success",
+	}
+	b, _ := json.Marshal(ev)
+	return ProgressEvent{Raw: string(b), Event: ev}
 }
 
 // initEvent builds a ProgressEvent that looks like a system/init event.
@@ -315,6 +328,79 @@ func TestPrecheck_LogLineAppended(t *testing.T) {
 	}
 	if !strings.Contains(logContent, `"run_id":"logtest-run-01"`) {
 		t.Errorf("log file missing run_id, got: %s", logContent)
+	}
+}
+
+// ----- supervise: truncated-stream detection --------------------------------
+
+// superviseTestRun wires up a Manager run record, active-process entry, and
+// lineage lock, then drives supervise to completion with the given driver and
+// pre-loaded stream events. It returns the final run-row status.
+func superviseTestRun(t *testing.T, driver string, events ...ProgressEvent) string {
+	t.Helper()
+	m, cleanup := newTestManager(t)
+	defer cleanup()
+
+	runID := "supervise-" + driver
+	lineage := "supervise-lineage"
+
+	row := &index.AgentRunRow{
+		RunID:     runID,
+		AgentName: "qa",
+		Role:      "qa",
+		StartedAt: time.Now(),
+		Status:    "running",
+	}
+	if err := m.idx.InsertAgentRun(row); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+
+	proc := newMockProcess(events...)
+	m.mu.Lock()
+	m.active[runID] = &activeRun{proc: proc, cancel: func() {}}
+	m.mu.Unlock()
+
+	if _, err := m.locks.Acquire(lineage, runID, "agent"); err != nil {
+		t.Fatalf("Acquire lock: %v", err)
+	}
+
+	run := Run{RunID: runID, AgentName: "qa", Role: "qa", Driver: driver}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	m.supervise(ctx, cancel, run, row, lineage)
+
+	return row.Status
+}
+
+// TestSupervise_ClaudeRunWithResultEventMarkedDone is the regression test for
+// the false truncated_stream failure (defect
+// agent-run-false-truncated-stream-failure): a claude-code-cli run that emits a
+// terminal result event AFTER the system/init event must be recorded as done.
+//
+// The precheck stops reading the progress channel at the init event, so the
+// result event arrives only via supervise's post-precheck drain loop. Before
+// that drain loop existed, resultEventSeen stayed false and the healthy run was
+// downgraded done → failed/truncated_stream.
+func TestSupervise_ClaudeRunWithResultEventMarkedDone(t *testing.T) {
+	status := superviseTestRun(t, "claude-code-cli",
+		initEvent("bypassPermissions"),
+		resultEvent("success"),
+	)
+	if status != "done" {
+		t.Errorf("run status = %q, want \"done\" (a clean run with a result event must not be marked failed)", status)
+	}
+}
+
+// TestSupervise_ClaudeRunWithoutResultEventMarkedFailed verifies the
+// truncated-stream detection still fires when a clean exit genuinely lacks a
+// terminal result event.
+func TestSupervise_ClaudeRunWithoutResultEventMarkedFailed(t *testing.T) {
+	status := superviseTestRun(t, "claude-code-cli",
+		initEvent("bypassPermissions"),
+		// no result event — stream truncated after init
+	)
+	if status != "failed" {
+		t.Errorf("run status = %q, want \"failed\" (truncated stream without a result event)", status)
 	}
 }
 
