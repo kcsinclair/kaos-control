@@ -1,16 +1,17 @@
 ---
 title: Auto Triage New Ideas
 type: idea
-status: draft
+status: approved
 lineage: auto-triage-new-ideas
 created: "2026-06-05T11:03:08+10:00"
-priority: normal
+priority: medium
 labels:
     - agent
     - agents
     - workflow
     - artifacts
     - process
+release: KC-Release3
 ---
 
 # Auto Triage New Ideas
