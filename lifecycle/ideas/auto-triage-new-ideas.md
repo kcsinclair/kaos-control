@@ -1,21 +1,22 @@
 ---
 title: Auto Triage New Ideas
 type: idea
-project: kaos-control
-created: 2026-05-21T00:00:00+10:00
-status: raw
+status: draft
 lineage: auto-triage-new-ideas
-lifecycle-stage: discovery
-priority: high
-effort:
-impact:
+created: "2026-06-05T11:03:08+10:00"
+priority: normal
+labels:
+    - agent
+    - agents
+    - workflow
+    - artifacts
+    - process
 ---
-## Raw Idea
 
-Check for new ideas and auto triage them, add frontmatter and put them through the idea capture agent to convert the raw idea into a formed idea.  The idea capture should keep the original idea and the new improved idea.
+# Auto Triage New Ideas
 
-Changes status from raw to draft
+Implement an automated triage step that detects newly created idea artifacts with status `raw` and runs them through an idea capture agent. The agent enriches the raw input into a well-formed idea while preserving the original brain-dump, then updates the artifact status from `raw` to `draft`.
 
-Changes Idea Heading to Raw Idea
+The resulting artifact structure retains the original content under a `## Raw Idea` heading and appends a new `## Idea` heading containing the LLM-improved, structured version of the idea. This keeps full provenance while surfacing a cleaner representation for downstream lifecycle stages.
 
-Adds heading "Idea" which includes the LLM idea.
+The triage step should be triggerable on-demand (e.g. a watcher or API-driven hook detects `status: raw` artifacts) and could run as a dedicated agent role scoped to `lifecycle/ideas/`. Configuration in `lifecycle/config.yaml` would define the agent prompt, allowed write paths, and any gating rules before the artifact advances.
