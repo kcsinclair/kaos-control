@@ -250,7 +250,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick, tru
 }
 
 /* ── status colours — light mode ─────────────────────────────────────────────*/
-.status-badge[data-status="raw"]            { background: #f1f5f9; color: #475569; }
+.status-badge[data-status="raw"]            { background: #ffedd5; color: #c2410c; }
 .status-badge[data-status="draft"]          { background: #f3f4f6; color: #374151; }
 .status-badge[data-status="clarifying"]     { background: #ede9fe; color: #5b21b6; }
 .status-badge[data-status="planning"]       { background: #fef3c7; color: #92400e; }
@@ -265,7 +265,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick, tru
 
 /* ── status colours — dark mode ──────────────────────────────────────────────*/
 @media (prefers-color-scheme: dark) {
-  .status-badge[data-status="raw"]            { background: #1e293b; color: #cbd5e1; }
+  .status-badge[data-status="raw"]            { background: #431407; color: #fb923c; }
   .status-badge[data-status="draft"]          { background: #374151; color: #d1d5db; }
   .status-badge[data-status="clarifying"]     { background: #3b2f6e; color: #c4b5fd; }
   .status-badge[data-status="planning"]       { background: #422006; color: #fcd34d; }
