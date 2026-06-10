@@ -1,7 +1,7 @@
 ---
 title: Release Artefacts in Markdown
 type: requirement
-status: blocked
+status: approved
 lineage: release-artefacts
 priority: high
 parent: ideas/release-artefacts.md
@@ -229,21 +229,35 @@ plan automatically.
       the Roadmap page, Gantt view, kanban filter, and rename
       propagation all behave identically after this change.
 
-## Open Questions
+## Resolved Questions
 
 1. Should the markdown body of a release file be exposed as an editable
    "release notes" field in the existing release edit modal, or stay
    reserved for a later iteration?
+
+> reserved for a later iteration.
+
 2. When a manual disk edit conflicts with a concurrent API update,
    should the watcher's last-write-wins behaviour be replaced with an
    explicit version field in frontmatter (e.g. `updated_at`) for
    conflict detection?
+
+> Yes
+
 3. Should rehydrate also be triggered manually via an admin endpoint
    (e.g. `POST /releases/rehydrate`) for recovery scenarios, or is the
    empty-table-on-startup trigger sufficient?
+
+> include an API and create a CLI option for this too.
+
 4. For the slug derivation: if the user names a release with characters
    that produce an empty slug (e.g. all emoji), should creation fail
    with HTTP 400 or fall back to a generated `release-<id>` slug?
+
+> fall back
+
 5. Does the watcher need to debounce release-file events on a different
    interval from artifact events, or can it reuse the existing 150 ms
    debounce?
+
+> reuse existing.
