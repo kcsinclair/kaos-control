@@ -1,7 +1,7 @@
 ---
 title: Release Artefacts in Markdown
 type: idea
-status: approved
+status: clarifying
 lineage: release-artefacts
 created:
   "{ date:YYYY-MM-DD }":
