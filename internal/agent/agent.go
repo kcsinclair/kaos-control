@@ -855,6 +855,34 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 			slog.Warn("agent: git status failed", "run_id", run.RunID, "err", err)
 		} else if len(files) > 0 {
 			produced = files
+
+			// Backfill parent: on any child lifecycle artifact that omitted it.
+			// We patch disk before AddAndCommit so the correction lands in the
+			// same commit as the artifact itself.
+			if run.TargetPath != "" {
+				for _, f := range files {
+					if !strings.HasPrefix(f, "lifecycle/") || !strings.HasSuffix(f, ".md") {
+						continue
+					}
+					if f == run.TargetPath {
+						continue // never add parent to the input artifact itself
+					}
+					absPath := filepath.Join(m.root, f)
+					raw, readErr := os.ReadFile(absPath)
+					if readErr != nil {
+						slog.Warn("agent: cannot read for parent backfill", "file", f, "err", readErr)
+						continue
+					}
+					patched, ok := artifact.EnsureFrontmatterField(raw, "parent", run.TargetPath)
+					if !ok {
+						continue
+					}
+					if writeErr := os.WriteFile(absPath, patched, 0644); writeErr != nil {
+						slog.Warn("agent: cannot write parent backfill", "file", f, "err", writeErr)
+					}
+				}
+			}
+
 			commitMsg := fmt.Sprintf("agent(%s): run %s [%s]", run.AgentName, run.RunID, status)
 			if _, commitErr := m.git.AddAndCommit(files, commitMsg, run.GitIdentity.Name, run.GitIdentity.Email); commitErr != nil {
 				slog.Warn("agent: commit failed", "run_id", run.RunID, "err", commitErr)
