@@ -5,6 +5,7 @@ package triage
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,15 +29,28 @@ func (m *Manager) execute(ctx context.Context, runID, relPath, lineage string, t
 
 	// Record the run start.
 	m.recordRunStart(relPath, runID, lineage, string(trigger), startedAt)
+
+	// Deferred: record completion, emit log line. Named return (retErr) carries
+	// the final error so the defer can inspect it after all return paths.
 	defer func() {
 		durationMs := time.Since(startedAt).Milliseconds()
-		status := "done"
-		stderr := ""
-		if retErr != nil {
-			status = "failed"
-			stderr = retErr.Error()
+		if retErr == nil {
+			slog.Info("triage completed",
+				"path", relPath,
+				"lineage", lineage,
+				"run_id", runID,
+				"duration_ms", durationMs,
+			)
+			m.recordRunComplete(runID, "done", durationMs, "")
+		} else {
+			slog.Warn("triage failed",
+				"path", relPath,
+				"lineage", lineage,
+				"run_id", runID,
+				"reason", retErr.Error(),
+			)
+			m.recordRunComplete(runID, "failed", durationMs, retErr.Error())
 		}
-		m.recordRunComplete(runID, status, durationMs, stderr)
 	}()
 
 	// Resolve the absolute path and validate it stays inside lifecycle/ideas/.

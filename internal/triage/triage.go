@@ -201,19 +201,10 @@ func (m *Manager) Trigger(ctx context.Context, relPath string, trigger TriggerSo
 			}
 		}()
 
-		var execErr error
 		if m.opts.executeHook != nil {
-			execErr = m.opts.executeHook(ctx, runID, relPath, lineage, trigger)
+			_ = m.opts.executeHook(ctx, runID, relPath, lineage, trigger)
 		} else {
-			execErr = m.execute(ctx, runID, relPath, lineage, trigger)
-		}
-		if execErr != nil {
-			slog.Warn("triage failed",
-				"path", relPath,
-				"lineage", lineage,
-				"run_id", runID,
-				"reason", execErr.Error(),
-			)
+			_ = m.execute(ctx, runID, relPath, lineage, trigger)
 		}
 	}()
 
