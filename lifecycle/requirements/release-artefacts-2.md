@@ -1,7 +1,7 @@
 ---
 title: Release Artefacts in Markdown
 type: requirement
-status: approved
+status: planning
 lineage: release-artefacts
 priority: high
 parent: ideas/release-artefacts.md
