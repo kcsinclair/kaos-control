@@ -1,7 +1,7 @@
 ---
 title: "Auto-Triage Raw Ideas — Backend Plan"
 type: plan-backend
-status: in-development
+status: done
 lineage: auto-triage-new-ideas
 parent: lifecycle/requirements/auto-triage-new-ideas-2.md
 assignees:
