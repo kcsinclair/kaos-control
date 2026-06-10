@@ -1,7 +1,7 @@
 ---
 title: "Auto-Triage Raw Ideas — Test Plan"
 type: plan-test
-status: approved
+status: in-development
 lineage: auto-triage-new-ideas
 parent: lifecycle/requirements/auto-triage-new-ideas-2.md
 assignees:
