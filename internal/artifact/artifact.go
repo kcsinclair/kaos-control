@@ -196,6 +196,31 @@ func PatchFrontmatterField(raw []byte, key, value string) ([]byte, bool) {
 	return []byte("---" + replaced + s[fmEnd:]), true
 }
 
+// EnsureFrontmatterField adds key: value to the YAML frontmatter if the key
+// is absent. If the key is already present (with any value, including empty),
+// the file is returned unchanged and ok is false. Returns (patched, true) when
+// the field was inserted. Only the region between the opening and closing ---
+// fences is modified; the document body is left untouched.
+func EnsureFrontmatterField(raw []byte, key, value string) ([]byte, bool) {
+	s := string(raw)
+	if !strings.HasPrefix(s, "---") {
+		return raw, false
+	}
+	closeIdx := strings.Index(s[3:], "\n---")
+	if closeIdx < 0 {
+		return raw, false
+	}
+	fmEnd := 3 + closeIdx
+	fmSection := s[3:fmEnd]
+	lineRe := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(key) + `:\s*.*$`)
+	if lineRe.MatchString(fmSection) {
+		// Field already present — leave it unchanged.
+		return raw, false
+	}
+	newFm := fmSection + "\n" + key + ": " + value
+	return []byte("---" + newFm + s[fmEnd:]), true
+}
+
 // HasOpenQuestions reports whether the markdown body contains a non-empty
 // "## Open Questions" section. The heading text is matched case-sensitively.
 // The section is considered non-empty when at least one non-whitespace line
