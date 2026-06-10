@@ -20,6 +20,7 @@ import MarkdownEditor from '@/components/artifact/MarkdownEditor.vue'
 import LockBanner from '@/components/common/LockBanner.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import QueueWorkButton from '@/components/artifact/QueueWorkButton.vue'
+import TriageNowButton from '@/components/artifact/TriageNowButton.vue'
 import { useGraphStore } from '@/stores/graph'
 import { useQueueStore } from '@/stores/queue'
 import { useAgentsStore } from '@/stores/agents'
@@ -256,6 +257,10 @@ useWebSocket(project.value, 'artifact.indexed', async (e: WsEvent) => {
   }
 })
 
+function onTriageStarted(_runId: string) {
+  void agentsStore.fetchRunsByTargetPath(project.value, artifactPath.value)
+}
+
 watch(artifactPath, () => load(), { immediate: false })
 onMounted(async () => {
   await load()
@@ -298,6 +303,7 @@ onMounted(async () => {
             class="btn-ghost"
             @click="openDocsModal"
           >Request docs</button>
+          <TriageNowButton :artifact="artifact" :project="project" @triage-started="onTriageStarted" />
           <QueueWorkButton :artifact="artifact" :project="project" />
           <button class="btn-ghost" @click="showRunAgent = true">Run Agent</button>
           <button
