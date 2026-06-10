@@ -189,6 +189,17 @@ func (m *Manager) Trigger(ctx context.Context, relPath string, trigger TriggerSo
 			delete(m.inFlight, relPath)
 			m.mu.Unlock()
 		}()
+		// Recover from panics so the deferred cleanup above always runs.
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("triage goroutine panicked",
+					"path", relPath,
+					"lineage", lineage,
+					"run_id", runID,
+					"panic", r,
+				)
+			}
+		}()
 
 		var execErr error
 		if m.opts.executeHook != nil {
