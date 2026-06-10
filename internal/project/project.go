@@ -152,6 +152,11 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		})
 	}
 
+	// Startup re-scan: enqueue any raw ideas that were present when the server
+	// started (the watcher only covers live changes). Runs in a goroutine so
+	// Open returns before potentially-slow LLM calls begin.
+	go triage.RescanRaw(context.Background(), triageMgr, idx)
+
 	maxConcurrent := opts.MaxConcurrentAgents
 	if maxConcurrent <= 0 {
 		maxConcurrent = 4
