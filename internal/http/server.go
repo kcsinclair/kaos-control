@@ -270,6 +270,8 @@ func (s *Server) buildRouter() chi.Router {
 			r.Post("/ideas/converse", s.handleIdeaConverse)
 			// Single-submit idea / defect capture (preview-only, no disk write)
 			r.Post("/ideas/generate", s.handleIdeaGenerate)
+			// On-demand triage trigger for a raw idea artifact
+			r.Post("/ideas/{slug}/triage", s.handleTriageIdea)
 
 			// WebSocket
 			r.Get("/ws", s.handleWebSocket)
