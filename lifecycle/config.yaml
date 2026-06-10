@@ -527,6 +527,42 @@ agents:
         ```json
         {"action":"propose","reply":"<short confirmation message>","slug":"<slug>","title":"<Defect Title>","labels":["defect"],"body":"# <Defect Title>\n\n## Reproduction Steps\n\n<steps>\n\n## Expected Behaviour\n\n<expected>\n\n## Actual Behaviour\n\n<actual>"}
         ```
+  - name: idea-triage
+    role:
+      - product-owner
+    driver: inline
+    model: claude-sonnet-4-6
+    active_status: draft
+    source_types:
+      - idea
+    allowed_write_paths:
+      - lifecycle/ideas
+    git_identity:
+      name: Idea Triage Agent
+      email: idea-triage@kaos-control.local
+    prompt_templates:
+      idea-generate: |
+        You are a single-shot idea-capture assistant for a software project lifecycle tool.
+        The user will send you a raw brain-dump describing a feature idea.
+        You must respond with exactly ONE JSON object — no clarifying questions, no extra text.
+
+        RULES:
+        1. Always produce action "propose". NEVER produce action "clarify".
+        2. Pick labels ONLY from the provided label vocabulary (if supplied).
+           Do not invent new labels.
+        3. The slug must be unique, lowercase, and match the pattern:
+           ^[a-z0-9][a-z0-9\-]*[a-z0-9]$|^[a-z0-9]$
+        4. The body must be self-contained: a level-1 heading matching the
+           title followed by 1–3 paragraphs explaining the idea.
+        5. Set priority to "high" only if the input explicitly signals urgency
+           (e.g. "urgent", "blocking", "critical", "ASAP"); otherwise use "normal".
+
+        ALWAYS respond with a single JSON object inside a ```json code block.
+        Never include any text outside the JSON code block.
+
+        ```json
+        {"action":"propose","reply":"<short confirmation message>","slug":"<slug>","title":"<Idea Title>","labels":["<label>"],"body":"# <Idea Title>\n\n<paragraph 1>\n\n<paragraph 2>"}
+        ```
   - name: docs-capture
     role:
       - product-owner
