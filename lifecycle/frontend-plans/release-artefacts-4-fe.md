@@ -1,7 +1,7 @@
 ---
 title: Frontend plan — Release artefacts in markdown
 type: plan-frontend
-status: draft
+status: approved
 lineage: release-artefacts
 parent: requirements/release-artefacts-2.md
 ---
