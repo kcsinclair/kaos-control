@@ -19,6 +19,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/lock"
 	"github.com/kaos-control/kaos-control/internal/scheduler"
+	"github.com/kaos-control/kaos-control/internal/triage"
 	"github.com/kaos-control/kaos-control/internal/watcher"
 	"github.com/kaos-control/kaos-control/internal/workflow"
 )
@@ -39,6 +40,7 @@ type Project struct {
 	DevopsLogs     *devops.LogStore     // persists run logs to ~/.kaos-control/devops/<project>/
 	Scheduler      *scheduler.Scheduler // nil until StartScheduler is called
 	SchedulerStore *scheduler.Store     // always set after Open()
+	TriageMgr      *triage.Manager      // auto-triage of raw idea artifacts
 
 	// watcherDone is closed when the watcher goroutine exits.
 	// Close() waits on this before closing the index DB.
@@ -129,6 +131,27 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 
 	locks := lock.New(idx, h)
 
+	// Build the triage manager.
+	triageDeps := triage.Deps{
+		Idx:         idx,
+		Locks:       locks,
+		Workflow:    wf,
+		Hub:         h,
+		Agents:      cfg.Agents,
+		ProjectRoot: entry.Path,
+		Git:         gitRepo,
+	}
+	triageMgr := triage.New(triageDeps, triage.Options{})
+
+	// Wire the triage callback to the watcher so raw ideas are triaged on create/modify.
+	if w != nil {
+		w.SetTriageCallback(func(relPath string) {
+			if _, err := triageMgr.Trigger(context.Background(), relPath, triage.TriggerWatcher); err != nil {
+				slog.Warn("triage: watcher trigger failed", "path", relPath, "err", err)
+			}
+		})
+	}
+
 	maxConcurrent := opts.MaxConcurrentAgents
 	if maxConcurrent <= 0 {
 		maxConcurrent = 4
@@ -193,6 +216,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		DevopsLogs:     logStore,
 		Scheduler:      sched,
 		SchedulerStore: schedulerStore,
+		TriageMgr:      triageMgr,
 	}, nil
 }
 
@@ -241,6 +265,12 @@ func (p *Project) Close() error {
 	// Stop the scheduler first so its goroutines can no longer touch the DB.
 	if p.Scheduler != nil {
 		p.Scheduler.Stop()
+	}
+	// Stop the triage manager so in-flight runs complete before the DB closes.
+	if p.TriageMgr != nil {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		p.TriageMgr.Stop(stopCtx)
 	}
 	if p.watcherDone != nil {
 		select {

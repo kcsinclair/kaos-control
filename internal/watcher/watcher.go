@@ -30,6 +30,10 @@ type Watcher struct {
 	// gitStatusFn is called (with 150 ms debounce) when .git/HEAD or
 	// .git/index change. May be nil when git is not available.
 	gitStatusFn func()
+
+	// triageFn is called after a successful re-index when the freshly
+	// indexed artifact has type "idea" and status "raw". May be nil.
+	triageFn func(relPath string)
 }
 
 // New creates a Watcher but does not start it. The optional ignore variadic
@@ -53,6 +57,15 @@ func New(projectRoot string, idx *index.Index, h *hub.Hub, ignore ...string) (*W
 // whenever .git/HEAD or .git/index changes. It must be called before Start.
 func (w *Watcher) SetGitStatusCallback(fn func()) {
 	w.gitStatusFn = fn
+}
+
+// SetTriageCallback registers a callback that is invoked in a goroutine after
+// a successful re-index when the newly indexed artifact has type "idea" and
+// status "raw". The triage Manager handles concurrency and deduplication
+// internally, so the callback may fire more than once for the same path.
+// It must be called before Start.
+func (w *Watcher) SetTriageCallback(fn func(relPath string)) {
+	w.triageFn = fn
 }
 
 // Start begins watching the lifecycle/ tree and blocks until ctx is cancelled.
@@ -174,20 +187,30 @@ func (w *Watcher) handleChange(absPath string) {
 		if removeErr := w.idx.DeletePath(relPath); removeErr != nil {
 			slog.Warn("watcher: delete from index failed", "path", relPath, "err", removeErr)
 		}
-	} else if isNew {
-		// Detect newly created defect artifacts.
-		if row, err := w.idx.Get(relPath); err == nil && row != nil && row.Type == "defect" {
-			artifactPath := relPath
-			summary := "Defect raised: " + row.FM.Title
-			feedEvent := &index.EventRow{
-				EventType:    "defect_raised",
-				Timestamp:    time.Now().Unix(),
-				Actor:        "system",
-				ArtifactPath: &artifactPath,
-				Summary:      summary,
+	} else {
+		if isNew {
+			// Detect newly created defect artifacts.
+			if row, err := w.idx.Get(relPath); err == nil && row != nil && row.Type == "defect" {
+				artifactPath := relPath
+				summary := "Defect raised: " + row.FM.Title
+				feedEvent := &index.EventRow{
+					EventType:    "defect_raised",
+					Timestamp:    time.Now().Unix(),
+					Actor:        "system",
+					ArtifactPath: &artifactPath,
+					Summary:      summary,
+				}
+				if err := w.idx.InsertEvent(feedEvent); err == nil {
+					w.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+				}
 			}
-			if err := w.idx.InsertEvent(feedEvent); err == nil {
-				w.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+		}
+		// Fire the triage callback for raw idea artifacts (created or modified).
+		if w.triageFn != nil {
+			if row, err := w.idx.Get(relPath); err == nil && row != nil &&
+				row.Type == "idea" && row.Status == "raw" {
+				fn := w.triageFn
+				go fn(relPath)
 			}
 		}
 	}
