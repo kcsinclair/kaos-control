@@ -1,7 +1,7 @@
 ---
 title: Auto-Triage Raw Ideas Into Drafts
 type: requirement
-status: blocked
+status: approved
 lineage: auto-triage-new-ideas
 parent: lifecycle/ideas/auto-triage-new-ideas.md
 labels:
@@ -138,9 +138,20 @@ The lifecycle state machine already permits `raw → draft` for the `system`, `a
 - [ ] The artifact detail view for a `raw` idea shows a "Triage now" button visible to authenticated `product-owner`/`analyst`/`reviewer` users and hidden for other roles.
 - [ ] Related: [[auto-triage-new-ideas]], [[agent-task-scheduler]] (concurrency/queue patterns), [[analyst-agent-sees-draft-ideas]] (downstream consumer that depends on `approved`, not `draft` — triage does not change that).
 
-## Open Questions
+## Resolved Questions
 
 - Which role should the triage agent run as for the workflow `raw → draft` transition: `system` (matches the spirit of an automated step and is already permitted by the state machine), `analyst`, or `product-owner`? `system` is recommended; confirm before implementation.
+
+> product-owner
+
 - Should the `priority` proposed by the agent be applied when the existing frontmatter `priority` matches the project default (e.g. `medium`), or only when `priority` is absent entirely? The current FR-4 wording chooses "only when absent" for safety; flag if a smarter merge is wanted.
+
+> Include a priority and set to normal as the default
+
 - Should the structured-idea generation be done with the existing `inline` driver and `idea-generate` template (lowest-friction, no new dependency surface), or via the `claude-mediated` driver to gain bash-allowlist policy and run-log streaming consistent with `requirements-analyst`? The former is recommended; confirm before implementation.
+
+> Yes, reuse existing inline driver.
+
 - Is the default concurrency cap of 2 simultaneous triage runs (NFR-3 / FR-7) appropriate, or should it default to 1 to be conservative with LLM spend?
+
+> 2 for concurrency works.
