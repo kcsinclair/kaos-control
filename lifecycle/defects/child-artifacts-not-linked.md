@@ -1,7 +1,7 @@
 ---
 title: Child Artifacts Not Linked After Agent Run
 type: defect
-status: in-development
+status: done
 lineage: child-artifacts-not-linked
 created: "2026-06-11T08:51:31+10:00"
 priority: normal
