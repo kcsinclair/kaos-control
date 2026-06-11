@@ -1,7 +1,7 @@
 ---
 title: Backend plan — Release artefacts in markdown
 type: plan-backend
-status: approved
+status: in-development
 lineage: release-artefacts
 parent: requirements/release-artefacts-2.md
 ---
