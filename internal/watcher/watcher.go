@@ -34,6 +34,11 @@ type Watcher struct {
 	// triageFn is called after a successful re-index when the freshly
 	// indexed artifact has type "idea" and status "raw". May be nil.
 	triageFn func(relPath string)
+
+	// releaseFn is called (debounced) for .md files under lifecycle/releases/.
+	// May be nil; when set, lifecycle/releases/ events are dispatched here
+	// instead of the standard artifact indexer.
+	releaseFn func(absPath string)
 }
 
 // New creates a Watcher but does not start it. The optional ignore variadic
@@ -66,6 +71,14 @@ func (w *Watcher) SetGitStatusCallback(fn func()) {
 // It must be called before Start.
 func (w *Watcher) SetTriageCallback(fn func(relPath string)) {
 	w.triageFn = fn
+}
+
+// SetReleaseCallback registers a callback that is invoked (debounced) for
+// every .md file event under lifecycle/releases/. When set, such events are
+// dispatched to fn instead of the standard artifact indexer. fn receives the
+// absolute path of the changed file. It must be called before Start.
+func (w *Watcher) SetReleaseCallback(fn func(absPath string)) {
+	w.releaseFn = fn
 }
 
 // Start begins watching the lifecycle/ tree and blocks until ctx is cancelled.
@@ -137,7 +150,13 @@ func (w *Watcher) Start(ctx context.Context) error {
 				continue
 			}
 			if w.shouldProcess(evt.Name) {
-				fire(evt.Name, func() { w.handleChange(evt.Name) })
+				if w.releaseFn != nil && w.isReleaseFile(evt.Name) {
+					path := evt.Name // capture for closure
+					fn := w.releaseFn
+					fire(evt.Name, func() { fn(path) })
+				} else {
+					fire(evt.Name, func() { w.handleChange(evt.Name) })
+				}
 			}
 			// When a new directory is created inside lifecycle/, watch it too.
 			if evt.Has(fsnotify.Create) {
@@ -228,6 +247,12 @@ func (w *Watcher) addDirRecursive(root string) error {
 		}
 		return w.fsw.Add(path)
 	})
+}
+
+func (w *Watcher) isReleaseFile(path string) bool {
+	releasesDir := filepath.Join(w.lifecycleDir, "releases")
+	return strings.HasPrefix(path, releasesDir+string(filepath.Separator)) ||
+		path == releasesDir
 }
 
 func (w *Watcher) shouldProcess(path string) bool {

@@ -23,7 +23,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/release"
 	"github.com/kaos-control/kaos-control/internal/scheduler"
 	"github.com/kaos-control/kaos-control/internal/triage"
-	"github.com/kaos-control/kaos-control/internal/watcher"
+	kwatcher "github.com/kaos-control/kaos-control/internal/watcher"
 	"github.com/kaos-control/kaos-control/internal/workflow"
 )
 
@@ -34,7 +34,7 @@ type Project struct {
 	Idx            *index.Index
 	Git            *kgit.Repo // nil if the project directory is not a git repo
 	Hub            *hub.Hub
-	Watcher        *watcher.Watcher
+	Watcher        *kwatcher.Watcher
 	Workflow       *workflow.Engine
 	Locks          *lock.Manager
 	Agents         *agent.Manager       // nil if no agents configured
@@ -117,7 +117,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	// Prune stale events on startup according to retention config.
 	_ = idx.PruneEvents(cfg.Feed.RetentionDays, cfg.Feed.MaxEvents)
 
-	w, err := watcher.New(entry.Path, idx, h, cfg.Ignore...)
+	w, err := kwatcher.New(entry.Path, idx, h, cfg.Ignore...)
 	if err != nil {
 		slog.Warn("project: failed to create watcher", "name", entry.Name, "err", err)
 		w = nil
@@ -131,6 +131,16 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 				h.Broadcast(hub.Event{Type: "git.status", Payload: summary})
 			}
 		})
+	}
+
+	// Wire the release handler so watcher-driven changes to lifecycle/releases/
+	// upsert/delete via the store and broadcast release.changed WS events.
+	// The ExpectedEvents set is populated later (after the releaseSync is built).
+	releaseExpected := release.NewExpectedEvents()
+	if w != nil {
+		releaseStore := release.NewStore(idx.DB())
+		rh := kwatcher.NewReleaseHandler(releaseStore, entry.Name, releaseExpected, h)
+		w.SetReleaseCallback(rh.Handle)
 	}
 
 	locks := lock.New(idx, h)
@@ -210,7 +220,6 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	schedulerLogDir := filepath.Join(dbDir, entry.Name, "scheduler-runs")
 	sched := scheduler.New(schedulerStore, agentMgr, h, entry.Path, schedulerLogDir, maxSchedulerWorkers)
 
-	releaseExpected := release.NewExpectedEvents()
 	releaseSync := release.NewDiskSync(releaseExpected)
 
 	// Startup release sync: rehydrate DB from disk or backfill disk from DB.
