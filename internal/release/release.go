@@ -14,9 +14,10 @@ var ErrNotFound = errors.New("release not found")
 
 // ValidStatuses is the set of allowed release status values.
 var ValidStatuses = map[string]bool{
-	"planned": true,
-	"active":  true,
-	"shipped": true,
+	"planned":     true,
+	"active":      true,
+	"shipped":     true,
+	"unscheduled": true,
 }
 
 // Release is a named, versioned bucket that groups artifacts.
@@ -24,6 +25,8 @@ type Release struct {
 	ID        int64      `json:"id"`
 	ProjectID string     `json:"project_id"`
 	Name      string     `json:"name"`
+	Slug      string     `json:"slug"`
+	FilePath  string     `json:"file_path,omitempty"`
 	Status    string     `json:"status"`
 	StartDate *time.Time `json:"start_date,omitempty"`
 	EndDate   *time.Time `json:"end_date,omitempty"`
@@ -45,7 +48,7 @@ func (r *Release) Validate() error {
 	}
 
 	if !ValidStatuses[r.Status] {
-		errs = append(errs, fmt.Errorf("status %q is not valid; must be one of: planned, active, shipped", r.Status))
+		errs = append(errs, fmt.Errorf("status %q is not valid; must be one of: planned, active, shipped, unscheduled", r.Status))
 	}
 
 	if r.StartDate != nil && r.EndDate != nil && r.EndDate.Before(*r.StartDate) {

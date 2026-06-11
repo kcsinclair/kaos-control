@@ -24,7 +24,7 @@ var KnownTypes = map[string]bool{
 	"idea": true, "requirement": true,
 	"plan-backend": true, "plan-frontend": true, "plan-test": true,
 	"test": true, "prototype": true, "defect": true,
-	"doc": true,
+	"doc": true, "release": true,
 }
 
 // Edge kinds used in GraphEdge.Kind and the links table.
@@ -407,6 +407,8 @@ func stageToType(stage string) string {
 		return "defect"
 	case "docs":
 		return "doc"
+	case "releases":
+		return "release"
 	default:
 		return "requirement"
 	}
