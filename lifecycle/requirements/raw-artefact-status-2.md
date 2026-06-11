@@ -1,7 +1,7 @@
 ---
 title: Add 'raw' Artefact Status Before Draft
 type: requirement
-status: planning
+status: done
 lineage: raw-artefact-status
 created: "2026-05-22T10:30:00+10:00"
 priority: medium
