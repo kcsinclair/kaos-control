@@ -7,6 +7,8 @@ import { useReleasesStore } from '@/stores/releases'
 import { useArtifactsStore } from '@/stores/artifacts'
 import { useRoadmapSettingsStore } from '@/stores/roadmapSettings'
 import { useGraphStore } from '@/stores/graph'
+import { useAuthStore } from '@/stores/auth'
+import { useUiStore } from '@/stores/ui'
 import GanttChart from '@/components/releases/GanttChart.vue'
 import BacklogPanel from '@/components/releases/BacklogPanel.vue'
 import ReleaseFormModal from '@/components/releases/ReleaseFormModal.vue'
@@ -28,6 +30,34 @@ const store = useReleasesStore()
 const artifactsStore = useArtifactsStore()
 const roadmapSettings = useRoadmapSettingsStore()
 const graphStore = useGraphStore()
+const authStore = useAuthStore()
+const ui = useUiStore()
+
+// ── Role-gated rehydrate ─────────────────────────────────────────────────────
+const canRehydrate = computed(() => {
+  const roles = authStore.rolesForProject(project)
+  return roles.includes('admin') || roles.includes('product-owner')
+})
+
+const rehydrating = ref(false)
+
+async function rehydrate() {
+  if (!window.confirm('Scan disk for release files and insert any that are missing from the database?')) return
+  rehydrating.value = true
+  try {
+    const result = await releasesApi.rehydrateReleases(project)
+    const errs = result.errors?.length ? ` (${result.errors.length} error${result.errors.length === 1 ? '' : 's'})` : ''
+    ui.success(`Inserted ${result.inserted} release${result.inserted === 1 ? '' : 's'}, skipped ${result.skipped}${errs}`)
+    if (result.errors?.length) {
+      ui.error(result.errors.join(' · '))
+    }
+    await store.fetch(project)
+  } catch (e: unknown) {
+    ui.error(e instanceof Error ? e.message : 'Rehydrate failed.')
+  } finally {
+    rehydrating.value = false
+  }
+}
 
 // ── Backlog artifacts ────────────────────────────────────────────────────────
 // All artifacts with no release assignment, excluding release and sprint types.
@@ -196,6 +226,12 @@ function openEdit(releaseId: number) {
           >Graph</button>
         </div>
 
+        <button
+          v-if="canRehydrate"
+          class="btn-ghost"
+          :disabled="rehydrating"
+          @click="rehydrate"
+        >{{ rehydrating ? 'Rehydrating…' : 'Rehydrate from disk' }}</button>
         <button class="btn-primary" @click="showCreateModal = true">+ Create Release</button>
       </div>
     </div>
@@ -352,6 +388,18 @@ function openEdit(releaseId: number) {
   white-space: nowrap;
 }
 .btn-primary:hover { opacity: 0.88; }
+.btn-ghost {
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-ghost:hover:not(:disabled) { background: var(--color-surface); }
+.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
 .state-msg {
   flex: 1;
   display: flex;
