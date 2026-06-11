@@ -16,6 +16,8 @@ function normaliseDates<T extends Release>(r: T): T {
     ...r,
     start_date: (r.start_date as string | null | undefined) ?? null,
     end_date: (r.end_date as string | null | undefined) ?? null,
+    file_path: (r.file_path as string | undefined) ?? '',
+    slug: (r.slug as string | undefined) ?? '',
   }
 }
 
@@ -52,6 +54,12 @@ export function listReleaseArtifacts(project: string, id: number): Promise<Artif
   return api
     .get<{ items: ArtifactRow[] | null }>(`/p/${encodeURIComponent(project)}/releases/${id}/artifacts`)
     .then((r) => r.items ?? [])
+}
+
+export function rehydrateReleases(project: string): Promise<{ inserted: number; skipped: number; errors: string[] }> {
+  return api.post<{ inserted: number; skipped: number; errors: string[] }>(
+    `/p/${encodeURIComponent(project)}/releases/rehydrate`,
+  )
 }
 
 export function getRoadmapGraph(project: string): Promise<GraphData> {

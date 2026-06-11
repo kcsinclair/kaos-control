@@ -9,6 +9,7 @@ import { getProjectWs } from '@/api/ws'
 export const useReleasesStore = defineStore('releases', () => {
   const releases = ref<Release[]>([])
   const loading = ref(false)
+  const lastWsSeq = ref(0)
   let currentProject = ''
   let unsub: (() => void) | null = null
 
@@ -35,6 +36,10 @@ export const useReleasesStore = defineStore('releases', () => {
     return releases.value.find((r) => r.name === name)
   }
 
+  function bySlug(slug: string): Release | undefined {
+    return releases.value.find((r) => r.slug === slug)
+  }
+
   async function fetch(project: string): Promise<void> {
     loading.value = true
     try {
@@ -58,7 +63,11 @@ export const useReleasesStore = defineStore('releases', () => {
   }
 
   async function update(project: string, id: number, data: UpdateReleasePayload): Promise<Release> {
-    const release = await releasesApi.updateRelease(project, id, data)
+    const current = releases.value.find((r) => r.id === id)
+    const payload: UpdateReleasePayload = current
+      ? { ...data, updated_at: current.updated_at }
+      : data
+    const release = await releasesApi.updateRelease(project, id, payload)
     releases.value = releases.value.map((r) => (r.id === id ? release : r))
     return release
   }
@@ -78,20 +87,57 @@ export const useReleasesStore = defineStore('releases', () => {
     const ws = getProjectWs(project)
 
     const handler = (e: { type: string; payload: Record<string, unknown> }) => {
-      if (e.type === 'release.created') {
+      if (e.type === 'release.changed') {
+        const action = (e.payload as { action?: string }).action
+        if (action === 'deleted') {
+          // Watcher-triggered delete: payload carries slug
+          const slug = (e.payload as { slug?: string }).slug
+          if (slug !== undefined) {
+            releases.value = releases.value.filter((r) => r.slug !== slug)
+            lastWsSeq.value++
+          }
+        } else {
+          // Create or update from API/watcher: upsert by id, fallback to slug
+          const raw = (e.payload as { release?: Release }).release
+          if (raw) {
+            const rel: Release = {
+              ...raw,
+              start_date: (raw.start_date as string | null | undefined) ?? null,
+              end_date: (raw.end_date as string | null | undefined) ?? null,
+              file_path: (raw.file_path as string | undefined) ?? '',
+              slug: (raw.slug as string | undefined) ?? '',
+            }
+            const idx = releases.value.findIndex(
+              (r) => r.id === rel.id || (rel.slug && r.slug === rel.slug),
+            )
+            if (idx >= 0) {
+              releases.value = releases.value.map((r, i) => (i === idx ? rel : r))
+            } else {
+              releases.value = [...releases.value, rel]
+            }
+            lastWsSeq.value++
+          }
+        }
+      } else if (e.type === 'release.created') {
+        // Legacy event kept for backward compat
         const release = (e.payload as { release?: Release }).release
         if (release && !releases.value.find((r) => r.id === release.id)) {
           releases.value = [...releases.value, release]
+          lastWsSeq.value++
         }
       } else if (e.type === 'release.updated') {
+        // Legacy event kept for backward compat
         const release = (e.payload as { release?: Release }).release
         if (release) {
           releases.value = releases.value.map((r) => (r.id === release.id ? release : r))
+          lastWsSeq.value++
         }
       } else if (e.type === 'release.deleted') {
+        // API-triggered delete: payload carries id
         const id = (e.payload as { id?: number }).id
         if (id !== undefined) {
           releases.value = releases.value.filter((r) => r.id !== id)
+          lastWsSeq.value++
         }
       }
     }
@@ -109,10 +155,12 @@ export const useReleasesStore = defineStore('releases', () => {
   return {
     releases,
     loading,
+    lastWsSeq,
     scheduled,
     unscheduled,
     byId,
     byName,
+    bySlug,
     fetch,
     create,
     update,

@@ -325,6 +325,7 @@ export type WsEventType =
   | 'scheduler.job.completed'
   | 'release.created'
   | 'release.updated'
+  | 'release.changed'
   | 'release.deleted'
   | 'queue.added'
   | 'queue.started'
