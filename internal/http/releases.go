@@ -109,16 +109,16 @@ func (s *Server) handleCreateRelease(w http.ResponseWriter, r *http.Request) {
 	}
 
 	store := release.NewStore(p.Idx.DB())
-	if err := store.Create(rel); err != nil {
+	if err := store.Create(rel, p.ReleaseSync, p.Entry.Path); err != nil {
 		if isDuplicateError(err) {
-			writeJSON(w, http.StatusConflict, apiError("conflict", fmt.Sprintf("release %q already exists in this project", rel.Name)))
+			writeJSON(w, http.StatusConflict, apiError("conflict", fmt.Sprintf("release slug already in use")))
 			return
 		}
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
 	}
 
-	p.Hub.Broadcast(hub.Event{Type: "release.created", Payload: map[string]any{"release": rel}})
+	p.Hub.Broadcast(hub.Event{Type: "release.changed", Payload: map[string]any{"release": rel}})
 	writeJSON(w, http.StatusCreated, map[string]any{"release": rel})
 }
 
@@ -156,6 +156,7 @@ type updateReleaseRequest struct {
 	StartDate *string `json:"start_date"`
 	EndDate   *string `json:"end_date"`
 	Duration  *string `json:"duration"`
+	UpdatedAt *string `json:"updated_at"` // optional; when present used for conflict detection
 }
 
 // handleUpdateRelease handles PUT /api/p/:project/releases/{releaseID}
@@ -220,14 +221,38 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 	}
 
 	store := release.NewStore(p.Idx.DB())
-	oldName, err := store.Update(rel)
+
+	// Conflict detection: if the caller supplied an updated_at, verify it is
+	// not stale against the current DB row.
+	if req.UpdatedAt != nil {
+		clientUpdatedAt, err := time.Parse(time.RFC3339, *req.UpdatedAt)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid updated_at: "+err.Error()))
+			return
+		}
+		current, err := store.Get(p.Entry.Name, id)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+			return
+		}
+		if current == nil {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
+			return
+		}
+		if clientUpdatedAt.Before(current.UpdatedAt) {
+			writeJSON(w, http.StatusConflict, apiError("conflict", "release was modified"))
+			return
+		}
+	}
+
+	oldName, err := store.Update(rel, p.ReleaseSync, p.Entry.Path)
 	if err != nil {
 		if err == release.ErrNotFound {
 			writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
 			return
 		}
 		if isDuplicateError(err) {
-			writeJSON(w, http.StatusConflict, apiError("conflict", fmt.Sprintf("release %q already exists in this project", rel.Name)))
+			writeJSON(w, http.StatusConflict, apiError("conflict", "release slug already in use"))
 			return
 		}
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
@@ -245,9 +270,9 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 		renamed = n
 	}
 
-	p.Hub.Broadcast(hub.Event{Type: "release.updated", Payload: map[string]any{
-		"release":         rel,
-		"old_name":        oldName,
+	p.Hub.Broadcast(hub.Event{Type: "release.changed", Payload: map[string]any{
+		"release":           rel,
+		"old_name":          oldName,
 		"artifacts_renamed": renamed,
 	}})
 	writeJSON(w, http.StatusOK, map[string]any{"release": rel, "artifacts_renamed": renamed})
@@ -310,7 +335,7 @@ func (s *Server) handleDeleteRelease(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	deletedName, orphaned, err := store.Delete(p.Entry.Name, id)
+	deletedName, orphaned, err := store.Delete(p.Entry.Name, id, p.ReleaseSync, p.Entry.Path)
 	if err != nil {
 		if err == release.ErrNotFound {
 			writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))

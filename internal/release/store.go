@@ -25,7 +25,7 @@ func NewStore(db *sql.DB) *Store {
 // (scheduled first, then unscheduled), then by name.
 func (s *Store) List(projectID string) ([]*Release, error) {
 	rows, err := s.db.Query(`
-		SELECT id, project_id, name, status, start_date, end_date, created_at, updated_at
+		SELECT id, project_id, name, slug, status, start_date, end_date, created_at, updated_at
 		FROM releases
 		WHERE project_id = ?
 		ORDER BY
@@ -45,7 +45,7 @@ func (s *Store) List(projectID string) ([]*Release, error) {
 func (s *Store) Get(projectID string, id int64) (*Release, error) {
 	row := s.db.QueryRow(`
 		SELECT
-			r.id, r.project_id, r.name, r.status, r.start_date, r.end_date,
+			r.id, r.project_id, r.name, r.slug, r.status, r.start_date, r.end_date,
 			r.created_at, r.updated_at,
 			(SELECT COUNT(*) FROM artifacts
 			 WHERE json_extract(frontmatter_json, '$.release') = r.name
@@ -64,19 +64,18 @@ func (s *Store) Get(projectID string, id int64) (*Release, error) {
 	return r, err
 }
 
-// GetByName returns a release by project and name, or nil if not found.
-func (s *Store) GetByName(projectID, name string) (*Release, error) {
+// GetBySlug returns a release by project and slug, or nil if not found.
+func (s *Store) GetBySlug(projectID, slug string) (*Release, error) {
 	row := s.db.QueryRow(`
-		SELECT id, project_id, name, status, start_date, end_date, created_at, updated_at
+		SELECT id, project_id, name, slug, status, start_date, end_date, created_at, updated_at
 		FROM releases
-		WHERE project_id = ? AND name = ?
-	`, projectID, name)
-
+		WHERE project_id = ? AND slug = ?
+	`, projectID, slug)
 	var r Release
 	var startDate, endDate sql.NullString
 	var createdAt, updatedAt string
 	err := row.Scan(
-		&r.ID, &r.ProjectID, &r.Name, &r.Status,
+		&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status,
 		&startDate, &endDate, &createdAt, &updatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -89,26 +88,73 @@ func (s *Store) GetByName(projectID, name string) (*Release, error) {
 	r.EndDate = parseDate(endDate)
 	r.CreatedAt = mustParseTime(createdAt)
 	r.UpdatedAt = mustParseTime(updatedAt)
+	r.FilePath = relPath(r.Slug)
 	return &r, nil
 }
 
-// Create inserts r into the database and sets r.ID, r.CreatedAt, r.UpdatedAt.
-// Returns an error if the name is already taken within the project.
-func (s *Store) Create(r *Release) error {
+// GetByName returns a release by project and name, or nil if not found.
+func (s *Store) GetByName(projectID, name string) (*Release, error) {
+	row := s.db.QueryRow(`
+		SELECT id, project_id, name, slug, status, start_date, end_date, created_at, updated_at
+		FROM releases
+		WHERE project_id = ? AND name = ?
+	`, projectID, name)
+
+	var r Release
+	var startDate, endDate sql.NullString
+	var createdAt, updatedAt string
+	err := row.Scan(
+		&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status,
+		&startDate, &endDate, &createdAt, &updatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	r.StartDate = parseDate(startDate)
+	r.EndDate = parseDate(endDate)
+	r.CreatedAt = mustParseTime(createdAt)
+	r.UpdatedAt = mustParseTime(updatedAt)
+	r.FilePath = relPath(r.Slug)
+	return &r, nil
+}
+
+// Count returns the number of releases for the given project.
+func (s *Store) Count(projectID string) (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM releases WHERE project_id = ?`, projectID).Scan(&n)
+	return n, err
+}
+
+// Create inserts r into the database and sets r.ID, r.Slug, r.FilePath,
+// r.CreatedAt, r.UpdatedAt. When sync is non-nil the markdown file is written
+// to disk inside the same transaction; a disk failure causes the transaction
+// to roll back. Returns an error if the name or slug is already taken within
+// the project.
+func (s *Store) Create(r *Release, sync *DiskSync, projectRoot string) error {
 	now := time.Now().UTC()
 	r.CreatedAt = now
 	r.UpdatedAt = now
 
-	createdAt := now.Format(time.RFC3339)
-	updatedAt := now.Format(time.RFC3339)
+	slug := Slugify(r.Name)
 
-	res, err := s.db.Exec(`
-		INSERT INTO releases (project_id, name, status, start_date, end_date, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Insert with the computed slug (may be empty for emoji-only names; the
+	// partial unique index excludes empty strings so this is safe to insert).
+	res, err := tx.Exec(`
+		INSERT INTO releases (project_id, name, slug, status, start_date, end_date, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`,
-		r.ProjectID, r.Name, r.Status,
+		r.ProjectID, r.Name, slug, r.Status,
 		formatDate(r.StartDate), formatDate(r.EndDate),
-		createdAt, updatedAt,
+		now.Format(time.RFC3339), now.Format(time.RFC3339),
 	)
 	if err != nil {
 		return err
@@ -118,17 +164,35 @@ func (s *Store) Create(r *Release) error {
 		return err
 	}
 	r.ID = id
-	return nil
+
+	// Resolve fallback slug for emoji-only names now that we have the ID.
+	if slug == "" {
+		slug = fmt.Sprintf("release-%d", id)
+		if _, err := tx.Exec(`UPDATE releases SET slug=? WHERE id=?`, slug, id); err != nil {
+			return err
+		}
+	}
+	r.Slug = slug
+	r.FilePath = relPath(slug)
+
+	if sync != nil && projectRoot != "" {
+		if _, err := sync.Write(projectRoot, r); err != nil {
+			return fmt.Errorf("writing release file: %w", err)
+		}
+	}
+
+	return tx.Commit()
 }
 
 // Update saves changes to name, status, and dates; bumps UpdatedAt.
 // Returns the old name (before the update) so the caller can trigger rename propagation.
-func (s *Store) Update(r *Release) (string, error) {
-	// Fetch the current name first.
-	var oldName string
+// When sync is non-nil the markdown file is rewritten (or renamed if the slug changed).
+func (s *Store) Update(r *Release, sync *DiskSync, projectRoot string) (string, error) {
+	// Fetch the current name and slug first.
+	var oldName, oldSlug string
 	err := s.db.QueryRow(
-		`SELECT name FROM releases WHERE project_id = ? AND id = ?`, r.ProjectID, r.ID,
-	).Scan(&oldName)
+		`SELECT name, slug FROM releases WHERE project_id = ? AND id = ?`, r.ProjectID, r.ID,
+	).Scan(&oldName, &oldSlug)
 	if err == sql.ErrNoRows {
 		return "", ErrNotFound
 	}
@@ -139,12 +203,25 @@ func (s *Store) Update(r *Release) (string, error) {
 	now := time.Now().UTC()
 	r.UpdatedAt = now
 
-	_, err = s.db.Exec(`
+	newSlug := Slugify(r.Name)
+	if newSlug == "" {
+		newSlug = fmt.Sprintf("release-%d", r.ID)
+	}
+	r.Slug = newSlug
+	r.FilePath = relPath(newSlug)
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	_, err = tx.Exec(`
 		UPDATE releases
-		SET name = ?, status = ?, start_date = ?, end_date = ?, updated_at = ?
+		SET name = ?, slug = ?, status = ?, start_date = ?, end_date = ?, updated_at = ?
 		WHERE project_id = ? AND id = ?
 	`,
-		r.Name, r.Status,
+		r.Name, newSlug, r.Status,
 		formatDate(r.StartDate), formatDate(r.EndDate),
 		now.Format(time.RFC3339),
 		r.ProjectID, r.ID,
@@ -152,16 +229,63 @@ func (s *Store) Update(r *Release) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	if sync != nil && projectRoot != "" {
+		if oldSlug != newSlug {
+			if _, err := sync.Rename(projectRoot, oldSlug, newSlug, r); err != nil {
+				return "", fmt.Errorf("renaming release file: %w", err)
+			}
+		} else {
+			if _, err := sync.Write(projectRoot, r); err != nil {
+				return "", fmt.Errorf("writing release file: %w", err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return "", err
+	}
 	return oldName, nil
+}
+
+// UpsertBySlug inserts or updates a release identified by projectID+slug.
+// Used by the watcher to mirror file-system changes into the DB.
+func (s *Store) UpsertBySlug(r *Release) error {
+	now := time.Now().UTC()
+	_, err := s.db.Exec(`
+		INSERT INTO releases (project_id, name, slug, status, start_date, end_date, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(project_id, name) DO UPDATE SET
+			slug       = excluded.slug,
+			status     = excluded.status,
+			start_date = excluded.start_date,
+			end_date   = excluded.end_date,
+			updated_at = excluded.updated_at
+	`,
+		r.ProjectID, r.Name, r.Slug, r.Status,
+		formatDate(r.StartDate), formatDate(r.EndDate),
+		now.Format(time.RFC3339), now.Format(time.RFC3339),
+	)
+	return err
+}
+
+// DeleteBySlug removes the release with the given slug from the project.
+// Returns without error if the release does not exist.
+func (s *Store) DeleteBySlug(projectID, slug string) error {
+	_, err := s.db.Exec(
+		`DELETE FROM releases WHERE project_id = ? AND slug = ?`, projectID, slug,
+	)
+	return err
 }
 
 // Delete removes the release and returns its name and the count of artifacts
 // that referenced it (for use in warnings or reassignment).
-func (s *Store) Delete(projectID string, id int64) (string, int, error) {
-	var name string
+// When sync is non-nil the markdown file is also removed from disk.
+func (s *Store) Delete(projectID string, id int64, sync *DiskSync, projectRoot string) (string, int, error) {
+	var name, slug string
 	err := s.db.QueryRow(
-		`SELECT name FROM releases WHERE project_id = ? AND id = ?`, projectID, id,
-	).Scan(&name)
+		`SELECT name, slug FROM releases WHERE project_id = ? AND id = ?`, projectID, id,
+	).Scan(&name, &slug)
 	if err == sql.ErrNoRows {
 		return "", 0, ErrNotFound
 	}
@@ -182,6 +306,10 @@ func (s *Store) Delete(projectID string, id int64) (string, int, error) {
 		`DELETE FROM releases WHERE project_id = ? AND id = ?`, projectID, id,
 	); err != nil {
 		return "", 0, err
+	}
+
+	if sync != nil && projectRoot != "" && slug != "" {
+		_ = sync.Delete(projectRoot, slug)
 	}
 
 	return name, count, nil
@@ -248,7 +376,7 @@ func scanReleases(rows *sql.Rows) ([]*Release, error) {
 		var startDate, endDate sql.NullString
 		var createdAt, updatedAt string
 		if err := rows.Scan(
-			&r.ID, &r.ProjectID, &r.Name, &r.Status,
+			&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status,
 			&startDate, &endDate, &createdAt, &updatedAt,
 		); err != nil {
 			return nil, err
@@ -257,6 +385,7 @@ func scanReleases(rows *sql.Rows) ([]*Release, error) {
 		r.EndDate = parseDate(endDate)
 		r.CreatedAt = mustParseTime(createdAt)
 		r.UpdatedAt = mustParseTime(updatedAt)
+		r.FilePath = relPath(r.Slug)
 		out = append(out, &r)
 	}
 	return out, rows.Err()
@@ -267,7 +396,7 @@ func scanReleaseWithCounts(row *sql.Row) (*Release, error) {
 	var startDate, endDate sql.NullString
 	var createdAt, updatedAt string
 	err := row.Scan(
-		&r.ID, &r.ProjectID, &r.Name, &r.Status,
+		&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status,
 		&startDate, &endDate, &createdAt, &updatedAt,
 		&r.IdeaCount, &r.DefectCount,
 	)
@@ -278,5 +407,6 @@ func scanReleaseWithCounts(row *sql.Row) (*Release, error) {
 	r.EndDate = parseDate(endDate)
 	r.CreatedAt = mustParseTime(createdAt)
 	r.UpdatedAt = mustParseTime(updatedAt)
+	r.FilePath = relPath(r.Slug)
 	return &r, nil
 }

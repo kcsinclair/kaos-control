@@ -18,6 +18,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/ideachat"
 	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/lock"
+	"github.com/kaos-control/kaos-control/internal/release"
 	"github.com/kaos-control/kaos-control/internal/scheduler"
 	"github.com/kaos-control/kaos-control/internal/triage"
 	"github.com/kaos-control/kaos-control/internal/watcher"
@@ -34,13 +35,14 @@ type Project struct {
 	Watcher        *watcher.Watcher
 	Workflow       *workflow.Engine
 	Locks          *lock.Manager
-	Agents         *agent.Manager  // nil if no agents configured
+	Agents         *agent.Manager       // nil if no agents configured
 	IdeaChatStore  *ideachat.Store      // per-project conversational idea-capture sessions
 	DevopsRunner   *devops.Runner       // manages active pipeline runs
 	DevopsLogs     *devops.LogStore     // persists run logs to ~/.kaos-control/devops/<project>/
 	Scheduler      *scheduler.Scheduler // nil until StartScheduler is called
 	SchedulerStore *scheduler.Store     // always set after Open()
 	TriageMgr      *triage.Manager      // auto-triage of raw idea artifacts
+	ReleaseSync    *release.DiskSync    // disk sync for release markdown files
 
 	// watcherDone is closed when the watcher goroutine exits.
 	// Close() waits on this before closing the index DB.
@@ -206,6 +208,9 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	schedulerLogDir := filepath.Join(dbDir, entry.Name, "scheduler-runs")
 	sched := scheduler.New(schedulerStore, agentMgr, h, entry.Path, schedulerLogDir, maxSchedulerWorkers)
 
+	releaseExpected := release.NewExpectedEvents()
+	releaseSync := release.NewDiskSync(releaseExpected)
+
 	return &Project{
 		Entry:          entry,
 		Cfg:            cfg,
@@ -222,6 +227,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		Scheduler:      sched,
 		SchedulerStore: schedulerStore,
 		TriageMgr:      triageMgr,
+		ReleaseSync:    releaseSync,
 	}, nil
 }
 

@@ -113,6 +113,10 @@ func Open(dbPath, projectRoot string, stages []config.Stage, opts ...Option) (*I
 	if err := idx.ensureSchedulerTables(); err != nil {
 		return nil, fmt.Errorf("ensuring scheduler tables: %w", err)
 	}
+	// Add slug column to releases if missing (migration from pre-B2 schema).
+	if err := idx.ensureReleasesSlugColumn(); err != nil {
+		slog.Warn("index: releases slug migration failed", "err", err)
+	}
 	// Always scan on startup: the index is a cache and files may have changed
 	// while the server was not running (watcher only covers live changes).
 	if err := idx.Scan(stages); err != nil {
@@ -1468,6 +1472,61 @@ func (idx *Index) ensureSchedulerTables() error {
 	return err
 }
 
+// ensureReleasesSlugColumn adds the slug column to releases if it is missing
+// (migration from pre-B2 schema), populates slugs for existing rows, and
+// creates the partial unique index. Uses inline slug logic to avoid an import
+// cycle with the release package.
+func (idx *Index) ensureReleasesSlugColumn() error {
+	// ADD COLUMN is a no-op if the column already exists.
+	_, _ = idx.db.Exec(`ALTER TABLE releases ADD COLUMN slug TEXT NOT NULL DEFAULT ''`)
+
+	// Populate slugs for rows that still have the default empty string.
+	rows, err := idx.db.Query(`SELECT id, name FROM releases WHERE slug = ''`)
+	if err != nil {
+		return nil // table may not exist yet in new installs
+	}
+	defer rows.Close()
+	type pending struct {
+		id   int64
+		name string
+	}
+	var toUpdate []pending
+	for rows.Next() {
+		var p pending
+		if err := rows.Scan(&p.id, &p.name); err == nil {
+			toUpdate = append(toUpdate, p)
+		}
+	}
+	_ = rows.Close()
+
+	for _, p := range toUpdate {
+		slug := indexReleaseSlugify(p.name)
+		if slug == "" {
+			slug = fmt.Sprintf("release-%d", p.id)
+		}
+		_, _ = idx.db.Exec(`UPDATE releases SET slug=? WHERE id=? AND slug=''`, slug, p.id)
+	}
+
+	// Partial unique index — no-op if already present.
+	_, _ = idx.db.Exec(
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_releases_project_slug ON releases(project_id, slug) WHERE slug != ''`,
+	)
+	return nil
+}
+
+// indexReleaseSlugify is a copy of release.Slugify used during migrations to
+// avoid an import cycle (index ← release ← index).
+var indexReleaseStripRe = regexp.MustCompile(`[^a-z0-9-]`)
+var indexReleaseCollapseRe = regexp.MustCompile(`-{2,}`)
+
+func indexReleaseSlugify(name string) string {
+	s := strings.ToLower(name)
+	s = strings.ReplaceAll(s, " ", "-")
+	s = indexReleaseStripRe.ReplaceAllString(s, "")
+	s = indexReleaseCollapseRe.ReplaceAllString(s, "-")
+	return strings.Trim(s, "-")
+}
+
 func (idx *Index) createSchema() error {
 	ddl := `
 PRAGMA journal_mode=WAL;
@@ -1534,6 +1593,7 @@ CREATE TABLE releases (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id  TEXT NOT NULL,
     name        TEXT NOT NULL,
+    slug        TEXT NOT NULL DEFAULT '',
     status      TEXT NOT NULL DEFAULT 'planned',
     start_date  TEXT,
     end_date    TEXT,
@@ -1541,6 +1601,7 @@ CREATE TABLE releases (
     updated_at  TEXT NOT NULL,
     UNIQUE(project_id, name)
 );
+CREATE UNIQUE INDEX idx_releases_project_slug ON releases(project_id, slug) WHERE slug != '';
 
 CREATE INDEX idx_artifacts_release ON artifacts(json_extract(frontmatter_json, '$.release'));
 `
