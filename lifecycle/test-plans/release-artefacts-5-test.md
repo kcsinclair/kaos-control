@@ -1,7 +1,7 @@
 ---
 title: Test plan — Release artefacts in markdown
 type: plan-test
-status: approved
+status: in-development
 lineage: release-artefacts
 parent: requirements/release-artefacts-2.md
 ---
