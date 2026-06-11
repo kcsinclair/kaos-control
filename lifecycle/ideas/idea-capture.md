@@ -6,6 +6,7 @@ lineage: idea-capture
 priority: normal
 labels:
     - feature
+    - frontend
     - artifacts
     - ux
     - editor
@@ -20,6 +21,6 @@ When an idea is captured, display the raw idea along with the enhanced idea, sav
 
 When a user captures a new idea, the system should preserve and display both the original raw brain-dump and the AI-enhanced version side by side. This ensures no context or nuance from the original input is lost during the enhancement process.
 
-The markdown artifact for each idea should include two clearly delineated sections using the headings `## Raw Idea` and `## Idea`. The `Raw Idea` section contains the verbatim user input, while the `Idea` section contains the structured, enhanced version produced by the capture assistant.
+The markdown artifact for each idea should include two clearly delineated sections using the headings `## Raw Idea` and `## Idea`. The `Raw Idea` section contains the verbatim user input, while the `Idea` section contains the structured, enhanced version produced by the capture assistant. This change touches the idea capture flow on both the frontend (display) and the artifact writing logic on the backend (markdown structure), ensuring the raw content is never silently discarded after enhancement.
 
 This change improves transparency and traceability, allowing contributors to understand the intent behind an idea even if the enhanced version interpreted it differently. It also supports future tooling that may want to diff or audit how ideas evolve from capture through planning.

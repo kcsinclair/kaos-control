@@ -10,6 +10,7 @@ labels:
     - backend
     - ux
     - artifacts
+    - usability
 release: KC-Release3
 ---
 
@@ -20,8 +21,8 @@ Each idea and defect can have a RICE score to assist with prioritisation.  Inclu
 
 ## Idea
 
-Add RICE (Reach, Impact, Confidence, Effort) scoring to idea and defect artifacts to assist with prioritisation. Each artifact should support optional numeric fields for the four RICE components, with the computed score (Reach × Impact × Confidence / Effort) derived automatically when all four values are present.
+Add RICE (Reach, Impact, Confidence, Effort) scoring to idea and defect artifacts to assist with prioritisation. The score fields would be stored in the artifact frontmatter and treated as optional, so existing artifacts require no migration. The computed score (Reach × Impact × Confidence / Effort) is derived automatically when all four values are present.
 
 In list views, display the RICE score (or 'N/A' if any component is blank) as a sortable column alongside existing metadata. This allows product owners and analysts to quickly compare and rank items without opening each artifact individually.
 
-Provide a UI panel or inline editor — accessible from both the list view and the artifact detail view — that lets users enter or update the four RICE component values. The interface should make it clear which fields are optional and show a live preview of the computed score as values are entered.
+Provide an inline editing experience within the list view (or a dedicated score panel) — accessible from both the list view and the artifact detail view — that lets users enter or update the four RICE component values without navigating away. The interface should show a live preview of the computed score as values are entered, making it practical to score items during triage or planning sessions.

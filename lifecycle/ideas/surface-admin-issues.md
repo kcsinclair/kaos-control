@@ -10,6 +10,8 @@ labels:
     - backend
     - reliability
     - usability
+    - websocket
+    - feature
 ---
 
 ## Raw Idea
@@ -29,4 +31,4 @@ When kaos-control emits structured log entries at WARN or ERROR level (e.g. stal
 
 On the backend, warnings and errors should optionally be written to a rotating log file and/or published to an MQTT topic, giving operators flexibility to integrate with external monitoring pipelines. The structured JSON format already emitted by the logger (slog-compatible) makes this straightforward to route to multiple sinks without changing call sites.
 
-The GUI component should poll or receive these conditions via the existing WebSocket broadcast channel (e.g. a new `system.condition` event type), keeping the display live. Conditions should be dismissible per-session and ideally badge-counted in the navigation so they are visible even when the panel is not in focus.
+The GUI component should receive these conditions via the existing WebSocket broadcast channel (e.g. a new `system.condition` event type), keeping the display live. Conditions should be deduplicated, dismissible per-session, and ideally badge-counted in the navigation so they are visible even when the panel is not in focus.

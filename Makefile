@@ -18,7 +18,7 @@ all: build-web build
 
 ## build: compile the Go binary (embeds web/dist)
 build:
-	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/kaos-control
+	go build -p 1 $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/kaos-control
 
 ## release: build static binaries for every platform in PLATFORMS into ./dist/
 release:
