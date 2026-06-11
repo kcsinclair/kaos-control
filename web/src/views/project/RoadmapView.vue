@@ -16,6 +16,7 @@ import RoadmapGraphView from '@/components/releases/RoadmapGraphView.vue'
 import ArtifactModal from '@/components/artifact/ArtifactModal.vue'
 import * as releasesApi from '@/api/releases'
 import { getProjectWs } from '@/api/ws'
+import { useReleasesSocket } from '@/composables/useReleasesSocket'
 import type { Release, ReleaseDetail } from '@/types/release'
 import type { GraphNode, GraphEdge } from '@/types/api'
 
@@ -39,6 +40,9 @@ const backlogArtifacts = computed(() =>
 function onOpenBacklogArtifact(path: string) {
   router.push(`/p/${project}/artifacts/${path}`)
 }
+
+// ── WebSocket: releases (managed by composable) ─────────────────────────────
+useReleasesSocket(project)
 
 // ── WebSocket: re-fetch backlog on artifact.indexed events ─────────────────
 let unsubArtifactWs: (() => void) | null = null
@@ -75,7 +79,6 @@ async function loadDetails() {
 
 onMounted(async () => {
   await store.fetch(project)
-  store.connectWs(project)
   loadDetails()
   roadmapSettings.loadDefaultPeriodMode(project)
 
@@ -83,7 +86,7 @@ onMounted(async () => {
   await artifactsStore.fetchList(project, { limit: 500 })
 
   // Subscribe to artifact.indexed WS events to keep backlog reactive.
-  // Reuse the singleton WsClient (already connected by releasesStore.connectWs).
+  // Reuse the singleton WsClient (already connected by useReleasesSocket).
   const ws = getProjectWs(project)
   unsubArtifactWs = ws.onType('artifact.indexed', () => {
     artifactsStore.fetchList(project, { limit: 500 })
@@ -91,7 +94,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  store.disconnectWs()
   if (unsubArtifactWs) {
     unsubArtifactWs()
     unsubArtifactWs = null
