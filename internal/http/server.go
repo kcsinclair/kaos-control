@@ -303,6 +303,7 @@ func (s *Server) buildRouter() chi.Router {
 			r.Route("/releases", func(r chi.Router) {
 				r.Get("/", s.handleListReleases)
 				r.Post("/", s.handleCreateRelease)
+				r.Post("/rehydrate", s.handleRehydrateReleases)
 				r.Get("/graph", s.handleRoadmapGraph)
 				r.Get("/{releaseID}", s.handleGetRelease)
 				r.Put("/{releaseID}", s.handleUpdateRelease)

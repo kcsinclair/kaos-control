@@ -24,6 +24,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/initcmd"
 	"github.com/kaos-control/kaos-control/internal/project"
 	"github.com/kaos-control/kaos-control/internal/queue"
+	"github.com/kaos-control/kaos-control/internal/releasescmd"
 	"github.com/kaos-control/kaos-control/web"
 )
 
@@ -71,6 +72,12 @@ func main() {
 			return
 		case "backfill-created":
 			if err := backfillcmd.Run(os.Args[2:]); err != nil {
+				fmt.Fprintln(os.Stderr, "error:", err)
+				os.Exit(1)
+			}
+			return
+		case "releases":
+			if err := releasescmd.Run(os.Args[2:]); err != nil {
 				fmt.Fprintln(os.Stderr, "error:", err)
 				os.Exit(1)
 			}

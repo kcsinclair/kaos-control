@@ -378,6 +378,26 @@ func (s *Server) handleListReleaseArtifacts(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": len(items)})
 }
 
+// handleRehydrateReleases handles POST /api/p/:project/releases/rehydrate
+func (s *Server) handleRehydrateReleases(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	if !requireRole(w, r, p, RolesAdminOnly...) {
+		return
+	}
+
+	store := release.NewStore(p.Idx.DB())
+	result, err := release.Rehydrate(r.Context(), store, p.Entry.Name, p.Entry.Path)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("rehydrate_error", err.Error()))
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
 // handleRoadmapGraph handles GET /api/p/:project/releases/graph
 func (s *Server) handleRoadmapGraph(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
