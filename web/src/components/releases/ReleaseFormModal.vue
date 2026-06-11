@@ -2,9 +2,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useReleasesStore } from '@/stores/releases'
 import { ApiError } from '@/api/client'
-import type { Release } from '@/types/release'
+import type { Release, ReleaseStatus } from '@/types/release'
 
 const props = defineProps<{
   release?: Release
@@ -16,12 +17,13 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const router = useRouter()
 const store = useReleasesStore()
 
 const isEdit = computed(() => props.release !== undefined)
 
 const name = ref('')
-const status = ref<'planned' | 'active' | 'shipped'>('planned')
+const status = ref<ReleaseStatus>('planned')
 const isScheduled = ref(true)
 const startDate = ref('')
 const durationValue = ref<number>(7)
@@ -84,6 +86,26 @@ function onDurationUnitChange() {
     endDate.value = calcEndFromDuration()
   } else {
     calcDurationFromEnd()
+  }
+}
+
+function onStatusChange() {
+  if (status.value === 'unscheduled') {
+    isScheduled.value = false
+  }
+}
+
+function setScheduled(val: boolean) {
+  isScheduled.value = val
+  if (val && status.value === 'unscheduled') {
+    status.value = 'planned'
+  }
+}
+
+function navigateToFile() {
+  if (props.release?.file_path) {
+    router.push(`/p/${encodeURIComponent(props.project)}/artifacts/${props.release.file_path}`)
+    emit('close')
   }
 }
 
@@ -156,9 +178,11 @@ async function submit() {
     emit('saved', release)
   } catch (e: unknown) {
     if (e instanceof ApiError && e.status === 409) {
-      // Server-side conflict: name is already taken. Surface this on the
-      // name field so the user understands why and can fix it.
-      errors.value.name = `A release named "${name.value.trim()}" already exists.`
+      if (e.message.includes('already in use') || e.message.includes('already exists')) {
+        errors.value.name = 'A release with this name already exists.'
+      } else {
+        errors.value.submit = 'This release was changed by another session — reload to continue.'
+      }
     } else {
       errors.value.submit = e instanceof Error ? e.message : 'Save failed.'
     }
@@ -192,12 +216,20 @@ async function submit() {
           <span v-if="errors.name" class="field-error">{{ errors.name }}</span>
         </div>
 
+        <div v-if="isEdit && release?.file_path" class="form-field">
+          <span class="field-label">File</span>
+          <button type="button" class="file-path-chip" @click="navigateToFile">
+            {{ release.file_path }}
+          </button>
+        </div>
+
         <div class="form-field">
           <label class="field-label" for="rel-status">Status</label>
-          <select id="rel-status" v-model="status" class="field-input field-select">
+          <select id="rel-status" v-model="status" class="field-input field-select" @change="onStatusChange">
             <option value="planned">planned</option>
             <option value="active">active</option>
             <option value="shipped">shipped</option>
+            <option value="unscheduled">unscheduled</option>
           </select>
         </div>
 
@@ -208,13 +240,13 @@ async function submit() {
               type="button"
               class="toggle-btn"
               :class="{ 'toggle-btn--active': isScheduled }"
-              @click="isScheduled = true"
+              @click="setScheduled(true)"
             >Scheduled</button>
             <button
               type="button"
               class="toggle-btn"
               :class="{ 'toggle-btn--active': !isScheduled }"
-              @click="isScheduled = false"
+              @click="setScheduled(false)"
             >Unscheduled</button>
           </div>
         </div>
@@ -416,6 +448,24 @@ async function submit() {
 }
 .duration-unit {
   flex: 1;
+}
+.file-path-chip {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: 11px;
+  font-family: monospace;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.file-path-chip:hover {
+  background: var(--color-bg);
+  text-decoration-style: solid;
 }
 .modal-footer {
   display: flex;

@@ -64,6 +64,13 @@ function openArtifact(artifact: ArtifactRow) {
   emit('close')
 }
 
+function openFile() {
+  if (detail.value?.file_path) {
+    router.push(`/p/${encodeURIComponent(props.project)}/artifacts/${detail.value.file_path}`)
+    emit('close')
+  }
+}
+
 const filteredArtifacts = computed(() =>
   artifacts.value.filter(a => a.type === 'idea' || a.type === 'defect')
 )
@@ -106,6 +113,10 @@ onMounted(load)
             <div class="meta-item">
               <span class="meta-label">Defects</span>
               <span class="meta-value">{{ detail.defect_count }}</span>
+            </div>
+            <div v-if="detail.file_path" class="meta-item meta-item--full">
+              <span class="meta-label">File</span>
+              <button class="file-path-link" @click="openFile">{{ detail.file_path }}</button>
             </div>
           </div>
 
@@ -230,13 +241,34 @@ onMounted(load)
   font-size: 11px;
   font-weight: 600;
 }
-.status-badge--planned { background: #e2e8f0; color: #334155; }
-.status-badge--active  { background: #dbeafe; color: #1e40af; }
-.status-badge--shipped { background: #d1fae5; color: #065f46; }
+.status-badge--planned     { background: #e2e8f0; color: #334155; }
+.status-badge--active      { background: #dbeafe; color: #1e40af; }
+.status-badge--shipped     { background: #d1fae5; color: #065f46; }
+.status-badge--unscheduled { background: #f1f5f9; color: #64748b; }
 @media (prefers-color-scheme: dark) {
-  .status-badge--planned { background: #334155; color: #e2e8f0; }
-  .status-badge--active  { background: #1e3a5f; color: #93c5fd; }
-  .status-badge--shipped { background: #064e3b; color: #6ee7b7; }
+  .status-badge--planned     { background: #334155; color: #e2e8f0; }
+  .status-badge--active      { background: #1e3a5f; color: #93c5fd; }
+  .status-badge--shipped     { background: #064e3b; color: #6ee7b7; }
+  .status-badge--unscheduled { background: #1e293b; color: #94a3b8; }
+}
+.meta-item--full { width: 100%; }
+.file-path-link {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: 11px;
+  font-family: monospace;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.file-path-link:hover {
+  background: var(--color-bg);
+  text-decoration-style: solid;
 }
 .artifacts-section { display: flex; flex-direction: column; gap: var(--space-2); }
 .artifacts-heading {
