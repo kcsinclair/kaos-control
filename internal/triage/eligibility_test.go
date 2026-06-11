@@ -107,6 +107,39 @@ func (a *alreadyLockedLocks) Acquire(_, _, _ string) (*index.LockRow, error) {
 }
 func (a *alreadyLockedLocks) Release(_ string) error { return nil }
 
+func TestEligible_WrongStatus_Clarifying(t *testing.T) {
+	r := rawIdeaRow("lifecycle/ideas/clarifying.md")
+	r.Status = "clarifying"
+	idx := &stubIndex{row: r}
+	row, reason, err := eligible(context.Background(), idx, "lifecycle/ideas/clarifying.md")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if row != nil {
+		t.Error("expected nil row for wrong status")
+	}
+	if reason != "wrong_status" {
+		t.Errorf("expected reason %q, got %q", "wrong_status", reason)
+	}
+}
+
+func TestEligible_CaseSensitivity(t *testing.T) {
+	// Status comparison is exact: "Raw" (capital R) must NOT match "raw".
+	r := rawIdeaRow("lifecycle/ideas/cap.md")
+	r.Status = "Raw"
+	idx := &stubIndex{row: r}
+	row, reason, err := eligible(context.Background(), idx, "lifecycle/ideas/cap.md")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if row != nil {
+		t.Error("expected nil row for wrong status (case mismatch)")
+	}
+	if reason != "wrong_status" {
+		t.Errorf("expected reason %q, got %q", "wrong_status", reason)
+	}
+}
+
 func TestTrigger_ErrIneligible(t *testing.T) {
 	idx := &stubIndex{row: nil} // not indexed → ineligible
 	mgr := New(Deps{Idx: idx, Locks: &stubLocks{}}, Options{})

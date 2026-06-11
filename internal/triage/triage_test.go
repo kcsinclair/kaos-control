@@ -4,6 +4,7 @@ package triage
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -213,6 +214,30 @@ func TestStop_WaitsForInFlight(t *testing.T) {
 	case <-finished:
 	case <-time.After(time.Second):
 		t.Fatal("Stop did not return after execute finished")
+	}
+}
+
+func TestTrigger_LockReleasedOnFailure(t *testing.T) {
+	released := make(chan struct{}, 1)
+	locks := &panicTrackingLocks{released: released}
+
+	idx := &stubIndex{row: rawIdeaRow("lifecycle/ideas/fail.md")}
+	mgr := New(Deps{Idx: idx, Locks: locks}, Options{})
+	mgr.opts.executeHook = func(_ context.Context, _, _, _ string, _ TriggerSource) error {
+		return fmt.Errorf("simulated failure")
+	}
+
+	if _, err := mgr.Trigger(context.Background(), "lifecycle/ideas/fail.md", TriggerAPI); err != nil {
+		t.Fatalf("Trigger: %v", err)
+	}
+
+	mgr.Stop(context.Background())
+
+	select {
+	case <-released:
+		// lock was released
+	default:
+		t.Error("lock was not released after execute failure")
 	}
 }
 

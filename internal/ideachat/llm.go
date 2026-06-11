@@ -22,9 +22,12 @@ type LLMMessage struct {
 	Content string
 }
 
-// CallLLM sends messages to the claude CLI and returns the assistant text reply.
-// The system prompt and conversation history are combined into a single -p prompt.
-func CallLLM(ctx context.Context, cfg ModelConfig, messages []LLMMessage) (string, error) {
+// CallLLM is the package-level function used to invoke the LLM. Tests can
+// replace it with a deterministic fake; production code should never reassign it.
+var CallLLM = callLLMImpl
+
+// callLLMImpl is the real production LLM caller.
+func callLLMImpl(ctx context.Context, cfg ModelConfig, messages []LLMMessage) (string, error) {
 	prompt := buildPrompt(cfg.SystemPrompt, messages)
 
 	args := []string{"--dangerously-skip-permissions", "-p", prompt}
