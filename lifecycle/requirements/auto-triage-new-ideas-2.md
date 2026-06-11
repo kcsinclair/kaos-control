@@ -1,7 +1,7 @@
 ---
 title: Auto-Triage Raw Ideas Into Drafts
 type: requirement
-status: planning
+status: done
 lineage: auto-triage-new-ideas
 parent: lifecycle/ideas/auto-triage-new-ideas.md
 labels:
