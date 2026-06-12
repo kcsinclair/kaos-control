@@ -205,7 +205,9 @@ describe('AppSidebar — Milestone 1: toggle behaviour', () => {
 // ===========================================================================
 
 describe('AppSidebar — Milestone 2: icon rendering', () => {
-  const expectedLabels = ['Dashboard', 'List', 'Board', 'Testing', 'Map', 'Roadmap', 'Agents', 'Reports', 'Queue', 'Scheduler', 'Feed', 'Parse Errors', 'Config', 'Ollama', 'Documentation']
+  // Order follows the functional sections: Activity, Content, Automation, System.
+  // (DevOps is role-gated and absent in the default test mount.)
+  const expectedLabels = ['Dashboard', 'Feed', 'Reports', 'List', 'Board', 'Map', 'Roadmap', 'Testing', 'Documentation', 'Agents', 'Queue', 'Scheduler', 'Config', 'Ollama', 'Parse Errors']
 
   it('renders an SVG icon for each nav item in expanded mode', async () => {
     const { wrapper } = await mountSidebar({ collapsed: false })
@@ -253,6 +255,30 @@ describe('AppSidebar — Milestone 2: icon rendering', () => {
     const { wrapper } = await mountSidebar({ collapsed: false })
     for (const label of expectedLabels) {
       expect(wrapper.text()).toContain(label)
+    }
+  })
+})
+
+// ===========================================================================
+// Functional section grouping (Activity / Content / Automation / System)
+// ===========================================================================
+
+describe('AppSidebar — functional section grouping', () => {
+  const expectedSections = ['Activity', 'Content', 'Automation', 'System']
+
+  it('renders the four functional section headers in order', async () => {
+    const { wrapper } = await mountSidebar({ collapsed: false })
+    const titles = wrapper.findAll('.nav-section-title').map(el => el.text())
+    expect(titles).toEqual(expectedSections)
+  })
+
+  it('section headers are not navigable (no link, not counted as nav items)', async () => {
+    const { wrapper } = await mountSidebar({ collapsed: false })
+    const sections = wrapper.findAll('.nav-section')
+    expect(sections.length).toBe(expectedSections.length)
+    for (const s of sections) {
+      expect(s.find('a').exists()).toBe(false)
+      expect(s.classes()).not.toContain('nav-item')
     }
   })
 })
@@ -327,7 +353,7 @@ describe('AppSidebar — Milestone 3: tooltip behaviour', () => {
 
   it('aria-label on nav link matches the corresponding nav item label', async () => {
     const { wrapper } = await mountSidebar({ collapsed: true })
-    const allExpectedLabels = ['Dashboard', 'List', 'Board', 'Testing', 'Map', 'Roadmap', 'Agents', 'Reports', 'Queue', 'Scheduler', 'Feed', 'Parse Errors', 'Config', 'Ollama', 'Documentation']
+    const allExpectedLabels = ['Dashboard', 'Feed', 'Reports', 'List', 'Board', 'Map', 'Roadmap', 'Testing', 'Documentation', 'Agents', 'Queue', 'Scheduler', 'Config', 'Ollama', 'Parse Errors']
     const navLinks = wrapper.findAll('.nav-link')
     // Iterate over navLinks (not a fixed-size array) so the test stays correct
     // when nav items are added or removed in future.

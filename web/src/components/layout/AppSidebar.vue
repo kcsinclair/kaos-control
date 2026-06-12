@@ -85,34 +85,66 @@ interface NavItem {
   badgeCount?: () => number
 }
 
-const navItems = computed((): NavItem[] => {
+interface NavSection {
+  title: string
+  items: NavItem[]
+}
+
+// Navigation is grouped into four functional sections. Section headers render
+// as static labels when expanded and collapse to thin dividers when the
+// sidebar is collapsed (see the .nav-section styles below).
+const navSections = computed((): NavSection[] => {
   const p = projectName()
   const roles = authStore.rolesForProject(p)
   const hasDevOpsAccess = roles.includes('product-owner') || roles.includes('devops')
-  const items: NavItem[] = [
-    { label: 'Dashboard',    to: `/p/${p}/dashboard`,       icon: LayoutDashboard },
-    { label: 'List',         to: `/p/${p}/artifacts`,       icon: List },
-    { label: 'Board',        to: `/p/${p}/artifacts/board`, icon: Columns3 },
-    { label: 'Testing',      to: `/p/${p}/testing`,         icon: FlaskConical, badgeCount: () => testingStore.approvedCount },
-    { label: 'Map',          to: `/p/${p}/map`,             icon: Network },
-    { label: 'Roadmap',      to: `/p/${p}/roadmap`,         icon: CalendarRange },
-    { label: 'Agents',       to: `/p/${p}/agents`,          icon: Bot },
-    { label: 'Reports',      to: `/p/${p}/reports`,         icon: BarChart3 },
-    // Queue is a global route (not project-scoped) but lives in the project
-    // sidebar for discoverability — it's the natural place users look when
-    // they've queued work from an artefact view.
-    { label: 'Queue',        to: `/queue`,                  icon: ListChecks },
-    { label: 'Scheduler',    to: `/p/${p}/scheduler`,       icon: CalendarClock },
-    { label: 'Feed',         to: `/p/${p}/feed`,            icon: Activity },
-    { label: 'Parse Errors', to: `/p/${p}/parse-errors`,    icon: AlertTriangle },
-    { label: 'Config',       to: `/p/${p}/config`,          icon: Settings },
-    { label: 'Ollama',       to: `/p/${p}/settings/ollama`, icon: Server },
-    { label: 'Documentation', to: `/p/${p}/docs`,           icon: BookOpen },
+
+  // System group: DevOps is role-gated, so it's inserted conditionally before
+  // Parse Errors (which stays last as the health/diagnostics entry).
+  const system: NavItem[] = [
+    { label: 'Config', to: `/p/${p}/config`,          icon: Settings },
+    { label: 'Ollama', to: `/p/${p}/settings/ollama`, icon: Server },
   ]
   if (hasDevOpsAccess) {
-    items.push({ label: 'DevOps', to: `/p/${p}/devops`, icon: Layers })
+    system.push({ label: 'DevOps', to: `/p/${p}/devops`, icon: Layers })
   }
-  return items
+  system.push({ label: 'Parse Errors', to: `/p/${p}/parse-errors`, icon: AlertTriangle })
+
+  return [
+    {
+      title: 'Activity',
+      items: [
+        { label: 'Dashboard', to: `/p/${p}/dashboard`, icon: LayoutDashboard },
+        { label: 'Feed',      to: `/p/${p}/feed`,      icon: Activity },
+        { label: 'Reports',   to: `/p/${p}/reports`,   icon: BarChart3 },
+      ],
+    },
+    {
+      title: 'Content',
+      items: [
+        { label: 'List',          to: `/p/${p}/artifacts`,       icon: List },
+        { label: 'Board',         to: `/p/${p}/artifacts/board`, icon: Columns3 },
+        { label: 'Map',           to: `/p/${p}/map`,             icon: Network },
+        { label: 'Roadmap',       to: `/p/${p}/roadmap`,         icon: CalendarRange },
+        { label: 'Testing',       to: `/p/${p}/testing`,         icon: FlaskConical, badgeCount: () => testingStore.approvedCount },
+        { label: 'Documentation', to: `/p/${p}/docs`,            icon: BookOpen },
+      ],
+    },
+    {
+      title: 'Automation',
+      items: [
+        { label: 'Agents',    to: `/p/${p}/agents`,    icon: Bot },
+        // Queue is a global route (not project-scoped) but lives in the project
+        // sidebar for discoverability — it's the natural place users look when
+        // they've queued work from an artefact view.
+        { label: 'Queue',     to: `/queue`,            icon: ListChecks },
+        { label: 'Scheduler', to: `/p/${p}/scheduler`, icon: CalendarClock },
+      ],
+    },
+    {
+      title: 'System',
+      items: system,
+    },
+  ]
 })
 
 // Hover-to-expand overlay state (does NOT change persisted sidebarCollapsed)
@@ -200,7 +232,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       </template>
     </div>
     <ul class="nav-list" role="list">
-      <li v-for="item in navItems" :key="item.label" class="nav-item">
+      <template v-for="section in navSections" :key="section.title">
+        <li class="nav-section" role="presentation">
+          <span class="nav-section-title">{{ section.title }}</span>
+        </li>
+        <li v-for="item in section.items" :key="item.label" class="nav-item">
         <SidebarTooltip :label="item.label" :disabled="isVisuallyExpanded()">
           <RouterLink
             :to="item.to"
@@ -239,7 +275,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             >{{ item.badgeCount() }}</span>
           </RouterLink>
         </SidebarTooltip>
-      </li>
+        </li>
+      </template>
     </ul>
     <!-- Git status panel -->
     <GitStatusBar :project="projectName()" :collapsed="uiStore.sidebarCollapsed && !hoverExpanded" />
@@ -277,6 +314,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   transition: width 250ms ease 100ms;
 }
 .sidebar--collapsing .nav-label,
+.sidebar--collapsing .nav-section-title,
 .sidebar--collapsing .project-label,
 .sidebar--collapsing .project-name {
   transition: opacity 100ms ease 0ms;
@@ -287,6 +325,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   transition: width 250ms ease 0ms;
 }
 .sidebar--expanding .nav-label,
+.sidebar--expanding .nav-section-title,
 .sidebar--expanding .project-label,
 .sidebar--expanding .project-name {
   transition: opacity 100ms ease 250ms;
@@ -294,6 +333,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 }
 /* Text elements default transition */
 .nav-label,
+.nav-section-title,
 .project-label,
 .project-name {
   transition: opacity 100ms ease;
@@ -353,6 +393,47 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 }
 .nav-item {
   margin-bottom: 2px;
+}
+/* ─── Functional section headers ──────────────────────────────────────────
+   Expanded: a small uppercase label introducing each group. Collapsed: the
+   text is hidden and a thin divider stands in (see .sidebar--collapsed rules),
+   so the grouping still reads at icon-only width. */
+.nav-section {
+  padding: var(--space-3) var(--space-3) var(--space-1);
+}
+.nav-section:first-child {
+  padding-top: var(--space-1);
+}
+.nav-section-title {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-sidebar-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sidebar--collapsed .nav-section {
+  padding: var(--space-2) 0;
+}
+.sidebar--collapsed .nav-section-title {
+  display: none;
+}
+.sidebar--collapsed .nav-section::after {
+  content: '';
+  display: block;
+  width: 60%;
+  height: 1px;
+  margin: 0 auto;
+  background: var(--color-border-dark);
+}
+/* No leading divider directly beneath the project header. */
+.sidebar--collapsed .nav-section:first-child {
+  padding: 0;
+}
+.sidebar--collapsed .nav-section:first-child::after {
+  display: none;
 }
 .nav-link {
   display: flex;
