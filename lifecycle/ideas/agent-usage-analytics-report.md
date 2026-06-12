@@ -1,7 +1,7 @@
 ---
 title: Agent Usage Analytics Report
 type: idea
-status: clarifying
+status: planning
 lineage: agent-usage-analytics-report
 created: "2026-06-12T15:19:52+10:00"
 priority: normal
