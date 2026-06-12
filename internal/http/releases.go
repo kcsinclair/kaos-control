@@ -118,6 +118,7 @@ func (s *Server) handleCreateRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	p.Hub.Broadcast(hub.Event{Type: "release.created", Payload: map[string]any{"release": rel}})
 	p.Hub.Broadcast(hub.Event{Type: "release.changed", Payload: map[string]any{"release": rel}})
 	writeJSON(w, http.StatusCreated, map[string]any{"release": rel})
 }
@@ -270,6 +271,11 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 		renamed = n
 	}
 
+	p.Hub.Broadcast(hub.Event{Type: "release.updated", Payload: map[string]any{
+		"release":           rel,
+		"old_name":          oldName,
+		"artifacts_renamed": renamed,
+	}})
 	p.Hub.Broadcast(hub.Event{Type: "release.changed", Payload: map[string]any{
 		"release":           rel,
 		"old_name":          oldName,
