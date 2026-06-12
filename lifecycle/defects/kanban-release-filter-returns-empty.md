@@ -1,14 +1,15 @@
 ---
-title: "Kanban filter by release returns 0 artifacts when matching artifacts exist"
+title: Kanban filter by release returns 0 artifacts when matching artifacts exist
 type: defect
-status: approved
+status: in-development
 lineage: kanban-release-filter-returns-empty
 created: "2026-06-12T00:00:00+10:00"
 labels:
-  - defect
+    - defect
+release: KC-Release3
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # Kanban filter by release returns 0 artifacts when matching artifacts exist
