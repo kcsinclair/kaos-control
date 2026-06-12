@@ -11,6 +11,7 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kaos-control/kaos-control/internal/config"
@@ -20,6 +21,12 @@ import (
 	"github.com/kaos-control/kaos-control/internal/lock"
 	"github.com/kaos-control/kaos-control/internal/workflow"
 )
+
+// failureCooldown is how long a failed run's relPath stays in the in-flight map
+// after the goroutine completes. During this window the entry acts as a zombie:
+// any new Trigger call coalesces onto the already-finished run instead of
+// starting a fresh attempt, enforcing the no-retry-on-failure policy.
+const failureCooldown = 5 * time.Second
 
 // TriggerSource identifies what initiated a triage run.
 type TriggerSource string
@@ -100,9 +107,10 @@ type Manager struct {
 	opts Options
 
 	mu       sync.Mutex
-	inFlight map[string]string // relPath → runID
-	sem      chan struct{}      // concurrency cap (size = opts.MaxConcurrent)
-	wg       sync.WaitGroup    // tracks in-flight goroutines
+	inFlight map[string]string       // relPath → runID (active or zombie after failure)
+	cooling  map[string]*time.Timer  // relPath → timer that clears the zombie inFlight entry
+	sem      chan struct{}            // concurrency cap (size = opts.MaxConcurrent)
+	wg       sync.WaitGroup          // tracks in-flight goroutines
 }
 
 // New creates a Manager. Callers must call Stop when done to release resources.
@@ -112,6 +120,7 @@ func New(deps Deps, opts Options) *Manager {
 		deps:     deps,
 		opts:     o,
 		inFlight: make(map[string]string),
+		cooling:  make(map[string]*time.Timer),
 		sem:      make(chan struct{}, o.MaxConcurrent),
 	}
 }
@@ -182,11 +191,25 @@ func (m *Manager) Trigger(ctx context.Context, relPath string, trigger TriggerSo
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()
+		var runErr error
 		defer func() {
 			<-m.sem
 			_ = m.deps.Locks.Release(lineage)
 			m.mu.Lock()
-			delete(m.inFlight, relPath)
+			if runErr != nil {
+				// Failed run: keep the inFlight entry as a zombie for failureCooldown.
+				// Any Trigger call during this window coalesces onto the already-finished
+				// run instead of starting a new attempt (no-retry policy).
+				timer := time.AfterFunc(failureCooldown, func() {
+					m.mu.Lock()
+					delete(m.inFlight, relPath)
+					delete(m.cooling, relPath)
+					m.mu.Unlock()
+				})
+				m.cooling[relPath] = timer
+			} else {
+				delete(m.inFlight, relPath)
+			}
 			m.mu.Unlock()
 		}()
 		// Recover from panics so the deferred cleanup above always runs.
@@ -202,17 +225,17 @@ func (m *Manager) Trigger(ctx context.Context, relPath string, trigger TriggerSo
 		}()
 
 		if m.opts.executeHook != nil {
-			_ = m.opts.executeHook(ctx, runID, relPath, lineage, trigger)
+			runErr = m.opts.executeHook(ctx, runID, relPath, lineage, trigger)
 		} else {
-			_ = m.execute(ctx, runID, relPath, lineage, trigger)
+			runErr = m.execute(ctx, runID, relPath, lineage, trigger)
 		}
 	}()
 
 	return runID, nil
 }
 
-// Stop waits for all in-flight triage runs to complete.
-// It returns when all goroutines have exited or ctx is cancelled.
+// Stop waits for all in-flight triage runs to complete, then cancels any pending
+// failure-cooldown timers. It returns when all goroutines have exited or ctx is cancelled.
 func (m *Manager) Stop(ctx context.Context) {
 	done := make(chan struct{})
 	go func() {
@@ -223,6 +246,14 @@ func (m *Manager) Stop(ctx context.Context) {
 	case <-done:
 	case <-ctx.Done():
 	}
+	// Cancel pending failure-cooldown timers and purge zombie in-flight entries.
+	m.mu.Lock()
+	for _, timer := range m.cooling {
+		timer.Stop()
+	}
+	m.inFlight = make(map[string]string)
+	m.cooling = make(map[string]*time.Timer)
+	m.mu.Unlock()
 }
 
 // isLockConflict reports whether err indicates a lineage is already locked.
