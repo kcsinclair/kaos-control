@@ -1,7 +1,7 @@
 ---
 title: "VERSION file contains pre-release suffix (0.1.3a) violating bare semver requirement"
 type: defect
-status: approved
+status: in-development
 lineage: version-file-pre-release-suffix
 created: "2026-06-12T00:00:00+10:00"
 labels:
