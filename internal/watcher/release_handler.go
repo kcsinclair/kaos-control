@@ -41,7 +41,17 @@ func NewReleaseHandler(store ReleaseStore, projectID string, expected *release.E
 // absPath is the absolute path to the changed release markdown file.
 func (rh *ReleaseHandler) Handle(absPath string) {
 	// Suppress events triggered by our own API writes.
-	if rh.expected.Consume(absPath) {
+	// sandbox.Resolve (used by DiskSync.Expect) resolves symlinks, so on macOS
+	// /tmp → /private/tmp. fsnotify reports events with the raw watched path, so
+	// we must normalise here to get a matching key.
+	consumePath := absPath
+	if resolved, err := filepath.EvalSymlinks(absPath); err == nil {
+		consumePath = resolved
+	} else if resolvedDir, err2 := filepath.EvalSymlinks(filepath.Dir(absPath)); err2 == nil {
+		// File no longer exists (delete event): resolve just the parent.
+		consumePath = filepath.Join(resolvedDir, filepath.Base(absPath))
+	}
+	if rh.expected.Consume(consumePath) {
 		return
 	}
 
