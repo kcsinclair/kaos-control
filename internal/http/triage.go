@@ -54,8 +54,10 @@ func (s *Server) handleTriageIdea(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Look up the idea artifact for this slug under lifecycle/ideas/.
-	rows, _, err := p.Idx.List(index.Filter{Lineage: slug, Type: "idea", Unlimited: true})
+	// Look up any artifact for this slug. We do not filter by type here so that
+	// a slug that exists with the wrong type reaches the triage manager's
+	// eligible() check and returns a 409 wrong_type instead of a 404.
+	rows, _, err := p.Idx.List(index.Filter{Lineage: slug, Unlimited: true})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
