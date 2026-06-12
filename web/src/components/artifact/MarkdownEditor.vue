@@ -7,9 +7,9 @@ import { keymap } from '@codemirror/view'
 import { markdown } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { defaultKeymap } from '@codemirror/commands'
-import { Compartment } from '@codemirror/state'
+import { Compartment, EditorState } from '@codemirror/state'
 
-const props = defineProps<{ modelValue: string }>()
+const props = defineProps<{ modelValue: string; readonly?: boolean }>()
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   save: []
@@ -20,6 +20,7 @@ let view: EditorView | null = null
 let ignoreNextUpdate = false
 
 const wrapCompartment = new Compartment()
+const readonlyCompartment = new Compartment()
 const wrapLines = ref(localStorage.getItem('kaos-editor-wrap') !== 'false')
 
 onMounted(() => {
@@ -31,6 +32,7 @@ onMounted(() => {
       markdown(),
       oneDark,
       wrapCompartment.of(wrapLines.value ? EditorView.lineWrapping : []),
+      readonlyCompartment.of(EditorState.readOnly.of(props.readonly ?? false)),
       keymap.of([
         ...defaultKeymap,
         { key: 'Mod-s', run: () => { emit('save'); return true } },
@@ -44,6 +46,15 @@ onMounted(() => {
     parent: container.value,
   })
 })
+
+watch(
+  () => props.readonly,
+  (val) => {
+    view?.dispatch({
+      effects: readonlyCompartment.reconfigure(EditorState.readOnly.of(val ?? false)),
+    })
+  },
+)
 
 onUnmounted(() => {
   view?.destroy()
