@@ -81,8 +81,9 @@ func (s *Server) handleListArtifacts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"items": items,
-		"total": total,
+		"items":     items,
+		"artifacts": items,
+		"total":     total,
 	})
 }
 
