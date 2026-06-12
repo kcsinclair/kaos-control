@@ -260,6 +260,9 @@ func (s *Server) buildRouter() chi.Router {
 			r.Get("/agents/runs/{run_id}/result", s.handleGetAgentRunResult)
 			r.Post("/agents/runs/{run_id}/kill", s.handleKillAgentRun)
 
+			// Reports
+			r.Get("/reports/agent-usage", s.handleGetAgentUsageReport)
+
 			// Locks
 			r.Get("/locks", s.handleListLocks)
 			r.Post("/locks", s.handleAcquireLock)
