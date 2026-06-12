@@ -1,14 +1,15 @@
 ---
-title: "Triage retries a failed run when no-retry policy is expected"
+title: Triage retries a failed run when no-retry policy is expected
 type: defect
-status: draft
+status: in-development
 lineage: triage-no-retry-policy-violated
 created: "2026-06-12T00:00:00+10:00"
 labels:
-  - defect
+    - defect
+release: KC-Release3
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # Triage retries a failed run when no-retry policy is expected
