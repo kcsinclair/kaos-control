@@ -1,14 +1,15 @@
 ---
-title: "Successful Claude agent runs reported FAILED (false truncated_stream)"
+title: Successful Claude agent runs reported FAILED (false truncated_stream)
 type: defect
-status: approved
+status: in-development
 lineage: agent-truncated-stream-detection
 created: "2026-06-05T00:00:00+10:00"
 labels:
-  - defect
+    - defect
+release: KC-Release3
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 ## Reproduction Steps
