@@ -1,7 +1,7 @@
 ---
 title: Detect Claude Code rate_limit_event for Precise Quota Signalling
 type: idea
-status: blocked
+status: draft
 lineage: rate-limit-event-detection
 priority: medium
 labels:
@@ -176,23 +176,44 @@ This degrades cleanly — older Claude versions that don't emit
 Step 1 + 2 are about an hour of work and prove the event is reaching
 us in the shape we expect before any further behaviour change.
 
-## Open Questions
+## Resolved Questions
 
-- Should `agent.quota_status` be project-scoped or app-global? An
-  operator running agents across several projects probably wants one
-  global indicator, not per-project ones.
-- What's the debounce window? Per-minute feels right but depends on
-  how often Claude actually emits these.
-- When should we proactively *pause* the queue based on Mode 1
-  signals (vs. only Mode 2 hard denials)? E.g. if
-  `overageStatus=rejected` and `resetsAt` is < 5 minutes away,
-  should we hold the next job rather than starting it and watching
-  it die? Or always let it try?
-- Should the precise-reset path (Mode 2) replace `ParseResetTime`
-  entirely, or remain a parallel optimisation? Removing the regex
-  would simplify the code, but would also drop support for any old
-  Claude versions that emit Format 3 without prior
-  `rate_limit_event` context.
-- Is there a similar event for the **weekly** bucket we should
-  capture separately, or is `rateLimitType: "weekly"` already
-  carried in the same shape?
+Resolved 2026-06-12 by reviewing the current code; four of five are settled
+by the architecture, one (proactive pause) is a deferred product decision.
+
+- **Project-scoped or app-global?** **Project-scoped.** There is one hub per
+  project ([internal/project/project.go](../../internal/project/project.go),
+  `hub.New()` per Project) and no app-global hub — emitting globally would
+  require new cross-project infrastructure. Note the nuance: the quota is
+  per-Claude-account / per-machine, *not* per-project (all projects on the box
+  share one subscription/credit pool). So the model is "global truth, observed
+  through whichever project is running": emit on the project hub (matches every
+  other event), and if a global indicator is wanted, let the frontend treat the
+  latest `quota_status` from *any* project as the account-wide state. Do not
+  build a global hub for this.
+- **Debounce window?** Debounce on **content-change, not on a timer.**
+  `resetsAt` / `status` / `bucket` are constant between bucket boundaries, so
+  broadcast only when `(status, bucket, resetsAt, overageStatus)` differs from
+  the last one sent for that run. Near-zero churn *and* no dropped transitions
+  (a 60 s window could swallow a boundary crossing). A per-minute floor is fine
+  as a cheap secondary guard, but change-detection is the primary mechanism.
+- **Proactively pause on Mode-1 signals?** **No — not in the first cut.**
+  `status:"allowed"` means Claude would accept the call; refusing to start it
+  trades certain throughput for an uncertain avoided failure. The Mode-2 denial
+  path already re-enqueues at the head and pauses until reset
+  ([handleRateLimit](../../internal/queue/dispatcher.go)), so a job that dies at
+  `resetsAt` is delayed one attempt, not lost. Ship Mode 1 as pure
+  observability; revisit a conservative gate (e.g. `overageStatus=rejected` AND
+  `resetsAt < 2min`) only if logs later show runs dying expensively near the
+  boundary.
+- **Mode 2 replace `ParseResetTime` entirely?** **No — keep both,
+  prefer-precise-when-present.** `rate_limit_event` is Claude-Code- and
+  version-specific; older binaries and any sidecar / Ollama driver won't emit
+  it. [ParseResetTime](../../internal/queue/parser.go) is the universal fallback
+  for the text-only case and must stay.
+- **Separate event for the weekly bucket?** **No — same shape, discriminated by
+  `rateLimitType`.** In the captured payloads `rateLimitType` is a field inside
+  `rate_limit_info` (`"five_hour"`); weekly arrives as `rateLimitType: "weekly"`
+  in the identical structure. `extractRateLimitInfo` returning `bucket` from
+  that field covers it — no second code path. Parse defensively (unknown value
+  → `bucket:"unknown"`).
