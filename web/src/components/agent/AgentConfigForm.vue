@@ -273,6 +273,7 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
         autocomplete="off"
       />
       <p v-if="errors.model" class="acf-error">{{ errors.model }}</p>
+      <p class="acf-hint">Requires <code>GEMINI_API_KEY</code> to be set in the server environment.</p>
     </div>
 
     <!-- Ollama instance + model -->
