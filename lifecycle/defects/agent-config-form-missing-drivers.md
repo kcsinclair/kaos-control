@@ -1,7 +1,7 @@
 ---
 title: AgentConfigForm.vue is missing claude-mediated, gemini, and gemini-cli driver options
 type: defect
-status: draft
+status: approved
 lineage: agent-config-form-missing-drivers
 created: "2026-05-22T18:30:00+10:00"
 labels:
@@ -11,7 +11,7 @@ labels:
 release: KC-Release3
 assignees:
     - role: frontend-developer
-      who: human
+      who: agent
 ---
 
 # AgentConfigForm.vue is missing claude-mediated, gemini, and gemini-cli driver options
