@@ -113,6 +113,16 @@ const router = createRouter({
           component: () => import('@/views/project/TestingBoardView.vue'),
         },
         {
+          path: 'docs',
+          name: 'docs',
+          component: () => import('@/views/project/DocsView.vue'),
+        },
+        {
+          path: 'docs/:pathMatch(.*)+',
+          name: 'docs-editor',
+          component: () => import('@/views/project/DocsEditorView.vue'),
+        },
+        {
           path: 'devops',
           name: 'devops',
           component: () => import('@/views/project/DevOpsView.vue'),

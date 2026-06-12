@@ -29,6 +29,7 @@ import {
   FlaskConical,
   ListChecks,
   BarChart3,
+  BookOpen,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
@@ -106,6 +107,7 @@ const navItems = computed((): NavItem[] => {
     { label: 'Parse Errors', to: `/p/${p}/parse-errors`,    icon: AlertTriangle },
     { label: 'Config',       to: `/p/${p}/config`,          icon: Settings },
     { label: 'Ollama',       to: `/p/${p}/settings/ollama`, icon: Server },
+    { label: 'Documentation', to: `/p/${p}/docs`,           icon: BookOpen },
   ]
   if (hasDevOpsAccess) {
     items.push({ label: 'DevOps', to: `/p/${p}/devops`, icon: Layers })
