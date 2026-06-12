@@ -58,7 +58,13 @@ func (m *Manager) execute(ctx context.Context, runID, relPath, lineage string, t
 	if err != nil {
 		return fmt.Errorf("sandbox resolve: %w", err)
 	}
-	ideasAbsDir := filepath.Join(m.deps.ProjectRoot, "lifecycle", "ideas")
+	// EvalSymlinks matches what sandbox.Resolve does internally, so the prefix
+	// check works on macOS where /var/folders is a symlink to /private/var/folders.
+	resolvedRoot, err := filepath.EvalSymlinks(m.deps.ProjectRoot)
+	if err != nil {
+		resolvedRoot = filepath.Clean(m.deps.ProjectRoot)
+	}
+	ideasAbsDir := filepath.Join(resolvedRoot, "lifecycle", "ideas")
 	if !strings.HasPrefix(absPath, ideasAbsDir+string(filepath.Separator)) {
 		return fmt.Errorf("path %q is outside lifecycle/ideas/", relPath)
 	}
