@@ -431,6 +431,11 @@ func (idx *Index) IndexFile(absPath string) error {
 
 	a := artifact.Parse(raw, relPath, info.ModTime())
 
+	if a.NoFrontmatter {
+		slog.Info("skipping file — no frontmatter detected", "path", relPath)
+		return nil
+	}
+
 	// SHA-256 guard (Milestone 4): if the stored hash matches the incoming
 	// content, the file has not meaningfully changed — skip Upsert and
 	// applyOpenQuestionTransition to prevent circular re-index loops caused
