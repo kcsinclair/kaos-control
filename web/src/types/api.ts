@@ -305,6 +305,7 @@ export interface PermissionDecision {
 
 export type WsEventType =
   | 'file.changed'
+  | 'doc.changed'
   | 'artifact.indexed'
   | 'git.committed'
   | 'git.status'
