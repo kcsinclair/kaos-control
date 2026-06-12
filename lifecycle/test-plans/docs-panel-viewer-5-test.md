@@ -1,15 +1,18 @@
 ---
-title: "Test Plan — Documentation Panel Viewer"
+title: Test Plan — Documentation Panel Viewer
 type: plan-test
-status: in-development
+status: blocked
 lineage: docs-panel-viewer
-parent: lifecycle/requirements/docs-panel-viewer-2.md
 created: "2026-06-12T00:00:00+10:00"
 priority: normal
+parent: lifecycle/requirements/docs-panel-viewer-2.md
 labels:
     - test
     - feature
 release: KC-Release3
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Test Plan — Documentation Panel Viewer
@@ -205,3 +208,28 @@ Manual smoke checklist:
 3. `make test-integration` clean (Milestones 1–4 new files included).
 4. `pnpm test` in `web/` clean (Milestone 5).
 5. Manual smoke checklist (Milestone 6) executed by the QA agent — every item ticked before status transitions to `done`.
+
+---
+
+## Open Questions
+
+### Q1: Should `qa@test.local` receive 403 or 200 on `PUT /api/p/{project}/docs/*path`?
+
+**Blocking test:** `TestDocsPut_ReadOnlyRoleForbidden` (Milestone 2, `docs_write_test.go`).
+
+**The contradiction:** The test plan specifies that logging in as `qa@test.local` and issuing a `PUT` to `/api/p/{project}/docs/alpha.md` should return `403 apiError("forbidden", ...)`. However, the current backend implementation at `internal/http/docs.go:142` uses `requireRole(w, r, p, RolesArtifactEditors...)` for the `handlePutDoc` handler, and `RolesArtifactEditors` is defined as:
+
+```go
+RolesArtifactEditors = []string{RoleProductOwner, RoleAnalyst, RoleBackendDeveloper,
+    RoleFrontendDeveloper, RoleTestDeveloper, RoleQA}
+```
+
+`RoleQA = "qa"` is included. The project config in the test environment gives `qa@test.local` the `[qa]` role. Therefore, the backend currently returns **200 (allowed)** for QA on this endpoint — the test as written would fail.
+
+**Two possible resolutions:**
+
+1. **QA should NOT be able to edit docs** → change `handlePutDoc` to use `RolesArtifactAuthors` (which excludes QA) instead of `RolesArtifactEditors`. This aligns with the manual smoke checklist item ("Logging in as `qa@test.local` and opening a doc renders the editor in read-only mode"), which implies QA is read-only for docs. A test developer cannot make this backend change; it requires a backend-developer or product-owner decision.
+
+2. **The test plan is wrong** → QA can legitimately edit docs (consistent with `RolesArtifactEditors`). In that case, `TestDocsPut_ReadOnlyRoleForbidden` should be rewritten to use a user with no project roles at all (e.g. a freshly created user with no role assignments), and the expected status code should be 403 for "unauthenticated or zero-role user".
+
+**Action needed:** Product owner to decide which interpretation is correct and either (a) update the backend role check, or (b) update this test plan to reflect what the implementation actually does. Implementation of all Milestone 2 write tests is blocked until this is resolved.
