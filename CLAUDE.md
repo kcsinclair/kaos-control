@@ -28,6 +28,7 @@ kaos-control/
 │   ├── index/               SQLite cache (modernc.org/sqlite, pure Go)
 │   ├── lock/                lineage lock manager (heartbeat + reaper)
 │   ├── project/             per-project runtime container
+│   ├── reports/             analytics aggregation (agent usage report)
 │   ├── sandbox/             path-traversal-safe filesystem resolver
 │   ├── watcher/             fsnotify → incremental re-index
 │   └── workflow/            transition state machine + plan gating
