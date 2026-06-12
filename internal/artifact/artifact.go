@@ -63,9 +63,10 @@ type Artifact struct {
 	// from git history or filesystem mtime. The on-disk file is never modified
 	// during backfill.
 	CreatedAt   time.Time
-	SHA256      [32]byte
-	Raw         []byte      // full file content; not stored in index
-	ParseErrs   []string    // non-fatal validation messages
+	SHA256        [32]byte
+	Raw           []byte   // full file content; not stored in index
+	ParseErrs     []string // non-fatal validation messages
+	NoFrontmatter bool     // true when the file has no YAML frontmatter fence
 }
 
 // Frontmatter holds the structured YAML header fields.
@@ -121,6 +122,15 @@ func Parse(raw []byte, relPath string, mtime time.Time) *Artifact {
 		Mtime:       mtime,
 		SHA256:      sum,
 		Raw:         raw,
+	}
+
+	// Files without a frontmatter fence are not lifecycle artifacts — skip
+	// validation entirely so callers can distinguish "no frontmatter" from
+	// "malformed frontmatter" and log at the appropriate severity.
+	if !bytes.HasPrefix(raw, []byte("---")) {
+		a.NoFrontmatter = true
+		a.Body = strings.TrimSpace(string(raw))
+		return a
 	}
 
 	ctx := parser.NewContext()
