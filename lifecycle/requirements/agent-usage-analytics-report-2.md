@@ -1,7 +1,7 @@
 ---
 title: Agent Usage Analytics Report
 type: requirement
-status: approved
+status: planning
 lineage: agent-usage-analytics-report
 priority: normal
 parent: lifecycle/ideas/agent-usage-analytics-report.md
@@ -62,44 +62,48 @@ Operators have no aggregated view of how the agent fleet is performing. Today, `
   - `agent` — repeated string; filters to runs whose `agent_name` matches one of the values. Omitted = all agents.
   - `status` — repeated string from `{done, failed, killed, killed-timeout, running}`; default = all terminal statuses (`running` excluded by default).
   - `bucket` — one of `hour`, `day`, `week`; default `day`.
-- Run metadata (counts, durations, status, agent name, started_at, finished_at) is sourced from the `agent_runs` SQLite table.
+- Run metadata (counts, durations, status, agent name, model, started_at, finished_at, ttft_ms) is sourced from the `agent_runs` SQLite table.
 - Token and cost data is parsed from each run's log file via `agent.ParseResultLine` (the same helper used by `GET /agents/runs/{run_id}/result`). Runs whose log file is missing, unparseable, or produced by a driver that does not emit `type:result` contribute `null` for token/cost fields and are counted in a `metrics_unavailable_count` field.
+- `ttft_ms` (time to first token) must be recorded on the `agent_runs` table at the moment the first streamed content token arrives from the driver. Runs that complete without streaming (batch mode) record `null`.
 - See OQ-1 for the open architectural question on aggregation strategy (on-the-fly log parsing vs. persisted result columns on `agent_runs`).
 
 #### FR-3: Summary aggregates
 
 The `summary` block of the response includes:
 
-- `overall`: `run_count`, `success_count`, `failure_count` (failed + killed + killed-timeout), `metrics_unavailable_count`, `total_cost_usd`, `total_duration_ms`, `total_input_tokens`, `total_cache_creation_tokens`, `total_cache_read_tokens`, `total_output_tokens`, `mean_duration_ms`, `median_duration_ms`, `p95_duration_ms`, `mean_cost_usd`, `mean_tokens_per_minute` (computed as `(input + cache_creation + cache_read + output) / (duration_ms / 60000)` averaged over runs with metrics).
-- `per_agent`: an array of objects, one per `agent_name` present in the filtered set, each with the same fields as `overall` plus the `agent_name` key.
+- `overall`: `run_count`, `success_count`, `failure_count` (failed + killed + killed-timeout), `metrics_unavailable_count`, `total_cost_usd`, `total_input_cost_usd`, `total_output_cost_usd`, `total_duration_ms`, `total_input_tokens`, `total_cache_creation_tokens`, `total_cache_read_tokens`, `total_output_tokens`, `mean_duration_ms`, `median_duration_ms`, `p95_duration_ms`, `mean_cost_usd`, `mean_output_tokens_per_second` (primary speed indicator; computed as `output_tokens / (duration_ms / 1000)` averaged over runs with metrics), `mean_ttft_ms` (mean time to first token over runs where it was recorded), `p95_ttft_ms`, `cache_hit_ratio` (computed as `cache_read_tokens / (input_tokens + cache_creation_tokens + cache_read_tokens)` averaged over runs with metrics).
+- `per_model`: an array of objects, one per `model` value (e.g. `claude-opus-4-8`, `claude-sonnet-4-6`) present in the filtered set, each with the same fields as `overall` plus the `model` key. This is the primary grouping dimension for performance trending, as output tokens/sec and TTFT are model-specific characteristics.
+- `per_agent`: an array of objects, one per `agent_name` (e.g. `requirements-analyst`) present in the filtered set, each with the same fields as `overall` plus the `agent_name` key.
 
 #### FR-4: Trend series
 
 The `series` block of the response includes one entry per time bucket within `[from, to]`:
 
 - `bucket_start` — RFC3339 timestamp at the start of the bucket.
-- `run_count`, `success_count`, `failure_count`, `mean_duration_ms`, `mean_cost_usd`, `mean_tokens_per_minute`.
+- `run_count`, `success_count`, `failure_count`, `mean_duration_ms`, `mean_cost_usd`, `mean_output_tokens_per_second`, `mean_ttft_ms`, `cache_hit_ratio`.
 - Buckets with zero runs are included with zero values (so charts render a continuous x-axis).
-- When `agent` filter contains multiple values, the response also includes `series_by_agent`: a map of `agent_name → [{bucket_start, run_count, mean_duration_ms, mean_cost_usd}, …]` so the frontend can render multi-series charts without re-aggregating.
+- The response always includes `series_by_model`: a map of `model → [{bucket_start, run_count, mean_duration_ms, mean_cost_usd, mean_output_tokens_per_second, mean_ttft_ms}, …]` so the frontend can render per-model trend lines — the primary way to detect a regression in a specific model.
+- When the `agent` filter is active, the response also includes `series_by_agent`: a map of `agent_name → [{bucket_start, run_count, mean_duration_ms, mean_cost_usd}, …]`.
 
 #### FR-5: Reports dashboard page
 
 - Route `/p/:project/reports` renders a new `ReportsView.vue` page.
 - Top of page: filter bar with controls for agent (multi-select), date range (preset shortcuts: Last 24h, Last 7d, Last 30d, Last 90d, Custom), status (multi-select), and bucket size.
-- Below the filter bar, a row of summary tiles showing: total runs, success rate %, total cost, total tokens, mean duration, mean tokens/minute.
+- Below the filter bar, a row of summary tiles showing: total runs, success rate %, total cost, mean output tokens/sec, mean TTFT, cache hit ratio.
 - Charts (in this order, each with a clear title and unit on the y-axis):
   1. **Runs over time** — stacked bar (success / failure) per bucket.
-  2. **Mean run duration over time** — line, one series per selected agent (or one aggregate line when no agent filter).
-  3. **Cost per run over time** — line, same series rules as duration.
-  4. **Cost vs. duration scatter** — one point per run in the filtered window; colour-coded by agent; hover reveals run id, started_at, agent, cost, duration. Linked: clicking a point navigates to the run detail.
-- Below the charts: a sortable summary table with one row per agent (the `per_agent` array from FR-3). Columns: agent, runs, success %, total cost, mean cost/run, mean duration, mean tokens/minute, metrics unavailable.
+  2. **Output tokens/sec over time** — line, one series per model (from `series_by_model`); this is the primary signal for detecting backend slowdowns.
+  3. **Time to first token (TTFT) over time** — line, one series per model; captures queuing and cold-start regressions independently from generation speed.
+  4. **Cost per run over time** — line, one series per model, showing `mean_cost_usd` per bucket.
+  5. **Cost vs. duration scatter** — one point per run in the filtered window; colour-coded by model; hover reveals run id, started_at, agent, model, cost, duration, output tokens/sec. Linked: clicking a point navigates to the run detail.
+- Below the charts: a sortable summary table with one row per model (the `per_model` array from FR-3). Columns: model, runs, success %, total cost, mean cost/run, input cost, output cost, mean output tokens/sec, mean TTFT, cache hit ratio, metrics unavailable.
 - An "Export CSV" button downloads the summary table as CSV.
 - Empty state: when there are zero runs in the filtered window, charts and table render an empty-state message ("No agent runs in this window") rather than blank canvases.
 
 #### FR-6: Charting library
 
 - Reuse the existing UI dependencies where practical. Three.js and Cytoscape are not appropriate for 2D analytics charts.
-- Add a lightweight charting library — recommendation: **Chart.js** (small bundle, well-supported, native dark/light theming via CSS vars). The implementation plan should confirm and pin a version. (See OQ-2.)
+- Use **Apache ECharts**, which is already bundled in the project (see OQ-2 resolution). The implementation plan should confirm the pinned version already in `package.json`.
 
 ### Non-functional
 
@@ -127,7 +131,7 @@ The `series` block of the response includes one entry per time bucket within `[f
 
 #### NFR-5: Testability
 
-- Backend: unit tests for the aggregation function with fixture runs covering — all-success, mixed status, runs with no result line, runs from a non-Claude driver, empty window, multi-agent.
+- Backend: unit tests for the aggregation function with fixture runs covering — all-success, mixed status, runs with no result line, runs from a non-Claude driver (no TTFT, no tokens), empty window, multi-agent, multi-model (e.g. opus + sonnet in same window).
 - Backend: an integration test (under `tests/`, see CLAUDE.md for the test harness) hits `GET /reports/agent-usage` with realistic data and asserts the response shape and key aggregates.
 - Frontend: component test for `ReportsView.vue` rendering with a mocked response (covering empty state, single agent, multi-agent, error response).
 
@@ -137,7 +141,7 @@ The `series` block of the response includes one entry per time bucket within `[f
 - [ ] `GET /api/p/:project/reports/agent-usage` returns a `summary` and `series` payload conforming to FR-3 and FR-4 for a project with mixed-status historical runs.
 - [ ] Filter query parameters (`from`, `to`, `agent`, `status`, `bucket`) correctly restrict the aggregated result; an unfiltered request returns the last 30 days of data with `bucket=day`.
 - [ ] Runs without a parseable `type:result` line (e.g. Ollama, missing log file) contribute to `run_count` and `metrics_unavailable_count` but do not pollute cost/token aggregates with `NaN` or zeros.
-- [ ] The dashboard renders six summary tiles, four charts, and the per-agent summary table populated from the response.
+- [ ] The dashboard renders six summary tiles, five charts, and the per-model summary table populated from the response.
 - [ ] Changing the agent, date range, status, or bucket filter re-fetches and re-renders within 2 seconds for a 10,000-run dataset.
 - [ ] The scatter chart links each point to the corresponding run detail view (see [[agent-run-summary-panel]]).
 - [ ] The "Export CSV" button downloads a CSV whose rows match the on-screen summary table.
