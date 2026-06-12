@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Agent Usage Analytics Report'
 type: plan-test
-status: in-development
+status: done
 lineage: agent-usage-analytics-report
 parent: lifecycle/requirements/agent-usage-analytics-report-2.md
 release: KC-Release3
