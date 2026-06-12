@@ -1,7 +1,7 @@
 ---
 title: Agent Usage Analytics Report
 type: idea
-status: approved
+status: clarifying
 lineage: agent-usage-analytics-report
 created: "2026-06-12T15:19:52+10:00"
 priority: normal
@@ -11,6 +11,7 @@ labels:
     - observability
     - feature
     - frontend
+release: KC-Release3
 ---
 
 # Agent Usage Analytics Report
