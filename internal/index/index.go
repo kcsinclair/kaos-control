@@ -1187,6 +1187,64 @@ func (idx *Index) RecoverRunningRuns() error {
 	return err
 }
 
+// AgentRunMetrics holds the parsed cost/token fields from a type:result line.
+// Model is included so UpdateAgentRunMetrics can prefer the result's model value
+// over the requested model when they differ (e.g. after fallbacks).
+type AgentRunMetrics struct {
+	Model               string
+	TotalCostUSD        float64
+	DurationApiMs       int64
+	NumTurns            int
+	InputTokens         int64
+	CacheCreationTokens int64
+	CacheReadTokens     int64
+	OutputTokens        int64
+}
+
+// UpdateAgentRunMetrics persists the parsed result metrics and sets
+// metrics_available=1. If m.Model is non-empty it also updates the model
+// column (type:result reflects the actual model used after any fallbacks).
+func (idx *Index) UpdateAgentRunMetrics(runID string, m AgentRunMetrics) error {
+	if m.Model != "" {
+		_, err := idx.db.Exec(
+			`UPDATE agent_runs
+			 SET model=?, total_cost_usd=?, duration_api_ms=?, num_turns=?,
+			     input_tokens=?, cache_creation_tokens=?, cache_read_tokens=?,
+			     output_tokens=?, metrics_available=1
+			 WHERE run_id=?`,
+			m.Model, m.TotalCostUSD, m.DurationApiMs, m.NumTurns,
+			m.InputTokens, m.CacheCreationTokens, m.CacheReadTokens,
+			m.OutputTokens, runID,
+		)
+		return err
+	}
+	_, err := idx.db.Exec(
+		`UPDATE agent_runs
+		 SET total_cost_usd=?, duration_api_ms=?, num_turns=?,
+		     input_tokens=?, cache_creation_tokens=?, cache_read_tokens=?,
+		     output_tokens=?, metrics_available=1
+		 WHERE run_id=?`,
+		m.TotalCostUSD, m.DurationApiMs, m.NumTurns,
+		m.InputTokens, m.CacheCreationTokens, m.CacheReadTokens,
+		m.OutputTokens, runID,
+	)
+	return err
+}
+
+// SetAgentRunModel stamps the model name on the run record. Called immediately
+// after InsertAgentRun so the model is visible before the run finishes.
+func (idx *Index) SetAgentRunModel(runID string, model string) error {
+	_, err := idx.db.Exec(`UPDATE agent_runs SET model=? WHERE run_id=?`, model, runID)
+	return err
+}
+
+// SetAgentRunTTFT records the time-to-first-token in milliseconds. Called by
+// the driver when the first streamed content token arrives.
+func (idx *Index) SetAgentRunTTFT(runID string, ttftMs int64) error {
+	_, err := idx.db.Exec(`UPDATE agent_runs SET ttft_ms=? WHERE run_id=?`, ttftMs, runID)
+	return err
+}
+
 func scanAgentRun(row *sql.Row) (*AgentRunRow, error) {
 	var r AgentRunRow
 	var startedAt int64

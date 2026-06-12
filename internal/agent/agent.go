@@ -585,6 +585,13 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		return "", fmt.Errorf("inserting run record: %w", err)
 	}
 
+	// Stamp the requested model immediately so it is visible before the run finishes.
+	if run.Model != "" {
+		if err := m.idx.SetAgentRunModel(runID, run.Model); err != nil {
+			slog.Warn("agent: stamping model on run record", "run_id", runID, "err", err)
+		}
+	}
+
 	// If configured, mark the target artifact as active before launching.
 	if ag.ActiveStatus != "" && targetPath != "" {
 		// For test artifacts transitioning to in-qa, validate via the workflow
@@ -960,14 +967,27 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		feedEventType = "agent_failed"
 	}
 
-	// Attempt to parse the run result from the log and include it in the
-	// broadcast payload. Parsing errors are non-fatal — the broadcast proceeds
-	// with result: null (expected for Ollama runs or logs without a result line).
+	// Attempt to parse the run result from the log. Persist metrics into the
+	// run record and include the result in the broadcast payload.
+	// Parsing errors are non-fatal — the broadcast proceeds with result: null
+	// (expected for Ollama runs or logs without a result line).
 	var runResult any
 	if run.LogPath != "" {
 		if logData, readErr := os.ReadFile(run.LogPath); readErr == nil {
 			if parsed, parseErr := ParseResultLine(string(logData)); parseErr == nil {
 				runResult = parsed
+				metrics := index.AgentRunMetrics{
+					TotalCostUSD:        parsed.TotalCostUSD,
+					DurationApiMs:       parsed.DurationApiMs,
+					NumTurns:            int(parsed.NumTurns),
+					InputTokens:         parsed.Usage.InputTokens,
+					CacheCreationTokens: parsed.Usage.CacheCreationInputTokens,
+					CacheReadTokens:     parsed.Usage.CacheReadInputTokens,
+					OutputTokens:        parsed.Usage.OutputTokens,
+				}
+				if err := m.idx.UpdateAgentRunMetrics(run.RunID, metrics); err != nil {
+					slog.Warn("agent: persisting run metrics", "run_id", run.RunID, "err", err)
+				}
 			}
 		}
 	}
