@@ -1,7 +1,7 @@
 ---
 title: Release WebSocket events (created/updated) not broadcast; API write emits spurious watcher event
 type: defect
-status: in-development
+status: done
 lineage: release-websocket-events-not-broadcast
 created: "2026-06-12T00:00:00+10:00"
 labels:

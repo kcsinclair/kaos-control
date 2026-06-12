@@ -8,7 +8,7 @@ labels:
     - architecture
     - artefacts
     - enhancement
-release: KC-Release3
+release: KC-Release4
 ---
 
 # Architectural Artefacts

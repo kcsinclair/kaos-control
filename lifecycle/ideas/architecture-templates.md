@@ -9,7 +9,7 @@ labels:
     - architecture
     - feature
     - onboarding
-release: KC-Release3
+release: KC-Release4
 ---
 
 # Architecture Templates for Project Bootstrapping

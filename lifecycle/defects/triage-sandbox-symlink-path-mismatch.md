@@ -1,7 +1,7 @@
 ---
 title: 'Triage execute fails: sandbox resolves symlinks but ideasAbsDir uses raw ProjectRoot'
 type: defect
-status: in-development
+status: done
 lineage: triage-sandbox-symlink-path-mismatch
 created: "2026-06-12T00:00:00+10:00"
 labels:

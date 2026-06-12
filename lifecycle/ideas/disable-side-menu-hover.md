@@ -1,19 +1,15 @@
 ---
-title: disable-side-menu-hover
+title: disable side menu hover over display
 type: idea
 status: draft
 lineage: disable-side-menu-hover
 priority: normal
 labels:
-    - frontend
-    - ux
-    - enhancement
+  - frontend
+  - ux
+  - enhancement
 ---
-
 ## Raw Idea
-
-## Raw Idea
-
 
 disable side menu hover over display
 

@@ -1,7 +1,7 @@
 ---
 title: Parsing errors should treat missing frontmatter as informational, not an error
 type: defect
-status: in-development
+status: done
 lineage: parsing-no-frontmatter-should-be-informational
 created: "2026-06-11T11:06:00+10:00"
 priority: normal

@@ -9,7 +9,7 @@ labels:
     - releases
     - persistence
     - portability
-release: KC-Release4
+release: KC-Release3
 assignees:
     - role: product-owner
       who: agent

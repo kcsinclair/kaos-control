@@ -1,7 +1,7 @@
 ---
 title: 'Triage in-flight coalescing broken: rapid duplicate calls create separate runs'
 type: defect
-status: in-development
+status: done
 lineage: triage-coalesce-duplicate-runs
 created: "2026-06-12T00:00:00+10:00"
 labels:

@@ -1,14 +1,15 @@
 ---
-title: "VERSION file contains pre-release suffix (0.1.3a) violating bare semver requirement"
+title: VERSION file contains pre-release suffix (0.1.3a) violating bare semver requirement
 type: defect
-status: in-development
+status: done
 lineage: version-file-pre-release-suffix
 created: "2026-06-12T00:00:00+10:00"
 labels:
-  - defect
+    - defect
+release: KC-Release3
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # VERSION file contains pre-release suffix (0.1.3a) violating bare semver requirement

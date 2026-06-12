@@ -10,6 +10,7 @@ labels:
     - artifacts
     - agent-runner
     - workflow
+release: KC-Release3
 ---
 
 # Child Artifacts Not Linked After Agent Run

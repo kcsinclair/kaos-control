@@ -1,7 +1,7 @@
 ---
 title: Triage retries a failed run when no-retry policy is expected
 type: defect
-status: in-development
+status: done
 lineage: triage-no-retry-policy-violated
 created: "2026-06-12T00:00:00+10:00"
 labels:
