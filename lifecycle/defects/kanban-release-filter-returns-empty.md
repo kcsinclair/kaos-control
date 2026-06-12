@@ -1,7 +1,7 @@
 ---
 title: "Kanban filter by release returns 0 artifacts when matching artifacts exist"
 type: defect
-status: draft
+status: approved
 lineage: kanban-release-filter-returns-empty
 created: "2026-06-12T00:00:00+10:00"
 labels:
