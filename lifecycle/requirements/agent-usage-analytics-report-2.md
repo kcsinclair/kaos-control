@@ -1,7 +1,7 @@
 ---
 title: Agent Usage Analytics Report
 type: requirement
-status: blocked
+status: approved
 lineage: agent-usage-analytics-report
 priority: normal
 parent: lifecycle/ideas/agent-usage-analytics-report.md
@@ -145,10 +145,24 @@ The `series` block of the response includes one entry per time bucket within `[f
 - [ ] Unit, integration, and frontend tests covering the cases listed under NFR-5 pass via `make test-unit` and the integration test target.
 - [ ] Backend and frontend implementation plans ([[agent-usage-analytics-report]] be/fe stages) exist and gate `planning → in-development` per project config.
 
-## Open Questions
+## Resolved Questions
 
 - **OQ-1 (architecture):** Should token/cost aggregates be computed by parsing each run's log file on every request, or by persisting `total_cost_usd`, `duration_api_ms`, `input_tokens`, `cache_creation_tokens`, `cache_read_tokens`, `output_tokens` columns on the `agent_runs` table at run finish? Persistence is faster at query time but requires a schema migration and a backfill routine for historical runs. The implementation plan should pick one approach and justify it under the NFR-1 budget.
+
+> Every time a job finishes all the required data should be cached into the database.  If there are items missing, we can run a one off migration/update script to reprocess the log files and add in the missing data.
+
 - **OQ-2 (charting library):** Confirm Chart.js as the dependency choice, or propose an alternative. The frontend already ships three.js (3D graph) and Cytoscape (2D graph) — neither is suitable for analytics charts. A separate library is required.
+
+> Apache ECharts already being used.
+
 - **OQ-3 (per-agent vs. per-role grouping):** Should the dashboard group by `agent_name` (e.g. `requirements-analyst`) or by `role` (e.g. `analyst`)? `role` collapses multiple agents into one series, which may be more useful at the fleet level. v1 ships per-agent grouping; per-role can be added later if useful.
+
+> broken down by the agent being used, e.g. opus or sonnet.
+
 - **OQ-4 (timezone handling):** Bucket boundaries are calendar-relative (a "day" bucket starts at midnight). Should boundaries use UTC, or the server's local timezone, or the browser's timezone? Default proposal: UTC for the API; the frontend formats bucket labels in the browser timezone for display.
+
+> Browser timezone.
+
 - **OQ-5 (CSV export scope):** Should "Export CSV" emit the per-agent summary only (current proposal), the time-series, or the raw run list? Per-agent summary is sufficient for v1 reporting; if operators want raw run export, that becomes a separate feature.
+
+> current proposal is good for v1
