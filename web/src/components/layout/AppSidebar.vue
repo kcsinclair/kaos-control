@@ -28,6 +28,7 @@ import {
   Server,
   FlaskConical,
   ListChecks,
+  BarChart3,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
@@ -95,6 +96,7 @@ const navItems = computed((): NavItem[] => {
     { label: 'Map',          to: `/p/${p}/map`,             icon: Network },
     { label: 'Roadmap',      to: `/p/${p}/roadmap`,         icon: CalendarRange },
     { label: 'Agents',       to: `/p/${p}/agents`,          icon: Bot },
+    { label: 'Reports',      to: `/p/${p}/reports`,         icon: BarChart3 },
     // Queue is a global route (not project-scoped) but lives in the project
     // sidebar for discoverability — it's the natural place users look when
     // they've queued work from an artefact view.

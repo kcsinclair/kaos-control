@@ -103,6 +103,11 @@ const router = createRouter({
           component: () => import('@/views/project/OllamaSettingsView.vue'),
         },
         {
+          path: 'reports',
+          name: 'reports',
+          component: () => import('@/views/project/ReportsView.vue'),
+        },
+        {
           path: 'testing',
           name: 'testing',
           component: () => import('@/views/project/TestingBoardView.vue'),
