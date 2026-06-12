@@ -1,7 +1,7 @@
 ---
 title: Documentation Panel Viewer
 type: requirement
-status: blocked
+status: approved
 lineage: docs-panel-viewer
 created: "2026-05-16T00:00:00+10:00"
 priority: normal
@@ -88,12 +88,32 @@ Project-level reference documentation lives in the `docs/` folder at the reposit
 - [ ] Editor honours existing project write-permission rules — read-only users see a read-only editor (see [[auth-role-checks-mutations]]).
 - [ ] Live updates piggy-back on the existing fsnotify + WebSocket pipeline (see [[editor-live-refresh-on-disk-change]]).
 
-## Open Questions
+## Resolved Questions
 
 - Should subdirectories under `docs/` be reflected in the UI (e.g. grouped sections, breadcrumbs) or remain flat as proposed? If grouped, what grouping signal — top-level folder name, frontmatter `category:`, or alphabetical letter buckets?
+
+> Yes, show subdirectories in alphabetical order for now.
+
 - Are non-markdown files in `docs/` (e.g. `.pdf`, `.png`, `.txt`) to be ignored entirely, listed but unopenable, or opened in a different viewer? v1 currently ignores them.
+
+> If other files exist in the directory, provide a link to open them for now.
+
 - Should the "Documentation" nav entry be visible to all roles, or hidden from roles that don't need it (e.g. limited to those who can read project files)?
+
+> All roles
+
 - Where exactly in the left nav should "Documentation" sit — above "Artifacts", below it, or grouped with settings/help items?
+
+> Added to bottom for now, going to restructure left menu later.
+
 - Is creating a new doc from the UI a v1.1 follow-up, or should we leave doc creation out-of-band entirely (filesystem only)?
+
+> out-of-band doc creation.
+
 - Should documents be added to the activity feed when edited via the SPA, or remain silent (since they are not lifecycle artifacts)?
+
+> make no changes to current handling of docs in the activity feed
+
 - Does the summary extraction need to strip markdown syntax (links, emphasis, inline code) before truncation, or is the raw first-paragraph text acceptable?
+
+> raw first paragraph works for now.
