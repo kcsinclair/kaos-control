@@ -94,6 +94,10 @@ type Run struct {
 	OllamaInstanceName string // resolved from AgentConfig.OllamaInstanceName
 	OllamaEndpoint     string // "chat" or "generate"
 	ShellCommand       string // shell-stub driver: command to run (empty = default stub behavior)
+	// OnTTFT, when non-nil, is called once with the wall-clock milliseconds
+	// between process start and the first streamed content token. Set by the
+	// Manager for streaming drivers; nil for batch-mode drivers.
+	OnTTFT func(ms int64)
 }
 
 // Process is a handle to a running agent.
@@ -239,6 +243,9 @@ func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []strin
 	waitErr := make(chan error, 1)
 	p := &cliProcess{cmd: cmd, progress: progressCh, stderr: rb, logFile: logFile, waitErr: waitErr}
 
+	// runStart is captured here (after cmd.Start succeeds) for TTFT measurement.
+	runStart := time.Now()
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -248,6 +255,7 @@ func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []strin
 		sc := bufio.NewScanner(stdout)
 		// stream-json events can be larger than the default 64 KiB buffer.
 		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+		var firstTokenSeen bool
 		for sc.Scan() {
 			line := sc.Text()
 			if logFile != nil {
@@ -257,6 +265,13 @@ func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []strin
 			var parsed map[string]any
 			if err := json.Unmarshal([]byte(line), &parsed); err == nil {
 				ev.Event = parsed
+				// Record TTFT on the first assistant event with text content.
+				if !firstTokenSeen && run.OnTTFT != nil {
+					if isFirstContentToken(parsed) {
+						firstTokenSeen = true
+						run.OnTTFT(time.Since(runStart).Milliseconds())
+					}
+				}
 			}
 			progressCh <- ev
 		}
@@ -560,7 +575,19 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		RelatedTestPath:    relatedTestPath,
 		OllamaInstanceName: ag.OllamaInstanceName,
 		OllamaEndpoint:     ag.OllamaEndpoint,
-		ShellCommand:       ag.ShellCommand,
+		ShellCommand: ag.ShellCommand,
+	}
+
+	// Wire TTFT recording for streaming drivers. The callback is called from
+	// the stdout goroutine; errors are logged but never abort the run.
+	if driverEmitsResultEvent(ag.Driver) {
+		runIDCopy := runID
+		idx := m.idx
+		run.OnTTFT = func(ms int64) {
+			if err := idx.SetAgentRunTTFT(runIDCopy, ms); err != nil {
+				slog.Warn("agent: recording ttft_ms", "run_id", runIDCopy, "err", err)
+			}
+		}
 	}
 
 	// Acquire lineage lock.
@@ -1560,6 +1587,34 @@ func isResultEvent(payload map[string]any) bool {
 	}
 	t, _ := ev["type"].(string)
 	return t == "result"
+}
+
+// isFirstContentToken reports whether a decoded stream-json event represents
+// the first streamed content token from the assistant. The Claude stream-json
+// protocol emits {"type":"assistant","message":{"content":[{"type":"text","text":"..."}]}};
+// we match any assistant event that carries a non-empty text block.
+func isFirstContentToken(ev map[string]any) bool {
+	t, _ := ev["type"].(string)
+	if t != "assistant" {
+		return false
+	}
+	msg, _ := ev["message"].(map[string]any)
+	if msg == nil {
+		return false
+	}
+	content, _ := msg["content"].([]any)
+	for _, block := range content {
+		b, _ := block.(map[string]any)
+		if b == nil {
+			continue
+		}
+		if btype, _ := b["type"].(string); btype == "text" {
+			if text, _ := b["text"].(string); text != "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // extractMessageText attempts to read a human-readable string from
