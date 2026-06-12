@@ -1,7 +1,7 @@
 ---
 title: Triage API returns 404 (not_found) for non-idea artifact instead of 409 (wrong_type)
 type: defect
-status: approved
+status: in-development
 lineage: triage-wrong-type-returns-404
 created: "2026-06-12T00:00:00+10:00"
 labels:
