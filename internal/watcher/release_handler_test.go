@@ -113,8 +113,17 @@ func TestReleaseHandler_APIOriginated_NoWSEvent(t *testing.T) {
 	ch := make(chan []byte, 16)
 	h.Register(ch)
 
-	// Mark this path as API-originated.
-	expected.Expect(absPath)
+	// Mark this path as API-originated. In production DiskSync.Expect records
+	// the symlink-resolved path (via sandbox.Resolve), and Handle resolves the
+	// fsnotify path the same way before Consume — so the keys match. Mirror that
+	// here by resolving before Expect; otherwise on macOS the temp dir's
+	// /var → /private/var symlink makes the keys diverge and the event is not
+	// suppressed.
+	resolvedPath := absPath
+	if r, err := filepath.EvalSymlinks(absPath); err == nil {
+		resolvedPath = r
+	}
+	expected.Expect(resolvedPath)
 
 	rh := NewReleaseHandler(store, "proj", expected, h)
 	rh.Handle(absPath)

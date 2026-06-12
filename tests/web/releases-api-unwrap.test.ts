@@ -51,6 +51,8 @@ const sample: Release = {
   status: 'planned',
   start_date: null,
   end_date: null,
+  file_path: '',
+  slug: '',
 } as Release
 
 describe('releases API client unwraps the envelope', () => {
