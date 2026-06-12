@@ -1,14 +1,15 @@
 ---
-title: "Triage API returns 404 (not_found) for non-idea artifact instead of 409 (wrong_type)"
+title: Triage API returns 404 (not_found) for non-idea artifact instead of 409 (wrong_type)
 type: defect
-status: draft
+status: approved
 lineage: triage-wrong-type-returns-404
 created: "2026-06-12T00:00:00+10:00"
 labels:
-  - defect
+    - defect
+release: KC-Release3
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # Triage API returns 404 (not_found) for non-idea artifact instead of 409 (wrong_type)
