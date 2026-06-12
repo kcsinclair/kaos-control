@@ -250,6 +250,11 @@ func (s *Server) buildRouter() chi.Router {
 				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
 			})
 
+			// Docs panel
+			r.Get("/docs", s.handleListDocs)
+			r.Get("/docs/*", s.handleGetDoc)
+			r.Put("/docs/*", s.handlePutDoc)
+
 			// Agents
 			r.Get("/agents", s.handleListAgents)
 			r.Get("/agents/ready-counts", s.handleGetReadyCounts)
