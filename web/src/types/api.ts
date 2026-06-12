@@ -398,3 +398,60 @@ export interface RunResult {
   permission_denials: unknown[]
   session_id: string
 }
+
+export interface AgentUsageBucketPoint {
+  bucket_start: string
+  run_count: number
+  success_count: number
+  failure_count: number
+  mean_duration_ms: number | null
+  mean_cost_usd: number | null
+  mean_output_tokens_per_second: number | null
+  mean_ttft_ms: number | null
+  cache_hit_ratio: number | null
+}
+
+export interface AgentUsageGroupSummary {
+  run_count: number
+  success_count: number
+  failure_count: number
+  metrics_unavailable_count: number
+  total_cost_usd: number
+  total_input_cost_usd: number
+  total_output_cost_usd: number
+  total_duration_ms: number
+  total_input_tokens: number
+  total_cache_creation_tokens: number
+  total_cache_read_tokens: number
+  total_output_tokens: number
+  mean_duration_ms: number | null
+  median_duration_ms: number | null
+  p95_duration_ms: number | null
+  mean_cost_usd: number | null
+  mean_output_tokens_per_second: number | null
+  mean_ttft_ms: number | null
+  p95_ttft_ms: number | null
+  cache_hit_ratio: number | null
+}
+
+export interface AgentUsageSummary {
+  overall: AgentUsageGroupSummary
+  per_model: (AgentUsageGroupSummary & { model: string })[]
+  per_agent: (AgentUsageGroupSummary & { agent_name: string })[]
+}
+
+export interface AgentUsageReport {
+  summary: AgentUsageSummary
+  series: AgentUsageBucketPoint[]
+  series_by_model: Record<string, AgentUsageBucketPoint[]>
+  series_by_agent?: Record<string, AgentUsageBucketPoint[]>
+}
+
+export interface AgentUsageFilter {
+  from?: string
+  to?: string
+  agent?: string[]
+  status?: string[]
+  bucket?: 'hour' | 'day' | 'week'
+  tz?: string
+}
