@@ -83,9 +83,11 @@ type Frontmatter struct {
 	Blocks    []string   `yaml:"blocks,omitempty"    json:"blocks,omitempty"`
 	Related   []string   `yaml:"related_to,omitempty" json:"related_to,omitempty"`
 	Members   []string   `yaml:"members,omitempty"   json:"members,omitempty"`
-	Release   string     `yaml:"release,omitempty"   json:"release,omitempty"`
-	Sprint    string     `yaml:"sprint,omitempty"    json:"sprint,omitempty"`
-	Assignees []Assignee `yaml:"assignees,omitempty" json:"assignees,omitempty"`
+	Release     string     `yaml:"release,omitempty"      json:"release,omitempty"`
+	Sprint      string     `yaml:"sprint,omitempty"       json:"sprint,omitempty"`
+	Assignees   []Assignee `yaml:"assignees,omitempty"    json:"assignees,omitempty"`
+	Summary     string     `yaml:"summary,omitempty"      json:"summary,omitempty"`
+	Description string     `yaml:"description,omitempty"  json:"description,omitempty"`
 }
 
 // Assignee is a role/who binding from the assignees field.
