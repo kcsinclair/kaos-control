@@ -163,6 +163,14 @@ func (m *Manager) Trigger(ctx context.Context, relPath string, trigger TriggerSo
 	if _, lockErr := m.deps.Locks.Acquire(lineage, runID, "agent"); lockErr != nil {
 		<-m.sem
 		if isLockConflict(lockErr) {
+			// The lock may be held by an in-flight triage run for this same
+			// path. If so, coalesce onto that run rather than returning an error.
+			m.mu.Lock()
+			existingID, ok := m.inFlight[relPath]
+			m.mu.Unlock()
+			if ok {
+				return existingID, nil
+			}
 			return "", ErrLocked
 		}
 		return "", lockErr
