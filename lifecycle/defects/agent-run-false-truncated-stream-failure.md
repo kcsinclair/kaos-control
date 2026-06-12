@@ -1,7 +1,7 @@
 ---
 title: "Successful Claude agent runs reported FAILED (false truncated_stream)"
 type: defect
-status: draft
+status: approved
 lineage: agent-truncated-stream-detection
 created: "2026-06-05T00:00:00+10:00"
 labels:
