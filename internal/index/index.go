@@ -1054,6 +1054,21 @@ type AgentRunRow struct {
 	// DeniedToolCalls holds any tool calls that were denied by the permission
 	// policy during a claude-mediated run (FR21). Empty for other drivers.
 	DeniedToolCalls []map[string]any `json:"denied_tool_calls,omitempty"`
+
+	// Analytics metrics — populated on run finish when the driver emits a
+	// type:result line. All nullable so legacy rows remain valid.
+	Model               *string  `json:"model,omitempty"`
+	TotalCostUSD        *float64 `json:"total_cost_usd,omitempty"`
+	DurationApiMs       *int64   `json:"duration_api_ms,omitempty"`
+	NumTurns            *int64   `json:"num_turns,omitempty"`
+	InputTokens         *int64   `json:"input_tokens,omitempty"`
+	CacheCreationTokens *int64   `json:"cache_creation_tokens,omitempty"`
+	CacheReadTokens     *int64   `json:"cache_read_tokens,omitempty"`
+	OutputTokens        *int64   `json:"output_tokens,omitempty"`
+	TtftMs              *int64   `json:"ttft_ms,omitempty"`
+	// MetricsAvailable is 1 when a parsed type:result line populated the
+	// cost/token columns; 0 otherwise (Ollama, missing log, etc.).
+	MetricsAvailable int `json:"metrics_available"`
 }
 
 // LockRow is a record in the lineage_locks table.
@@ -1098,7 +1113,8 @@ func (idx *Index) UpdateAgentRun(r *AgentRunRow) error {
 // GetAgentRun retrieves a single run by ID, or nil if not found.
 func (idx *Index) GetAgentRun(runID string) (*AgentRunRow, error) {
 	row := idx.db.QueryRow(
-		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]')
+		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]'),
+		        model, total_cost_usd, duration_api_ms, num_turns, input_tokens, cache_creation_tokens, cache_read_tokens, output_tokens, ttft_ms, COALESCE(metrics_available, 0)
 		 FROM agent_runs WHERE run_id = ?`, runID,
 	)
 	return scanAgentRun(row)
@@ -1107,7 +1123,8 @@ func (idx *Index) GetAgentRun(runID string) (*AgentRunRow, error) {
 // ListAgentRuns returns runs optionally filtered by status, newest first.
 // When limit <= 0 all matching runs are returned (no server-side truncation).
 func (idx *Index) ListAgentRuns(status string, limit int) ([]*AgentRunRow, error) {
-	const sel = `SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]')
+	const sel = `SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]'),
+			        model, total_cost_usd, duration_api_ms, num_turns, input_tokens, cache_creation_tokens, cache_read_tokens, output_tokens, ttft_ms, COALESCE(metrics_available, 0)
 			 FROM agent_runs`
 	var rows *sql.Rows
 	var err error
@@ -1142,7 +1159,8 @@ func (idx *Index) ListAgentRuns(status string, limit int) ([]*AgentRunRow, error
 // ListAgentRunsByTargetPath returns all runs whose target_path matches the given path, newest first.
 func (idx *Index) ListAgentRunsByTargetPath(targetPath string) ([]*AgentRunRow, error) {
 	rows, err := idx.db.Query(
-		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]')
+		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]'),
+		        model, total_cost_usd, duration_api_ms, num_turns, input_tokens, cache_creation_tokens, cache_read_tokens, output_tokens, ttft_ms, COALESCE(metrics_available, 0)
 		 FROM agent_runs WHERE target_path = ? ORDER BY started_at DESC`, targetPath,
 	)
 	if err != nil {
@@ -1176,10 +1194,22 @@ func scanAgentRun(row *sql.Row) (*AgentRunRow, error) {
 	var exitCode sql.NullInt64
 	var producedJSON string
 	var deniedJSON string
+	var model sql.NullString
+	var totalCostUSD sql.NullFloat64
+	var durationApiMs sql.NullInt64
+	var numTurns sql.NullInt64
+	var inputTokens sql.NullInt64
+	var cacheCreationTokens sql.NullInt64
+	var cacheReadTokens sql.NullInt64
+	var outputTokens sql.NullInt64
+	var ttftMs sql.NullInt64
 	err := row.Scan(
 		&r.RunID, &r.AgentName, &r.Role, &r.TargetPath,
 		&startedAt, &finishedAt, &r.Status, &exitCode,
 		&r.StderrTail, &producedJSON, &deniedJSON,
+		&model, &totalCostUSD, &durationApiMs, &numTurns,
+		&inputTokens, &cacheCreationTokens, &cacheReadTokens, &outputTokens,
+		&ttftMs, &r.MetricsAvailable,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -1198,6 +1228,33 @@ func scanAgentRun(row *sql.Row) (*AgentRunRow, error) {
 	}
 	_ = json.Unmarshal([]byte(producedJSON), &r.ArtifactsProduced)
 	_ = json.Unmarshal([]byte(deniedJSON), &r.DeniedToolCalls)
+	if model.Valid {
+		r.Model = &model.String
+	}
+	if totalCostUSD.Valid {
+		r.TotalCostUSD = &totalCostUSD.Float64
+	}
+	if durationApiMs.Valid {
+		r.DurationApiMs = &durationApiMs.Int64
+	}
+	if numTurns.Valid {
+		r.NumTurns = &numTurns.Int64
+	}
+	if inputTokens.Valid {
+		r.InputTokens = &inputTokens.Int64
+	}
+	if cacheCreationTokens.Valid {
+		r.CacheCreationTokens = &cacheCreationTokens.Int64
+	}
+	if cacheReadTokens.Valid {
+		r.CacheReadTokens = &cacheReadTokens.Int64
+	}
+	if outputTokens.Valid {
+		r.OutputTokens = &outputTokens.Int64
+	}
+	if ttftMs.Valid {
+		r.TtftMs = &ttftMs.Int64
+	}
 	return &r, nil
 }
 
@@ -1208,10 +1265,22 @@ func scanAgentRunRow(rows *sql.Rows) (*AgentRunRow, error) {
 	var exitCode sql.NullInt64
 	var producedJSON string
 	var deniedJSON string
+	var model sql.NullString
+	var totalCostUSD sql.NullFloat64
+	var durationApiMs sql.NullInt64
+	var numTurns sql.NullInt64
+	var inputTokens sql.NullInt64
+	var cacheCreationTokens sql.NullInt64
+	var cacheReadTokens sql.NullInt64
+	var outputTokens sql.NullInt64
+	var ttftMs sql.NullInt64
 	err := rows.Scan(
 		&r.RunID, &r.AgentName, &r.Role, &r.TargetPath,
 		&startedAt, &finishedAt, &r.Status, &exitCode,
 		&r.StderrTail, &producedJSON, &deniedJSON,
+		&model, &totalCostUSD, &durationApiMs, &numTurns,
+		&inputTokens, &cacheCreationTokens, &cacheReadTokens, &outputTokens,
+		&ttftMs, &r.MetricsAvailable,
 	)
 	if err != nil {
 		return nil, err
@@ -1227,6 +1296,33 @@ func scanAgentRunRow(rows *sql.Rows) (*AgentRunRow, error) {
 	}
 	_ = json.Unmarshal([]byte(producedJSON), &r.ArtifactsProduced)
 	_ = json.Unmarshal([]byte(deniedJSON), &r.DeniedToolCalls)
+	if model.Valid {
+		r.Model = &model.String
+	}
+	if totalCostUSD.Valid {
+		r.TotalCostUSD = &totalCostUSD.Float64
+	}
+	if durationApiMs.Valid {
+		r.DurationApiMs = &durationApiMs.Int64
+	}
+	if numTurns.Valid {
+		r.NumTurns = &numTurns.Int64
+	}
+	if inputTokens.Valid {
+		r.InputTokens = &inputTokens.Int64
+	}
+	if cacheCreationTokens.Valid {
+		r.CacheCreationTokens = &cacheCreationTokens.Int64
+	}
+	if cacheReadTokens.Valid {
+		r.CacheReadTokens = &cacheReadTokens.Int64
+	}
+	if outputTokens.Valid {
+		r.OutputTokens = &outputTokens.Int64
+	}
+	if ttftMs.Valid {
+		r.TtftMs = &ttftMs.Int64
+	}
 	return &r, nil
 }
 
@@ -1409,8 +1505,22 @@ func (idx *Index) ensureAgentRunsTable() error {
 	if _, err = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_target_path ON agent_runs(target_path)`); err != nil {
 		return err
 	}
-	// Migration: add denied_tool_calls_json column if not present (no-op if exists).
+	// Migrations: idempotent ALTER TABLE additions. The SQLite driver returns
+	// "duplicate column name" when the column already exists; discard silently.
 	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN denied_tool_calls_json TEXT`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN model TEXT`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN total_cost_usd REAL`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN duration_api_ms INTEGER`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN num_turns INTEGER`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN input_tokens INTEGER`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN cache_creation_tokens INTEGER`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN cache_read_tokens INTEGER`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN output_tokens INTEGER`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN ttft_ms INTEGER`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN metrics_available INTEGER NOT NULL DEFAULT 0`)
+	// Covering indexes for the report's primary filter dimensions.
+	_, _ = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_started_at ON agent_runs(started_at)`)
+	_, _ = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_agent_name ON agent_runs(agent_name)`)
 	return nil
 }
 
