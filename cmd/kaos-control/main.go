@@ -39,6 +39,8 @@ Commands:
   hook-helper        PreToolUse hook helper (called by Claude Code)
   backfill-created   Add created: frontmatter to legacy artefacts using
                      filesystem birth time
+  backfill           One-off data backfill utilities
+                       backfill agent-run-metrics --project <id>
 
 Flags:
   --version, -V      Print version, copyright, and licence
@@ -72,6 +74,12 @@ func main() {
 			return
 		case "backfill-created":
 			if err := backfillcmd.Run(os.Args[2:]); err != nil {
+				fmt.Fprintln(os.Stderr, "error:", err)
+				os.Exit(1)
+			}
+			return
+		case "backfill":
+			if err := runBackfill(os.Args[2:]); err != nil {
 				fmt.Fprintln(os.Stderr, "error:", err)
 				os.Exit(1)
 			}
