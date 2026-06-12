@@ -1,7 +1,7 @@
 ---
 title: Agent Usage Analytics Report
 type: requirement
-status: planning
+status: done
 lineage: agent-usage-analytics-report
 priority: normal
 parent: lifecycle/ideas/agent-usage-analytics-report.md
