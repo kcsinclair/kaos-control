@@ -1,14 +1,15 @@
 ---
-title: "Triage execute fails: sandbox resolves symlinks but ideasAbsDir uses raw ProjectRoot"
+title: 'Triage execute fails: sandbox resolves symlinks but ideasAbsDir uses raw ProjectRoot'
 type: defect
-status: draft
+status: approved
 lineage: triage-sandbox-symlink-path-mismatch
 created: "2026-06-12T00:00:00+10:00"
 labels:
-  - defect
+    - defect
+release: KC-Release3
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # Triage execute fails: sandbox resolves symlinks but ideasAbsDir uses raw ProjectRoot
