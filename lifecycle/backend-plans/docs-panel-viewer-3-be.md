@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Documentation Panel Viewer"
 type: plan-backend
-status: approved
+status: in-development
 lineage: docs-panel-viewer
 parent: lifecycle/requirements/docs-panel-viewer-2.md
 created: "2026-06-12T00:00:00+10:00"
