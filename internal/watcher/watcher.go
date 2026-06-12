@@ -5,6 +5,7 @@ package watcher
 
 import (
 	"context"
+	"errors"
 	"io/fs"
 	"log/slog"
 	"path/filepath"
@@ -22,6 +23,7 @@ import (
 type Watcher struct {
 	fsw          *fsnotify.Watcher
 	lifecycleDir string
+	docsDir      string
 	projectRoot  string
 	idx          *index.Index
 	hub          *hub.Hub
@@ -51,6 +53,7 @@ func New(projectRoot string, idx *index.Index, h *hub.Hub, ignore ...string) (*W
 	return &Watcher{
 		fsw:          fsw,
 		lifecycleDir: filepath.Join(projectRoot, "lifecycle"),
+		docsDir:      filepath.Join(projectRoot, "docs"),
 		projectRoot:  projectRoot,
 		idx:          idx,
 		hub:          h,
@@ -87,6 +90,11 @@ func (w *Watcher) SetReleaseCallback(fn func(absPath string)) {
 func (w *Watcher) Start(ctx context.Context) error {
 	if err := w.addDirRecursive(w.lifecycleDir); err != nil {
 		return err
+	}
+
+	// Watch docs/ as well; a missing directory is non-fatal (project may not have one).
+	if err := w.addDirRecursive(w.docsDir); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		slog.Info("watcher: docs dir not watched", "dir", w.docsDir, "err", err)
 	}
 
 	// Watch individual .git files so we detect external branch checkouts and
@@ -147,6 +155,15 @@ func (w *Watcher) Start(ctx context.Context) error {
 			// Git-state files: debounce and call the git status callback.
 			if w.gitStatusFn != nil && (evt.Name == gitHEAD || evt.Name == gitIndex) {
 				fire(evt.Name, w.gitStatusFn)
+				continue
+			}
+			// Docs files: emit doc.changed without touching the index.
+			if w.isDocsFile(evt.Name) {
+				path := evt.Name
+				fire(evt.Name, func() { w.handleDocChange(path) })
+				if evt.Has(fsnotify.Create) {
+					_ = w.fsw.Add(evt.Name)
+				}
 				continue
 			}
 			if w.shouldProcess(evt.Name) {
@@ -274,4 +291,37 @@ func (w *Watcher) shouldProcess(path string) bool {
 		}
 	}
 	return !config.ShouldIgnore(path, w.ignore)
+}
+
+// isDocsFile reports whether absPath is under the project's docs/ directory.
+func (w *Watcher) isDocsFile(path string) bool {
+	return strings.HasPrefix(path, w.docsDir+string(filepath.Separator)) ||
+		path == w.docsDir
+}
+
+// handleDocChange broadcasts a doc.changed event for a file under docs/.
+// It does not consult the index or the lifecycle ignore rules.
+func (w *Watcher) handleDocChange(absPath string) {
+	resolvedRoot, err := filepath.EvalSymlinks(w.docsDir)
+	if err != nil {
+		resolvedRoot = filepath.Clean(w.docsDir)
+	}
+	resolvedFile, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		resolvedFile = filepath.Clean(absPath)
+		resolvedRoot = filepath.Clean(w.docsDir)
+	}
+	relPath, err := filepath.Rel(resolvedRoot, resolvedFile)
+	if err != nil {
+		return
+	}
+	relPath = filepath.ToSlash(relPath)
+	if relPath == ".." || strings.HasPrefix(relPath, "../") || filepath.IsAbs(relPath) {
+		return
+	}
+
+	w.hub.Broadcast(hub.Event{
+		Type:    "doc.changed",
+		Payload: map[string]string{"path": relPath},
+	})
 }
