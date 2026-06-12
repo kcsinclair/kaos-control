@@ -11,6 +11,9 @@ labels:
     - artifacts
     - reliability
 release: KC-Release3
+assignees:
+    - role: backend-developer
+      who: agent
 ---
 
 # Parsing errors should treat missing frontmatter as informational, not an error
