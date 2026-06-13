@@ -1,7 +1,7 @@
 ---
 title: Release Artifacts Incorrectly Shown in Kanban View
 type: defect
-status: draft
+status: approved
 lineage: kanban-hides-release-artifacts
 created: "2026-06-12T16:05:32+10:00"
 priority: normal
