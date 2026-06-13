@@ -1,7 +1,7 @@
 ---
 title: "Tests: 'raw' artefact status"
 type: test
-status: approved
+status: in-qa
 lineage: raw-artefact-status
 parent: lifecycle/test-plans/raw-artefact-status-5-test.md
 ---
