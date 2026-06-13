@@ -44,6 +44,7 @@ const notFound = ref(false)
 const saving = ref(false)
 
 const isImage = computed(() => !!mime.value && mime.value.startsWith('image/'))
+const isHtml = computed(() => mime.value === 'text/html')
 const imageSrc = computed(() =>
   bodyBase64.value && mime.value ? `data:${mime.value};base64,${bodyBase64.value}` : '',
 )
@@ -175,6 +176,16 @@ function rawDownloadUrl(): string {
       <a :href="rawDownloadUrl()" class="btn-action" download>Download</a>
     </div>
 
+    <!-- HTML rendering -->
+    <div v-else-if="!isMarkdown && isHtml" class="html-panel">
+      <iframe
+        :srcdoc="body"
+        class="doc-iframe"
+        sandbox="allow-same-origin"
+        title="HTML document preview"
+      />
+    </div>
+
     <!-- Non-markdown fallback -->
     <div v-else-if="!isMarkdown" class="non-markdown-panel">
       <p class="non-markdown-name">{{ relPath }}</p>
@@ -301,6 +312,20 @@ function rawDownloadUrl(): string {
   max-width: 100%;
   border-radius: var(--radius-md);
   margin-bottom: var(--space-4);
+}
+
+.html-panel {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #fff;
 }
 
 .btn-action {
