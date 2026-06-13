@@ -1,7 +1,7 @@
 ---
 title: Integration tests fail to compile due to duplicate helper declarations
 type: defect
-status: draft
+status: approved
 lineage: agent-usage-analytics-report
 parent: lifecycle/tests/agent-usage-analytics-report-6-test.md
 labels:
