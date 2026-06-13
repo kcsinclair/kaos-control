@@ -8,6 +8,7 @@ priority: medium
 labels:
     - agent
     - security
+release: KC-Release2
 assignees:
     - role: product-owner
       who: agent
