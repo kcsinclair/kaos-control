@@ -10,7 +10,8 @@ labels:
     - frontend
     - test
     - hygiene
-release: KC-Release3
+release: KC-Release4
+parent: lifecycle/tests/release-artefacts-6-test.md
 ---
 
 # Frontend Vitest Suite Leaks Un-Mocked Fetches, Logged as ECONNREFUSED Errors

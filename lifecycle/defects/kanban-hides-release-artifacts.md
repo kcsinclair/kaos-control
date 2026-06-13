@@ -1,7 +1,7 @@
 ---
 title: Release Artifacts Incorrectly Shown in Kanban View
 type: defect
-status: in-development
+status: done
 lineage: kanban-hides-release-artifacts
 created: "2026-06-12T16:05:32+10:00"
 priority: normal
@@ -15,6 +15,7 @@ release: KC-Release3
 assignees:
     - role: frontend-developer
       who: agent
+parent: lifecycle/tests/release-artefacts-6-test.md
 ---
 
 # Release Artifacts Incorrectly Shown in Kanban View

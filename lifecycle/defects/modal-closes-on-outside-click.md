@@ -1,7 +1,7 @@
 ---
 title: Modals Dismiss on Outside Click Instead of Explicit Action
 type: defect
-status: in-development
+status: done
 lineage: modal-closes-on-outside-click
 created: "2026-05-16T07:50:43+10:00"
 priority: medium
@@ -14,6 +14,7 @@ release: KC-Release3
 assignees:
     - role: frontend-developer
       who: agent
+parent: lifecycle/tests/release-artefacts-6-test.md
 ---
 
 # Modals Dismiss on Outside Click Instead of Explicit Action

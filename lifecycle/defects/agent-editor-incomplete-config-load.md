@@ -10,7 +10,8 @@ labels:
     - agent
     - editor
     - frontend
-release: KC-Release3
+release: KC-Release4
+parent: lifecycle/tests/release-artefacts-6-test.md
 ---
 
 # Agent Editor Does Not Load All Data from config.yaml

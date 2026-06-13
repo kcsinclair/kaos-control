@@ -1,7 +1,7 @@
 ---
 title: Graph Maps Display Release Artifacts That Are Already Shown via Release Database
 type: defect
-status: in-development
+status: done
 lineage: graph-maps-show-release-artifacts
 created: "2026-06-13T11:42:26+10:00"
 priority: normal
@@ -16,6 +16,7 @@ labels:
 assignees:
     - role: frontend-developer
       who: agent
+parent: lifecycle/tests/release-artefacts-6-test.md
 ---
 
 # Graph Maps Display Release Artifacts That Are Already Shown via Release Database
