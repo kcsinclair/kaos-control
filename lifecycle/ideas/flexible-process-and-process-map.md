@@ -1,7 +1,7 @@
 ---
 title: Flexible Process and Process Map
 type: idea
-status: draft
+status: raw
 lineage: flexible-process-and-process-map
 priority: normal
 labels:
