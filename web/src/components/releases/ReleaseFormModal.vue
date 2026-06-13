@@ -193,7 +193,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
+  <div class="modal-overlay">
     <div class="modal-panel" role="dialog" aria-modal="true" :aria-label="isEdit ? 'Edit release' : 'Create release'">
       <div class="modal-header">
         <h3 class="modal-title">{{ isEdit ? 'Edit Release' : 'New Release' }}</h3>
