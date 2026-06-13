@@ -1,7 +1,7 @@
 ---
 title: Modals Dismiss on Outside Click Instead of Explicit Action
 type: defect
-status: approved
+status: in-development
 lineage: modal-closes-on-outside-click
 created: "2026-05-16T07:50:43+10:00"
 priority: medium
