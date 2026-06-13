@@ -172,7 +172,6 @@ onBeforeUnmount(() => {
     aria-modal="true"
     role="dialog"
     aria-labelledby="icp-title"
-    @click.self="tryClose"
     @keydown="onPanelKeydown"
     tabindex="-1"
   >

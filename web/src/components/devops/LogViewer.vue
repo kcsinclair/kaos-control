@@ -51,7 +51,7 @@ function parsedLines() {
 </script>
 
 <template>
-  <div class="log-viewer-backdrop" @click.self="emit('close')">
+  <div class="log-viewer-backdrop">
     <div class="log-viewer">
       <div class="log-viewer__header">
         <span class="log-viewer__title">Run log — {{ props.pipelineName }}</span>

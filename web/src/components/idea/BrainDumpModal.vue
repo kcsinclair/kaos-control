@@ -183,7 +183,6 @@ watch(
       aria-modal="true"
       role="dialog"
       aria-labelledby="bdm-title"
-      @click.self="tryClose"
       @keydown="onPanelKeydown"
       tabindex="-1"
     >

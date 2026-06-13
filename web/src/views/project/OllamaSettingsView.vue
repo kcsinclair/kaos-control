@@ -153,7 +153,7 @@ function healthLabel(name: string): string {
 
     <!-- Add / Edit modal -->
     <Teleport to="body">
-      <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+      <div v-if="showModal" class="modal-overlay">
         <div class="modal-panel" role="dialog" aria-modal="true" :aria-label="editTarget ? 'Edit Ollama instance' : 'Add Ollama instance'">
           <div class="modal-header">
             <h3 class="modal-title">{{ editTarget ? 'Edit Instance' : 'Add Ollama Instance' }}</h3>
@@ -173,7 +173,7 @@ function healthLabel(name: string): string {
 
     <!-- Delete confirmation modal -->
     <Teleport to="body">
-      <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
+      <div v-if="deleteTarget" class="modal-overlay">
         <div class="modal-panel" role="dialog" aria-modal="true" aria-label="Confirm deletion">
           <div class="modal-header">
             <h3 class="modal-title">Delete Instance</h3>

@@ -229,7 +229,7 @@ onMounted(() => store.fetchJobs(project))
     />
 
     <!-- Create modal -->
-    <div v-if="showCreate" class="modal-backdrop" @click.self="showCreate = false">
+    <div v-if="showCreate" class="modal-backdrop">
       <div class="modal-box">
         <div class="modal-header">
           <h3 class="modal-title">New Job</h3>

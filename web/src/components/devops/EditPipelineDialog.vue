@@ -146,7 +146,7 @@ async function handleSave() {
 </script>
 
 <template>
-  <div v-if="open" class="epd-overlay" @click.self="handleClose">
+  <div v-if="open" class="epd-overlay">
     <div class="epd-panel" role="dialog" aria-modal="true" aria-label="Edit Pipeline">
       <h3 class="epd-title">Edit Pipeline</h3>
 

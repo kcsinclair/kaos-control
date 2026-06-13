@@ -419,7 +419,7 @@ onMounted(() => {
 
     <!-- Agent config form modal -->
     <Teleport to="body">
-      <div v-if="showAgentForm" class="modal-overlay" @click.self="closeAgentForm">
+      <div v-if="showAgentForm" class="modal-overlay">
         <div class="modal-panel" role="dialog" aria-modal="true" :aria-label="editAgent ? 'Edit agent' : 'New agent'">
           <div class="modal-header">
             <h3 class="modal-title">{{ editAgent ? 'Edit Agent' : 'New Agent' }}</h3>

@@ -90,7 +90,7 @@ async function handleCreate() {
 </script>
 
 <template>
-  <div v-if="open" class="cpd-overlay" @click.self="handleClose">
+  <div v-if="open" class="cpd-overlay">
     <div class="cpd-panel" role="dialog" aria-modal="true" aria-label="Create Pipeline">
       <h3 class="cpd-title">Create Pipeline</h3>
 
