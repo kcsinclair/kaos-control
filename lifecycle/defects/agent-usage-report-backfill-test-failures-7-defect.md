@@ -1,7 +1,7 @@
 ---
 title: Backfill metrics integration tests fail due to outdated database schema and missing modelUsage
 type: defect
-status: approved
+status: in-development
 lineage: agent-usage-analytics-report
 parent: lifecycle/tests/agent-usage-analytics-report-6-test.md
 labels:
