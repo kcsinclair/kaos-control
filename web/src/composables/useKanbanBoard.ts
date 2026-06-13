@@ -86,6 +86,8 @@ export function useKanbanBoard(project: string) {
     return items.filter(a => {
       // Hide test artifacts unless the "Show Tests" toggle is on
       if (!uiStore.showTestsOnKanban && a.type === 'test') return false
+      // Release artifacts are never shown on the Kanban board
+      if (a.type === 'release') return false
       if (hideTerminal.value && (TERMINAL_STATUSES as readonly string[]).includes(a.status)) return false
       if (filters.stage && a.stage !== filters.stage) return false
       if (filters.status && a.status !== filters.status) return false
