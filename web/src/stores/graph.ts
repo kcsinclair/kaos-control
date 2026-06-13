@@ -115,8 +115,12 @@ export const useGraphStore = defineStore('graph', () => {
   })
 
   // Release overlay: release nodes and their connecting edges (timeline spine + assigned).
+  // Only include nodes whose ID starts with 'release:' — these are release DB records
+  // (e.g. release:1, release:backlog, release:unscheduled).  Markdown release artifact
+  // files have file-path IDs (lifecycle/releases/*.md) and must be excluded to avoid
+  // duplicate nodes appearing alongside the canonical release DB entries.
   const releaseNodes = computed<GraphNode[]>(() =>
-    rawNodes.value.filter((n) => n.type === 'release')
+    rawNodes.value.filter((n) => n.type === 'release' && n.id.startsWith('release:'))
   )
 
   // Only include release edges whose non-release endpoints are currently visible.
