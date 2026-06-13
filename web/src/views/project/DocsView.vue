@@ -38,10 +38,6 @@ const groupedDocs = computed(() => docsStore.groupedDocs)
 const totalDocs = computed(() => docsStore.docs.length)
 const filteredTotal = computed(() => docsStore.filteredDocs.length)
 
-function rawUrl(relPath: string): string {
-  return `/api/p/${project}/docs/${relPath.split('/').map(encodeURIComponent).join('/')}`
-}
-
 function openDoc(doc: DocEntry): void {
   router.push({
     name: 'docs-editor',
@@ -107,9 +103,9 @@ function clearQuery(): void {
         <h2 v-if="group.subDir" class="docs-subgroup">{{ group.subDir }}</h2>
         <div class="docs-cards">
           <template v-for="doc in group.docs" :key="doc.path">
-            <!-- Markdown: interactive button navigating to editor -->
+            <!-- All docs open in the in-app viewer, which renders markdown as a
+                 preview, HTML in a sandboxed iframe, and images inline. -->
             <button
-              v-if="doc.is_markdown"
               class="doc-card"
               type="button"
               @click="openDoc(doc)"
@@ -120,19 +116,6 @@ function clearQuery(): void {
               <p class="doc-summary">{{ doc.summary }}</p>
               <span class="doc-path">{{ doc.path }}</span>
             </button>
-
-            <!-- Non-markdown: link to open directly -->
-            <a
-              v-else
-              class="doc-card doc-card--link"
-              :href="rawUrl(doc.path)"
-              target="_blank"
-              rel="noopener"
-            >
-              <h3 class="doc-title">{{ doc.title }}</h3>
-              <p class="doc-summary">{{ doc.summary }}</p>
-              <span class="doc-path">{{ doc.path }}</span>
-            </a>
           </template>
         </div>
       </div>
