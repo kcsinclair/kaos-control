@@ -1,7 +1,7 @@
 ---
 title: TestTriageAPI_LockedLineage fails due to startup rescan lock and 5s cooldown
 type: defect
-status: approved
+status: in-development
 lineage: auto-triage-new-ideas
 parent: lifecycle/tests/auto-triage-new-ideas-6-test.md
 labels: [defect]
