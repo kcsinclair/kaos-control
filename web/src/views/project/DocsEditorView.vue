@@ -30,8 +30,9 @@ const canEdit = computed(() => {
   return roles.length > 0 && roles.some((r) => r !== 'qa')
 })
 
-// Preview vs edit toggle: read-only users default to rendered preview
-const showPreview = ref(!canEdit.value)
+// Preview vs edit toggle: the documentation view defaults to the rendered
+// preview for everyone (it's a view, not an editor); editors click Edit to modify.
+const showPreview = ref(true)
 
 // Editor state
 const body = ref('')
@@ -44,10 +45,15 @@ const notFound = ref(false)
 const saving = ref(false)
 
 const isImage = computed(() => !!mime.value && mime.value.startsWith('image/'))
-const isHtml = computed(() => mime.value === 'text/html')
+// Match the text/html prefix — the backend's http.DetectContentType returns
+// "text/html; charset=utf-8", so an exact === 'text/html' check never matches.
+const isHtml = computed(() => !!mime.value && mime.value.startsWith('text/html'))
 const imageSrc = computed(() =>
   bodyBase64.value && mime.value ? `data:${mime.value};base64,${bodyBase64.value}` : '',
 )
+// Non-markdown files come back as body_base64 (not body), so decode it for the
+// HTML iframe rather than binding the (empty) body.
+const htmlSrc = computed(() => (bodyBase64.value ? atob(bodyBase64.value) : ''))
 
 // Conflict / disk-change indicators
 const conflictError = ref(false)
@@ -71,7 +77,7 @@ async function loadDoc(): Promise<void> {
     isDirty.value = false
     diskUpdated.value = false
     conflictError.value = false
-    showPreview.value = !canEdit.value
+    showPreview.value = true
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       notFound.value = true
@@ -179,7 +185,7 @@ function rawDownloadUrl(): string {
     <!-- HTML rendering -->
     <div v-else-if="!isMarkdown && isHtml" class="html-panel">
       <iframe
-        :srcdoc="body"
+        :srcdoc="htmlSrc"
         class="doc-iframe"
         sandbox="allow-same-origin"
         title="HTML document preview"
