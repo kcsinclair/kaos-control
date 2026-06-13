@@ -54,6 +54,32 @@ func TestParseResultLine_ValidResult(t *testing.T) {
 	}
 }
 
+// TestParseResultLine_Model verifies the primary model is derived from
+// modelUsage as the entry with the most output tokens (Claude Code runs a
+// cheaper background model — haiku — alongside the primary).
+func TestParseResultLine_Model(t *testing.T) {
+	line := `{"type":"result","subtype":"success","total_cost_usd":1.12,"modelUsage":{"claude-haiku-4-5-20251001":{"outputTokens":6790,"costUSD":0.24},"claude-sonnet-4-6":{"outputTokens":16801,"costUSD":0.88}}}`
+	result, err := ParseResultLine(line)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Model != "claude-sonnet-4-6" {
+		t.Errorf("model: got %q, want %q (dominant by output tokens)", result.Model, "claude-sonnet-4-6")
+	}
+}
+
+// TestParseResultLine_ModelAbsent verifies that a result line without
+// modelUsage yields an empty model rather than erroring.
+func TestParseResultLine_ModelAbsent(t *testing.T) {
+	result, err := ParseResultLine(validResultLine)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Model != "" {
+		t.Errorf("model: got %q, want empty (no modelUsage present)", result.Model)
+	}
+}
+
 func TestParseResultLine_NoResultLine(t *testing.T) {
 	log := `{"type":"assistant","content":"hello"}` + "\n" +
 		`{"type":"user","content":"world"}` + "\n"

@@ -17,9 +17,9 @@ import (
 
 const backfillUsage = `Usage: kaos-control backfill agent-run-metrics --project <id> [flags]
 
-Walks every agent_runs row with metrics_available=0 and a terminal status,
-reads the per-run log file, parses the type:result line, and writes the
-extracted cost/token metrics. Safe to re-run.
+Walks every agent_runs row that is missing metrics OR missing a model (and has
+a terminal status), reads the per-run log file, parses the type:result line, and
+writes the extracted model + cost/token metrics. Safe to re-run.
 
 Flags:
   --project <id>    Project name (required)
@@ -84,9 +84,12 @@ func runBackfillAgentRunMetrics(args []string) error {
 	// Log files live next to the index: <dataDir>/<project>/runs/<run_id>.log
 	runsLogDir := filepath.Join(appCfg.DataDir, entry.Name, "runs")
 
+	// Process runs that are missing metrics, OR that have metrics but no model
+	// (rows backfilled before model extraction was added — re-parsing the log to
+	// fill in the model column is cheap and idempotent).
 	rows, err := db.Query(
 		`SELECT run_id FROM agent_runs
-		 WHERE metrics_available=0
+		 WHERE (metrics_available=0 OR model IS NULL OR model='')
 		   AND status IN ('done','failed','killed','killed-timeout')`,
 	)
 	if err != nil {
@@ -129,20 +132,24 @@ func runBackfillAgentRunMetrics(args []string) error {
 		}
 
 		if *dryRun {
-			fmt.Printf("  would backfill %s (cost=%.6f)\n", runID, parsed.TotalCostUSD)
+			fmt.Printf("  would backfill %s (model=%s cost=%.6f)\n", runID, parsed.Model, parsed.TotalCostUSD)
 			backfilled++
 			continue
 		}
 
+		// COALESCE(NULLIF(?, ''), model) leaves any existing model untouched
+		// when the log carries no modelUsage (parsed.Model == "").
 		_, writeErr := db.Exec(
 			`UPDATE agent_runs
 			 SET total_cost_usd=?, duration_api_ms=?, num_turns=?,
 			     input_tokens=?, cache_creation_tokens=?, cache_read_tokens=?,
-			     output_tokens=?, metrics_available=1
+			     output_tokens=?, model=COALESCE(NULLIF(?, ''), model),
+			     metrics_available=1
 			 WHERE run_id=?`,
 			parsed.TotalCostUSD, parsed.DurationApiMs, parsed.NumTurns,
 			parsed.Usage.InputTokens, parsed.Usage.CacheCreationInputTokens,
 			parsed.Usage.CacheReadInputTokens, parsed.Usage.OutputTokens,
+			parsed.Model,
 			runID,
 		)
 		if writeErr != nil {

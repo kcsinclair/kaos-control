@@ -14,14 +14,28 @@ var errNoResultLine = errors.New("no result line found in log")
 
 // RunResult holds the parsed fields from a Claude Code type:result JSON line.
 type RunResult struct {
-	Subtype           string            `json:"subtype"`
-	TotalCostUSD      float64           `json:"total_cost_usd"`
-	DurationMs        int64             `json:"duration_ms"`
-	DurationApiMs     int64             `json:"duration_api_ms"`
-	NumTurns          int               `json:"num_turns"`
-	Usage             RunResultUsage    `json:"usage"`
-	PermissionDenials []json.RawMessage `json:"permission_denials"`
-	SessionID         string            `json:"session_id"`
+	Subtype           string                   `json:"subtype"`
+	TotalCostUSD      float64                  `json:"total_cost_usd"`
+	DurationMs        int64                    `json:"duration_ms"`
+	DurationApiMs     int64                    `json:"duration_api_ms"`
+	NumTurns          int                      `json:"num_turns"`
+	Usage             RunResultUsage           `json:"usage"`
+	PermissionDenials []json.RawMessage        `json:"permission_denials"`
+	SessionID         string                   `json:"session_id"`
+	ModelUsage        map[string]RunModelUsage `json:"modelUsage"`
+	// Model is the run's primary model, derived from ModelUsage by
+	// ParseResultLine (the model with the most output tokens). Claude Code may
+	// use a cheaper background model (e.g. haiku) alongside the primary, so the
+	// dominant-by-output-tokens entry is the one worth reporting. Empty when the
+	// result line carries no modelUsage (older logs, non-Claude drivers).
+	Model string `json:"-"`
+}
+
+// RunModelUsage is the per-model usage block from a type:result `modelUsage`
+// object. Only the fields needed to pick the primary model are decoded.
+type RunModelUsage struct {
+	OutputTokens int64   `json:"outputTokens"`
+	CostUSD      float64 `json:"costUSD"`
 }
 
 // RunResultUsage holds token usage fields from a type:result JSON line.
@@ -81,8 +95,27 @@ func ParseResultLine(logContent string) (*RunResult, error) {
 		if err := json.Unmarshal([]byte(line), &result); err != nil {
 			return nil, errors.New("malformed JSON in result line: " + err.Error())
 		}
+		result.Model = dominantModel(result.ModelUsage)
 		return &result, nil
 	}
 
 	return nil, errNoResultLine
+}
+
+// dominantModel returns the run's primary model: the entry in modelUsage with
+// the most output tokens (tie-break: higher cost, then lexicographically first
+// name for determinism). Returns "" for an empty/nil map.
+func dominantModel(usage map[string]RunModelUsage) string {
+	best := ""
+	var bestTokens int64 = -1
+	var bestCost float64 = -1
+	for name, u := range usage {
+		better := u.OutputTokens > bestTokens ||
+			(u.OutputTokens == bestTokens && u.CostUSD > bestCost) ||
+			(u.OutputTokens == bestTokens && u.CostUSD == bestCost && (best == "" || name < best))
+		if better {
+			best, bestTokens, bestCost = name, u.OutputTokens, u.CostUSD
+		}
+	}
+	return best
 }

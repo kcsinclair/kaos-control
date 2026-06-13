@@ -1004,6 +1004,7 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 			if parsed, parseErr := ParseResultLine(string(logData)); parseErr == nil {
 				runResult = parsed
 				metrics := index.AgentRunMetrics{
+					Model:               parsed.Model,
 					TotalCostUSD:        parsed.TotalCostUSD,
 					DurationApiMs:       parsed.DurationApiMs,
 					NumTurns:            int(parsed.NumTurns),
