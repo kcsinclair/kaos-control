@@ -26,10 +26,6 @@ function openArtifact(node: GraphNode) {
   emit('close')
 }
 
-function handleOverlayClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).classList.contains('label-modal-overlay')) emit('close')
-}
-
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('close')
 }
@@ -42,7 +38,6 @@ function handleKeydown(e: KeyboardEvent) {
       role="dialog"
       aria-modal="true"
       tabindex="-1"
-      @click="handleOverlayClick"
       @keydown="handleKeydown"
     >
       <div class="label-modal-panel">

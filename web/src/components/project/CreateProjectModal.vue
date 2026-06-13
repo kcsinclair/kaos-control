@@ -108,9 +108,6 @@ async function handleSubmit() {
   }
 }
 
-function handleOverlayClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).classList.contains('modal-overlay')) emit('close')
-}
 </script>
 
 <template>
@@ -120,7 +117,6 @@ function handleOverlayClick(e: MouseEvent) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-project-title"
-      @click="handleOverlayClick"
       @keydown.escape="emit('close')"
     >
       <div class="modal-panel">

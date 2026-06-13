@@ -56,10 +56,6 @@ async function copyCommands() {
   }
 }
 
-function handleOverlayClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).classList.contains('modal-overlay')) emit('close')
-}
-
 function handleDone() {
   emit('initialised')
 }
@@ -72,7 +68,6 @@ function handleDone() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="init-project-title"
-      @click="handleOverlayClick"
       @keydown.escape="emit('close')"
     >
       <div class="modal-panel">
