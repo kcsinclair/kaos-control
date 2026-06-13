@@ -1,7 +1,7 @@
 ---
 title: Test Plan — Documentation Panel Viewer
 type: plan-test
-status: blocked
+status: in-development
 lineage: docs-panel-viewer
 created: "2026-06-12T00:00:00+10:00"
 priority: normal
@@ -11,7 +11,7 @@ labels:
     - feature
 release: KC-Release3
 assignees:
-    - role: product-owner
+    - role: test-developer
       who: agent
 ---
 
@@ -79,8 +79,10 @@ Cover `PUT /docs/*path` happy path, sha-mismatch concurrency, the 415 non-markdo
     - Seed `docs/diagram.png`. `PUT /api/p/{project}/docs/diagram.png` returns 415 `apiError("not_markdown", ...)`.
   - `TestDocsPut_CreateNotAllowed`:
     - `PUT /api/p/{project}/docs/brand-new.md` returns 404 (creation is out-of-band; resolved question in [[docs-panel-viewer-2]]).
-  - `TestDocsPut_ReadOnlyRoleForbidden`:
-    - Log in as `qa@test.local`. `PUT /api/p/{project}/docs/alpha.md` returns 403 `apiError("forbidden", ...)`.
+  - `TestDocsPut_NoRoleForbidden`:
+    - Per the resolution of Q1 below, `qa` IS a docs editor (it's in `RolesArtifactEditors`), so QA editing is allowed and is covered by the happy-path write tests. This test instead verifies the forbidden path with a user who has **no roles on the project**: create/log in as a zero-role user, `PUT /api/p/{project}/docs/alpha.md` returns 403 `apiError("forbidden", ...)`.
+  - `TestDocsPut_QARoleAllowed`:
+    - Log in as `qa@test.local` (role `[qa]`). `PUT /api/p/{project}/docs/alpha.md` returns 200 — QA can fix doc issues directly (see Q1 resolution).
   - `TestDocsPut_BroadcastsDocChanged`:
     - Open a WebSocket against `/api/p/{project}/ws`. Issue a `PUT` for `docs/alpha.md`. Within 500 ms (well below the watcher debounce), assert at least one `doc.changed` event with `payload.path = "alpha.md"` is delivered.
 
@@ -184,7 +186,7 @@ Manual smoke checklist:
 - [ ] Opening `docs/architecture.md` loads the markdown editor with the file body.
 - [ ] Saving an edit persists to disk; reopening the file shows the edit.
 - [ ] Modifying the file on disk while the editor is open shows the "Disk version updated" indicator (no overwrite without explicit reload).
-- [ ] Logging in as `qa@test.local` and opening a doc renders the editor in read-only mode.
+- [ ] Logging in as `qa@test.local` and opening a doc renders an **editable** editor and a `PUT` save succeeds (QA is a docs editor — see Q1 resolution). A user with no project roles instead gets a 403 on save.
 - [ ] `PUT /api/p/{project}/docs/../escape.md` rejected with HTTP 400 (curl).
 - [ ] Tab through the panel from the sidebar header: focus reaches "Documentation", Enter activates; on the panel, Tab advances through the search input then each card; Enter on a card opens the editor.
 
@@ -211,9 +213,32 @@ Manual smoke checklist:
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-### Q1: Should `qa@test.local` receive 403 or 200 on `PUT /api/p/{project}/docs/*path`?
+### Q1 (RESOLVED 2026-06-13): Should `qa@test.local` receive 403 or 200 on `PUT /api/p/{project}/docs/*path`?
+
+**Decision (product owner): QA *can* edit docs — resolution 2 below.** Rationale: in
+practice a QA engineer who spots a problem in a doc should be able to fix a minor
+issue directly rather than be blocked; larger changes are expected to be checked
+with the team, but that's a team-process convention, not something the endpoint
+enforces. (A docs review/approval workflow could be a future enhancement; it is
+out of scope here.)
+
+**Consequences:**
+- **No backend change.** `handlePutDoc` keeps `RolesArtifactEditors` (which
+  includes `RoleQA`) — the implementation is already correct.
+- The Milestone 2 write tests above are updated accordingly:
+  `TestDocsPut_QARoleAllowed` (QA → 200) and `TestDocsPut_NoRoleForbidden`
+  (zero-role user → 403) replace the original `TestDocsPut_ReadOnlyRoleForbidden`.
+- The Milestone 6 smoke item is updated: QA sees an editable editor, not
+  read-only.
+
+This unblocks the Milestone 2 write tests; the test plan returns to active
+implementation.
+
+<details><summary>Original question and analysis (for the record)</summary>
+
+#### Should `qa@test.local` receive 403 or 200 on `PUT /api/p/{project}/docs/*path`?
 
 **Blocking test:** `TestDocsPut_ReadOnlyRoleForbidden` (Milestone 2, `docs_write_test.go`).
 
@@ -233,3 +258,5 @@ RolesArtifactEditors = []string{RoleProductOwner, RoleAnalyst, RoleBackendDevelo
 2. **The test plan is wrong** → QA can legitimately edit docs (consistent with `RolesArtifactEditors`). In that case, `TestDocsPut_ReadOnlyRoleForbidden` should be rewritten to use a user with no project roles at all (e.g. a freshly created user with no role assignments), and the expected status code should be 403 for "unauthenticated or zero-role user".
 
 **Action needed:** Product owner to decide which interpretation is correct and either (a) update the backend role check, or (b) update this test plan to reflect what the implementation actually does. Implementation of all Milestone 2 write tests is blocked until this is resolved.
+
+</details>
