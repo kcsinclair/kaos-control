@@ -1,7 +1,7 @@
 ---
 title: "Auto-Triage Raw Ideas — Integration Test Suite"
 type: test
-status: draft
+status: approved
 lineage: auto-triage-new-ideas
 parent: lifecycle/test-plans/auto-triage-new-ideas-5-test.md
 ---
