@@ -1,7 +1,7 @@
 ---
 title: Integration test suite build failure due to duplicate helper declarations
 type: defect
-status: approved
+status: in-development
 lineage: raw-artefact-status
 parent: lifecycle/tests/raw-artefact-status-6-test.md
 labels:
