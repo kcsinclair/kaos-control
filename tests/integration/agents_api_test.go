@@ -303,8 +303,8 @@ func TestStartAgentRun_BadRequest(t *testing.T) {
 
 // ── Milestone 1 — ListAgentRunsByTargetPath API ────────────────────────────
 
-// seedAgentRun inserts a single AgentRunRow directly into the index for test setup.
-func seedAgentRun(t *testing.T, env *testEnv, r *index.AgentRunRow) {
+// seedAgentRunRow inserts a single AgentRunRow directly into the index for test setup.
+func seedAgentRunRow(t *testing.T, env *testEnv, r *index.AgentRunRow) {
 	t.Helper()
 	if err := env.proj.Idx.InsertAgentRun(r); err != nil {
 		t.Fatalf("seeding agent run %q: %v", r.RunID, err)
@@ -321,15 +321,15 @@ func TestListAgentRunsByTargetPath_ReturnsMatchingRuns(t *testing.T) {
 	const otherPath = "lifecycle/ideas/bar.md"
 
 	base := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-	seedAgentRun(t, env, &index.AgentRunRow{
+	seedAgentRunRow(t, env, &index.AgentRunRow{
 		RunID: "aaaa0001-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: base, Status: "done",
 	})
-	seedAgentRun(t, env, &index.AgentRunRow{
+	seedAgentRunRow(t, env, &index.AgentRunRow{
 		RunID: "aaaa0002-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: base.Add(time.Minute), Status: "failed",
 	})
-	seedAgentRun(t, env, &index.AgentRunRow{
+	seedAgentRunRow(t, env, &index.AgentRunRow{
 		RunID: "bbbb0001-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: otherPath, StartedAt: base, Status: "done",
 	})
@@ -387,7 +387,7 @@ func TestListAgentRunsByTargetPath_NoParam_ReturnsAll(t *testing.T) {
 		"lifecycle/backend-plans/baz-3-be.md",
 	}
 	for i, path := range paths {
-		seedAgentRun(t, env, &index.AgentRunRow{
+		seedAgentRunRow(t, env, &index.AgentRunRow{
 			RunID:     "dddd000" + string(rune('1'+i)) + "-0000-0000-0000-000000000000",
 			AgentName: "requirements-analyst", Role: "analyst",
 			TargetPath: path, StartedAt: base.Add(time.Duration(i) * time.Minute),
@@ -416,15 +416,15 @@ func TestListAgentRunsByTargetPath_OrderNewestFirst(t *testing.T) {
 	middle := oldest.Add(time.Hour)
 	newest := middle.Add(time.Hour)
 
-	seedAgentRun(t, env, &index.AgentRunRow{
+	seedAgentRunRow(t, env, &index.AgentRunRow{
 		RunID: "eeee0001-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: oldest, Status: "done",
 	})
-	seedAgentRun(t, env, &index.AgentRunRow{
+	seedAgentRunRow(t, env, &index.AgentRunRow{
 		RunID: "eeee0002-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: middle, Status: "done",
 	})
-	seedAgentRun(t, env, &index.AgentRunRow{
+	seedAgentRunRow(t, env, &index.AgentRunRow{
 		RunID: "eeee0003-0000-0000-0000-000000000000", AgentName: "requirements-analyst",
 		Role: "analyst", TargetPath: targetPath, StartedAt: newest, Status: "done",
 	})

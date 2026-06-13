@@ -17,9 +17,9 @@ import (
 
 const backfillUsage = `Usage: kaos-control backfill agent-run-metrics --project <id> [flags]
 
-Walks every agent_runs row that is missing metrics OR missing a model (and has
-a terminal status), reads the per-run log file, parses the type:result line, and
-writes the extracted model + cost/token metrics. Safe to re-run.
+Walks every agent_runs row with metrics_available=0 and a terminal status,
+reads the per-run log file, parses the type:result line, and writes the
+extracted model + cost/token metrics. Safe to re-run (idempotent).
 
 Flags:
   --project <id>    Project name (required)
@@ -84,12 +84,14 @@ func runBackfillAgentRunMetrics(args []string) error {
 	// Log files live next to the index: <dataDir>/<project>/runs/<run_id>.log
 	runsLogDir := filepath.Join(appCfg.DataDir, entry.Name, "runs")
 
-	// Process runs that are missing metrics, OR that have metrics but no model
-	// (rows backfilled before model extraction was added — re-parsing the log to
-	// fill in the model column is cheap and idempotent).
+	// Only process runs that have not been backfilled yet. metrics_available=1
+	// is the idempotency marker — a run is processed exactly once. (The model
+	// column is filled in the same pass via the UPDATE below; logs without a
+	// modelUsage block simply leave it NULL rather than being re-processed every
+	// run.)
 	rows, err := db.Query(
 		`SELECT run_id FROM agent_runs
-		 WHERE (metrics_available=0 OR model IS NULL OR model='')
+		 WHERE metrics_available=0
 		   AND status IN ('done','failed','killed','killed-timeout')`,
 	)
 	if err != nil {

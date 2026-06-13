@@ -94,6 +94,9 @@ func writeBackfillConfig(t *testing.T) (cfgPath, dataDir string) {
 // createAgentRunsTable creates the agent_runs table schema in the given DB.
 func createAgentRunsTable(t *testing.T, db *sql.DB) {
 	t.Helper()
+	// Schema must match the real agent_runs metric/model columns the backfill
+	// command writes (see internal/index/index.go migrations) — otherwise the
+	// backfill UPDATE fails with "no such column".
 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS agent_runs (
 		run_id                   TEXT PRIMARY KEY,
 		agent_name               TEXT NOT NULL,
@@ -105,6 +108,15 @@ func createAgentRunsTable(t *testing.T, db *sql.DB) {
 		exit_code                INTEGER,
 		stderr_tail              TEXT,
 		artifacts_produced_json  TEXT,
+		model                    TEXT,
+		total_cost_usd           REAL,
+		duration_api_ms          INTEGER,
+		num_turns                INTEGER,
+		input_tokens             INTEGER,
+		cache_creation_tokens    INTEGER,
+		cache_read_tokens        INTEGER,
+		output_tokens            INTEGER,
+		ttft_ms                  INTEGER,
 		metrics_available        INTEGER NOT NULL DEFAULT 0
 	)`)
 	if err != nil {

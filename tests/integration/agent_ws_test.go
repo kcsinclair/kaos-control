@@ -89,10 +89,12 @@ COLLECT:
 
 // ── Milestone 3 — WebSocket events include result payload ─────────────────────
 
-// setupFakeClaudeWithOutput creates a fake `claude` shell script that prints
+// setupFakeClaudeWithLines creates a fake `claude` shell script that prints
 // outputLines to stdout (one per line) and then exits with exitCode.  It
 // prepends its directory to PATH so the agent driver picks it up.
-func setupFakeClaudeWithOutput(t *testing.T, outputLines []string, exitCode int) {
+// (Distinct from agent_metrics_test.go's setupFakeClaudeWithOutput, which takes
+// a single NDJSON string.)
+func setupFakeClaudeWithLines(t *testing.T, outputLines []string, exitCode int) {
 	t.Helper()
 	fakeDir := t.TempDir()
 
@@ -120,7 +122,7 @@ func setupFakeClaudeWithOutput(t *testing.T, outputLines []string, exitCode int)
 // carries a non-null "result" field with the parsed summary fields.
 func TestAgentWSFinished_IncludesResult(t *testing.T) {
 	const resultLine = `{"type":"result","subtype":"success","total_cost_usd":0.0234,"duration_ms":12345,"duration_api_ms":9800,"num_turns":3,"usage":{"input_tokens":1500,"cache_creation_input_tokens":200,"cache_read_input_tokens":50,"output_tokens":400},"permission_denials":[],"session_id":"ses_ws_result_test"}`
-	setupFakeClaudeWithOutput(t, []string{resultLine}, 0)
+	setupFakeClaudeWithLines(t, []string{resultLine}, 0)
 
 	const artifactPath = "lifecycle/ideas/ws-result-test.md"
 	env := newAgentTestEnv(t, []seedArtifact{{
@@ -187,7 +189,7 @@ COLLECT:
 // no type:result line (e.g. Ollama driver, or a zero-output fake), the
 // agent.finished event carries "result": null — not an error event.
 func TestAgentWSFinished_NoResultLine_ResultNull(t *testing.T) {
-	setupFakeClaude(t, 0) // exits 0 with no output → no result line in log
+	setupFakeClaudeSilent(t, 0) // exits 0 with no output → no result line in log
 
 	const artifactPath = "lifecycle/ideas/ws-null-result-test.md"
 	env := newAgentTestEnv(t, []seedArtifact{{

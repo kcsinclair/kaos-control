@@ -115,6 +115,9 @@ func setupFakeClaudeWritingDefect(t *testing.T, relativeDefectPath, relatedToPat
 	sb.WriteString("---\n\n")
 	sb.WriteString("Defect found during QA run.\n")
 	sb.WriteString("DEFECT_EOF\n")
+	// Emit the stream-json a successful run must produce (init + result), else
+	// the truncated-stream detection marks the clean exit as failed.
+	sb.WriteString(fakeClaudeSuccessEvents)
 	sb.WriteString("exit 0\n")
 
 	fakeScript := filepath.Join(fakeDir, "claude")
@@ -142,6 +145,9 @@ func setupFakeClaudeWritingDefectNoRelated(t *testing.T, relativeDefectPath stri
 	sb.WriteString("---\n\n")
 	sb.WriteString("Defect with no related_to.\n")
 	sb.WriteString("DEFECT_EOF\n")
+	// Emit the stream-json a successful run must produce (init + result), else
+	// the truncated-stream detection marks the clean exit as failed.
+	sb.WriteString(fakeClaudeSuccessEvents)
 	sb.WriteString("exit 0\n")
 
 	fakeScript := filepath.Join(fakeDir, "claude")

@@ -282,7 +282,41 @@ func newAgentTestEnvWithCfg(t *testing.T, cfgYAML string, seeds []seedArtifact) 
 // setupFakeClaude writes a stub `claude` shell script that exits with exitCode
 // and prepends its directory to PATH.  The original PATH is restored when the
 // test ends via t.Setenv.
+// fakeClaudeSuccessEvents is the minimal stream-json a stub `claude` must print
+// for a *successful* run: a system/init with bypassPermissions (so the
+// supervisor's precheck passes) and a terminal type:result (so the run is not
+// flagged as a truncated stream and marked failed — see the truncated-stream
+// detection in internal/agent/agent.go). Emit these before `exit 0` in any stub
+// that should produce agent.finished / status=done. The literal `\n` sequences
+// are intentional: printf turns them into newlines in the generated script.
+const fakeClaudeSuccessEvents = `printf '%s\n' '{"type":"system","subtype":"init","permissionMode":"bypassPermissions","model":"claude-sonnet-4-6"}'
+printf '%s\n' '{"type":"result","subtype":"success","total_cost_usd":0,"num_turns":1,"usage":{}}'
+`
+
 func setupFakeClaude(t *testing.T, exitCode int) {
+	t.Helper()
+	fakeDir := t.TempDir()
+	var script string
+	if exitCode == 0 {
+		// A clean exit with no result event is (correctly) marked failed by the
+		// truncated-stream detection, so a successful stub must emit the events.
+		script = "#!/bin/sh\n" + fakeClaudeSuccessEvents + "exit 0\n"
+	} else {
+		script = fmt.Sprintf("#!/bin/sh\nexit %d\n", exitCode)
+	}
+	fakeScript := filepath.Join(fakeDir, "claude")
+	if err := os.WriteFile(fakeScript, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", fakeDir+":"+os.Getenv("PATH"))
+}
+
+// setupFakeClaudeSilent installs a stub `claude` that emits NO output and exits
+// with exitCode. Use this to simulate a run that produces no type:result line —
+// e.g. testing the no-metrics / null-result paths. (For a claude-code-cli run a
+// clean exit with no result is correctly treated as a truncated stream and
+// marked failed; tests that want a *successful* run should use setupFakeClaude.)
+func setupFakeClaudeSilent(t *testing.T, exitCode int) {
 	t.Helper()
 	fakeDir := t.TempDir()
 	script := fmt.Sprintf("#!/bin/sh\nexit %d\n", exitCode)

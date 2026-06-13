@@ -24,9 +24,9 @@ func setupFakeClaudeWithOutput(t *testing.T, ndjsonOutput string) {
 	t.Setenv("PATH", fakeDir+":"+os.Getenv("PATH"))
 }
 
-// setupFakeClaudeWithScript writes a multi-line shell script for the fake
+// setupFakeClaudeWithRawScript writes a multi-line shell script for the fake
 // claude binary. The content is written to a temp file and set in PATH.
-func setupFakeClaudeWithScript(t *testing.T, script string) {
+func setupFakeClaudeWithRawScript(t *testing.T, script string) {
 	t.Helper()
 	fakeDir := t.TempDir()
 	fakeScript := filepath.Join(fakeDir, "claude")
@@ -46,7 +46,7 @@ func TestSupervisor_PersistsMetricsOnFinish(t *testing.T) {
 	// Emit assistant event + result line.
 	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s\\n' '%s'\nprintf '%%s\\n' '%s'\nexit 0\n",
 		ndjsonAssistantEvent, ndjsonResultLine)
-	setupFakeClaudeWithScript(t, script)
+	setupFakeClaudeWithRawScript(t, script)
 
 	const artifactPath = "lifecycle/ideas/metrics-persist.md"
 	env := newAgentTestEnv(t, []seedArtifact{{
@@ -85,8 +85,8 @@ func TestSupervisor_PersistsMetricsOnFinish(t *testing.T) {
 // TestSupervisor_NonClaudeRun_NoMetrics verifies that when a fake claude
 // emits no NDJSON (exits 0 silently), metrics_available remains 0.
 func TestSupervisor_NonClaudeRun_NoMetrics(t *testing.T) {
-	// Plain exit 0 — no NDJSON output.
-	setupFakeClaude(t, 0)
+	// Plain exit 0 — no NDJSON output (no result line → no metrics).
+	setupFakeClaudeSilent(t, 0)
 
 	const artifactPath = "lifecycle/ideas/no-metrics.md"
 	env := newAgentTestEnv(t, []seedArtifact{{
@@ -116,7 +116,7 @@ func TestSupervisor_RecordsTTFT(t *testing.T) {
 	// Sleep ~120ms before emitting the first assistant event, then the result.
 	script := fmt.Sprintf("#!/bin/sh\nsleep 0.12\nprintf '%%s\\n' '%s'\nprintf '%%s\\n' '%s'\nexit 0\n",
 		ndjsonAssistantEvent, ndjsonResultLine)
-	setupFakeClaudeWithScript(t, script)
+	setupFakeClaudeWithRawScript(t, script)
 
 	const artifactPath = "lifecycle/ideas/ttft-test.md"
 	env := newAgentTestEnv(t, []seedArtifact{{
@@ -152,7 +152,7 @@ func TestSupervisor_RecordsTTFTOnce(t *testing.T) {
 	script := fmt.Sprintf(
 		"#!/bin/sh\nprintf '%%s\\n' '%s'\nprintf '%%s\\n' '%s'\nprintf '%%s\\n' '%s'\nexit 0\n",
 		ndjsonAssistantEvent, ndjsonAssistantEvent, ndjsonResultLine)
-	setupFakeClaudeWithScript(t, script)
+	setupFakeClaudeWithRawScript(t, script)
 
 	const artifactPath = "lifecycle/ideas/ttft-once.md"
 	env := newAgentTestEnv(t, []seedArtifact{{
