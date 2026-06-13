@@ -1,7 +1,7 @@
 ---
 title: "Test Suite: Agent Usage Analytics Report"
 type: test
-status: approved
+status: in-qa
 lineage: agent-usage-analytics-report
 parent: lifecycle/test-plans/agent-usage-analytics-report-5-test.md
 ---
