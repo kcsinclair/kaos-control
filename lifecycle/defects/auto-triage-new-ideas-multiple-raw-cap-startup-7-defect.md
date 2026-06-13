@@ -1,7 +1,7 @@
 ---
 title: TestTriageStartup_MultipleRawWithCap fails due to pollForArtifactStatus parsing bug
 type: defect
-status: draft
+status: approved
 lineage: auto-triage-new-ideas
 parent: lifecycle/tests/auto-triage-new-ideas-6-test.md
 labels: [defect]
