@@ -11,6 +11,10 @@ labels:
     - artifacts
     - releases
     - filter
+release: KC-Release3
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Release Artifacts Incorrectly Shown in Kanban View
