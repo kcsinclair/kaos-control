@@ -11,6 +11,10 @@ labels:
     - ux
     - usability
     - editor
+release: KC-Release3
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Documentation View Renders Raw Base64 and Markdown Instead of Formatted Output
