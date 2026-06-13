@@ -13,6 +13,9 @@ labels:
     - releases
     - filter
     - frontend
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Graph Maps Display Release Artifacts That Are Already Shown via Release Database
