@@ -229,6 +229,16 @@ func TestTriageAPI_InFlightCoalesce(t *testing.T) {
 
 // TestTriageAPI_LockedLineage verifies that triggering triage on a locked
 // lineage returns 409 with error=locked.
+//
+// Design note: the idea is seeded as "draft" (not "raw") so the startup
+// RescanRaw goroutine skips it. The lineage lock is acquired *before*
+// rewriting the file to "raw", ensuring any watcher-triggered Trigger call
+// encounters the lock immediately and returns ErrLocked without spawning a
+// run or creating a zombie cooldown entry. A bare time.Sleep is replaced by
+// pollForArtifactStatus so we wait until the index actually reflects "raw"
+// before making the POST — removing the only timing gap that could cause a
+// spurious 404 or wrong-status 409 response. (Defect:
+// auto-triage-new-ideas-api-locked-cooldown-7-defect.md)
 func TestTriageAPI_LockedLineage(t *testing.T) {
 	seeds := []seedArtifact{{
 		relPath: "lifecycle/ideas/locked-idea.md",
@@ -236,19 +246,25 @@ func TestTriageAPI_LockedLineage(t *testing.T) {
 			"Draft idea for lock test with enough words to qualify."),
 	}}
 	env := newTestEnvWithCfgYAML(t, seeds, triageCfgYAML)
-	env.login("admin@test.local", "admin-pass-123")
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond) // let startup scan finish (finds nothing)
 
-	// Pre-acquire the lineage lock.
+	// Acquire the lock before making the artifact raw.  Any watcher-triggered
+	// Trigger call will see the lock, return ErrLocked, and create no zombie
+	// cooldown entry in the inFlight map.
 	if _, err := env.proj.Locks.Acquire("locked-idea", "test-holder", "agent"); err != nil {
 		t.Fatalf("Acquire lock: %v", err)
 	}
 	t.Cleanup(func() { _ = env.proj.Locks.Release("locked-idea") })
 
-	// Rewrite to raw on disk, and wait for watcher to index it.
+	// Rewrite to raw on disk; the watcher will re-index within ~150 ms.
 	writeRawIdea(t, env.projectRoot, "locked-idea", "Locked Idea",
 		"Raw idea for lock test with enough words to qualify.")
-	time.Sleep(300 * time.Millisecond)
+
+	// Wait until the index reflects raw status; a bare sleep is racy on
+	// slow CI hosts and does not guarantee the artifact is queryable yet.
+	if !pollForArtifactStatus(t, env, "lifecycle/ideas/locked-idea.md", "raw", 3*time.Second) {
+		t.Fatal("timed out waiting for locked-idea to be indexed as raw")
+	}
 
 	resp := env.doRequest("POST", triageURL("locked-idea"), nil)
 	requireStatus(t, resp, http.StatusConflict)
