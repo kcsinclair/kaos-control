@@ -1,7 +1,7 @@
 ---
 title: Graph Maps Display Release Artifacts That Are Already Shown via Release Database
 type: defect
-status: draft
+status: approved
 lineage: graph-maps-show-release-artifacts
 created: "2026-06-13T11:42:26+10:00"
 priority: normal
