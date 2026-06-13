@@ -102,7 +102,7 @@ onMounted(fetchArtifacts)
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="emit('cancel')">
+  <div class="modal-overlay">
     <div class="modal-panel" role="dialog" aria-modal="true" :aria-label="`Run ${agent.name}`">
       <div class="modal-header">
         <h3 class="modal-title">Run {{ agent.name }}</h3>

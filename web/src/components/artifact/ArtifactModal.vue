@@ -114,10 +114,6 @@ function triggerStatusCheck() {
   showStatusPanel.value = true
 }
 
-function handleOverlayClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).classList.contains('modal-overlay')) emit('close')
-}
-
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('close')
 }
@@ -146,7 +142,6 @@ const STATUS_TEXT: Record<string, string> = {
       role="dialog"
       aria-modal="true"
       tabindex="-1"
-      @click="handleOverlayClick"
       @keydown="handleKeydown"
     >
       <div class="modal-panel">

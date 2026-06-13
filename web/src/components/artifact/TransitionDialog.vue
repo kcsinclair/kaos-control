@@ -47,7 +47,7 @@ async function confirm() {
 </script>
 
 <template>
-  <div class="td-overlay" @click.self="emit('cancel')">
+  <div class="td-overlay">
     <div class="td-panel" role="dialog" aria-modal="true" aria-label="Change status">
       <h3 class="td-title">Change Status</h3>
       <p class="td-current">Current: <strong>{{ currentStatus }}</strong></p>

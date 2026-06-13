@@ -107,9 +107,6 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
-function handleOverlayClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).classList.contains('rdm-overlay')) emit('close')
-}
 </script>
 
 <template>
@@ -120,7 +117,6 @@ function handleOverlayClick(e: MouseEvent) {
       aria-modal="true"
       aria-label="Run details"
       tabindex="-1"
-      @click="handleOverlayClick"
       @keydown="handleKeydown"
     >
       <div class="rdm-panel">

@@ -62,7 +62,7 @@ onMounted(() => {
 
 <template>
   <Teleport to="body">
-  <div class="rad-overlay" @click.self="emit('cancel')">
+  <div class="rad-overlay">
     <div class="rad-panel" role="dialog" aria-modal="true" aria-label="Run agent">
       <h3 class="rad-title">Run Agent</h3>
 

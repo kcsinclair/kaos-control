@@ -56,9 +56,6 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
-function handleOverlayClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).classList.contains('rlm-overlay')) emit('close')
-}
 </script>
 
 <template>
@@ -69,7 +66,6 @@ function handleOverlayClick(e: MouseEvent) {
       aria-modal="true"
       aria-label="Raw log"
       tabindex="-1"
-      @click="handleOverlayClick"
       @keydown="handleKeydown"
     >
       <div class="rlm-panel">
