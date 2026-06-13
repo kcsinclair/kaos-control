@@ -1,7 +1,7 @@
 ---
 title: Documentation Panel Viewer
 type: requirement
-status: in-development
+status: done
 lineage: docs-panel-viewer
 created: "2026-05-16T00:00:00+10:00"
 priority: normal
