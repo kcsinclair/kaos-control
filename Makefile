@@ -80,6 +80,9 @@ test-all: test-unit test-integration test-e2e
 ##         G301/G302/G306  file/dir perms 0644/0755 — standard for shared content
 ##         G304/G703  file inclusion/path traversal via variable —
 ##                    every flagged path goes through internal/sandbox/
+##         G704  SSRF via taint — only flagged sites are the Gemini API client
+##               (internal/agent/gemini.go), whose request URL is built from the
+##               operator-configured base URL + model + API key, not user input
 ##         G705  XSS via taint — only flagged site is NDJSON output
 ##               (Content-Type: application/x-ndjson), not HTML
 lint:
@@ -100,13 +103,13 @@ lint:
 	fi
 	@if [ -x "$(GOBIN)/gosec" ]; then \
 	  "$(GOBIN)/gosec" -quiet \
-	    -exclude=G104,G124,G201,G202,G204,G301,G302,G304,G306,G703,G705 \
+	    -exclude=G104,G124,G201,G202,G204,G301,G302,G304,G306,G703,G704,G705 \
 	    -exclude-dir=tests/web/node_modules \
 	    -exclude-dir=node_modules \
 	    -exclude-dir=web/node_modules \
 	    ./...; \
 	elif command -v gosec >/dev/null 2>&1; then \
-	  gosec -quiet -exclude=G104,G124,G201,G202,G204,G301,G302,G304,G306,G703,G705 ./...; \
+	  gosec -quiet -exclude=G104,G124,G201,G202,G204,G301,G302,G304,G306,G703,G704,G705 ./...; \
 	else \
 	  echo "gosec not installed; install with: go install github.com/securego/gosec/v2/cmd/gosec@latest"; \
 	fi

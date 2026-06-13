@@ -2,3 +2,7 @@
 # tests/auth_middleware_test.go to construct a valid WebSocket handshake
 # request. Not a secret — it's the literal example value from the RFC.
 08b871c5aa6eb32fa96b389155f843d3871cb9ae:tests/auth_middleware_test.go:generic-api-key:353
+
+# generic-api-key matched the Go identifier `durApiMs = durApiMsN.Int64` in the
+# agent-usage report aggregator — a variable assignment, not a secret.
+5dc85540053fcadaf3496379393f9ce01a05f4ed:internal/reports/agent_usage.go:generic-api-key:413
