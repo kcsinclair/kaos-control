@@ -120,7 +120,8 @@ func TestGeminiCliDriver_Start(t *testing.T) {
 	}
 
 	// Inject environment variables to trigger the helper process in init()
-	ctx := context.WithValue(context.Background(), "test", true)
+	type ctxKey string
+	ctx := context.WithValue(context.Background(), ctxKey("test"), true)
 	t.Setenv("GO_WANT_HELPER_PROCESS", "1")
 
 	proc, err := driver.Start(ctx, run)

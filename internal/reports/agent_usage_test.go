@@ -94,8 +94,6 @@ func seedRuns(t *testing.T, idx *index.Index, runs []runSeed) {
 	}
 }
 
-func ptr64(v int64) *int64 { return &v }
-
 // ── Milestone 1 — BucketStart tests ──────────────────────────────────────────
 
 func TestBucketStart_HourUTC(t *testing.T) {

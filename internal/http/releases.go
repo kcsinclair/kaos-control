@@ -111,7 +111,7 @@ func (s *Server) handleCreateRelease(w http.ResponseWriter, r *http.Request) {
 	store := release.NewStore(p.Idx.DB())
 	if err := store.Create(rel, p.ReleaseSync, p.Entry.Path); err != nil {
 		if isDuplicateError(err) {
-			writeJSON(w, http.StatusConflict, apiError("conflict", fmt.Sprintf("release slug already in use")))
+			writeJSON(w, http.StatusConflict, apiError("conflict", "release slug already in use"))
 			return
 		}
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))

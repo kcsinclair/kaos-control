@@ -167,13 +167,21 @@ func TestTrigger_SemaphoreCap(t *testing.T) {
 		mu.Lock()
 		started = append(started, p)
 		mu.Unlock()
-		_ = p
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for third execute to start")
 	}
 
 	close(release) // unblock remaining runs
 	<-done
+
+	// All three runs should have started — two immediately, the third only
+	// after a concurrency slot freed.
+	mu.Lock()
+	startedCount := len(started)
+	mu.Unlock()
+	if startedCount != 3 {
+		t.Errorf("expected 3 runs to start, got %d: %v", startedCount, started)
+	}
 
 	if thirdID == "" {
 		t.Error("expected non-empty run ID for paths[2]")

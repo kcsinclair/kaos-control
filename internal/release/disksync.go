@@ -55,11 +55,6 @@ func NewDiskSync(expected *ExpectedEvents) *DiskSync {
 	return &DiskSync{expected: expected}
 }
 
-// releasesDir returns the absolute path to lifecycle/releases/ within projectRoot.
-func releasesDir(projectRoot string) string {
-	return filepath.Join(projectRoot, "lifecycle", "releases")
-}
-
 // relPath returns the project-relative path for a release slug.
 func relPath(slug string) string {
 	return fmt.Sprintf("lifecycle/releases/%s.md", slug)
