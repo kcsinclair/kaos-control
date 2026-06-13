@@ -1,7 +1,7 @@
 ---
 title: Guide Panel with Contextual Help
 type: idea
-status: planning
+status: raw
 lineage: guide-panel-with-help
 priority: normal
 labels:
