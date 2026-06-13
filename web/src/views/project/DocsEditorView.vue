@@ -37,9 +37,16 @@ const showPreview = ref(!canEdit.value)
 const body = ref('')
 const fileSha = ref('')
 const isMarkdown = ref(true)
+const mime = ref<string | undefined>(undefined)
+const bodyBase64 = ref<string | undefined>(undefined)
 const loadError = ref<string | null>(null)
 const notFound = ref(false)
 const saving = ref(false)
+
+const isImage = computed(() => !!mime.value && mime.value.startsWith('image/'))
+const imageSrc = computed(() =>
+  bodyBase64.value && mime.value ? `data:${mime.value};base64,${bodyBase64.value}` : '',
+)
 
 // Conflict / disk-change indicators
 const conflictError = ref(false)
@@ -58,6 +65,8 @@ async function loadDoc(): Promise<void> {
     savedBody.value = data.body ?? ''
     fileSha.value = data.file_sha
     isMarkdown.value = data.is_markdown
+    mime.value = data.mime
+    bodyBase64.value = data.body_base64
     isDirty.value = false
     diskUpdated.value = false
     conflictError.value = false
@@ -152,6 +161,18 @@ function rawDownloadUrl(): string {
     <!-- Load error -->
     <div v-else-if="loadError" class="error-banner">
       {{ loadError }}
+    </div>
+
+    <!-- Image rendering -->
+    <div v-else-if="!isMarkdown && isImage" class="non-markdown-panel image-panel">
+      <p class="non-markdown-name">{{ relPath }}</p>
+      <img
+        v-if="imageSrc"
+        :src="imageSrc"
+        :alt="relPath"
+        class="doc-image"
+      />
+      <a :href="rawDownloadUrl()" class="btn-action" download>Download</a>
     </div>
 
     <!-- Non-markdown fallback -->
@@ -265,6 +286,20 @@ function rawDownloadUrl(): string {
 }
 
 .non-markdown-msg {
+  margin-bottom: var(--space-4);
+}
+
+.image-panel {
+  align-items: flex-start;
+  text-align: left;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+}
+
+.doc-image {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--radius-md);
   margin-bottom: var(--space-4);
 }
 
