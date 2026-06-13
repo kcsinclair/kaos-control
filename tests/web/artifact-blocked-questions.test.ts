@@ -46,6 +46,21 @@ vi.mock('@/api/artifacts', () => ({
   listArtifacts:    vi.fn().mockResolvedValue({ items: [], total: 0 }),
 }))
 
+// ArtifactEditorView calls agentsStore.fetchAgents() on mount → listAgents().
+// Mock the agents API so that fetch resolves instead of leaking a real request
+// to test.local (an unhandled rejection, which Vitest 4 treats as fatal).
+vi.mock('@/api/agents', () => ({
+  listAgents:            vi.fn().mockResolvedValue([]),
+  listRuns:              vi.fn().mockResolvedValue([]),
+  listRunsByTargetPath:  vi.fn().mockResolvedValue([]),
+  getReadyCounts:        vi.fn().mockResolvedValue({}),
+  startRun:              vi.fn(),
+  getRun:                vi.fn(),
+  killRun:               vi.fn(),
+  getRunResult:          vi.fn(),
+  getRunLog:             vi.fn(),
+}))
+
 vi.mock('@/composables/useLock', () => ({
   useLock: vi.fn(() => ({
     acquired:     vueRef(false),

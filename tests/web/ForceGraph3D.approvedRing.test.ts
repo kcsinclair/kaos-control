@@ -258,12 +258,16 @@ function makeNode(overrides: Partial<GraphNode> = {}): GraphNode {
 // Mount helper
 // ---------------------------------------------------------------------------
 
-// ResizeObserver is not available in happy-dom — provide a no-op stub
-const MockResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+// ResizeObserver is not available in happy-dom — provide a no-op stub.
+// Vitest 4 no longer allows `new` on a vi.fn() whose implementation is an arrow
+// function (arrows can't be constructors), so use a regular function.
+const MockResizeObserver = vi.fn().mockImplementation(function () {
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }
+})
 
 async function mountForceGraph3D(nodes: GraphNode[] = [], edges: GraphEdge[] = []) {
   // Stub ResizeObserver before mounting

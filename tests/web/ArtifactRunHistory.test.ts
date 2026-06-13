@@ -225,6 +225,13 @@ describe('ArtifactRunHistory — fetch on mount', () => {
 
 describe('ArtifactRunHistory — reactive updates', () => {
   it('updates the list when a new run is pushed into agentsStore.artifactRuns', async () => {
+    // Neutralise the onMounted fetch: fetchRunsByTargetPath() would otherwise
+    // resolve within `await nextTick()` under Vitest 4 (it didn't under Vitest 1)
+    // and overwrite the runs we set manually below. Make it hang so the store
+    // reflects only our explicit $patch calls.
+    const { listRunsByTargetPath } = await import('@/api/agents')
+    vi.mocked(listRunsByTargetPath).mockImplementation(() => new Promise(() => {}))
+
     const store = useAgentsStore()
     store.$patch({
       artifactRuns: [makeRun({ run_id: 'aaaa0000-0000-0000-0000-000000000000' })],

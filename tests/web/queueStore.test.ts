@@ -180,6 +180,12 @@ describe('FS3: queue.finished moves to recent (capped at 10)', () => {
     const store = useQueueStore()
     await store.fetch()
 
+    // The queue.finished handler fires a silent server refresh. Under Vitest 4
+    // that refresh resolves within `await nextTick()` (it didn't under Vitest 1)
+    // and would re-apply the now-stale fetch mock, clobbering the optimistic
+    // update. Reject it so this test verifies the WS-handler update in isolation.
+    vi.mocked(listQueue).mockRejectedValue(new Error('refresh skipped'))
+
     dispatchWS('queue.finished', { id: 'run-job', status: 'done' })
     await nextTick()
 
@@ -199,6 +205,11 @@ describe('FS3: queue.finished moves to recent (capped at 10)', () => {
 
     const store = useQueueStore()
     await store.fetch()
+
+    // Reject the post-finish silent refresh (see the sibling test): under
+    // Vitest 4 it would otherwise resolve within nextTick and re-apply the stale
+    // mock snapshot, clobbering the optimistic cap-to-10 update.
+    vi.mocked(listQueue).mockRejectedValue(new Error('refresh skipped'))
 
     dispatchWS('queue.finished', { id: 'new-job', status: 'done' })
     await nextTick()

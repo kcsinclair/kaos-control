@@ -7,13 +7,14 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.4",
+    "@vitejs/plugin-vue": "^5.2.4",
     "@vue/test-utils": "^2.4.6",
     "happy-dom": "^20.8.9",
     "pinia": "^2.1.7",
+    "vite": "^6.4.2",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.6"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

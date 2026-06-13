@@ -232,6 +232,11 @@ import * as configApi from '../../web/src/api/config'
 
 describe('roadmapSettings store — loadDefaultPeriodMode (Milestone 8)', () => {
   beforeEach(() => {
+    // Vitest 4's vi.restoreAllMocks() (afterEach, below) no longer clears
+    // vi.fn() call counts — only spies — so getConfig's count would otherwise
+    // accumulate across the file's tests and break M8.3's
+    // toHaveBeenCalledTimes(1) assertion. Clear counts at the start of each test.
+    vi.clearAllMocks()
     const pinia = createPinia()
     setActivePinia(pinia)
   })

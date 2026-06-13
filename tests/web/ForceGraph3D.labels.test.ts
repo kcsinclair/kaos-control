@@ -228,11 +228,16 @@ function makeNode(overrides: Partial<GraphNode> = {}): GraphNode {
   }
 }
 
-const MockResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+// Vitest 4 no longer allows `new` on a vi.fn() whose implementation is an arrow
+// function (arrows can't be constructors). ForceGraph3D.vue does
+// `new ResizeObserver(...)`, so the implementation must be a regular function.
+const MockResizeObserver = vi.fn().mockImplementation(function () {
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Canvas mock — installed globally so textSprite() never hits null context

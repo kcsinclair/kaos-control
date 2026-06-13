@@ -23,24 +23,13 @@ export default defineConfig({
       happyDOM: { url: 'http://test.local' },
     },
     globals: true,
-    // Run *.perf.test.ts / *.perf.spec.ts files in isolated forked processes
-    // so they don't compete for CPU with component-mounting tests.  Without
-    // this, wall-clock timings measured by performance.now() absorb OS
-    // scheduler jitter introduced by the concurrent worker-thread pool and
-    // cause intermittent threshold failures (see defect
-    // sortable-table-columns-19-defect.md).
-    poolMatchGlobs: [
-      ['**/*.perf.test.ts', 'forks'],
-      ['**/*.perf.spec.ts', 'forks'],
-    ],
-    poolOptions: {
-      forks: {
-        // Each perf file runs in its own dedicated fork — no sharing between
-        // perf suites — so a slow sort in one file cannot inflate timings in
-        // another.
-        singleFork: false,
-      },
-    },
+    // Perf files (*.perf.test.ts / *.perf.spec.ts) measure wall-clock timings
+    // with performance.now() and must not absorb OS scheduler jitter from a
+    // shared worker pool (see defect sortable-table-columns-19-defect.md).
+    // Vitest 4 defaults the pool to `forks` with one fork per test file, so
+    // each perf file already runs in its own isolated process — the explicit
+    // poolMatchGlobs / poolOptions config used under Vitest 1 was removed in
+    // Vitest 4 and is no longer needed to preserve that isolation.
   },
   resolve: {
     alias: {

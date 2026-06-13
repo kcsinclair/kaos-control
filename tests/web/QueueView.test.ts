@@ -112,6 +112,17 @@ vi.mock('@/stores/agents', () => ({
   }),
 }))
 
+// QueueView's onMounted calls projectStore.fetchProjects(); mock the project
+// store so it resolves instead of leaking a real request to test.local (an
+// unhandled rejection, which Vitest 4 treats as fatal).
+vi.mock('@/stores/project', () => ({
+  useProjectStore: () => ({
+    fetchProjects: vi.fn().mockResolvedValue(undefined),
+    projects: [],
+    current: null,
+  }),
+}))
+
 vi.mock('@/composables/useNow', () => ({
   useNow: () => ref(new Date()),
 }))
