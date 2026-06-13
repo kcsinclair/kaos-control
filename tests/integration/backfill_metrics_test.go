@@ -157,7 +157,7 @@ func writeLogFile(t *testing.T, runsDir, runID string, hasResult bool) {
 	var content string
 	if hasResult {
 		content = `{"type":"assistant","message":{"content":[{"type":"text","text":"hello"}]}}` + "\n" +
-			`{"type":"result","subtype":"success","total_cost_usd":0.015,"duration_ms":1200,"duration_api_ms":1100,"num_turns":2,"usage":{"input_tokens":150,"cache_creation_input_tokens":10,"cache_read_input_tokens":30,"output_tokens":80}}` + "\n"
+			`{"type":"result","subtype":"success","total_cost_usd":0.015,"duration_ms":1200,"duration_api_ms":1100,"num_turns":2,"usage":{"input_tokens":150,"cache_creation_input_tokens":10,"cache_read_input_tokens":30,"output_tokens":80},"modelUsage":{"claude-sonnet-4-6":{"outputTokens":80,"costUSD":0.015}}}` + "\n"
 	} else {
 		content = `{"type":"system","subtype":"init"}` + "\n"
 	}
