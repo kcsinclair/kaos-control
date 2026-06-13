@@ -108,6 +108,8 @@ type accumulator struct {
 	failureCount            int64
 	metricsUnavailableCount int64
 	totalCostUSD            float64
+	totalInputCostUSD       float64
+	totalOutputCostUSD      float64
 	totalDurationMs         int64
 	totalInputTokens        int64
 	totalCacheCreationTokens int64
@@ -128,7 +130,8 @@ type accumulator struct {
 }
 
 func (a *accumulator) add(status string, metricsAvail bool, costUSD float64, durationApiMs int64,
-	inputTok, cacheCreate, cacheRead, outputTok int64, ttftMs *int64) {
+	inputTok, cacheCreate, cacheRead, outputTok int64, ttftMs *int64,
+	inputCostUSD, outputCostUSD float64) {
 
 	a.runCount++
 	if status == "done" {
@@ -143,6 +146,8 @@ func (a *accumulator) add(status string, metricsAvail bool, costUSD float64, dur
 	}
 
 	a.totalCostUSD += costUSD
+	a.totalInputCostUSD += inputCostUSD
+	a.totalOutputCostUSD += outputCostUSD
 	a.totalDurationMs += durationApiMs
 	a.totalInputTokens += inputTok
 	a.totalCacheCreationTokens += cacheCreate
@@ -176,6 +181,8 @@ func (a *accumulator) toAggregate() AgentUsageAggregate {
 		FailureCount:             a.failureCount,
 		MetricsUnavailableCount:  a.metricsUnavailableCount,
 		TotalCostUSD:             a.totalCostUSD,
+		TotalInputCostUSD:        a.totalInputCostUSD,
+		TotalOutputCostUSD:       a.totalOutputCostUSD,
 		TotalDurationMs:          a.totalDurationMs,
 		TotalInputTokens:         a.totalInputTokens,
 		TotalCacheCreationTokens: a.totalCacheCreationTokens,
@@ -422,20 +429,25 @@ func BuildAgentUsageReport(idx *index.Index, f AgentUsageFilter) (*AgentUsageRep
 			ttftPtr = &v
 		}
 
+		// Split the recorded total into input-side and output cost using the
+		// model's list prices (reconciled to the recorded total). Zero for
+		// unknown models or rows without metrics.
+		inCost, outCost := splitCost(modelStr, inputTok, cacheCreate, cacheRead, outputTok, costUSD)
+
 		// Overall accumulator.
-		overall.add(status, metricsOK, costUSD, durApiMs, inputTok, cacheCreate, cacheRead, outputTok, ttftPtr)
+		overall.add(status, metricsOK, costUSD, durApiMs, inputTok, cacheCreate, cacheRead, outputTok, ttftPtr, inCost, outCost)
 
 		// Per-model accumulator.
 		if _, ok := modelAccum[modelStr]; !ok {
 			modelAccum[modelStr] = &accumulator{}
 		}
-		modelAccum[modelStr].add(status, metricsOK, costUSD, durApiMs, inputTok, cacheCreate, cacheRead, outputTok, ttftPtr)
+		modelAccum[modelStr].add(status, metricsOK, costUSD, durApiMs, inputTok, cacheCreate, cacheRead, outputTok, ttftPtr, inCost, outCost)
 
 		// Per-agent accumulator.
 		if _, ok := agentAccum[agentName]; !ok {
 			agentAccum[agentName] = &accumulator{}
 		}
-		agentAccum[agentName].add(status, metricsOK, costUSD, durApiMs, inputTok, cacheCreate, cacheRead, outputTok, ttftPtr)
+		agentAccum[agentName].add(status, metricsOK, costUSD, durApiMs, inputTok, cacheCreate, cacheRead, outputTok, ttftPtr, inCost, outCost)
 
 		// Bucket key.
 		bk := BucketStart(startedAt, f.Bucket, loc)
