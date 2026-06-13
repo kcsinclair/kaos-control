@@ -1,7 +1,7 @@
 ---
 title: Documentation Panel Viewer
 type: idea
-status: in-development
+status: done
 lineage: docs-panel-viewer
 created: "2026-05-16T09:18:03+10:00"
 priority: normal
