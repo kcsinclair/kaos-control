@@ -8,6 +8,7 @@ import { useWebSocket } from '@/composables/useWebSocket'
 import { getDoc, putDoc } from '@/api/docs'
 import { ApiError } from '@/api/client'
 import MarkdownEditor from '@/components/artifact/MarkdownEditor.vue'
+import MarkdownPreview from '@/components/artifact/MarkdownPreview.vue'
 import type { WsEvent } from '@/types/api'
 
 const route = useRoute()
@@ -28,6 +29,9 @@ const canEdit = computed(() => {
   const roles = authStore.rolesForProject(project)
   return roles.length > 0 && roles.some((r) => r !== 'qa')
 })
+
+// Preview vs edit toggle: read-only users default to rendered preview
+const showPreview = ref(!canEdit.value)
 
 // Editor state
 const body = ref('')
@@ -57,6 +61,7 @@ async function loadDoc(): Promise<void> {
     isDirty.value = false
     diskUpdated.value = false
     conflictError.value = false
+    showPreview.value = !canEdit.value
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       notFound.value = true
@@ -181,10 +186,17 @@ function rawDownloadUrl(): string {
           {{ saving ? 'Saving…' : 'Save' }}
         </button>
         <span v-else class="read-only-badge">Read-only</span>
+        <button class="btn-toggle" @click="showPreview = !showPreview">
+          {{ showPreview ? (canEdit ? 'Edit' : 'Source') : 'Preview' }}
+        </button>
       </div>
 
       <div class="editor-body">
+        <div v-if="showPreview" class="preview-wrapper">
+          <MarkdownPreview :source="body" :project="project" />
+        </div>
         <MarkdownEditor
+          v-else
           :model-value="body"
           :readonly="!canEdit"
           @update:model-value="onBodyUpdate"
@@ -346,8 +358,30 @@ function rawDownloadUrl(): string {
   border-radius: var(--radius-full);
 }
 
+.btn-toggle {
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background 0.1s;
+  margin-left: auto;
+}
+
+.btn-toggle:hover {
+  background: var(--color-border);
+}
+
 .editor-body {
   flex: 1;
   overflow: hidden;
+}
+
+.preview-wrapper {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
 }
 </style>
