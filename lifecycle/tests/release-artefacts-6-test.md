@@ -1,7 +1,7 @@
 ---
 title: "Release Artefacts in Markdown — Integration Test Suite"
 type: test
-status: in-qa
+status: approved
 lineage: release-artefacts
 parent: lifecycle/test-plans/release-artefacts-5-test.md
 ---

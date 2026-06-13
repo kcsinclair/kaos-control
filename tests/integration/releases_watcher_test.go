@@ -101,6 +101,10 @@ func TestWatcherDeletesRowOnFileRemoval(t *testing.T) {
 		t.Fatalf("release file should exist before removal: %v", err)
 	}
 
+	// Wait for the API-driven write event to be processed and consumed from ExpectedEvents
+	// before we delete the file, otherwise the CREATE and REMOVE events will be coalesced.
+	time.Sleep(debounceWait)
+
 	ch := make(chan []byte, 64)
 	env.proj.Hub.Register(ch)
 	defer env.proj.Hub.Unregister(ch)

@@ -184,8 +184,10 @@ func pollForArtifactStatus(t *testing.T, env *testEnv, relPath, want string, tim
 		resp := env.doRequest("GET", "/api/p/testproject/artifacts/"+relPath, nil)
 		if resp.StatusCode == 200 {
 			data := readJSON(t, resp)
-			if status, _ := data["status"].(string); status == want {
-				return true
+			if art, ok := data["artifact"].(map[string]any); ok {
+				if status, _ := art["status"].(string); status == want {
+					return true
+				}
 			}
 		} else {
 			resp.Body.Close()

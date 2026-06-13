@@ -1,7 +1,7 @@
 ---
 title: Test Plan — Documentation Panel Viewer
 type: plan-test
-status: in-development
+status: done
 lineage: docs-panel-viewer
 created: "2026-06-12T00:00:00+10:00"
 priority: normal

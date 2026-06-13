@@ -40,6 +40,7 @@ func TestTriageAPI_Unauthenticated(t *testing.T) {
 // TestTriageAPI_WrongRole verifies that a user without product-owner, analyst,
 // or reviewer role receives 403.
 func TestTriageAPI_WrongRole(t *testing.T) {
+	installLLMFakeError(t, "deliberate failure")
 	seeds := []seedArtifact{{
 		relPath: "lifecycle/ideas/role-test.md",
 		content: makeArtifact("Role Test", "idea", "raw", "role-test", "",
@@ -112,7 +113,25 @@ func TestTriageAPI_WrongType(t *testing.T) {
 // TestTriageAPI_Success verifies that triggering triage on a raw idea returns
 // 202 with a run_id, and the run completes with status=done within 5 s.
 func TestTriageAPI_Success(t *testing.T) {
-	installLLMFake(t, []string{defaultProposeJSON("api-success", "API Success", nil)})
+	block := make(chan struct{})
+	var unblockOnce sync.Once
+	unblock := func() { unblockOnce.Do(func() { close(block) }) }
+	defer unblock()
+
+	orig := ideachat.CallLLM
+	t.Cleanup(func() {
+		unblock()
+		time.Sleep(100 * time.Millisecond)
+		ideachat.CallLLM = orig
+	})
+	ideachat.CallLLM = func(ctx context.Context, cfg ideachat.ModelConfig, msgs []ideachat.LLMMessage) (string, error) {
+		select {
+		case <-block:
+			return defaultProposeJSON("api-success", "API Success", nil), nil
+		case <-ctx.Done():
+			return "", ctx.Err()
+		}
+	}
 
 	seeds := []seedArtifact{{
 		relPath: "lifecycle/ideas/api-success.md",
@@ -132,16 +151,12 @@ func TestTriageAPI_Success(t *testing.T) {
 		t.Fatal("202 response missing non-empty run_id")
 	}
 
+	unblock()
+
 	// Poll for the run to complete.
 	run := pollForRunStatus(t, env, "lifecycle/ideas/api-success.md", "done", 5*time.Second)
 	if run == nil {
-		// Also accept the run completing synchronously.
-		run = pollForRunStatus(t, env, "lifecycle/ideas/api-success.md", "failed", 1*time.Second)
-		if run != nil {
-			t.Errorf("run failed instead of succeeding; run: %v", run)
-		} else {
-			t.Error("run did not complete within 5s")
-		}
+		t.Error("run did not complete within 5s")
 	}
 }
 
@@ -217,8 +232,8 @@ func TestTriageAPI_InFlightCoalesce(t *testing.T) {
 func TestTriageAPI_LockedLineage(t *testing.T) {
 	seeds := []seedArtifact{{
 		relPath: "lifecycle/ideas/locked-idea.md",
-		content: makeArtifact("Locked Idea", "idea", "raw", "locked-idea", "",
-			"Raw idea for lock test with enough words to qualify."),
+		content: makeArtifact("Locked Idea", "idea", "draft", "locked-idea", "",
+			"Draft idea for lock test with enough words to qualify."),
 	}}
 	env := newTestEnvWithCfgYAML(t, seeds, triageCfgYAML)
 	env.login("admin@test.local", "admin-pass-123")
@@ -229,6 +244,11 @@ func TestTriageAPI_LockedLineage(t *testing.T) {
 		t.Fatalf("Acquire lock: %v", err)
 	}
 	t.Cleanup(func() { _ = env.proj.Locks.Release("locked-idea") })
+
+	// Rewrite to raw on disk, and wait for watcher to index it.
+	writeRawIdea(t, env.projectRoot, "locked-idea", "Locked Idea",
+		"Raw idea for lock test with enough words to qualify.")
+	time.Sleep(300 * time.Millisecond)
 
 	resp := env.doRequest("POST", triageURL("locked-idea"), nil)
 	requireStatus(t, resp, http.StatusConflict)
