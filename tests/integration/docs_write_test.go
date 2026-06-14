@@ -58,7 +58,8 @@ func TestDocsPut_ShaMismatch(t *testing.T) {
 		map[string]any{"body": "# Alpha\n\nTampered.\n", "expected_sha": staleSHA})
 	requireStatus(t, resp, http.StatusConflict)
 	data := readJSON(t, resp)
-	if code, _ := data["code"].(string); code != "sha_mismatch" {
+	errObj, _ := data["error"].(map[string]any)
+	if code, _ := errObj["code"].(string); code != "sha_mismatch" {
 		t.Errorf("error code: expected %q, got %q", "sha_mismatch", code)
 	}
 
@@ -80,7 +81,8 @@ func TestDocsPut_NotMarkdown(t *testing.T) {
 		map[string]any{"body": "not allowed"})
 	requireStatus(t, resp, http.StatusUnsupportedMediaType)
 	data := readJSON(t, resp)
-	if code, _ := data["code"].(string); code != "not_markdown" {
+	errObj, _ := data["error"].(map[string]any)
+	if code, _ := errObj["code"].(string); code != "not_markdown" {
 		t.Errorf("error code: expected %q, got %q", "not_markdown", code)
 	}
 }
@@ -112,7 +114,8 @@ func TestDocsPut_NoRoleForbidden(t *testing.T) {
 		map[string]any{"body": "# Alpha\n\nUnauthorised edit.\n"})
 	requireStatus(t, resp, http.StatusForbidden)
 	data := readJSON(t, resp)
-	if code, _ := data["code"].(string); code != "forbidden" {
+	errObj, _ := data["error"].(map[string]any)
+	if code, _ := errObj["code"].(string); code != "forbidden" {
 		t.Errorf("error code: expected %q, got %q", "forbidden", code)
 	}
 }

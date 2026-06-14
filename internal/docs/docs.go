@@ -214,6 +214,12 @@ func extractFirstParagraph(body string) string {
 // Returns ErrPathTraversal when the path escapes the docs/ root.
 func Read(projectRoot, relPath string) ([]byte, error) {
 	docsRoot := filepath.Join(projectRoot, "docs")
+	// If docs/ doesn't exist, the file can't either — report not-found rather
+	// than letting sandbox.Resolve walk above the (absent) root and mistake it
+	// for a traversal attempt. Mirrors the guard in List.
+	if _, statErr := os.Stat(docsRoot); errors.Is(statErr, fs.ErrNotExist) {
+		return nil, ErrNotFound
+	}
 	absPath, err := sandbox.Resolve(docsRoot, relPath)
 	if err != nil {
 		return nil, ErrPathTraversal

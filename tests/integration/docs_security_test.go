@@ -82,7 +82,8 @@ func TestDocsGet_RejectsEscapingSymlink(t *testing.T) {
 	resp := env.doRequest("GET", "/api/p/testproject/docs/escape.md", nil)
 	requireStatus(t, resp, http.StatusBadRequest)
 	data := readJSON(t, resp)
-	if code, _ := data["code"].(string); code != "path_traversal" {
+	errObj, _ := data["error"].(map[string]any)
+	if code, _ := errObj["code"].(string); code != "path_traversal" {
 		t.Errorf("error code: expected %q, got %q", "path_traversal", code)
 	}
 }

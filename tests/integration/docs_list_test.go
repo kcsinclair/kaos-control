@@ -262,7 +262,8 @@ func TestDocsGet_NotFound(t *testing.T) {
 	resp := env.doRequest("GET", "/api/p/testproject/docs/missing.md", nil)
 	requireStatus(t, resp, http.StatusNotFound)
 	data := readJSON(t, resp)
-	if code, _ := data["code"].(string); code != "not_found" {
+	errObj, _ := data["error"].(map[string]any)
+	if code, _ := errObj["code"].(string); code != "not_found" {
 		t.Errorf("error code: expected %q, got %q", "not_found", code)
 	}
 }
