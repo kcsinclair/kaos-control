@@ -6,3 +6,10 @@
 # generic-api-key matched the Go identifier `durApiMs = durApiMsN.Int64` in the
 # agent-usage report aggregator — a variable assignment, not a secret.
 5dc85540053fcadaf3496379393f9ce01a05f4ed:internal/reports/agent_usage.go:generic-api-key:413
+
+# The explanatory text for the above false positive quotes the matched code, so
+# the same generic-api-key rule recurs where it is quoted — in the comment just
+# above (this file) and in the PROJECT_PLAN.md change-log entry. Both are at
+# commit 51d72d73; ignore those self-references too.
+51d72d736e40b18233f1276aefbd28bd88e197ae:.gitleaksignore:generic-api-key:6
+51d72d736e40b18233f1276aefbd28bd88e197ae:plans/PROJECT_PLAN.md:generic-api-key:13
