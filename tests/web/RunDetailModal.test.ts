@@ -209,19 +209,20 @@ describe('RunDetailModal — Escape key', () => {
 })
 
 describe('RunDetailModal — backdrop click', () => {
-  it('emits "close" when the overlay backdrop (not the panel) is clicked', async () => {
+  it('does NOT emit "close" when the overlay backdrop is clicked', async () => {
+    // Per the modal-closes-on-outside-click defect (done), modals only dismiss
+    // via the explicit close button or Escape — a backdrop click is a no-op.
     const wrapper = mountModal()
     await flushPromises()
 
     // Simulate a click event whose target is the overlay element itself.
     const overlay = wrapper.find('.rdm-overlay')
-    // Manually dispatch a click so that e.target === overlay.element.
     const clickEvent = new MouseEvent('click', { bubbles: true })
     Object.defineProperty(clickEvent, 'target', { value: overlay.element, writable: false })
     overlay.element.dispatchEvent(clickEvent)
     await flushPromises()
 
-    expect(wrapper.emitted('close')).toBeDefined()
+    expect(wrapper.emitted('close')).toBeUndefined()
   })
 
   it('does NOT emit "close" when the modal panel itself is clicked', async () => {
