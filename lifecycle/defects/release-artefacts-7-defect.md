@@ -1,7 +1,7 @@
 ---
 title: "Flaky integration test TestWatcherDeletesRowOnFileRemoval due to fsnotify event coalescence"
 type: defect
-status: in-development
+status: done
 lineage: release-artefacts
 parent: lifecycle/tests/release-artefacts-6-test.md
 labels: [defect]

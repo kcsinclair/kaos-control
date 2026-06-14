@@ -10,7 +10,6 @@ labels:
     - feature
     - ux
     - frontend
-release: KC-Release3
 ---
 
 # Guide Panel on Right with help for current screen

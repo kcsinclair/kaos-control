@@ -8,7 +8,7 @@ labels:
     - workflow
     - process
     - feature
-release: KC-Release3
+release: KC-Release4
 ---
 
 The concept of Epics is a little different with agentic development, you can get so many things done in a release, it makes less sense.

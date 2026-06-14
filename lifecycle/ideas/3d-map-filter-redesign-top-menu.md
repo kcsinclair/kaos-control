@@ -10,7 +10,7 @@ labels:
     - frontend
     - usability
     - vue
-release: KC-Release3
+release: KC-Release4
 ---
 
 # 2D and 3D Map Filter Redesign: Top Menu Bar

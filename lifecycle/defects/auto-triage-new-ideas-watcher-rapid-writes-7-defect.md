@@ -1,7 +1,7 @@
 ---
 title: TestTriageWatcher_RapidWrites_OneRun fails due to pollForArtifactStatus parsing bug
 type: defect
-status: in-development
+status: done
 lineage: auto-triage-new-ideas
 parent: lifecycle/tests/auto-triage-new-ideas-6-test.md
 labels: [defect]

@@ -11,7 +11,7 @@ labels:
     - frontend
     - enhancement
     - usability
-release: KC-Release3
+release: KC-Release5
 ---
 
 # Bulk Edit Artifacts (Status, Priority, Release)

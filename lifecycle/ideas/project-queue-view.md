@@ -4,14 +4,14 @@ type: idea
 status: draft
 lineage: project-queue-view
 created: "2026-05-16T13:04:44+10:00"
-priority: medium
+priority: high
 labels:
     - queue
     - frontend
     - feature
     - agent
     - vue
-release: KC-Release3
+release: KC-Release4
 ---
 
 # Project Queue View in Agents Panel

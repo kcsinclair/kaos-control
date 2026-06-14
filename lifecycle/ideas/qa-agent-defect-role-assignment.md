@@ -10,7 +10,7 @@ labels:
     - defect
     - workflow
     - agent
-release: KC-Release3
+release: KC-Release4
 ---
 
 # QA Agent Should Assign Defects to the Correct Role

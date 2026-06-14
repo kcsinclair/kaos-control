@@ -11,7 +11,7 @@ labels:
     - qa
     - workflow
     - artefacts
-release: KC-Release3
+release: KC-Release4
 ---
 
 # Test Artifact Status Lifecycle
