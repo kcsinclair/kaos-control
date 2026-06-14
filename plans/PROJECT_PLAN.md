@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-06-14** — Documentation panel verified working; closed defect `doc-view-renders-raw-content` (`in-development` → `done`). The docs view renders markdown previews, HTML in a sandboxed iframe, and images inline, and the list opens all docs in the in-app viewer (`docs-panel-viewer-2` requirement already done). Release notes for 0.1.3 finalised in the GitHub release (the working-copy RELEASE_NOTES-0.1.3.md draft was removed).
+
 - **2026-06-14** — Fix a stale e2e assertion in `flows/07-doc-new.spec.ts`. The "New Docs" flow creates the originating doc via `brainDump.createDoc`, which sets `status: 'raw'` (the pre-draft quick-capture status from the raw-artefact-status feature) — but the test asserted `status=draft`. The app is correct; updated the assertion to expect `raw`. Flow 07 green 3/3.
 
 - **2026-06-14** — Stop gitleaks flagging its own documentation. The earlier `generic-api-key` false-positive fix (commit `51d72d73`) quoted the matched code inside both the `.gitleaksignore` explanatory comment and a PROJECT_PLAN change-log entry, so the same rule re-matched those two lines (2 new "leaks"). Added their fingerprints to `.gitleaksignore` (without reproducing the matched string here, to avoid recursing). `gitleaks detect` clean again — no leaks found.

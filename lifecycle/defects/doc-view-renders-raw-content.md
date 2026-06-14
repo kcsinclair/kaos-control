@@ -1,7 +1,7 @@
 ---
 title: Documentation View Renders Raw Base64 and Markdown Instead of Formatted Output
 type: defect
-status: in-development
+status: done
 lineage: doc-view-renders-raw-content
 created: "2026-06-13T12:01:08+10:00"
 priority: normal
