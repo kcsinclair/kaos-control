@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-06-14** — Fix a stale e2e assertion in `flows/07-doc-new.spec.ts`. The "New Docs" flow creates the originating doc via `brainDump.createDoc`, which sets `status: 'raw'` (the pre-draft quick-capture status from the raw-artefact-status feature) — but the test asserted `status=draft`. The app is correct; updated the assertion to expect `raw`. Flow 07 green 3/3.
+
 - **2026-06-14** — Stop gitleaks flagging its own documentation. The earlier `generic-api-key` false-positive fix (commit `51d72d73`) quoted the matched code inside both the `.gitleaksignore` explanatory comment and a PROJECT_PLAN change-log entry, so the same rule re-matched those two lines (2 new "leaks"). Added their fingerprints to `.gitleaksignore` (without reproducing the matched string here, to avoid recursing). `gitleaks detect` clean again — no leaks found.
 
 - **2026-06-14** — Fix a stale `RunDetailModal.test.ts` assertion. The test expected a backdrop click to emit `close`, but the `modal-closes-on-outside-click` defect (done, KC-Release3; commit `fed90a6b`) intentionally disabled outside-click dismiss on agent/artifact modals — dismissal is now explicit (close button / Escape) only. The component is correct; flipped the test to assert a backdrop click is a no-op (`emitted('close')` undefined). RunDetailModal suite 21/21 green.

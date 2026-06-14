@@ -77,8 +77,10 @@ test.describe('Flow 07 — "New Docs" button (FR2)', () => {
     await page.waitForURL((url) => url.pathname.includes('lifecycle/docs'), { timeout: 10_000 })
     expect(page.url()).toContain('lifecycle/docs')
 
-    // Verify the artifact page shows type=doc and status=draft
-    await expect(page.locator('[data-status="draft"], .status-badge:has-text("draft")')).toBeVisible({
+    // Verify the artifact page shows the new doc in its originating status.
+    // Quick-capture artifacts (brainDump.createDoc) start in `raw`, the
+    // pre-draft status from the raw-artefact-status feature — not `draft`.
+    await expect(page.locator('[data-status="raw"], .status-badge:has-text("raw")')).toBeVisible({
       timeout: 5_000,
     })
   })
