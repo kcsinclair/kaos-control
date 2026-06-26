@@ -1,7 +1,7 @@
 ---
 title: DevOps CLI with Linux-User Identity Mapping
 type: requirement
-status: approved
+status: planning
 lineage: kaos-control-devops-cli
 created: "2026-06-26T00:00:00+10:00"
 priority: high
