@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
+	"github.com/kaos-control/kaos-control/internal/project"
 	"github.com/kaos-control/kaos-control/internal/release"
 	"github.com/kaos-control/kaos-control/internal/sandbox"
 	"gopkg.in/yaml.v3"
@@ -690,6 +692,41 @@ func buildMarkdown(fm artifact.Frontmatter, body string) (string, error) {
 		sb.WriteString("\n")
 	}
 	return sb.String(), nil
+}
+
+// resolveParentFrontmatter looks up the parent artifact's Frontmatter by its
+// lifecycle-relative path. It tries the index first (one DB query); on a miss
+// it falls back to a single os.ReadFile + artifact.Parse. Any failure returns
+// (Frontmatter{}, false) — callers must proceed without inheritance rather than
+// propagating the error (FR-5 / NFR-4).
+func resolveParentFrontmatter(p *project.Project, parentPath string) (artifact.Frontmatter, bool) {
+	if parentPath == "" {
+		return artifact.Frontmatter{}, false
+	}
+	// Try the index first.
+	if row, err := p.Idx.Get(parentPath); err == nil && row != nil {
+		return row.FM, true
+	}
+	// Index miss — fall back to disk.
+	absPath, err := sandbox.Resolve(p.Entry.Path, parentPath)
+	if err != nil {
+		slog.Info("resolveParentFrontmatter: invalid parent path", "path", parentPath, "err", err)
+		return artifact.Frontmatter{}, false
+	}
+	raw, err := os.ReadFile(absPath)
+	if err != nil {
+		slog.Info("resolveParentFrontmatter: parent not on disk", "path", parentPath, "err", err)
+		return artifact.Frontmatter{}, false
+	}
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return artifact.Frontmatter{}, false
+	}
+	a := artifact.Parse(raw, parentPath, info.ModTime())
+	if a == nil {
+		return artifact.Frontmatter{}, false
+	}
+	return a.FM, true
 }
 
 // rewriteLinks replaces references to oldRelPath/oldSlug with newRelPath/newSlug
