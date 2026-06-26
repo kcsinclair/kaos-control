@@ -3,14 +3,15 @@ title: Detect Claude Code rate_limit_event for Precise Quota Signalling
 type: requirement
 status: draft
 lineage: rate-limit-event-detection
-parent: lifecycle/ideas/rate-limit-event-detection.md
 created: "2026-06-12T00:00:00+10:00"
 priority: medium
+parent: lifecycle/ideas/rate-limit-event-detection.md
 labels:
     - agent
     - queue
     - observability
     - backend
+release: KC-Release5
 assignees:
     - role: product-owner
       who: agent
