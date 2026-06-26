@@ -10,7 +10,9 @@ import { ApiError } from '@/api/client'
 import StepProgress from '@/components/devops/StepProgress.vue'
 import StepOutput from '@/components/devops/StepOutput.vue'
 import RunHistory from '@/components/devops/RunHistory.vue'
-import { Pencil } from 'lucide-vue-next'
+import { Pencil, CheckCircle, XCircle, MinusCircle } from 'lucide-vue-next'
+import { useNow } from '@/composables/useNow'
+import { formatRelativeTime } from '@/composables/useRunFormatters'
 
 const props = defineProps<{
   pipeline: Pipeline
@@ -38,6 +40,9 @@ const outputOpen = ref(new Set<number>())
 const activeRun = computed(() => devops.activeRuns.get(props.pipeline.slug))
 const isActive = computed(() => activeRun.value?.overallStatus === 'running')
 const showSteps = computed(() => activeRun.value != null)
+
+const now = useNow()
+const latestRun = computed(() => devops.latestRunForPipeline(props.pipeline.slug))
 
 function toggleOutput(index: number) {
   if (outputOpen.value.has(index)) {
@@ -98,6 +103,18 @@ async function handleCancel() {
       <span v-else-if="activeRun?.overallStatus === 'failed'" class="run-status run-status--failed">Failed</span>
       <span v-else-if="activeRun?.overallStatus === 'cancelled'" class="run-status run-status--cancelled">Cancelled</span>
       <span v-else-if="isActive" class="run-status run-status--running">Running</span>
+      <!-- Latest historical run badge when no active run is displayed -->
+      <span
+        v-else-if="latestRun"
+        class="latest-run-badge"
+        :class="`latest-run-badge--${latestRun.status}`"
+        :title="`Last run: ${latestRun.status} — ${new Date(latestRun.started_at).toLocaleString()}`"
+      >
+        <CheckCircle v-if="latestRun.status === 'passed'" :size="11" />
+        <XCircle v-else-if="latestRun.status === 'failed'" :size="11" />
+        <MinusCircle v-else :size="11" />
+        {{ formatRelativeTime(latestRun.started_at, now) }}
+      </span>
     </div>
 
     <!-- Step list shown when a run is active or completed -->
@@ -224,6 +241,22 @@ async function handleCancel() {
 }
 .run-status--cancelled {
   background: var(--color-border);
+  color: var(--color-text-muted);
+}
+.latest-run-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 500;
+}
+.latest-run-badge--passed {
+  color: #22c55e;
+}
+.latest-run-badge--failed {
+  color: var(--color-error);
+}
+.latest-run-badge--cancelled {
   color: var(--color-text-muted);
 }
 .step-list {
