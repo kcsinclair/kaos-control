@@ -1,7 +1,7 @@
 ---
 title: Rice Scoring Support for Product Management Prioritisation
 type: idea
-status: draft
+status: approved
 lineage: rice-scoring
 priority: high
 labels:
