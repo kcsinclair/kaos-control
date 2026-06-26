@@ -32,6 +32,7 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 		AllowedPaths       []string `json:"allowed_write_paths,omitempty"`
 		OllamaInstanceName string   `json:"ollama_instance,omitempty"`
 		OllamaEndpoint     string   `json:"ollama_endpoint,omitempty"`
+		BaseURL            string   `json:"base_url,omitempty"` // claude-env: endpoint base URL (non-secret)
 		ReadyCount         int      `json:"ready_count"`
 	}
 	var out []agentSummary
@@ -50,6 +51,7 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 			AllowedPaths:       ag.AllowedPaths,
 			OllamaInstanceName: ag.OllamaInstanceName,
 			OllamaEndpoint:     ag.OllamaEndpoint,
+			BaseURL:            ag.BaseURL,
 			ReadyCount:         rc,
 		})
 	}
