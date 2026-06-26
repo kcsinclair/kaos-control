@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Run History
 type: requirement
-status: blocked
+status: approved
 lineage: devops-pipeline-run-history
 created: "2026-06-26T00:00:00+10:00"
 priority: normal
@@ -173,17 +173,28 @@ DevOps screen.
       is never pruned).
 - [ ] No regression to live streaming or run triggering. ([[devops-pipelines]])
 
-## Open Questions
+## Resolved Questions
 
 1. The on-disk store path is `~/.kaos-control/devops/<project>/`; is the
    `<project>` segment the project **name** or its registration **id**?
    ([[devops-pipelines]] resolved-question wording says name — confirm this is
    still the convention for history lookups.)
+
+> The directory ~/.kaos-control/devops/kaos-control is for the project ID
+
 2. Default history length is specified as 10 with a max of 50 — is 50 an
    acceptable retention ceiling per pipeline, or should retention be larger
    than the display maximum?
+
+> 50 is good.
+
 3. Should the latest-run summary (F7) also appear in the DevOps card grouping
    header, or only on the individual pipeline card/detail?
+
+> Yes in the devops card grouping.
+
 4. For runs that predate this feature (already on disk but possibly without the
    full structured metadata of F1), should they be back-filled/migrated, listed
    best-effort, or ignored?
+
+> back-filled.
