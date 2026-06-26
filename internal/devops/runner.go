@@ -83,6 +83,14 @@ func (r *Runner) ActiveRunID(slug string) (string, bool) {
 	return ar.runID, true
 }
 
+// IsRunningID reports whether the given run_id is currently active.
+func (r *Runner) IsRunningID(runID string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, ok := r.byRunID[runID]
+	return ok
+}
+
 // Start launches pipeline in a background goroutine. It returns the run_id
 // immediately. Returns an error if the pipeline slug is already running.
 //

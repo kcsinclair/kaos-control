@@ -239,6 +239,9 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 					if err := logStore.WriteRecord(entry.Name, rec); err != nil {
 						slog.Error("devops: write run record", "run_id", runID, "err", err)
 					}
+					if _, err := logStore.PruneOldRuns(entry.Name, info.slug, 50, devopsRunner.IsRunningID); err != nil {
+						slog.Warn("devops: prune old runs", "project", entry.Name, "slug", info.slug, "err", err)
+					}
 				}
 			}
 		}

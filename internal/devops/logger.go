@@ -315,6 +315,40 @@ func (ls *LogStore) ListPipelineRuns(projectName, slug string, limit int) ([]Run
 	return records, nil
 }
 
+// PruneOldRuns removes the oldest finished runs for slug beyond the keep
+// threshold. Both .meta.json and .log files are deleted for each pruned run.
+// isActive must return true for any runID that is currently executing; those
+// runs are never pruned. Returns the count of run pairs removed.
+func (ls *LogStore) PruneOldRuns(projectName, slug string, keep int, isActive func(runID string) bool) (int, error) {
+	// Collect all sidecar records for this slug, sorted newest-first.
+	records, err := ls.ListPipelineRuns(projectName, slug, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(records) <= keep {
+		return 0, nil
+	}
+
+	toRemove := records[keep:]
+	removed := 0
+	for _, rec := range toRemove {
+		if isActive != nil && isActive(rec.RunID) {
+			continue
+		}
+		metaPath := ls.metaPath(projectName, rec.RunID)
+		logPath := ls.logPath(projectName, rec.RunID)
+		_ = os.Remove(metaPath)
+		_ = os.Remove(logPath)
+		removed++
+	}
+
+	if removed > 0 {
+		slog.Info("devops: pruned old runs", "project", projectName, "slug", slug, "removed", removed)
+	}
+	return removed, nil
+}
+
 // RunSummary is a brief description of a past pipeline run extracted from its
 // log file header.
 type RunSummary struct {
