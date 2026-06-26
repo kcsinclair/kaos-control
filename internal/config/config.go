@@ -422,6 +422,9 @@ type AgentConfig struct {
 	// It is the shell command to run as the agent process.
 	// If empty, the stub emits one synthetic result event and exits 0.
 	ShellCommand string `yaml:"shell_command,omitempty"`
+	// claude-env driver fields (only used when Driver == "claude-env").
+	BaseURL   string `yaml:"base_url,omitempty"`
+	AuthToken string `yaml:"auth_token,omitempty"` // secret — must never be logged or echoed
 }
 
 // agentConfigRaw is used internally to unmarshal AgentConfig and accept both
@@ -447,6 +450,8 @@ type agentConfigRaw struct {
 	OnDenial           string            `yaml:"on_denial,omitempty"`
 	ObserveOnly        bool              `yaml:"observe_only,omitempty"`
 	ShellCommand       string            `yaml:"shell_command,omitempty"`
+	BaseURL            string            `yaml:"base_url,omitempty"`
+	AuthToken          string            `yaml:"auth_token,omitempty"`
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler so that AgentConfig accepts both
@@ -475,6 +480,8 @@ func (a *AgentConfig) UnmarshalYAML(value *yaml.Node) error {
 	a.OnDenial = raw.OnDenial
 	a.ObserveOnly = raw.ObserveOnly
 	a.ShellCommand = raw.ShellCommand
+	a.BaseURL = raw.BaseURL
+	a.AuthToken = raw.AuthToken
 
 	// Merge "role" and "roles" entries, preserving order and deduplicating.
 	seen := make(map[string]bool)
