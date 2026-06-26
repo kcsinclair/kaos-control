@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Run History
 type: idea
-status: approved
+status: clarifying
 lineage: devops-pipeline-run-history
 created: "2026-05-10T16:00:54+10:00"
 priority: normal
