@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — DevOps Pipeline Run History"
 type: plan-test
-status: draft
+status: approved
 lineage: devops-pipeline-run-history
 parent: lifecycle/requirements/devops-pipeline-run-history-2.md
 created: "2026-06-26T00:00:00+10:00"
