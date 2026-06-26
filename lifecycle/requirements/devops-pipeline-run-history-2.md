@@ -1,7 +1,7 @@
 ---
 title: DevOps Pipeline Run History
 type: requirement
-status: approved
+status: planning
 lineage: devops-pipeline-run-history
 created: "2026-06-26T00:00:00+10:00"
 priority: normal
