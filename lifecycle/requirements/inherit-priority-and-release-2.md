@@ -1,7 +1,7 @@
 ---
 title: Inherit Priority and Release Through Lineage
 type: requirement
-status: approved
+status: planning
 lineage: inherit-priority-and-release
 created: "2026-06-26T00:00:00+10:00"
 priority: high
