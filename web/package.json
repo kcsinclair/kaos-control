@@ -27,7 +27,7 @@
     "echarts": "^6.0.0",
     "js-yaml": "^4.1.1",
     "lucide-vue-next": "^1.0.0",
-    "markdown-it": "^14.1.0",
+    "markdown-it": "^14.2.0",
     "pinia": "^2.1.7",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
@@ -48,6 +48,9 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "vue-demi"
-    ]
+    ],
+    "overrides": {
+      "undici": "^7.28.0"
+    }
   }
 }
