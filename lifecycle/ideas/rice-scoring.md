@@ -3,7 +3,7 @@ title: Rice Scoring Support for Product Management Prioritisation
 type: idea
 status: draft
 lineage: rice-scoring
-priority: medium
+priority: high
 labels:
     - feature
     - frontend
@@ -12,6 +12,7 @@ labels:
     - artifacts
     - usability
 release: KC-Release4
+parent: lifecycle/ideas/kaos-control-devops-cli.md
 ---
 
 ## Raw Idea

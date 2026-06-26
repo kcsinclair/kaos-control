@@ -8,7 +8,8 @@ labels:
     - architecture
     - artefacts
     - enhancement
-release: KC-Release4
+release: KC-Release5
+parent: lifecycle/ideas/kaos-control-devops-cli.md
 ---
 
 # Architectural Artefacts

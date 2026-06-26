@@ -11,7 +11,8 @@ labels:
     - qa
     - workflow
     - artefacts
-release: KC-Release4
+release: KC-Release5
+parent: lifecycle/ideas/kaos-control-devops-cli.md
 ---
 
 # Test Artifact Status Lifecycle
