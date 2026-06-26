@@ -249,6 +249,11 @@ onMounted(() => {
     })
 
   if (props.dagMode) {
+    // Tolerate cycles: with DAG mode on, 3d-force-graph throws / fails to assign
+    // depths when the graph isn't acyclic, leaving nodes unlaid-out. onDagError
+    // lets it ignore the loop segment and lay out the rest (the roadmap graph is
+    // frequently cyclic — timeline/parent/depends_on/related_to/assigned edges).
+    graph.onDagError(() => {})
     graph.dagMode(props.dagMode as any)
   }
 

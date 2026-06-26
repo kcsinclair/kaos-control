@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-06-26** — Fix the Roadmap 3D graph layout (defect `roadmap-3d-graph-dag-cycle`). The roadmap is the only caller that enables DAG mode (`dag-mode="lr"`) on the shared `ForceGraph3D.vue`, which registered no `onDagError` handler — so 3d-force-graph couldn't assign DAG depths on the roadmap's cyclic graph (timeline/parent/depends_on/related_to/assigned edges) and nodes piled up at the origin with overlapping labels (the engine rendered; only the layout failed). Added `graph.onDagError(() => {})` before `dagMode()` so cycles are tolerated and the rest lays out. Verified live by the user; defect → done. (The regular 3D Map never sets dagMode, so it was unaffected.)
+
 - **2026-06-14** — Documentation panel verified working; closed defect `doc-view-renders-raw-content` (`in-development` → `done`). The docs view renders markdown previews, HTML in a sandboxed iframe, and images inline, and the list opens all docs in the in-app viewer (`docs-panel-viewer-2` requirement already done). Release notes for 0.1.3 finalised in the GitHub release (the working-copy RELEASE_NOTES-0.1.3.md draft was removed).
 
 - **2026-06-14** — Fix a stale e2e assertion in `flows/07-doc-new.spec.ts`. The "New Docs" flow creates the originating doc via `brainDump.createDoc`, which sets `status: 'raw'` (the pre-draft quick-capture status from the raw-artefact-status feature) — but the test asserted `status=draft`. The app is correct; updated the assertion to expect `raw`. Flow 07 green 3/3.
