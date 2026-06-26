@@ -94,6 +94,9 @@ type Run struct {
 	OllamaInstanceName string // resolved from AgentConfig.OllamaInstanceName
 	OllamaEndpoint     string // "chat" or "generate"
 	ShellCommand       string // shell-stub driver: command to run (empty = default stub behavior)
+	// claude-env driver fields (only used when Driver == "claude-env").
+	BaseURL   string // ANTHROPIC_BASE_URL override for the subprocess
+	AuthToken string // ANTHROPIC_AUTH_TOKEN override — secret, must never be logged or echoed
 	// OnTTFT, when non-nil, is called once with the wall-clock milliseconds
 	// between process start and the first streamed content token. Set by the
 	// Manager for streaming drivers; nil for batch-mode drivers.
@@ -575,7 +578,9 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		RelatedTestPath:    relatedTestPath,
 		OllamaInstanceName: ag.OllamaInstanceName,
 		OllamaEndpoint:     ag.OllamaEndpoint,
-		ShellCommand: ag.ShellCommand,
+		ShellCommand:       ag.ShellCommand,
+		BaseURL:            ag.BaseURL,
+		AuthToken:          ag.AuthToken,
 	}
 
 	// Wire TTFT recording for streaming drivers. The callback is called from
