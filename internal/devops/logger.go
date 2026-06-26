@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -141,6 +142,64 @@ func (ls *LogStore) WriteRecord(projectName string, rec RunRecord) error {
 		return fmt.Errorf("devops: rename run record: %w", err)
 	}
 	return nil
+}
+
+// readRecord decodes a single .meta.json sidecar file.
+func readRecord(path string) (RunRecord, bool) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return RunRecord{}, false
+	}
+	var rec RunRecord
+	if err := json.Unmarshal(data, &rec); err != nil {
+		return RunRecord{}, false
+	}
+	return rec, true
+}
+
+// Record looks up a run record by project and runID.
+func (ls *LogStore) Record(projectName, runID string) (RunRecord, bool) {
+	return readRecord(ls.metaPath(projectName, runID))
+}
+
+// ListPipelineRuns returns finished runs for one pipeline slug, newest-first.
+// limit<=0 means all; callers should cap at 50. Corrupt records are skipped
+// with a WARN log (NF3).
+func (ls *LogStore) ListPipelineRuns(projectName, slug string, limit int) ([]RunRecord, error) {
+	dir := ls.projectLogsDir(projectName)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("devops: listing pipeline runs: %w", err)
+	}
+
+	var records []RunRecord
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".meta.json") {
+			continue
+		}
+		path := filepath.Join(dir, e.Name())
+		rec, ok := readRecord(path)
+		if !ok {
+			slog.Warn("devops: skipping corrupt run record", "project", projectName, "file", e.Name())
+			continue
+		}
+		if rec.Slug != slug {
+			continue
+		}
+		records = append(records, rec)
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].StartedAt > records[j].StartedAt
+	})
+
+	if limit > 0 && len(records) > limit {
+		records = records[:limit]
+	}
+	return records, nil
 }
 
 // RunSummary is a brief description of a past pipeline run extracted from its
