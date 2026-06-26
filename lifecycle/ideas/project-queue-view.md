@@ -1,7 +1,7 @@
 ---
 title: Project Queue View in Agents Panel
 type: idea
-status: draft
+status: approved
 lineage: project-queue-view
 created: "2026-05-16T13:04:44+10:00"
 priority: high
