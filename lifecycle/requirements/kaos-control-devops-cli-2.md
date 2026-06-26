@@ -1,7 +1,7 @@
 ---
 title: DevOps CLI with Linux-User Identity Mapping
 type: requirement
-status: blocked
+status: approved
 lineage: kaos-control-devops-cli
 created: "2026-06-26T00:00:00+10:00"
 priority: high
@@ -110,22 +110,36 @@ attributing every action to a resolved kaos-control user.
 - [ ] Integration tests in `tests/` cover identity resolution (token, mapped Linux user, unmapped), role-gated allow/deny, and `--json` output shape.
 - [ ] `make lint` and `make test-unit` pass; related: [[auth-role-checks-mutations]], [[cli-auth-user-management]], [[devops-pipelines]].
 
-## Open Questions
+## Resolved Questions
 
 1. **Linux-user mapping location & shape.** Should the `os_user → email` map live in
    per-project `config.yaml`, in app-level `~/.kaos-control/config.yaml`, or as a
    field on each user record? The idea implies per-user association but does not fix
    the storage location.
+
+> Yes, the user will need to be a field in the project configuration in addition to the email, typically this will be the product-owner but in the future could be a different user.
+
 2. **Service-account (`--as`) authority.** Should `--as <email>` impersonation be
    available at all in this iteration, and if so, which role(s) may use it
    (`product-owner` only)? Or should CI rely solely on per-account bearer tokens?
+
+> The user id of the Linux user will be looked up in the configuration.
+
 3. **Task vocabulary for `run`.** Is `run` limited to configured agents, or does it
    also expose named composite tasks like `test-all`? If the latter, where are those
    tasks defined — config, or a fixed built-in set?
+
+> The devops run will be for the devops tasks only.  Any CLI agent handling will be done seperately.
+
 4. **Loopback vs in-process.** Should the CLI talk to a running server over the
    local API (requiring the server to be up) or operate in-process against the index
    and agent runner directly (working offline)? This affects how `--follow`
    streaming and live runs behave.
+
+> The CLI can talk to the running server.
+
 5. **Trust model for `os/user`.** Mapping trusts the OS-reported username on a
    shared host. Is that acceptable for the target deployment, or must the CLI also
    require a token even for mapped Linux users in multi-tenant environments?
+
+> Yes, os-reported username is OK.
