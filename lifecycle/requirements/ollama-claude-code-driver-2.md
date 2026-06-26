@@ -1,7 +1,7 @@
 ---
 title: Env-Override Claude Code Driver (Ollama / Anthropic-compatible endpoints)
 type: requirement
-status: blocked
+status: approved
 lineage: ollama-claude-code-driver
 priority: high
 parent: lifecycle/ideas/ollama-claude-code-driver.md
@@ -197,24 +197,38 @@ a local / air-gapped / cost-free model.
 - [ ] Related work [[ollama-agent-support]] is referenced and not duplicated:
       this driver does not register or list Ollama instances.
 
-## Open Questions
+## Resolved Questions
 
 1. **Driver name.** `claude-env` (descriptive of mechanism) vs `claude-ollama`
    (descriptive of primary use case). The idea text suggested either
    `driver: ollama` (already taken) or `driver: claude-env`. Recommend
    `claude-env`. Confirm the canonical string.
+
+> claude-env
+
 2. **Shared token resolution.** Should `auth_token` be referenceable from
    app-level config (like Ollama instances are shared across projects per
    [[ollama-agent-support]] resolved question 2), to avoid duplicating the
    token across agents? Or is an inline per-agent value sufficient for v1?
+
+> For Ollama the token is irrelevant, for other local AI it will be unique to the server instance.
+
 3. **Permission model.** Should this driver mirror `claude-code-cli`
    (bypass-permissions) or `claude-mediated` (hook-gated tool calls)? The idea's
    example uses plain `claude --model …` (bypass). Recommend starting from the
    bypass path and treating a mediated variant as a later enhancement —
    confirm.
+
+> If claude-mediated can be used with the local model that is a good option.
+
 4. **Frontend exposure.** Is config-file-only acceptable for v1, or must the
    agent creation/edit UI offer `claude-env` as a driver type with
    base-url/token/model fields (mirroring the Ollama picker)?
+
+> For this version no frontend required.
+
 5. **Endpoint compatibility scope.** Do we commit to any Anthropic-compatible
    endpoint (LiteLLM, vLLM Anthropic shim, etc.) or scope v1 docs/testing to the
    Ollama shim only, with others "best effort, untested"?
+
+> scope v1 docs/testing to the Ollama shim only, with others "best effort, untested"?
