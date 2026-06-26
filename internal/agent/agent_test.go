@@ -159,6 +159,7 @@ func TestDriverEmitsResultEvent(t *testing.T) {
 	}{
 		{"claude-code-cli", true},
 		{"claude-mediated", true},
+		{"claude-env", true},
 		{"ollama", false},
 		{"codex-cli", false},
 		{"gemini", false},

@@ -652,6 +652,209 @@ func TestSaveProjectEntry_Atomic(t *testing.T) {
 // Shared helpers (used above; also used by existing tests below)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// T-1 — claude-env config validation
+// ---------------------------------------------------------------------------
+
+// validClaudeEnvAgent returns YAML for a minimal valid claude-env agent.
+func validClaudeEnvAgentYAML(baseURL, authToken, model string) string {
+	return `agents:
+  - name: env-agent
+    role: [analyst]
+    driver: claude-env
+    base_url: ` + baseURL + `
+    auth_token: ` + authToken + `
+    model: ` + model + `
+    allowed_write_paths: [lifecycle/ideas]
+    git_identity:
+      name: Env Agent
+      email: env@test.local
+    prompt_templates:
+      analyst: "Analyse {target_path}"
+`
+}
+
+// TestValidateClaudeEnvAgent verifies BE-2 validation for the claude-env driver.
+func TestValidateClaudeEnvAgent(t *testing.T) {
+	t.Run("valid agent fields are populated", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, validClaudeEnvAgentYAML("https://api.example.com", "secret-tok", "claude-opus-4-6"))
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if len(cfg.Agents) != 1 {
+			t.Fatalf("expected 1 agent, got %d", len(cfg.Agents))
+		}
+		ag := cfg.Agents[0]
+		if ag.Driver != "claude-env" {
+			t.Errorf("driver: got %q, want claude-env", ag.Driver)
+		}
+		if ag.BaseURL != "https://api.example.com" {
+			t.Errorf("base_url: got %q", ag.BaseURL)
+		}
+		if ag.AuthToken != "secret-tok" {
+			t.Errorf("auth_token: got %q", ag.AuthToken)
+		}
+		if ag.Model != "claude-opus-4-6" {
+			t.Errorf("model: got %q", ag.Model)
+		}
+	})
+
+	t.Run("http base_url accepted", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, validClaudeEnvAgentYAML("http://localhost:11434", "tok", "claude-opus-4-6"))
+		if _, err := LoadProject(dir); err != nil {
+			t.Errorf("http base_url should be accepted: %v", err)
+		}
+	})
+
+	t.Run("missing base_url names agent and field", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: env-agent
+    role: [analyst]
+    driver: claude-env
+    auth_token: secret
+    model: claude-opus-4-6
+    prompt_templates:
+      analyst: "x"
+`)
+		_, err := LoadProject(dir)
+		if err == nil {
+			t.Fatal("expected error for missing base_url, got nil")
+		}
+		if !strings.Contains(err.Error(), "env-agent") {
+			t.Errorf("error %q does not mention agent name", err.Error())
+		}
+		if !strings.Contains(err.Error(), "base_url") {
+			t.Errorf("error %q does not mention base_url", err.Error())
+		}
+	})
+
+	t.Run("malformed base_url (not-a-url)", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, validClaudeEnvAgentYAML("not-a-url", "tok", "claude-opus-4-6"))
+		_, err := LoadProject(dir)
+		if err == nil {
+			t.Fatal("expected error for malformed base_url, got nil")
+		}
+		if !strings.Contains(err.Error(), "env-agent") {
+			t.Errorf("error %q does not mention agent name", err.Error())
+		}
+	})
+
+	t.Run("malformed base_url (non-http scheme)", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, validClaudeEnvAgentYAML("ftp://x", "tok", "claude-opus-4-6"))
+		_, err := LoadProject(dir)
+		if err == nil {
+			t.Fatal("expected error for ftp base_url, got nil")
+		}
+		if !strings.Contains(err.Error(), "env-agent") {
+			t.Errorf("error %q does not mention agent name", err.Error())
+		}
+	})
+
+	t.Run("missing auth_token names agent and field", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: env-agent
+    role: [analyst]
+    driver: claude-env
+    base_url: http://localhost:11434
+    model: claude-opus-4-6
+    prompt_templates:
+      analyst: "x"
+`)
+		_, err := LoadProject(dir)
+		if err == nil {
+			t.Fatal("expected error for missing auth_token, got nil")
+		}
+		if !strings.Contains(err.Error(), "env-agent") {
+			t.Errorf("error %q does not mention agent name", err.Error())
+		}
+		if !strings.Contains(err.Error(), "auth_token") {
+			t.Errorf("error %q does not mention auth_token", err.Error())
+		}
+	})
+
+	t.Run("missing model names agent and field", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: env-agent
+    role: [analyst]
+    driver: claude-env
+    base_url: http://localhost:11434
+    auth_token: secret
+    prompt_templates:
+      analyst: "x"
+`)
+		_, err := LoadProject(dir)
+		if err == nil {
+			t.Fatal("expected error for missing model, got nil")
+		}
+		if !strings.Contains(err.Error(), "env-agent") {
+			t.Errorf("error %q does not mention agent name", err.Error())
+		}
+		if !strings.Contains(err.Error(), "model") {
+			t.Errorf("error %q does not mention model", err.Error())
+		}
+	})
+
+	// NFR-2 regression: existing drivers must still validate correctly.
+	t.Run("regression ollama still validates", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: ollama-agent
+    role: [analyst]
+    driver: ollama
+    ollama_instance: local-ollama
+    model: llama3
+    prompt_templates:
+      analyst: "x"
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("ollama agent should validate: %v", err)
+		}
+		if cfg.Agents[0].Driver != "ollama" {
+			t.Errorf("driver: got %q", cfg.Agents[0].Driver)
+		}
+	})
+
+	t.Run("regression claude-mediated still validates", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: mediated-agent
+    role: [analyst]
+    driver: claude-mediated
+    prompt_templates:
+      analyst: "x"
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("claude-mediated agent should validate: %v", err)
+		}
+		if cfg.Agents[0].Driver != "claude-mediated" {
+			t.Errorf("driver: got %q", cfg.Agents[0].Driver)
+		}
+	})
+
+	t.Run("regression gemini still validates", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: gemini-agent
+    role: [analyst]
+    driver: gemini
+    model: gemini-2.5-pro
+    prompt_templates:
+      analyst: "x"
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("gemini agent should validate: %v", err)
+		}
+		if cfg.Agents[0].Driver != "gemini" {
+			t.Errorf("driver: got %q", cfg.Agents[0].Driver)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers (used above; also used by existing tests below)
+// ---------------------------------------------------------------------------
+
 // writeMinimalProjectConfig writes a lifecycle/config.yaml with a minimal valid
 // base configuration plus an optional extra YAML snippet (e.g. an ignore: line),
 // and returns the temp project root directory.

@@ -5,13 +5,13 @@ status: draft
 lineage: agent-editor-incomplete-config-load
 created: "2026-05-22T10:14:42+10:00"
 priority: normal
+parent: lifecycle/tests/release-artefacts-6-test.md
 labels:
     - defect
     - agent
     - editor
     - frontend
-release: KC-Release4
-parent: lifecycle/tests/release-artefacts-6-test.md
+release: KC-Release5
 ---
 
 # Agent Editor Does Not Load All Data from config.yaml
