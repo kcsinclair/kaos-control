@@ -1,7 +1,7 @@
 ---
 title: Inherit Priority and Release Through Lineage
 type: idea
-status: approved
+status: clarifying
 lineage: inherit-priority-and-release
 created: "2026-05-10T10:12:41+10:00"
 priority: high
