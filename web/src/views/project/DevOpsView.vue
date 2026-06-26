@@ -8,7 +8,6 @@ import { useDevOpsStore } from '@/stores/devops'
 import { useUiStore } from '@/stores/ui'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
-import type { RunHistoryEntry } from '@/stores/devops'
 import { Plus } from 'lucide-vue-next'
 import PipelineCard from '@/components/devops/PipelineCard.vue'
 import SplitPane from '@/components/common/SplitPane.vue'
@@ -54,11 +53,6 @@ function showLogPane() {
   splitPaneRef.value?.expandPane()
 }
 
-function hideLogPane() {
-  logPaneVisible.value = false
-  splitPaneRef.value?.collapsePane()
-}
-
 function onLogPaneCollapse() {
   logPaneVisible.value = false
 }
@@ -70,16 +64,6 @@ watch(
     if (id) showLogPane()
   },
 )
-
-// Handle user selecting a completed run from PipelineCard history
-async function handleViewLog(entry: RunHistoryEntry) {
-  try {
-    await devops.loadRunLog(project, entry.runId, entry.pipelineSlug)
-    showLogPane()
-  } catch (e: unknown) {
-    ui.error(e instanceof Error ? e.message : 'Failed to load run log.')
-  }
-}
 
 // Clear log buffer on unmount (route change)
 onUnmounted(() => {
@@ -191,7 +175,6 @@ useWebSocket(project, 'pipeline.updated', () => {
                     :key="pipeline.slug"
                     :pipeline="pipeline"
                     :project="project"
-                    @view-log="handleViewLog"
                     @edit="handleEditPipeline"
                   />
                 </div>

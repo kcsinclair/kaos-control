@@ -7,7 +7,6 @@ import { useDevOpsStore } from '@/stores/devops'
 import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/api/client'
-import type { RunHistoryEntry } from '@/stores/devops'
 import StepProgress from '@/components/devops/StepProgress.vue'
 import StepOutput from '@/components/devops/StepOutput.vue'
 import RunHistory from '@/components/devops/RunHistory.vue'
@@ -19,7 +18,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'view-log', entry: RunHistoryEntry): void
   (e: 'edit', slug: string): void
 }>()
 
@@ -121,7 +119,7 @@ async function handleCancel() {
 
     <RunHistory
       :pipeline-slug="props.pipeline.slug"
-      @view-log="emit('view-log', $event)"
+      :project="props.project"
     />
 
     <div class="card-actions">

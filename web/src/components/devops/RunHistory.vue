@@ -1,51 +1,68 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import { onMounted } from 'vue'
+import { ChevronDown, ChevronRight, CheckCircle, XCircle, MinusCircle, Loader } from 'lucide-vue-next'
 import { useDevOpsStore } from '@/stores/devops'
-import type { RunHistoryEntry } from '@/stores/devops'
+import { useNow } from '@/composables/useNow'
+import { formatRelativeTime, formatDurationMs } from '@/composables/useRunFormatters'
+import type { RunHistoryRow } from '@/api/devops'
 
 const props = defineProps<{
   pipelineSlug: string
-}>()
-
-const emit = defineEmits<{
-  (e: 'view-log', entry: RunHistoryEntry): void
+  project: string
 }>()
 
 const devops = useDevOpsStore()
+const now = useNow()
+const collapsed = ref(true)
 
-const history = computed(() =>
-  devops.historyForPipeline(props.pipelineSlug).slice().reverse()
-)
+const rows = computed((): RunHistoryRow[] => devops.pipelineHistory.get(props.pipelineSlug) ?? [])
+const isLoading = computed(() => devops.historyLoading.get(props.pipelineSlug) ?? false)
+const loadError = computed(() => devops.historyError.get(props.pipelineSlug) ?? null)
 
-function formatTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString()
+onMounted(() => {
+  devops.fetchPipelineHistory(props.project, props.pipelineSlug)
+})
+
+function toggle() {
+  collapsed.value = !collapsed.value
 }
 
-function formatDuration(entry: RunHistoryEntry): string | null {
-  if (!entry.completedAt) return null
-  const ms = entry.completedAt - entry.startedAt
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
+function absoluteTime(iso: string): string {
+  return new Date(iso).toLocaleString()
 }
 </script>
 
 <template>
-  <div v-if="history.length > 0" class="run-history">
-    <div class="history-header">Recent runs</div>
-    <div
-      v-for="entry in history"
-      :key="entry.runId"
-      class="history-row"
-    >
-      <span class="history-status" :class="`history-status--${entry.overallStatus}`">
-        {{ entry.overallStatus }}
-      </span>
-      <span class="history-time">{{ formatTime(entry.startedAt) }}</span>
-      <span v-if="formatDuration(entry)" class="history-duration">{{ formatDuration(entry) }}</span>
-      <button class="history-log-btn" @click="emit('view-log', entry)">log</button>
-    </div>
+  <div class="run-history">
+    <button class="history-toggle" @click="toggle" aria-label="Toggle run history">
+      <component :is="collapsed ? ChevronRight : ChevronDown" :size="12" class="toggle-icon" />
+      <span class="history-header-label">Run history</span>
+      <span v-if="isLoading" class="history-loading"><Loader :size="10" class="spin" /></span>
+    </button>
+
+    <template v-if="!collapsed">
+      <div v-if="loadError" class="history-error">{{ loadError }}</div>
+      <div v-else-if="rows.length === 0 && !isLoading" class="history-empty">No runs yet</div>
+      <div
+        v-for="row in rows"
+        :key="row.run_id"
+        class="history-row"
+      >
+        <span class="history-status" :class="`history-status--${row.status}`" :title="row.status">
+          <CheckCircle v-if="row.status === 'passed'" :size="13" />
+          <XCircle v-else-if="row.status === 'failed'" :size="13" />
+          <MinusCircle v-else-if="row.status === 'cancelled'" :size="13" />
+          <Loader v-else :size="13" class="spin" />
+        </span>
+        <span class="history-time" :title="absoluteTime(row.started_at)">
+          {{ formatRelativeTime(row.started_at, now) }}
+        </span>
+        <span class="history-duration">{{ formatDurationMs(row.duration_ms) }}</span>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -57,57 +74,91 @@ function formatDuration(entry: RunHistoryEntry): string | null {
   flex-direction: column;
   gap: 2px;
 }
-.history-header {
+.history-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-muted);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-text-muted);
+  width: 100%;
+  text-align: left;
   margin-bottom: var(--space-1);
+}
+.history-toggle:hover {
+  color: var(--color-text);
+}
+.toggle-icon {
+  flex-shrink: 0;
+}
+.history-header-label {
+  flex: 1;
+}
+.history-loading {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+}
+.history-error {
+  font-size: 11px;
+  color: var(--color-error);
+  padding: 2px 0;
+}
+.history-empty {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: 2px 0;
 }
 .history-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   font-size: 11px;
+  padding: 1px 0;
 }
 .history-status {
-  font-weight: 600;
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 99px;
-}
-.history-status--running {
-  background: var(--badge-approved-bg);
-  color: var(--badge-approved-text);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 .history-status--passed {
-  background: var(--badge-done-bg);
-  color: var(--badge-done-text);
+  color: #22c55e;
 }
 .history-status--failed {
-  background: var(--badge-blocked-bg);
-  color: var(--badge-blocked-text);
+  color: var(--color-error);
 }
 .history-status--cancelled {
-  background: var(--color-border);
   color: var(--color-text-muted);
+}
+.history-status--running {
+  color: var(--color-accent);
 }
 .history-time {
   color: var(--color-text-muted);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .history-duration {
   color: var(--color-text-muted);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
-.history-log-btn {
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 10px;
-  color: var(--color-accent);
-  cursor: pointer;
-  padding: 0 var(--space-1);
-  margin-left: auto;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
-.history-log-btn:hover { background: var(--color-surface); }
+.spin {
+  animation: spin 1s linear infinite;
+}
 </style>
