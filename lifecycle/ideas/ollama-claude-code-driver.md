@@ -1,7 +1,7 @@
 ---
 title: Ollama Claude code driver
 type: idea
-status: draft
+status: approved
 lineage: ollama-claude-code-driver
 priority: high
 labels:
