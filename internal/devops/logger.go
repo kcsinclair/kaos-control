@@ -162,9 +162,91 @@ func (ls *LogStore) Record(projectName, runID string) (RunRecord, bool) {
 	return readRecord(ls.metaPath(projectName, runID))
 }
 
+// backfillRecord derives a RunRecord from a legacy .log file that has no
+// matching .meta.json sidecar. It persists the result so future calls are fast.
+// Returns (record, true) on success; (zero, false) if the log cannot be parsed.
+func (ls *LogStore) backfillRecord(projectName, runID string) (RunRecord, bool) {
+	path := ls.logPath(projectName, runID)
+	f, err := os.Open(path)
+	if err != nil {
+		return RunRecord{}, false
+	}
+	defer f.Close()
+
+	var first, last *logEntry
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var e logEntry
+		if err := json.Unmarshal(line, &e); err != nil {
+			continue
+		}
+		if first == nil {
+			first = &e
+		}
+		last = &e
+	}
+
+	if first == nil {
+		return RunRecord{}, false
+	}
+
+	var slug, status string
+	startedAt := first.Time
+	endedAt := last.Time
+
+	if first.EventType == EventRunStarted {
+		if m, ok := first.Payload.(map[string]any); ok {
+			slug, _ = m["pipeline_slug"].(string)
+		}
+	}
+
+	durationMs := endedAt.Sub(startedAt).Milliseconds()
+
+	if last != nil && last.EventType == EventRunCompleted {
+		if m, ok := last.Payload.(map[string]any); ok {
+			status, _ = m["status"].(string)
+			if d, ok := m["duration_seconds"].(float64); ok {
+				durationMs = int64(d * 1000)
+			}
+		}
+	} else {
+		// No completion entry — infer best-effort status from last step.
+		status = "unknown"
+		if last != nil && last.EventType == EventStepCompleted {
+			if m, ok := last.Payload.(map[string]any); ok {
+				status, _ = m["status"].(string)
+			}
+		}
+	}
+
+	if slug == "" {
+		return RunRecord{}, false
+	}
+
+	rec := RunRecord{
+		RunID:      runID,
+		Slug:       slug,
+		StartedAt:  startedAt.UTC().Format(time.RFC3339),
+		EndedAt:    endedAt.UTC().Format(time.RFC3339),
+		DurationMs: durationMs,
+		Status:     status,
+		LogRef:     runID + ".log",
+	}
+
+	if err := ls.WriteRecord(projectName, rec); err != nil {
+		slog.Warn("devops: backfill write record", "project", projectName, "run_id", runID, "err", err)
+	}
+	return rec, true
+}
+
 // ListPipelineRuns returns finished runs for one pipeline slug, newest-first.
 // limit<=0 means all; callers should cap at 50. Corrupt records are skipped
-// with a WARN log (NF3).
+// with a WARN log (NF3). Legacy .log files without a sidecar are back-filled
+// lazily.
 func (ls *LogStore) ListPipelineRuns(projectName, slug string, limit int) ([]RunRecord, error) {
 	dir := ls.projectLogsDir(projectName)
 	entries, err := os.ReadDir(dir)
@@ -175,7 +257,18 @@ func (ls *LogStore) ListPipelineRuns(projectName, slug string, limit int) ([]Run
 		return nil, fmt.Errorf("devops: listing pipeline runs: %w", err)
 	}
 
+	// Build a set of run IDs that already have a sidecar.
+	hasMeta := make(map[string]bool)
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".meta.json") {
+			runID := strings.TrimSuffix(e.Name(), ".meta.json")
+			hasMeta[runID] = true
+		}
+	}
+
 	var records []RunRecord
+
+	// Read existing sidecar records.
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".meta.json") {
 			continue
@@ -184,6 +277,26 @@ func (ls *LogStore) ListPipelineRuns(projectName, slug string, limit int) ([]Run
 		rec, ok := readRecord(path)
 		if !ok {
 			slog.Warn("devops: skipping corrupt run record", "project", projectName, "file", e.Name())
+			continue
+		}
+		if rec.Slug != slug {
+			continue
+		}
+		records = append(records, rec)
+	}
+
+	// Back-fill from .log files that have no sidecar.
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".log") {
+			continue
+		}
+		runID := strings.TrimSuffix(e.Name(), ".log")
+		if hasMeta[runID] {
+			continue
+		}
+		rec, ok := ls.backfillRecord(projectName, runID)
+		if !ok {
+			slog.Warn("devops: cannot backfill run from log", "project", projectName, "run_id", runID)
 			continue
 		}
 		if rec.Slug != slug {
