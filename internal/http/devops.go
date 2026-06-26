@@ -460,3 +460,38 @@ func (s *Server) handleListPipelineRuns(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{"runs": out})
 }
 
+// handleGetPipelineRunLog handles GET /api/p/{project}/devops/pipelines/{slug}/runs/{run_id}/log.
+// Returns the stored NDJSON log for one past run, scoped to the pipeline (F3, NF1, NF4, NF5).
+func (s *Server) handleGetPipelineRunLog(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+	if !pipelineSlugRe.MatchString(slug) {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid pipeline slug"))
+		return
+	}
+
+	runID := chi.URLParam(r, "run_id")
+	if !runIDRe.MatchString(runID) {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid run_id format"))
+		return
+	}
+
+	slog.Debug("devops: get pipeline run log", "project", p.Entry.Name, "slug", slug, "run_id", runID)
+
+	rec, ok := p.DevopsLogs.Record(p.Entry.Name, runID)
+	if !ok || rec.Slug != slug {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "run not found: "+runID))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-ndjson")
+	w.WriteHeader(http.StatusOK)
+	if err := p.DevopsLogs.StreamLogNDJSON(p.Entry.Name, runID, w); err != nil {
+		slog.Warn("devops: streaming run log", "project", p.Entry.Name, "run_id", runID, "err", err)
+	}
+}
+
