@@ -1,7 +1,7 @@
 ---
 title: "Env-Override Claude Code Driver — Test Plan"
 type: plan-test
-status: draft
+status: approved
 lineage: ollama-claude-code-driver
 parent: lifecycle/requirements/ollama-claude-code-driver-2.md
 ---
