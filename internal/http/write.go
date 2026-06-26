@@ -104,6 +104,12 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 	// Stamp created time; always set by the server and never overridden by the caller.
 	req.Frontmatter.Created = time.Now().Format(time.RFC3339)
 
+	// Inherit priority/release from parent when the caller did not supply them.
+	// Inherited release is copied as-is and intentionally not re-validated here (FR-11).
+	if parentFM, ok := resolveParentFrontmatter(p, req.Frontmatter.Parent); ok {
+		artifact.ApplyInheritedFields(&req.Frontmatter, parentFM)
+	}
+
 	// Marshal frontmatter to YAML.
 	content, err := buildMarkdown(req.Frontmatter, req.Body)
 	if err != nil {
