@@ -4,12 +4,13 @@ type: idea
 status: planning
 lineage: inherit-priority-and-release
 created: "2026-05-10T10:12:41+10:00"
-priority: medium
+priority: high
 labels:
     - feature
     - workflow
     - artefacts
 release: KC-Release4
+parent: lifecycle/ideas/devops-pipeline-run-history.md
 ---
 
 # Inherit Priority and Release Through Lineage

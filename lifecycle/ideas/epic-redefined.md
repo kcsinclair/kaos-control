@@ -8,7 +8,8 @@ labels:
     - workflow
     - process
     - feature
-release: KC-Release4
+release: KC-Release5
+parent: lifecycle/ideas/devops-pipeline-run-history.md
 ---
 
 The concept of Epics is a little different with agentic development, you can get so many things done in a release, it makes less sense.

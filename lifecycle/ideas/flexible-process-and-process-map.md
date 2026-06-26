@@ -11,7 +11,8 @@ labels:
     - ux
     - feature
     - frontend
-release: KC-Release4
+release: KC-Release5
+parent: lifecycle/ideas/devops-pipeline-run-history.md
 ---
 
 # flexible process and process map
