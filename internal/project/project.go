@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/kaos-control/kaos-control/internal/agent"
@@ -195,8 +196,52 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	}
 	logStore := devops.NewLogStore(devopsLogDir)
 	devopsRunner := devops.NewRunner()
+
+	// runInfoMu guards runInfos, which tracks start time + slug for each
+	// in-flight run so the completion event can assemble the RunRecord.
+	type runStartInfo struct {
+		startedAt time.Time
+		slug      string
+	}
+	var runInfoMu sync.Mutex
+	runInfos := make(map[string]runStartInfo)
+
 	devopsRunner.SetEventHook(func(runID, eventType string, payload any) {
 		logStore.WriteEvent(entry.Name, runID, eventType, payload)
+
+		switch eventType {
+		case devops.EventRunStarted:
+			if p, ok := payload.(devops.RunStartedPayload); ok {
+				runInfoMu.Lock()
+				runInfos[runID] = runStartInfo{startedAt: time.Now().UTC(), slug: p.Pipeline}
+				runInfoMu.Unlock()
+			}
+		case devops.EventRunCompleted:
+			if p, ok := payload.(devops.RunCompletedPayload); ok {
+				runInfoMu.Lock()
+				info, found := runInfos[runID]
+				if found {
+					delete(runInfos, runID)
+				}
+				runInfoMu.Unlock()
+
+				if found {
+					endedAt := time.Now().UTC()
+					rec := devops.RunRecord{
+						RunID:      runID,
+						Slug:       info.slug,
+						StartedAt:  info.startedAt.Format(time.RFC3339),
+						EndedAt:    endedAt.Format(time.RFC3339),
+						DurationMs: int64(p.DurationSeconds * 1000),
+						Status:     p.Status,
+						LogRef:     runID + ".log",
+					}
+					if err := logStore.WriteRecord(entry.Name, rec); err != nil {
+						slog.Error("devops: write run record", "run_id", runID, "err", err)
+					}
+				}
+			}
+		}
 	})
 
 	// Scheduler store is always created so the HTTP API can serve job CRUD

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -85,6 +86,61 @@ func (ls *LogStore) ReadLog(projectName, runID string) ([]byte, error) {
 		return nil, fmt.Errorf("devops: reading log %s: %w", runID, err)
 	}
 	return data, nil
+}
+
+// RunRecord is persisted as a sidecar JSON file (<run_id>.meta.json) next to
+// the run log when a run reaches a terminal state.
+type RunRecord struct {
+	RunID      string `json:"run_id"`
+	Slug       string `json:"slug"`
+	StartedAt  string `json:"started_at"`  // RFC 3339
+	EndedAt    string `json:"ended_at"`    // RFC 3339
+	DurationMs int64  `json:"duration_ms"`
+	Status     string `json:"status"`     // passed | failed | cancelled
+	LogRef     string `json:"log_ref"`    // "<run_id>.log"
+}
+
+// metaPath returns the absolute path of the sidecar meta file for runID.
+func (ls *LogStore) metaPath(projectName, runID string) string {
+	return filepath.Join(ls.projectLogsDir(projectName), runID+".meta.json")
+}
+
+// WriteRecord atomically persists a RunRecord as a sidecar JSON file.
+// Uses a temp-file + rename so a killed server never leaves a partial file.
+func (ls *LogStore) WriteRecord(projectName string, rec RunRecord) error {
+	dir := ls.projectLogsDir(projectName)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("devops: create log dir: %w", err)
+	}
+
+	data, err := json.Marshal(rec)
+	if err != nil {
+		return fmt.Errorf("devops: marshal run record: %w", err)
+	}
+
+	destPath := ls.metaPath(projectName, rec.RunID)
+	tmp, err := os.CreateTemp(dir, rec.RunID+".meta.json.tmp*")
+	if err != nil {
+		return fmt.Errorf("devops: create temp record file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("devops: write run record: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("devops: sync run record: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("devops: close run record: %w", err)
+	}
+	if err := os.Rename(tmpPath, destPath); err != nil {
+		return fmt.Errorf("devops: rename run record: %w", err)
+	}
+	return nil
 }
 
 // RunSummary is a brief description of a past pipeline run extracted from its
@@ -167,6 +223,52 @@ func (ls *LogStore) ReadLogNDJSON(projectName, runID string) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// StreamLogNDJSON writes the run log to w as NDJSON, flushing after each line
+// so callers receive data progressively without buffering the whole file.
+func (ls *LogStore) StreamLogNDJSON(projectName, runID string, w io.Writer) error {
+	path := ls.logPath(projectName, runID)
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("devops: reading log %s: %w", runID, err)
+	}
+	defer f.Close()
+
+	flusher, canFlush := w.(interface{ Flush() error })
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+
+		var entry logEntry
+		if err := json.Unmarshal(line, &entry); err != nil {
+			continue
+		}
+
+		out := make(map[string]any)
+		if payload, ok := entry.Payload.(map[string]any); ok {
+			for k, v := range payload {
+				out[k] = v
+			}
+		}
+		out["type"] = entry.EventType
+
+		data, err := json.Marshal(out)
+		if err != nil {
+			continue
+		}
+		if _, err := w.Write(append(data, '\n')); err != nil {
+			return err
+		}
+		if canFlush {
+			_ = flusher.Flush()
+		}
+	}
+	return scanner.Err()
 }
 
 // summariseLog reads the first and last relevant log entries to build a RunSummary.
