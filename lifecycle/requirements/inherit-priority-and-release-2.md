@@ -1,7 +1,7 @@
 ---
 title: Inherit Priority and Release Through Lineage
 type: requirement
-status: blocked
+status: approved
 lineage: inherit-priority-and-release
 created: "2026-06-26T00:00:00+10:00"
 priority: high
@@ -98,9 +98,20 @@ The result is metadata drift across a single lineage: a `priority: high`, `relea
 - [ ] `go vet ./...` and `go build ./...` pass with no new errors; `pnpm exec vue-tsc --noEmit` passes with no new errors.
 - [ ] Related artifacts: [[inherit-priority-and-release]], [[artefact-priority-inline-edit]], [[inline-release-display-edit]], [[artefacts-list-release-priority-columns]]
 
-## Open Questions
+## Resolved Questions
 
 1. **Inherited-state indicator semantics.** FR-10 computes "inherited vs overridden" by live-comparing the child's value to the parent's *current* value. This means an override that happens to equal the parent reads as "inherited," and a parent edit can flip a previously-inherited child to "overridden" in the display. Is value-comparison acceptable, or should we persist an explicit marker (e.g. `inherited_fields: [priority, release]`) at creation to track provenance precisely? A persisted marker adds a frontmatter field and round-trip considerations (the `Frontmatter` struct is a strict field list).
+
+> Inherit only, typically this will be on creation of the new artefacts, so when the requirements-analyst creates the requirements, they should include the priority and release of the idea.  The system does not need to change existing values.
+
 2. **Defects.** Defects raised by QA (`lifecycle/defects/`) carry a `parent`. Should they inherit `priority`/`release` from the artifact under test, or are defect priority/release independently triaged? Current assumption: treat them like any other child (inherit), but confirm.
+
+> they should inherit `priority`/`release` from the artifact under test
+
 3. **Agent fallback priority.** FR-6 keeps `priority: normal` as a fallback only when there is no parent value. Confirm `normal` remains the desired default for genuinely parentless agent-generated artifacts (e.g. ideas from brain-dump with no source).
+
+> Yes, normal is the default.
+
 4. **Visual treatment.** What exactly should the inherited indicator look like (muted "inherited from parent" hint text, a badge, a tooltip on the field)? Should it offer a one-click "reset to inherited" affordance? Defer to product-owner / UX preference.
+
+> No visual difference is required.
