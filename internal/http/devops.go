@@ -4,17 +4,22 @@ package http
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kaos-control/kaos-control/internal/devops"
 	"github.com/kaos-control/kaos-control/internal/hub"
 )
+
+// runIDRe matches the 16-hex-character run IDs produced by newRunID.
+var runIDRe = regexp.MustCompile(`^[0-9a-f]{16}$`)
 
 var pipelineSlugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*[a-z0-9]$|^[a-z0-9]$`)
 
@@ -387,3 +392,71 @@ func (s *Server) handleCreatePipeline(w http.ResponseWriter, r *http.Request) {
 		"step_count": len(pl.Steps),
 	})
 }
+
+// handleListPipelineRuns handles GET /api/p/{project}/devops/pipelines/{slug}/runs.
+// Returns recent run history for a pipeline, newest-first (F2, NF4, NF5).
+func (s *Server) handleListPipelineRuns(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+	if !pipelineSlugRe.MatchString(slug) {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid pipeline slug"))
+		return
+	}
+
+	dir := devopsDir(p.Entry.Path)
+	pipelines, _ := devops.Discover(dir)
+	var found bool
+	for _, pl := range pipelines {
+		if pl.Slug == slug {
+			found = true
+			break
+		}
+	}
+	if !found {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "pipeline not found: "+slug))
+		return
+	}
+
+	limit := 10
+	if ls := r.URL.Query().Get("limit"); ls != "" {
+		if n, err := strconv.Atoi(ls); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	if limit > 50 {
+		limit = 50
+	}
+
+	slog.Debug("devops: list pipeline runs", "project", p.Entry.Name, "slug", slug, "limit", limit)
+
+	runs, err := p.DevopsLogs.ListPipelineRuns(p.Entry.Name, slug, limit)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("server_error", err.Error()))
+		return
+	}
+
+	type runOut struct {
+		RunID      string `json:"run_id"`
+		Status     string `json:"status"`
+		StartedAt  string `json:"started_at"`
+		EndedAt    string `json:"ended_at"`
+		DurationMs int64  `json:"duration_ms"`
+	}
+	out := make([]runOut, len(runs))
+	for i, rec := range runs {
+		out[i] = runOut{
+			RunID:      rec.RunID,
+			Status:     rec.Status,
+			StartedAt:  rec.StartedAt,
+			EndedAt:    rec.EndedAt,
+			DurationMs: rec.DurationMs,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"runs": out})
+}
+

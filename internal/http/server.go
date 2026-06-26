@@ -337,6 +337,7 @@ func (s *Server) buildRouter() chi.Router {
 			r.Put("/devops/pipelines/{slug}", s.handleUpdatePipeline)
 			r.Post("/devops/pipelines/{slug}/run", s.handleRunPipeline)
 			r.Post("/devops/pipelines/{slug}/cancel", s.handleCancelPipeline)
+			r.Get("/devops/pipelines/{slug}/runs", s.handleListPipelineRuns)
 			r.Get("/devops/runs/{run_id}", s.handleGetRunLog)
 
 			// Scheduler
