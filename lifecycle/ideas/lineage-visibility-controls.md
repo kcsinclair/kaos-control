@@ -9,7 +9,8 @@ labels:
     - feature
     - frontend
     - architecture
-release: KC-Release4
+release: KC-Release5
+parent: lifecycle/ideas/inherit-priority-and-release.md
 ---
 
 # Lineage Visibility Controls

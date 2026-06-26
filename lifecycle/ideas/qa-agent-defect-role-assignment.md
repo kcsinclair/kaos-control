@@ -10,7 +10,8 @@ labels:
     - defect
     - workflow
     - agent
-release: KC-Release4
+release: KC-Release5
+parent: lifecycle/ideas/inherit-priority-and-release.md
 ---
 
 # QA Agent Should Assign Defects to the Correct Role

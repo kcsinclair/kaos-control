@@ -10,7 +10,8 @@ labels:
     - frontend
     - usability
     - vue
-release: KC-Release4
+release: KC-Release5
+parent: lifecycle/ideas/inherit-priority-and-release.md
 ---
 
 # 2D and 3D Map Filter Redesign: Top Menu Bar
