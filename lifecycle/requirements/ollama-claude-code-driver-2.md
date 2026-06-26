@@ -1,7 +1,7 @@
 ---
 title: Env-Override Claude Code Driver (Ollama / Anthropic-compatible endpoints)
 type: requirement
-status: planning
+status: done
 lineage: ollama-claude-code-driver
 priority: high
 parent: lifecycle/ideas/ollama-claude-code-driver.md
