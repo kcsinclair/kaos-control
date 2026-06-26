@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Inherit Priority and Release Through Lineage"
 type: plan-backend
-status: draft
+status: approved
 lineage: inherit-priority-and-release
 parent: lifecycle/requirements/inherit-priority-and-release-2.md
 ---
