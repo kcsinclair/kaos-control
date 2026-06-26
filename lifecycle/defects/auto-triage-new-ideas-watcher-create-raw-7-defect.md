@@ -1,7 +1,7 @@
 ---
 title: TestTriageWatcher_CreateRawIdea_TriageRuns fails due to pollForArtifactStatus parsing bug
 type: defect
-status: approved
+status: in-development
 lineage: auto-triage-new-ideas
 parent: lifecycle/tests/auto-triage-new-ideas-6-test.md
 labels: [defect]
