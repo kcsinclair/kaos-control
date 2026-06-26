@@ -445,6 +445,7 @@ func New(
 	m.drivers = map[string]Driver{
 		"claude-code-cli": &ClaudeCodeDriver{},
 		"claude-mediated": hookDriver,
+		"claude-env":      &ClaudeEnvDriver{},
 		"codex-cli":       &CodexCLIDriver{},
 		"ollama":          &OllamaDriver{Instances: ollamaInstances},
 		"gemini":          &GeminiDriver{},
@@ -1562,7 +1563,7 @@ func looksLikeQuotaExhausted(text string) bool {
 // task didn't actually complete.
 func driverEmitsResultEvent(driver string) bool {
 	switch driver {
-	case "claude-code-cli", "claude-mediated":
+	case "claude-code-cli", "claude-mediated", "claude-env":
 		return true
 	default:
 		return false
