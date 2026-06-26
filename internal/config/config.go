@@ -709,6 +709,21 @@ func validateProject(cfg *Project) error {
 				return fmt.Errorf("project config: agent %q has driver=gemini but missing model", a.Name)
 			}
 		}
+		if a.Driver == "claude-env" {
+			if a.BaseURL == "" {
+				return fmt.Errorf("project config: agent %q has driver=claude-env but missing base_url", a.Name)
+			}
+			u, err := url.ParseRequestURI(a.BaseURL)
+			if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+				return fmt.Errorf("project config: agent %q has driver=claude-env but base_url %q is not a valid http/https URL", a.Name, a.BaseURL)
+			}
+			if a.AuthToken == "" {
+				return fmt.Errorf("project config: agent %q has driver=claude-env but missing auth_token", a.Name)
+			}
+			if a.Model == "" {
+				return fmt.Errorf("project config: agent %q has driver=claude-env but missing model", a.Name)
+			}
+		}
 	}
 	for _, pat := range cfg.Ignore {
 		if _, err := filepath.Match(pat, ""); err != nil {
