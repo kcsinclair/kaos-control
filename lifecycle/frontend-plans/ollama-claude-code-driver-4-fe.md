@@ -1,7 +1,7 @@
 ---
 title: "Env-Override Claude Code Driver — Frontend Plan"
 type: plan-frontend
-status: draft
+status: approved
 lineage: ollama-claude-code-driver
 parent: lifecycle/requirements/ollama-claude-code-driver-2.md
 ---
