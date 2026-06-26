@@ -83,6 +83,34 @@ export function getRunLog(project: string, runId: string): Promise<string> {
   return api.getText(`/p/${encodeURIComponent(project)}/devops/runs/${encodeURIComponent(runId)}`)
 }
 
+export interface RunHistoryRow {
+  run_id: string
+  status: string
+  started_at: string
+  ended_at: string | null
+  duration_ms: number | null
+}
+
+export interface RunsResponse {
+  runs: RunHistoryRow[]
+}
+
+export function listPipelineRuns(
+  project: string,
+  slug: string,
+  limit = 10,
+): Promise<RunsResponse> {
+  return api.get<RunsResponse>(
+    `/p/${encodeURIComponent(project)}/devops/pipelines/${encodeURIComponent(slug)}/runs?limit=${limit}`,
+  )
+}
+
+export function getPipelineRunLog(project: string, slug: string, runId: string): Promise<string> {
+  return api.getText(
+    `/p/${encodeURIComponent(project)}/devops/pipelines/${encodeURIComponent(slug)}/runs/${encodeURIComponent(runId)}/log`,
+  )
+}
+
 /**
  * Parse a raw NDJSON run log (as returned by getRunLog) into LogLine objects
  * that PipelineLogPane can render identically to the live WebSocket stream.
