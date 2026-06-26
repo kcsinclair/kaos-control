@@ -125,9 +125,11 @@ export interface OllamaModel {
 export interface AgentSummary {
   name: string
   roles: string[]
-  /** driver: 'ollama' | 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'inline' */
+  /** driver: 'ollama' | 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'inline' | 'claude-env' */
   driver: string
   model?: string
+  /** Non-secret base URL exposed by claude-env driver (BE-6); never auth_token. */
+  base_url?: string
   active_status?: string
   source_types?: string[]
   allowed_write_paths?: string[]
