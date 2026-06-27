@@ -1,7 +1,7 @@
 ---
 title: "Flaky TestAgentLifecycleType_RunAllowedAfterFirstCompletes under CPU contention"
 type: defect
-status: draft
+status: approved
 lineage: test-artifact-status-lifecycle
 parent: lifecycle/tests/test-artifact-status-lifecycle-6.md
 labels: [defect]
