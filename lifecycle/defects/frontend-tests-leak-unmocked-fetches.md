@@ -1,7 +1,7 @@
 ---
 title: Frontend Vitest Suite Leaks Un-Mocked Fetches, Logged as ECONNREFUSED Errors
 type: defect
-status: approved
+status: in-development
 lineage: frontend-tests-leak-unmocked-fetches
 created: "2026-05-13T11:55:00+10:00"
 priority: low
