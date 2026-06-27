@@ -1,7 +1,7 @@
 ---
 title: "Tests — DevOps Pipeline Run History"
 type: test
-status: approved
+status: in-qa
 lineage: devops-pipeline-run-history
 parent: lifecycle/test-plans/devops-pipeline-run-history-5-test.md
 created: "2026-06-27T00:00:00+10:00"
