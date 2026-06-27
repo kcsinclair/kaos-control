@@ -1,7 +1,7 @@
 ---
 title: E2E test harness does not pass daemon flag or serve command to start server
 type: defect
-status: draft
+status: approved
 lineage: end-to-end-smoke-tests
 parent: lifecycle/tests/end-to-end-smoke-tests-8-test.md
 labels: [defect]
