@@ -1,7 +1,7 @@
 ---
 title: Default to Usage Guide; Require -d/--daemon to Start the Server
 type: requirement
-status: approved
+status: planning
 lineage: daemon-flag-usage-guide
 created: "2026-06-27T14:30:00+10:00"
 priority: normal
