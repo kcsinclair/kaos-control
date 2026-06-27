@@ -1,7 +1,7 @@
 ---
 title: DevOps CLI with Linux-User Identity Mapping — Test Plan
 type: plan-test
-status: in-development
+status: done
 lineage: kaos-control-devops-cli
 parent: lifecycle/requirements/kaos-control-devops-cli-2.md
 release: KC-Release4
