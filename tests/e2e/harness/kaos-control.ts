@@ -118,7 +118,7 @@ export async function spawnKaosControl(): Promise<KcTestInstance> {
     )
 
     // Spawn the server
-    const proc = spawn(binaryPath, ['-config', configPath], {
+    const proc = spawn(binaryPath, ['serve', '-config', configPath], {
       env: { ...process.env, LOG_LEVEL: 'warn' },
     })
 
