@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Default to Usage Guide; Require -d/--daemon to Start the Server"
 type: plan-backend
-status: in-development
+status: done
 lineage: daemon-flag-usage-guide
 parent: lifecycle/requirements/daemon-flag-usage-guide-2.md
 ---
