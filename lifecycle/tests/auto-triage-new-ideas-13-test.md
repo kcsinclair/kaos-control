@@ -1,7 +1,7 @@
 ---
 title: "Auto-Triage Watcher CreateRaw — pollForArtifactStatus Regression Test"
 type: test
-status: draft
+status: approved
 lineage: auto-triage-new-ideas
 parent: lifecycle/defects/auto-triage-new-ideas-watcher-create-raw-7-defect.md
 ---
