@@ -1,7 +1,7 @@
 ---
 title: Default to Usage Guide; Require -d/--daemon to Start the Server
 type: requirement
-status: blocked
+status: approved
 lineage: daemon-flag-usage-guide
 created: "2026-06-27T14:30:00+10:00"
 priority: normal
@@ -107,7 +107,7 @@ The usage guide must include, at minimum:
 - [ ] Project documentation referencing a bare `kaos-control` server start is updated to `kaos-control -d` / `kaos-control serve`.
 - [ ] Plans and tests in the [[daemon-flag-usage-guide]] lineage can reference this requirement.
 
-## Open Questions
+## Resolved Questions
 
 1. **Long/short flag wiring with the existing dispatch.** The current `main()` hand-rolls the first-argument switch and only `run()` calls `flag.Parse()`. Should `-d`/`--daemon` be handled in the top-level switch (so `kaos-control -d` is recognised before `flag.Parse`), and how should it compose with `-config` ordering (e.g. `-d -config x` vs `-config x -d`)? Recommendation: detect `-d`/`--daemon` in the top-level dispatch and then hand remaining args (including `-config`) to `run()`.
 
