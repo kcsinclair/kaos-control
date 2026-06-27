@@ -1,7 +1,7 @@
 ---
 title: Documentation required for the agent-usasge-analytics-report lineage
 type: doc
-status: raw
+status: approved
 lineage: agent-usage-analytics-report
 created: "2026-06-27T14:47:30+10:00"
 priority: normal
