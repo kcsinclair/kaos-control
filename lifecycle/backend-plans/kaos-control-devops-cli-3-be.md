@@ -1,7 +1,7 @@
 ---
 title: DevOps CLI with Linux-User Identity Mapping — Backend Plan
 type: plan-backend
-status: approved
+status: in-development
 lineage: kaos-control-devops-cli
 parent: lifecycle/requirements/kaos-control-devops-cli-2.md
 release: KC-Release4
