@@ -855,6 +855,87 @@ func TestValidateClaudeEnvAgent(t *testing.T) {
 // Shared helpers (used above; also used by existing tests below)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Milestone 1 — linux_user field, EmailForLinuxUser, and duplicate validation
+// ---------------------------------------------------------------------------
+
+// TestLinuxUserBinding_RoundTrip verifies that linux_user on a user binding
+// round-trips through LoadProject with the field populated.
+func TestLinuxUserBinding_RoundTrip(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `users:
+  - email: alice@test.local
+    roles: [analyst]
+    linux_user: alice
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	if len(cfg.Users) != 1 {
+		t.Fatalf("expected 1 user, got %d", len(cfg.Users))
+	}
+	if cfg.Users[0].LinuxUser != "alice" {
+		t.Errorf("LinuxUser = %q, want %q", cfg.Users[0].LinuxUser, "alice")
+	}
+	if cfg.Users[0].Email != "alice@test.local" {
+		t.Errorf("Email = %q, want %q", cfg.Users[0].Email, "alice@test.local")
+	}
+}
+
+// TestEmailForLinuxUser covers the three cases: bound, unmapped, and empty input.
+func TestEmailForLinuxUser(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `users:
+  - email: alice@test.local
+    roles: [analyst]
+    linux_user: alice
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+
+	// Bound email → email + true.
+	email, ok := cfg.EmailForLinuxUser("alice")
+	if !ok || email != "alice@test.local" {
+		t.Errorf("EmailForLinuxUser(%q) = (%q, %v), want (alice@test.local, true)", "alice", email, ok)
+	}
+
+	// Unmapped name → ("", false).
+	email, ok = cfg.EmailForLinuxUser("nobody")
+	if ok || email != "" {
+		t.Errorf("EmailForLinuxUser(%q) = (%q, %v), want (\"\", false)", "nobody", email, ok)
+	}
+
+	// Empty input → ("", false) (NF3 guard).
+	email, ok = cfg.EmailForLinuxUser("")
+	if ok || email != "" {
+		t.Errorf("EmailForLinuxUser(%q) = (%q, %v), want (\"\", false)", "", email, ok)
+	}
+}
+
+// TestLinuxUserDuplicate_Error verifies that two bindings sharing the same
+// linux_user cause LoadProject to return an error (ambiguous mapping).
+func TestLinuxUserDuplicate_Error(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `users:
+  - email: alice@test.local
+    roles: [analyst]
+    linux_user: shareduser
+  - email: bob@test.local
+    roles: [analyst]
+    linux_user: shareduser
+`)
+	_, err := LoadProject(dir)
+	if err == nil {
+		t.Fatal("expected error for duplicate linux_user, got nil")
+	}
+	if !strings.Contains(err.Error(), "linux_user") {
+		t.Errorf("error %q does not mention linux_user field", err.Error())
+	}
+	if !strings.Contains(err.Error(), "shareduser") {
+		t.Errorf("error %q does not mention the duplicate value", err.Error())
+	}
+}
+
 // writeMinimalProjectConfig writes a lifecycle/config.yaml with a minimal valid
 // base configuration plus an optional extra YAML snippet (e.g. an ignore: line),
 // and returns the temp project root directory.
