@@ -111,6 +111,10 @@ The usage guide must include, at minimum:
 
 1. **Long/short flag wiring with the existing dispatch.** The current `main()` hand-rolls the first-argument switch and only `run()` calls `flag.Parse()`. Should `-d`/`--daemon` be handled in the top-level switch (so `kaos-control -d` is recognised before `flag.Parse`), and how should it compose with `-config` ordering (e.g. `-d -config x` vs `-config x -d`)? Recommendation: detect `-d`/`--daemon` in the top-level dispatch and then hand remaining args (including `-config`) to `run()`.
 
+> Proceed as recommended
+
 2. **Should `serve` be deprecated, aliased, or kept as a peer of `-d`?** The idea introduces `-d`/`--daemon` but `serve` already exists. Recommendation: keep `serve` as a documented equivalent; do not remove it. Confirm whether `serve` should still be advertised in the usage guide or quietly retained for compatibility.
+
+> Keep serve as equivelent
 
 3. **Exit code / stream for no-argument case — confirm stdout+0.** F1 specifies stdout and exit 0 (treating bare invocation as a help request). Some CLIs treat "no arguments" as a usage error (stderr, exit 2). The idea explicitly says "exit with code 0", so stdout+0 is assumed — confirm this is the intended convention.
