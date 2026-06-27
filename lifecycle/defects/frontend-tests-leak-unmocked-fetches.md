@@ -5,13 +5,16 @@ status: approved
 lineage: frontend-tests-leak-unmocked-fetches
 created: "2026-05-13T11:55:00+10:00"
 priority: low
+parent: lifecycle/tests/release-artefacts-6-test.md
 labels:
     - defect
     - frontend
     - test
     - hygiene
 release: KC-Release4
-parent: lifecycle/tests/release-artefacts-6-test.md
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Frontend Vitest Suite Leaks Un-Mocked Fetches, Logged as ECONNREFUSED Errors
