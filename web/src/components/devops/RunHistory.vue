@@ -114,6 +114,9 @@ function formatLogDuration(ms: number | undefined): string {
           <span class="history-time" :title="absoluteTime(row.started_at)">
             {{ formatRelativeTime(row.started_at, now) }}
           </span>
+          <span v-if="row.triggered_by" class="history-actor" :title="`Triggered by ${row.triggered_by}`">
+            {{ row.triggered_by }}
+          </span>
           <span class="history-duration">{{ formatDurationMs(row.duration_ms) }}</span>
         </div>
 
@@ -258,6 +261,15 @@ function formatLogDuration(ms: number | undefined): string {
   color: var(--color-text-muted);
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-actor {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  flex-shrink: 0;
+  max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

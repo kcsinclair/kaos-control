@@ -89,6 +89,8 @@ export interface RunHistoryRow {
   started_at: string
   ended_at: string | null
   duration_ms: number | null
+  /** Email of the user who triggered the run. Present for CLI-originated runs once backend populates it. */
+  triggered_by?: string
 }
 
 export interface RunsResponse {
