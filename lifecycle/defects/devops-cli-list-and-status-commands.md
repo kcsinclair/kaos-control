@@ -11,6 +11,10 @@ labels:
     - feature
     - backend
     - go
+release: KC-Release4
+assignees:
+    - role: backend-developer
+      who: agent
 ---
 
 # devops CLI: add list and status subcommands
