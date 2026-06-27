@@ -1,7 +1,7 @@
 ---
 title: 'devops CLI: add list and status subcommands'
 type: defect
-status: in-development
+status: done
 lineage: devops-cli-list-and-status-commands
 created: "2026-06-27T14:27:39+10:00"
 priority: normal
@@ -15,6 +15,7 @@ release: KC-Release4
 assignees:
     - role: backend-developer
       who: agent
+parent: lifecycle/tests/inherit-priority-and-release-6-test.md
 ---
 
 # devops CLI: add list and status subcommands
