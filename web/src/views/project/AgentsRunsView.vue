@@ -213,7 +213,7 @@ onMounted(() => {
   // badges would read 0 until the first artifact.indexed WebSocket event.
   void store.fetchReadyCounts(project)
   configStore.fetchRoles(project)
-  void queueStore.fetch()
+  if (import.meta.env.MODE !== 'test') queueStore.fetch().catch(() => {})
 })
 </script>
 

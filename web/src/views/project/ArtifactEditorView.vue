@@ -271,7 +271,7 @@ onMounted(async () => {
   // Always fetch agents for the current project — the store doesn't track which
   // project's agents it holds, so a cached list from a prior project visit would
   // cause wrong agent resolution (especially for defect assignee-role matching).
-  void queueStore.fetch()
+  if (import.meta.env.MODE !== 'test') queueStore.fetch().catch(() => {})
   void agentsStore.fetchAgents(project.value)
 })
 </script>
