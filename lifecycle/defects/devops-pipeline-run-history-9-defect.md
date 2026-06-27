@@ -1,7 +1,7 @@
 ---
 title: E2E Test 'pipeline card shows the latest-run summary badge after a run' fails to spawn server
 type: defect
-status: approved
+status: in-development
 lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-6-test.md
 labels: [defect]
