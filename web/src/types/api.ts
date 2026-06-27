@@ -35,6 +35,12 @@ export interface UpdateProjectPayload {
   path?: string
 }
 
+export interface UserBinding {
+  email: string
+  roles: string[]
+  linux_user?: string
+}
+
 export interface CheckDirectoryResult {
   exists: boolean
   writable: boolean
