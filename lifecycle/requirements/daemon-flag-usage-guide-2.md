@@ -115,6 +115,8 @@ The usage guide must include, at minimum:
 
 2. **Should `serve` be deprecated, aliased, or kept as a peer of `-d`?** The idea introduces `-d`/`--daemon` but `serve` already exists. Recommendation: keep `serve` as a documented equivalent; do not remove it. Confirm whether `serve` should still be advertised in the usage guide or quietly retained for compatibility.
 
-> Keep serve as equivelent
+> Keep serve as a peer
 
 3. **Exit code / stream for no-argument case — confirm stdout+0.** F1 specifies stdout and exit 0 (treating bare invocation as a help request). Some CLIs treat "no arguments" as a usage error (stderr, exit 2). The idea explicitly says "exit with code 0", so stdout+0 is assumed — confirm this is the intended convention.
+
+> usage error (stderr, exit 2)
