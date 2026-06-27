@@ -508,8 +508,9 @@ type GitIdentity struct {
 
 // UserBinding binds a user email to one or more roles in a project.
 type UserBinding struct {
-	Email string   `yaml:"email"`
-	Roles []string `yaml:"roles"`
+	Email     string   `yaml:"email"`
+	Roles     []string `yaml:"roles"`
+	LinuxUser string   `yaml:"linux_user,omitempty"`
 }
 
 // RequiredPlans maps artifact type to a list of required plan types before advancing.
@@ -725,6 +726,16 @@ func validateProject(cfg *Project) error {
 			}
 		}
 	}
+	seenLinuxUser := make(map[string]bool)
+	for _, u := range cfg.Users {
+		if u.LinuxUser == "" {
+			continue
+		}
+		if seenLinuxUser[u.LinuxUser] {
+			return fmt.Errorf("project config: linux_user %q is bound to more than one user (ambiguous mapping)", u.LinuxUser)
+		}
+		seenLinuxUser[u.LinuxUser] = true
+	}
 	for _, pat := range cfg.Ignore {
 		if _, err := filepath.Match(pat, ""); err != nil {
 			return fmt.Errorf("project config: invalid ignore pattern %q: %w", pat, err)
@@ -798,4 +809,18 @@ func (p *Project) RolesFor(email string) []string {
 		}
 	}
 	return nil
+}
+
+// EmailForLinuxUser returns the email bound to the given Linux username, or
+// ("", false) if unmapped or if linuxUser is empty.
+func (p *Project) EmailForLinuxUser(linuxUser string) (string, bool) {
+	if linuxUser == "" {
+		return "", false
+	}
+	for _, u := range p.Users {
+		if u.LinuxUser == linuxUser {
+			return u.Email, true
+		}
+	}
+	return "", false
 }

@@ -40,6 +40,7 @@ required_plans:
     - plan-test
 users:
   - email: keith@sinclair.org.au
+    linux_user: keith
     roles:
       - product-owner
       - analyst
