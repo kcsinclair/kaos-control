@@ -31,10 +31,15 @@ import (
 
 var version = "dev"
 
-const usage = `Usage: kaos-control <command> [flags]
+const usage = `kaos-control — lifecycle management for turning ideas into releases.
+
+Usage:
+  kaos-control -d [-config <path>]      Start the HTTP server (daemon mode)
+  kaos-control serve [-config <path>]   Start the HTTP server (equivalent to -d)
+  kaos-control <command> [flags]
 
 Commands:
-  serve              Start the HTTP server (default)
+  serve              Start the HTTP server (same as -d/--daemon)
   init               Initialise a new project directory
   auth               Manage users, passwords, and API tokens
   devops             DevOps operations against a registered project
@@ -43,11 +48,13 @@ Commands:
                      filesystem birth time
   backfill           One-off data backfill utilities
                        backfill agent-run-metrics --project <id>
+  releases           Release management operations
 
 Flags:
+  -d, --daemon       Start the foreground HTTP server (required to run the server)
+  -config <path>     Path to app config.yaml (daemon mode only)
   --version, -V      Print version, copyright, and licence
-  --help, -h         Print this usage banner
-  -config <path>     Path to app config.yaml (serve only)
+  --help, -h         Print this usage guide
 
 Run 'kaos-control <command> --help' for command-specific usage.
 `
