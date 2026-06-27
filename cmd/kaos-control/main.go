@@ -61,6 +61,12 @@ func printVersion() {
 }
 
 func main() {
+	if len(os.Args) == 1 {
+		// No command given — treat as a usage error (Resolved Q3): write the
+		// usage guide to stderr and exit non-zero. No side effects on this path.
+		fmt.Fprint(os.Stderr, usage)
+		os.Exit(2)
+	}
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "init":
