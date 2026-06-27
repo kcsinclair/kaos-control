@@ -1,7 +1,7 @@
 ---
 title: 'devops CLI: add list and status subcommands'
 type: defect
-status: approved
+status: in-development
 lineage: devops-cli-list-and-status-commands
 created: "2026-06-27T14:27:39+10:00"
 priority: normal
