@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Inherit Priority and Release Through Lineage"
 type: plan-test
-status: in-development
+status: done
 lineage: inherit-priority-and-release
 parent: lifecycle/requirements/inherit-priority-and-release-2.md
 ---
