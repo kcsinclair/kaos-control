@@ -87,8 +87,8 @@ func runRun(args []string) int {
 	return streamRunLog(c, logPath, *jsonOut)
 }
 
-// streamRunLog polls/streams the NDJSON run log for the given path and exits
-// with exitOK on a successful terminal status or exitOpFailed otherwise.
+// streamRunLog fetches the NDJSON run log and streams events to stdout,
+// exiting with exitOK on "passed" terminal status or exitOpFailed otherwise.
 func streamRunLog(c *client, path string, jsonOut bool) int {
 	logBody, code := c.get(path)
 	if code != exitOK {
@@ -96,7 +96,7 @@ func streamRunLog(c *client, path string, jsonOut bool) int {
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(logBody))
-	var lastStatus string
+	terminalStatus := ""
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {
@@ -105,28 +105,37 @@ func streamRunLog(c *client, path string, jsonOut bool) int {
 		if jsonOut {
 			fmt.Println(line)
 		} else {
-			// Pretty-print the log line content.
+			// Pretty-print: show type + message or output fields.
 			var event map[string]json.RawMessage
 			if err := json.Unmarshal([]byte(line), &event); err == nil {
-				if msg, ok := event["message"]; ok {
-					fmt.Println(strings.Trim(string(msg), `"`))
-				} else {
-					fmt.Println(line)
+				eventType := strings.Trim(string(event["type"]), `"`)
+				switch eventType {
+				case "pipeline.step.output":
+					if out, ok := event["output"]; ok {
+						fmt.Print(strings.Trim(string(out), `"`))
+					}
+				case "pipeline.step.completed":
+					step := strings.Trim(string(event["step"]), `"`)
+					status := strings.Trim(string(event["status"]), `"`)
+					fmt.Printf("[step:%s] %s\n", step, status)
+				case "pipeline.run.completed":
+					status := strings.Trim(string(event["status"]), `"`)
+					fmt.Printf("[run] completed: %s\n", status)
 				}
-			} else {
-				fmt.Println(line)
 			}
 		}
-		// Track the terminal status.
+		// Detect terminal status from the run completion event.
 		var event struct {
+			Type   string `json:"type"`
 			Status string `json:"status"`
 		}
-		if json.Unmarshal([]byte(line), &event) == nil && event.Status != "" {
-			lastStatus = event.Status
+		if json.Unmarshal([]byte(line), &event) == nil &&
+			event.Type == "pipeline.run.completed" {
+			terminalStatus = event.Status
 		}
 	}
 
-	if lastStatus == "success" || lastStatus == "done" || lastStatus == "completed" {
+	if terminalStatus == "passed" {
 		return exitOK
 	}
 	return exitOpFailed
