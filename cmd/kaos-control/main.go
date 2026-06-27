@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/authcmd"
+	"github.com/kaos-control/kaos-control/cmd/kaos-control/devopscmd"
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/hookcmd"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/backfillcmd"
@@ -36,6 +37,7 @@ Commands:
   serve              Start the HTTP server (default)
   init               Initialise a new project directory
   auth               Manage users, passwords, and API tokens
+  devops             DevOps operations against a registered project
   hook-helper        PreToolUse hook helper (called by Claude Code)
   backfill-created   Add created: frontmatter to legacy artefacts using
                      filesystem birth time
@@ -69,6 +71,8 @@ func main() {
 			return
 		case "auth":
 			os.Exit(authcmd.Run(os.Args[2:]))
+		case "devops":
+			os.Exit(devopscmd.Run(os.Args[2:]))
 		case "hook-helper":
 			hookcmd.Run(os.Args[2:])
 			return
