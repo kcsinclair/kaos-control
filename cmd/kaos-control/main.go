@@ -67,6 +67,22 @@ func main() {
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
 	}
+	// Strip -d/--daemon/-daemon from os.Args before flag.Parse runs in run().
+	// Accept any position so -d -config x and -config x -d both work (Resolved Q1).
+	daemon := false
+	{
+		filtered := os.Args[:1]
+		for _, a := range os.Args[1:] {
+			switch a {
+			case "-d", "--daemon", "-daemon":
+				daemon = true
+			default:
+				filtered = append(filtered, a)
+			}
+		}
+		os.Args = filtered
+	}
+
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "init":
@@ -101,8 +117,9 @@ func main() {
 			}
 			return
 		case "serve":
-			// Strip "serve" so the server's flag.Parse sees only its own flags.
+			// Strip "serve" so flag.Parse in run() sees only server flags.
 			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
+			daemon = true
 		case "--help", "-help", "-h":
 			fmt.Print(usage)
 			os.Exit(0)
@@ -112,9 +129,8 @@ func main() {
 		default:
 			arg := os.Args[1]
 			if strings.HasPrefix(arg, "-") {
-				// Allow -config / --config (with or without =value) to fall
-				// through to flag.Parse() in run() — that's the implicit
-				// `serve -config /path` form.
+				// -config is valid with -d; let the daemon check below decide
+				// whether to proceed or reject (F3: server requires explicit opt-in).
 				if arg == "-config" || arg == "--config" ||
 					strings.HasPrefix(arg, "-config=") ||
 					strings.HasPrefix(arg, "--config=") {
@@ -127,6 +143,12 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	if !daemon {
+		fmt.Fprintf(os.Stderr, "error: no command given; use -d/--daemon or 'serve' to start the server\n\n%s", usage)
+		os.Exit(2)
+	}
+
 	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
