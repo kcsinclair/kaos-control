@@ -3,6 +3,7 @@
 package devopscmd
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -16,9 +17,6 @@ func runList(args []string) int {
 		asEmail    = fs.String("as", "", "assert identity as this email")
 		projectArg = fs.String("project", "", "project name (default: infer from cwd)")
 		jsonOut    = fs.Bool("json", false, "emit JSON output")
-		typeArg    = fs.String("type", "", "filter by artifact type")
-		statusArg  = fs.String("status", "", "filter by status")
-		lineageArg = fs.String("lineage", "", "filter by lineage slug")
 	)
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
@@ -50,38 +48,38 @@ func runList(args []string) int {
 	}
 
 	c := newClient(appCfg, identity)
-
-	path := "/api/p/" + entry.Name + "/artifacts"
-	sep := "?"
-	if *typeArg != "" {
-		path += sep + "type=" + *typeArg
-		sep = "&"
-	}
-	if *statusArg != "" {
-		path += sep + "status=" + *statusArg
-		sep = "&"
-	}
-	if *lineageArg != "" {
-		path += sep + "lineage=" + *lineageArg
-	}
-
-	body, code := c.get(path)
+	body, code := c.get("/api/p/" + entry.Name + "/devops/pipelines")
 	if code != exitOK {
 		return code
 	}
 
 	if *jsonOut {
-		// Extract the "artifacts" array and emit raw.
-		fmt.Println(extractJSONField(body, "artifacts"))
+		fmt.Println(extractJSONField(body, "pipelines"))
 		return exitOK
 	}
 
-	// Human-readable table.
-	artifacts := parseArtifactList(body)
+	var wrapper struct {
+		Pipelines []struct {
+			Slug      string `json:"slug"`
+			Name      string `json:"name"`
+			Type      string `json:"type"`
+			StepCount int    `json:"step_count"`
+		} `json:"pipelines"`
+	}
+	if err := json.Unmarshal([]byte(body), &wrapper); err != nil {
+		fmt.Fprintf(os.Stderr, "error parsing response: %v\n", err)
+		return exitOpFailed
+	}
+
+	if len(wrapper.Pipelines) == 0 {
+		fmt.Println("no pipelines defined under lifecycle/devops/")
+		return exitOK
+	}
+
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "TYPE\tSTATUS\tLINEAGE\tTITLE")
-	for _, a := range artifacts {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", a.Type, a.Status, a.Lineage, a.Title)
+	fmt.Fprintln(tw, "SLUG\tNAME\tTYPE\tSTEPS")
+	for _, p := range wrapper.Pipelines {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%d\n", p.Slug, p.Name, p.Type, p.StepCount)
 	}
 	tw.Flush()
 	return exitOK

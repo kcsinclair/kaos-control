@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-06-27** — Fix `devops list` (defect `devops-cli-list-and-status-commands` M1): rewrite `cmd/kaos-control/devopscmd/list.go` to call `GET /api/p/{project}/devops/pipelines` and display a SLUG/NAME/TYPE/STEPS table. Previously the command queried lifecycle artifact metadata instead of devops pipeline definitions.
+
 - **2026-06-27** — Raise defect `agent-auth-error-fail-fast` (from investigating run `215bc5d8c2773b49`: a `test-developer` run burned ~58 min / $1.08 grinding through Claude's 10-attempt retry budget on transient `401 authentication_failed` — caused by an OAuth refresh-token rotation race between concurrent Claude clients sharing one host login, not a logout). kaos-control marks it failed only after the binary exits; it should detect `api_retry` 401 / `authentication_failed` (or the terminal `is_error:true` "Not logged in" result), kill the run early, and re-enqueue it (without pausing the queue — distinct from rate-limit). Recommended mitigation noted: give agents a dedicated `ANTHROPIC_API_KEY` via the `claude-env` driver so they don't share the rotating OAuth token.
 
 - **2026-06-26** — Add a regression test for the roadmap 3D DAG fix (`tests/web/ForceGraph3D.dagMode.test.ts`). Mounts `ForceGraph3D` with `dag-mode` + a 2-cycle graph and asserts the component registers `onDagError` *before* `dagMode`, that the handler tolerates a reported cycle without throwing, and that neither is touched when `dag-mode` is absent (regular-map path). Verified the test fails if `graph.onDagError(() => {})` is removed. Frontend 1487/1487.
