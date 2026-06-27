@@ -1,7 +1,7 @@
 ---
 title: "Tests — DevOps CLI with Linux-User Identity Mapping"
 type: test
-status: draft
+status: approved
 lineage: kaos-control-devops-cli
 parent: lifecycle/test-plans/kaos-control-devops-cli-5-test.md
 ---
