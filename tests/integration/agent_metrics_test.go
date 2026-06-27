@@ -203,13 +203,13 @@ func TestReportsAgentUsage_AggregatedTTFS(t *testing.T) {
 			ndjsonAssistantEvent, ndjsonResultLineWithTTFT(ttft))
 		setupFakeClaudeWithRawScript(t, script)
 
-		artifactPath := fmt.Sprintf("lifecycle/ideas/agg-test-%d.md", i)
 		env.proj.Idx.InsertAgentRun(&index.AgentRunRow{
 			RunID:      runID,
 			AgentName:  "qa",
 			Role:       "analyst",
 			Status:     "running",
 			StartedAt:  now.Add(-time.Duration(i+1) * time.Hour),
+			TargetPath: fmt.Sprintf("lifecycle/ideas/agg-test-%d.md", i),
 		})
 
 		// We need to simulate the driver finishing and emitting results.
@@ -219,7 +219,6 @@ func TestReportsAgentUsage_AggregatedTTFS(t *testing.T) {
 			DurationApiMs:  100,
 			InputTokens:    100,
 			OutputTokens:   100,
-			TtftMs:          ttft,
 		}
 		err := env.proj.Idx.UpdateAgentRunMetrics(runID, m)
 		if err != nil {
@@ -228,7 +227,7 @@ func TestReportsAgentUsage_AggregatedTTFS(t *testing.T) {
 
 		// Mark as done manually for the run
 		var finishedAtTime time.Time = finishedAt
-		err = env.proj.Idx.UpdateAgentRun(runID, &index.AgentRunRow{
+		err = env.proj.Idx.UpdateAgentRun(&index.AgentRunRow{
 			RunID:      runID,
 			Status:     "done",
 			FinishedAt: &finishedAtTime,
