@@ -1,7 +1,7 @@
 ---
 title: "Test Suite: Backfill Metrics Test Helper Fixes"
 type: test
-status: in-qa
+status: approved
 lineage: agent-usage-analytics-report
 parent: lifecycle/defects/agent-usage-report-backfill-test-failures-7-defect.md
 ---

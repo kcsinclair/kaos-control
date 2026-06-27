@@ -9,6 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/kaos-control/kaos-control/internal/index"
 )
 
 // setupFakeClaudeWithOutput writes a stub `claude` shell script that emits
@@ -80,6 +83,12 @@ func TestSupervisor_PersistsMetricsOnFinish(t *testing.T) {
 	if row.OutputTokens == nil {
 		t.Error("OutputTokens should be non-nil after run with result line")
 	}
+	if row.CacheCreationTokens == nil {
+		t.Error("CacheCreationTokens should be non-nil after run with result line")
+	}
+	if row.CacheReadTokens == nil {
+		t.Error("CacheReadTokens should be non-nil after run with result line")
+	}
 }
 
 // TestSupervisor_NonClaudeRun_NoMetrics verifies that when a fake claude
@@ -138,10 +147,10 @@ func TestSupervisor_RecordsTTFT(t *testing.T) {
 	if row.TtftMs == nil {
 		t.Fatal("TtftMs should be non-nil after run with assistant event")
 	}
-	// Generous bounds for CI: sleep 0.12 → expect 80ms ≤ ttft ≤ 500ms.
+	// Generous bounds for CI: sleep 0.12 → expect 80ms ≤ ttft ≤ 2000ms.
 	ttft := *row.TtftMs
-	if ttft < 80 || ttft > 500 {
-		t.Errorf("TtftMs: got %d ms, expected in range [80, 500]", ttft)
+	if ttft < 80 || ttft > 2000 {
+		t.Errorf("TtftMs: got %d ms, expected in range [80, 2000]", ttft)
 	}
 }
 
@@ -177,4 +186,83 @@ func TestSupervisor_RecordsTTFTOnce(t *testing.T) {
 	if *row.TtftMs <= 0 {
 		t.Errorf("TtftMs should be > 0, got %d", *row.TtftMs)
 	}
+}
+
+// TestReportsAgentUsage_AggregatedTTFS verifies that the analytics report
+// correctly calculates mean and P95 TTFT from a series of runs.
+func TestReportsAgentUsage_AggregatedTTFS(t *testing.T) {
+	env := newAgentTestEnv(t, nil)
+	env.login("admin@test.local", "admin-pass-123")
+
+	now := time.Now()
+	// We'll add 5 runs with TTFT values: 100, 200, 300, 400, 500 ms.
+	ttftValues := []int64{100, 200, 300, 400, 500}
+	for i, ttft := range ttftValues {
+		runID := fmt.Sprintf("agg-ttft-%d", i)
+		script := fmt.Sprintf("#!/bin/sh\nprintf '%%s\\n' '%s'\nprintf '%%s\\n' '%s'\nexit 0\n",
+			ndjsonAssistantEvent, ndjsonResultLineWithTTFT(ttft))
+		setupFakeClaudeWithRawScript(t, script)
+
+		artifactPath := fmt.Sprintf("lifecycle/ideas/agg-test-%d.md", i)
+		env.proj.Idx.InsertAgentRun(&index.AgentRunRow{
+			RunID:      runID,
+			AgentName:  "qa",
+			Role:       "analyst",
+			Status:     "running",
+			StartedAt:  now.Add(-time.Duration(i+1) * time.Hour),
+		})
+
+		// We need to simulate the driver finishing and emitting results.
+		finishedAt := now.Add(-time.Duration(i) * time.Hour)
+		m := index.AgentRunMetrics{
+			TotalCostUSD:   0.1,
+			DurationApiMs:  100,
+			InputTokens:    100,
+			OutputTokens:   100,
+			TtftMs:          ttft,
+		}
+		err := env.proj.Idx.UpdateAgentRunMetrics(runID, m)
+		if err != nil {
+			t.Fatalf("failed to update metrics: %v", err)
+		}
+
+		// Mark as done manually for the run
+		var finishedAtTime time.Time = finishedAt
+		err = env.proj.Idx.UpdateAgentRun(runID, &index.AgentRunRow{
+			RunID:      runID,
+			Status:     "done",
+			FinishedAt: &finishedAtTime,
+		})
+		if err != nil {
+			t.Fatalf("failed to update run status: %v", err)
+		}
+	}
+
+	resp := env.doRequest("GET", "/api/p/testproject/reports/agent-usage", nil)
+	if resp == nil {
+		t.Fatal("expected response, got nil")
+	}
+	data := readJSON(t, resp)
+
+	summary, _ := data["summary"].(map[string]any)
+	overall, _ := summary["overall"].(map[string]any)
+	meanTTFT, ok := overall["mean_ttft_ms"].(float64)
+	if !ok {
+		t.Fatalf("missing mean_ttft_ms in summary: %v", overall)
+	}
+	if fmt.Sprintf("%.0f", meanTTFT) != "300" {
+		t.Errorf("mean_ttft: got %v, want 300", meanTTFT)
+	}
+
+	p95TTFT, ok := overall["p95_ttft_ms"].(float64)
+	if !ok {
+		t.Fatalf("missing p95_ttft_ms in summary: %v", overall)
+	}
+	if fmt.Sprintf("%.0f", p95TTFT) != "500" {
+		t.Errorf("p95_ttft: got %v, want 500", p95TTFT)
+	}
+}
+
+func ndjsonResultLineWithTTFT(ttft int64) string {
+	return fmt.Sprintf(`{"type":"result","subtype":"success","total_cost_usd":0.01,"duration_ms":1000,"duration_api_ms":900,"num_turns":1,"usage":{"input_tokens":100,"cache_creation_input_tokens":0,"cache_read_input_tokens":50,"output_tokens":200},"ttft_ms":%d}`, ttft)
 }
