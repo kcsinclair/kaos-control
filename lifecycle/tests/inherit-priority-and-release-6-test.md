@@ -1,7 +1,7 @@
 ---
 title: "Tests — Inherit Priority and Release Through Lineage"
 type: test
-status: draft
+status: approved
 lineage: inherit-priority-and-release
 parent: lifecycle/test-plans/inherit-priority-and-release-5-test.md
 ---
