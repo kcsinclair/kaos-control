@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-06-27** — Fix `devops status <job-name>` (defect `devops-cli-list-and-status-commands` M2): rewrite `cmd/kaos-control/devopscmd/status.go` to require a positional job-name arg, call `GET /api/p/{project}/devops/pipelines/{slug}/runs?limit=1` for the most recent run record, then fetch the NDJSON run log and extract step-completion events for an output summary (step name, status, exit code, duration). Human-readable and `--json` modes. Updated the root `devopsUsage` string to reflect the new signatures.
+
 - **2026-06-27** — Fix `devops list` (defect `devops-cli-list-and-status-commands` M1): rewrite `cmd/kaos-control/devopscmd/list.go` to call `GET /api/p/{project}/devops/pipelines` and display a SLUG/NAME/TYPE/STEPS table. Previously the command queried lifecycle artifact metadata instead of devops pipeline definitions.
 
 - **2026-06-27** — Raise defect `agent-auth-error-fail-fast` (from investigating run `215bc5d8c2773b49`: a `test-developer` run burned ~58 min / $1.08 grinding through Claude's 10-attempt retry budget on transient `401 authentication_failed` — caused by an OAuth refresh-token rotation race between concurrent Claude clients sharing one host login, not a logout). kaos-control marks it failed only after the binary exits; it should detect `api_retry` 401 / `authentication_failed` (or the terminal `is_error:true` "Not logged in" result), kill the run early, and re-enqueue it (without pausing the queue — distinct from rate-limit). Recommended mitigation noted: give agents a dedicated `ANTHROPIC_API_KEY` via the `claude-env` driver so they don't share the rotating OAuth token.

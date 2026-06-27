@@ -22,9 +22,9 @@ const (
 const devopsUsage = `Usage: kaos-control devops <subcommand> [flags]
 
 Subcommands:
-  list     List artifacts in the project index
-  status   Show project health (status counts, active runs, locks)
-  run      Trigger a devops pipeline task
+  list              List devops pipeline definitions from lifecycle/devops/
+  status <job>      Show the most recent run status for the named pipeline
+  run               Trigger a devops pipeline task
 
 Identity flags (applied to all subcommands):
   --token <token>     Bearer API token (overrides KAOS_CONTROL_TOKEN env var)
