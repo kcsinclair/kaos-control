@@ -307,6 +307,8 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 		d.broadcastJobEvent("queue.finished", job, "completed")
 	case "rate_limit":
 		d.handleRateLimit(job, result.rawText, result.rlKind)
+	case "auth_error":
+		d.handleAuthError(job)
 	case "cancelled":
 		_ = d.store.MarkTerminal(job.ID, StateFailed, "cancelled")
 		d.broadcastJobEvent("queue.finished", job, "failed")
@@ -375,7 +377,8 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 			// Until we know our run_id, drop these — they cannot be ours.
 			isRelevant := evt.Type == "agent.finished" ||
 				evt.Type == "agent.failed" ||
-				evt.Type == "queue.rate_limit"
+				evt.Type == "queue.rate_limit" ||
+				evt.Type == "queue.auth_error"
 			if isRelevant {
 				if ourRunID == "" || evt.Payload.RunID != ourRunID {
 					continue
@@ -400,6 +403,12 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 			case "queue.rate_limit": // M4: emitted by agent stream watcher
 				select {
 				case done <- runResult{kind: "rate_limit", rawText: evt.Payload.RawText, rlKind: evt.Payload.Kind}:
+				default:
+				}
+				return
+			case "queue.auth_error": // emitted by agent stream watcher on OAuth token rotation
+				select {
+				case done <- runResult{kind: "auth_error"}:
 				default:
 				}
 				return
@@ -472,6 +481,50 @@ func (d *Dispatcher) handleRateLimit(job *Job, rawText, kind string) {
 		"job_id", job.ID,
 		"reset_time", resetTime.Format(time.RFC3339),
 		"paused_until", pausedUntil.Format(time.RFC3339))
+}
+
+// handleAuthError processes an OAuth token rotation failure: marks the job
+// failed and re-enqueues it immediately (bounded by max-attempts) without
+// pausing the queue. An auth rotation is transient and per-run — subsequent
+// runs will pick up the freshly-rotated token, so no queue-wide pause is needed.
+func (d *Dispatcher) handleAuthError(job *Job) {
+	now := d.cfg.clock()
+
+	// 1. Mark current job failed.
+	_ = d.store.MarkTerminal(job.ID, StateFailed, "auth_error")
+
+	// 2. Re-enqueue at head if within max-attempts.
+	if job.Attempts >= d.cfg.maxAttempts() {
+		slog.Warn("queue: job exceeded max attempts after auth error; not re-enqueueing",
+			"job_id", job.ID, "attempts", job.Attempts, "max", d.cfg.maxAttempts())
+		d.broadcast("queue.skipped", map[string]any{
+			"id":     job.ID,
+			"reason": "max_attempts",
+		})
+	} else {
+		requeue := *job
+		requeue.ID = newID()
+		requeue.State = StatePending
+		requeue.Attempts = job.Attempts + 1
+		requeue.Position = d.store.MinPosition() - 1
+		requeue.EnqueuedAt = now
+		if err := d.store.EnqueueDirect(requeue); err != nil {
+			slog.Error("queue: re-enqueue after auth error failed", "err", err)
+		} else {
+			d.broadcast("queue.added", map[string]any{
+				"id":       requeue.ID,
+				"position": requeue.Position,
+				"attempts": requeue.Attempts,
+				"reason":   "auth_error_retry",
+			})
+		}
+	}
+
+	// 3. Do NOT pause — auth rotation is transient and affects only this run.
+	d.broadcastJobEvent("queue.finished", job, "failed")
+
+	slog.Info("queue: auth error — re-enqueued job without pausing",
+		"job_id", job.ID, "attempts", job.Attempts)
 }
 
 // ---- public store-proxy methods (used by HTTP handlers) ----
