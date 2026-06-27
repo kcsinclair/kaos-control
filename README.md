@@ -152,7 +152,7 @@ Two releases unzipped side-by-side won't collide because each gets its own versi
 To quickly get started, just run it from the unzipped directory:
 
 ```bash
-./kaos-control
+./kaos-control -d
 ```
 
 To make `kaos-control` runnable from anywhere, move it onto your PATH:
@@ -178,7 +178,7 @@ Linux and Windows have no equivalent step.
 
 From here on the bootstrap path is the same whether you built from source or downloaded a release:
 
-- [First run](#2-first-run) — kaos-control writes `~/.kaos-control/config.yaml`, starts on `:8042`, and waits for you to create the first user.
+- [First run](#2-first-run) — run `kaos-control -d`; it writes `~/.kaos-control/config.yaml`, starts on `:8042`, and waits for you to create the first user.
 - [Bootstrap a project](#3-bootstrap-a-project) — register a directory on disk as a project so it appears in the picker.
 - [Use it](#4-use-it) — what the SPA looks like once you're in.
 
@@ -263,7 +263,7 @@ The Go binary embeds the SPA via `embed.FS`, so `./dist/kaos-control` is a singl
 ### 2. First run
 
 ```bash
-./dist/kaos-control
+./dist/kaos-control -d
 ```
 
 On first launch, kaos-control writes a default `~/.kaos-control/config.yaml` and starts listening on `:8042`. Open <http://localhost:8042>.

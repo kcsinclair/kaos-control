@@ -84,7 +84,7 @@ The harness (`tests/e2e/harness/kaos-control.ts`) performs the following steps f
    description: E2E smoke test project
    ```
 
-8. **Spawn the binary** — launches `./dist/kaos-control -config <configPath>` with `LOG_LEVEL=warn` to suppress noise.
+8. **Spawn the binary** — launches `./dist/kaos-control -d -config <configPath>` with `LOG_LEVEL=warn` to suppress noise.
 
 9. **Wait for health** — polls `GET /api/health` every 200 ms up to a 10-second timeout. A startup failure dumps the binary's captured stdout/stderr.
 

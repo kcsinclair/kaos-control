@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-06-27** — Implement `daemon-flag-usage-guide` (M1–M4, plan `lifecycle/backend-plans/daemon-flag-usage-guide-3-be.md`). M1: bare `kaos-control` invocation now prints usage to stderr and exits 2 instead of starting the server. M2: added `-d`/`--daemon` flag (any position, stripped before `flag.Parse`); server start is now gated on `-d`, `--daemon`, or `serve` — bare `-config <path>` without `-d` is a usage error. M3: expanded `usage` const with product description, `-d/--daemon` flag, all eight subcommands (`devops` and `releases` were missing), and the per-command help pointer. M4: updated `README.md` (bare-start instructions × 3), `Makefile` (`make run` passes `-d`), and `docs/end-to-end-smoke-tests.md` to reflect the new required `-d` flag.
+
 - **2026-06-27** — Fix `devops status <job-name>` (defect `devops-cli-list-and-status-commands` M2): rewrite `cmd/kaos-control/devopscmd/status.go` to require a positional job-name arg, call `GET /api/p/{project}/devops/pipelines/{slug}/runs?limit=1` for the most recent run record, then fetch the NDJSON run log and extract step-completion events for an output summary (step name, status, exit code, duration). Human-readable and `--json` modes. Updated the root `devopsUsage` string to reflect the new signatures.
 
 - **2026-06-27** — Fix `devops list` (defect `devops-cli-list-and-status-commands` M1): rewrite `cmd/kaos-control/devopscmd/list.go` to call `GET /api/p/{project}/devops/pipelines` and display a SLUG/NAME/TYPE/STEPS table. Previously the command queried lifecycle artifact metadata instead of devops pipeline definitions.

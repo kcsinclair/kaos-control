@@ -43,7 +43,7 @@ build-web:
 
 ## run: run the server in development mode (no TLS, default config)
 run:
-	LOG_LEVEL=debug go run $(LDFLAGS) ./cmd/kaos-control
+	LOG_LEVEL=debug go run $(LDFLAGS) ./cmd/kaos-control -d
 
 ## test-unit: run unit tests only
 test-unit:
