@@ -1,7 +1,7 @@
 ---
 title: E2E Test 'history row appears after pipeline run completes' fails to spawn server
 type: defect
-status: approved
+status: in-development
 lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-6-test.md
 labels: [defect]
