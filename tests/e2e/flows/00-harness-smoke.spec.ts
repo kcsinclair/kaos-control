@@ -12,3 +12,15 @@ test.describe('Harness smoke', () => {
     }
   })
 })
+
+test.describe('Basic API endpoints', () => {
+  test('can access root endpoint', async () => {
+    const instance = await spawnKaosControl()
+    try {
+      const res = await fetch(`${instance.baseURL}/`)
+      expect(res.status).toBe(200)
+    } finally {
+      await instance.kill()
+    }
+  })
+})
