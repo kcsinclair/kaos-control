@@ -1,7 +1,7 @@
 ---
 title: Agent runs burn the full retry budget on transient auth (401) failures instead of failing fast and re-queuing
 type: defect
-status: approved
+status: in-development
 lineage: agent-auth-error-fail-fast
 created: "2026-06-27T00:00:00+10:00"
 priority: medium
