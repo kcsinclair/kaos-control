@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"testing"
 	"time"
-
-	"github.com/kaos-control/kaos-control/internal/devops"
 )
 
 // TestPipelineRunHistoryIntegration demonstrates the core functionality of

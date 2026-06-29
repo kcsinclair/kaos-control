@@ -225,6 +225,12 @@ func TestReportsAgentUsage_AggregatedTTFS(t *testing.T) {
 			t.Fatalf("failed to update metrics: %v", err)
 		}
 
+		// TTFT is persisted via a dedicated setter (not part of
+		// AgentRunMetrics); set it so the report can aggregate it.
+		if err := env.proj.Idx.SetAgentRunTTFT(runID, ttft); err != nil {
+			t.Fatalf("failed to set ttft: %v", err)
+		}
+
 		// Mark as done manually for the run
 		var finishedAtTime time.Time = finishedAt
 		err = env.proj.Idx.UpdateAgentRun(&index.AgentRunRow{

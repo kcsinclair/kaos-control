@@ -98,8 +98,10 @@ func testConcurrentRunIteration(t *testing.T) {
 	}
 }
 
-// TestConcurrentRunUnderHighLoad tests the scenario where multiple agent runs
-// are started simultaneously under load to stress the system.
+// TestConcurrentRunUnderHighLoad verifies the QA concurrency guard: while one
+// QA run holds an artifact in-qa, a second run started against the same
+// artifact is rejected with 409. Once the first run completes and the artifact
+// resets to approved, a fresh run is accepted again.
 func TestConcurrentRunUnderHighLoad(t *testing.T) {
 	setupFakeClaudeWithProperEvents(t, 0)
 
@@ -110,36 +112,36 @@ func TestConcurrentRunUnderHighLoad(t *testing.T) {
 	}})
 	env.login("qa@test.local", "qa-pass-123")
 
-	// Start multiple runs in quick succession
-	var runIDs []string
-
-	// Run 1
+	// Run 1 is accepted (202) and moves the artifact to in-qa.
 	runID1 := startAgentRun(t, env, "qa", artifactPath)
-	runIDs = append(runIDs, runID1)
 
-	// Run 2
-	runID2 := startAgentRun(t, env, "qa", artifactPath)
-	runIDs = append(runIDs, runID2)
+	// A second run against the same artifact while it is in-qa must be rejected
+	// with 409 — concurrent QA runs on one artifact are not allowed.
+	resp := env.doRequest("POST", "/api/p/testproject/agents/qa/run", map[string]any{
+		"target_path": artifactPath,
+	})
+	requireStatus(t, resp, 409)
 
-	// Run 3
-	runID3 := startAgentRun(t, env, "qa", artifactPath)
-	runIDs = append(runIDs, runID3)
-
-	// Wait for all runs to complete
-	for _, runID := range runIDs {
-		run := waitForRunCompletion(t, env, runID)
-		if got, _ := run["status"].(string); got != "done" {
-			t.Errorf("run expected 'done', got %q", got)
-		}
+	// First run completes successfully.
+	run1 := waitForRunCompletion(t, env, runID1)
+	if got, _ := run1["status"].(string); got != "done" {
+		t.Errorf("first run expected 'done', got %q", got)
 	}
 
-	// Check artifact status is back to approved after all runs complete
+	// Artifact resets to approved (lock released).
 	raw, err := os.ReadFile(filepath.Join(env.projectRoot, artifactPath))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(raw), "status: approved") {
-		t.Fatalf("expected status: approved after all runs complete; got:\n%s", raw)
+		t.Fatalf("expected status: approved after first run completes; got:\n%s", raw)
+	}
+
+	// A fresh run is now accepted again.
+	runID2 := startAgentRun(t, env, "qa", artifactPath)
+	run2 := waitForRunCompletion(t, env, runID2)
+	if got, _ := run2["status"].(string); got != "done" {
+		t.Errorf("second run expected 'done', got %q", got)
 	}
 }
 
