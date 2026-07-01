@@ -24,7 +24,7 @@
     "cytoscape": "^3.33.2",
     "cytoscape-dagre": "^2.5.0",
     "cytoscape-fcose": "^2.2.0",
-    "echarts": "^6.0.0",
+    "echarts": "^6.1.0",
     "js-yaml": "^4.1.1",
     "lucide-vue-next": "^1.0.0",
     "markdown-it": "^14.2.0",
