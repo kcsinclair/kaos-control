@@ -14,6 +14,8 @@ related_to:
     - architecture/tech-stacks/ts-react-nest.md
     - architecture/tech-stacks/python-fastapi.md
     - architecture/tech-stacks/java-spring-angular.md
+    - architecture/tech-stacks/php-symfony-postgres.md
+    - architecture/tech-stacks/python-mongodb.md
 summary: A single deployable application organised into well-bounded internal modules — the pragmatic default most projects should start with.
 ---
 
@@ -57,6 +59,8 @@ Startups and new products, internal business apps, and any team that wants clean
 - [TypeScript React + NestJS](../tech-stacks/ts-react-nest.md) — NestJS modules map directly onto bounded contexts.
 - [Python + FastAPI](../tech-stacks/python-fastapi.md) — fast to stand up, great for data-centric apps.
 - [Java + Spring Boot / Angular](../tech-stacks/java-spring-angular.md) — enterprise modular monolith with strong DI.
+- [PHP + Symfony / PostgreSQL](../tech-stacks/php-symfony-postgres.md) — bundles map cleanly onto modules; ubiquitous hosting.
+- [Python + MongoDB](../tech-stacks/python-mongodb.md) — flexible document store for evolving data.
 
 ## Related architectures
 The natural predecessor to [[architecture/architectures/cloud-native-microservices|Cloud-Native Microservices]] (extract modules when scale demands). Deployed for one team on a LAN it *is* a [[architecture/architectures/local-web|Local Web Application]]; hosted for many tenants it becomes a [[architecture/architectures/single-service-saas|Single-Service Cloud SaaS]].

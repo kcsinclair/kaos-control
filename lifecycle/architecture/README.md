@@ -46,6 +46,8 @@ compatibility edges in the graph and the filter for stack selection.
 | [Go + Vue](tech-stacks/go-vue.md) | Full-stack web | Lean, high-concurrency (kaos-control's own) |
 | [TypeScript React + NestJS](tech-stacks/ts-react-nest.md) | Full-stack web | Ecosystem & velocity |
 | [Python + FastAPI](tech-stacks/python-fastapi.md) | Backend | AI/ML & rapid prototyping |
+| [Python + MongoDB](tech-stacks/python-mongodb.md) | Backend | Flexible/document data, fast iteration |
+| [PHP + Symfony / PostgreSQL](tech-stacks/php-symfony-postgres.md) | Full-stack web | Structured web apps, ubiquitous hosting |
 | [Java + Spring Boot / Angular](tech-stacks/java-spring-angular.md) | Full-stack web | Enterprise robustness |
 | [Go + gRPC Microservices](tech-stacks/go-grpc-microservices.md) | Service backbone | High-perf inter-service |
 | [Tauri](tech-stacks/tauri.md) | Desktop | Tiny footprint (Rust) |

@@ -12,6 +12,7 @@ related_to:
     - architecture/tech-stacks/go-vue.md
     - architecture/tech-stacks/python-fastapi.md
     - architecture/tech-stacks/ts-react-nest.md
+    - architecture/tech-stacks/php-symfony-postgres.md
 summary: Thin browser clients talking to one centralised server on a LAN; single source of truth, shared state, easy updates.
 ---
 
@@ -54,6 +55,7 @@ Internal enterprise tools: inventory management, Laboratory Information Manageme
 - [Go + Vue](../tech-stacks/go-vue.md) — lean single-binary server + reactive SPA (kaos-control's own stack).
 - [Python + FastAPI](../tech-stacks/python-fastapi.md) — fast to build, great for data-driven internal tools.
 - [TypeScript React + NestJS](../tech-stacks/ts-react-nest.md) — one language end-to-end, large ecosystem.
+- [PHP + Symfony / PostgreSQL](../tech-stacks/php-symfony-postgres.md) — classic central business app with a relational source of truth.
 
 ## Related architectures
 Drop the server and it becomes a [[architecture/architectures/standalone-desktop|Standalone Desktop]] app; move it to the cloud for many tenants and it becomes a [[architecture/architectures/single-service-saas|Single-Service Cloud SaaS]]. Internally it is usually a [[architecture/architectures/modular-monolith|Modular Monolith]].

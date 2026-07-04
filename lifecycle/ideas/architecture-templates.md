@@ -124,6 +124,7 @@ slug. Worth ratifying this exception to §3.3 of the spec during requirements.
   config + pipelines + ADRs?)
 - Where does the embedded catalog get copied on init, and how are project-local
   edits reconciled with catalog updates in later kaos-control versions?
-- Which initial templates ship as *named bundles* (the original idea listed
-  Go+SQLite, PHP/Symfony/Postgres, Python/Mongo — note PHP/Symfony and Mongo
-  aren't yet in the stack catalog; add them, or start from the current nine)?
+- Which initial templates ship as *named bundles*? The original idea listed
+  Go+SQLite, PHP/Symfony/Postgres, and Python/Mongo — the stack catalog now
+  includes [[php-symfony-postgres]] and [[python-mongodb]] (11 stacks total), so
+  named bundles can be assembled from the catalog rather than invented.

@@ -12,6 +12,8 @@ related_to:
     - architecture/tech-stacks/go-vue.md
     - architecture/tech-stacks/ts-react-nest.md
     - architecture/tech-stacks/python-fastapi.md
+    - architecture/tech-stacks/php-symfony-postgres.md
+    - architecture/tech-stacks/python-mongodb.md
 summary: One cloud-hosted web application serving many tenants — the classic SaaS shape, without the cost of full microservices.
 ---
 
@@ -54,6 +56,8 @@ Most B2B and B2C web products: dashboards, productivity tools, vertical SaaS. Th
 - [Go + Vue](../tech-stacks/go-vue.md) — cheap to run, small footprint per instance.
 - [TypeScript React + NestJS](../tech-stacks/ts-react-nest.md) — fast product iteration, huge ecosystem.
 - [Python + FastAPI](../tech-stacks/python-fastapi.md) — data- and AI-centric SaaS.
+- [PHP + Symfony / PostgreSQL](../tech-stacks/php-symfony-postgres.md) — productive multi-tenant web on cheap, ubiquitous hosting.
+- [Python + MongoDB](../tech-stacks/python-mongodb.md) — document-per-tenant models scale simply.
 
 ## Related architectures
 Internally almost always a [[architecture/architectures/modular-monolith|Modular Monolith]]; scales into [[architecture/architectures/cloud-native-microservices|Cloud-Native Microservices]] when domains need independent scaling; can shed infrastructure entirely toward [[architecture/architectures/serverless-faas|Serverless / FaaS]].

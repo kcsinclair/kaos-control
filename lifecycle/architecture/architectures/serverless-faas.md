@@ -12,6 +12,7 @@ related_to:
     - architecture/tech-stacks/ts-react-nest.md
     - architecture/tech-stacks/python-fastapi.md
     - architecture/tech-stacks/go-vue.md
+    - architecture/tech-stacks/python-mongodb.md
 summary: Application composed of managed functions triggered on demand; no servers to run, pay-per-execution, scales to zero.
 ---
 
@@ -54,6 +55,7 @@ Spiky or unpredictable workloads, event processing, webhooks, cron/back-office j
 - [TypeScript React + NestJS](../tech-stacks/ts-react-nest.md) — Node has first-class FaaS support.
 - [Python + FastAPI](../tech-stacks/python-fastapi.md) — Python functions for data/AI workloads.
 - [Go + Vue](../tech-stacks/go-vue.md) — Go's tiny cold-start and fast startup suit Lambda well.
+- [Python + MongoDB](../tech-stacks/python-mongodb.md) — stateless functions over a managed document store (Atlas).
 
 ## Related architectures
 Often the compute tier of a [[architecture/architectures/single-service-saas|Single-Service Cloud SaaS]], and a common execution model for [[architecture/architectures/event-driven-streaming|Event-Driven / Streaming]] consumers and [[architecture/architectures/cloud-native-microservices|Cloud-Native Microservices]] where each service is a set of functions.
