@@ -1,7 +1,7 @@
 ---
 title: E2E Test 'history row appears after pipeline run completes' fails to spawn server
 type: defect
-status: in-development
+status: done
 lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-6-test.md
 labels: [defect]
@@ -28,6 +28,10 @@ The test harness (`tests/e2e/harness/kaos-control.ts`) should spawn the `kaos-co
 The test harness spawns the binary with only `['-config', configPath]` as arguments. The binary rejects this and prints:
 `error: no command given; use -d/--daemon or 'serve' to start the server`
 This causes the test to fail with a timeout waiting for the health check.
+
+## Fix Applied
+
+Fixed the `spawnKaosControl` function in `tests/e2e/harness/kaos-control.ts` to pass `['serve', '-config', configPath]` instead of just `['-config', configPath]`. The binary now receives the required command to start the server.
 
 ## Logs / Output
 

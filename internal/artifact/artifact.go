@@ -25,6 +25,10 @@ var KnownTypes = map[string]bool{
 	"plan-backend": true, "plan-frontend": true, "plan-test": true,
 	"test": true, "prototype": true, "defect": true,
 	"doc": true, "release": true,
+	// Catalog artifacts shipped for project onboarding (see
+	// lifecycle/ideas/architecture-templates.md): selectable high-level
+	// architectures and the tech stacks that suit them.
+	"architecture": true, "tech-stack": true,
 }
 
 // Edge kinds used in GraphEdge.Kind and the links table.

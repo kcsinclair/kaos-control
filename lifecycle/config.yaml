@@ -288,13 +288,15 @@ agents:
   - name: test-developer
     role:
       - test-developer
-    driver: claude-code-cli
-    model: sonnet
+    driver: claude-env
+    base_url: http://leia.packsin.com:11434
+    auth_token: ollama
+    model: qwen3-coder:30b
     active_status: in-development
     done_on_success: true
     source_types:
       - plan-test
-    timeout_minutes: 0
+    timeout_minutes: 60
     allowed_write_paths:
       - tests
       - web/src

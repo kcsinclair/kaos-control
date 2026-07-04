@@ -1,7 +1,7 @@
 ---
 title: "Devops List subcommand missing type flag"
 type: defect
-status: in-development
+status: done
 lineage: kaos-control-devops-cli
 parent: lifecycle/tests/kaos-control-devops-cli-6-test.md
 labels: [defect]
