@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Recursive Subdirectory Support for Artifact Directories"
 type: plan-test
-status: in-development
+status: done
 lineage: idea-archiving
 parent: lifecycle/requirements/idea-archiving-2.md
 created: "2026-07-05T16:00:00+10:00"

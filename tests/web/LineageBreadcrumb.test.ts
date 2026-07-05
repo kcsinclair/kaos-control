@@ -48,6 +48,7 @@ interface MountOpts {
   path?: string
   project?: string
   lineage?: string
+  relPath?: string
 }
 
 async function mountBreadcrumb(opts: MountOpts = {}) {
@@ -59,6 +60,7 @@ async function mountBreadcrumb(opts: MountOpts = {}) {
       path: opts.path ?? 'lifecycle/requirements/login-2.md',
       project: opts.project ?? 'test',
       lineage: opts.lineage ?? 'login',
+      relPath: opts.relPath ?? '',
     },
     global: { plugins: [router] },
   })
@@ -341,4 +343,52 @@ describe('LineageBreadcrumb — Milestone 4: all stage directories', () => {
       errorSpy.mockRestore()
     })
   }
+})
+
+// ===========================================================================
+// Milestone 6 (idea-archiving-5-test.md) — Folder segments sourced from
+// rel_path, so a nested artifact's breadcrumb shows its subfolders under the
+// stage directory.
+// ===========================================================================
+
+describe('LineageBreadcrumb — folder segments from rel_path', () => {
+  it('renders no folder segment for a flat artifact (rel_path has no slash)', async () => {
+    const { wrapper } = await mountBreadcrumb({
+      path: 'lifecycle/ideas/login.md',
+      relPath: 'login.md',
+    })
+    const intermediates = wrapper.findAll('span.crumb-intermediate').map(s => s.text())
+    expect(intermediates).toEqual(['lifecycle', 'ideas'])
+    expect(wrapper.find('span.crumb-current').text()).toBe('login.md')
+  })
+
+  it('renders a single folder segment for a single-nested rel_path', async () => {
+    const { wrapper } = await mountBreadcrumb({
+      path: 'lifecycle/ideas/archive/login.md',
+      relPath: 'archive/login.md',
+    })
+    const intermediates = wrapper.findAll('span.crumb-intermediate').map(s => s.text())
+    expect(intermediates).toEqual(['lifecycle', 'ideas', 'archive'])
+    expect(wrapper.find('span.crumb-current').text()).toBe('login.md')
+  })
+
+  it('renders ordered folder segments for a deeply-nested rel_path', async () => {
+    const { wrapper } = await mountBreadcrumb({
+      path: 'lifecycle/ideas/2026/q3/release-x.md',
+      relPath: '2026/q3/release-x.md',
+    })
+    const intermediates = wrapper.findAll('span.crumb-intermediate').map(s => s.text())
+    expect(intermediates).toEqual(['lifecycle', 'ideas', '2026', 'q3'])
+    expect(wrapper.find('span.crumb-current').text()).toBe('release-x.md')
+  })
+
+  it('falls back to splitting the full path when rel_path is absent (loading state)', async () => {
+    const { wrapper } = await mountBreadcrumb({
+      path: 'lifecycle/ideas/archive/login.md',
+      relPath: '',
+    })
+    // No crash, and the final segment still renders — even though it can't
+    // yet tell "archive" is a folder vs. part of the flat path.
+    expect(wrapper.find('span.crumb-current').text()).toBe('login.md')
+  })
 })
