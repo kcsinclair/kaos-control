@@ -1,7 +1,7 @@
 ---
 title: Project Queue View in Agents Panel
 type: requirement
-status: blocked
+status: approved
 lineage: project-queue-view
 created: "2026-06-27T00:00:00+10:00"
 priority: high
@@ -131,10 +131,24 @@ The pending-count indicator and cancel actions must be screen-reader accessible 
 - [ ] `pnpm build` and `vue-tsc --noEmit` pass with no new errors; if a backend endpoint is added, `go build ./...` and `go vet ./...` pass with no new errors
 - [ ] Originating idea: [[project-queue-view]]
 
-## Open Questions
+## Resolved Questions
 
 - **Q1**: Should the project queue panel be collapsible/dismissible, or always visible when the Agents view is open?
+
+> Always visible.
+
 - **Q2**: Should clicking a queued job's artifact navigate to that artifact (drill-down), consistent with the ready-count badge drill-down in [[agent-panel-status-and-ready-count]]?
+
+> Yes
+
 - **Q3**: When the queue is globally paused (rate-limit or manual), should the project panel surface the paused state and reason, or stay silent and leave pause status to the global view only?
+
+> It should show that it is paused and include a link to view the global queue, e.g. "see here for details".
+
 - **Q4**: Should the project panel show the user who enqueued each job (`enqueued_by`), as the global pending table does, or is that noise within a single-project context?
+
+> No, not needed at the moment.
+
 - **Q5**: How many "recent" jobs should the project panel show — the same global window of 10 (which may be mostly other projects' jobs and yield few project entries), or a project-scoped count of the last N for this project?
+ 
+> The project level queue should only show the jobs waiting to be run, the completed jobs will be visibile in the current agent view.
