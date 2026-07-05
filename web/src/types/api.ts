@@ -83,6 +83,7 @@ export interface ArtifactFrontmatter {
 
 export interface ArtifactRow {
   path: string
+  rel_path: string
   slug: string
   lineage: string
   index: number
