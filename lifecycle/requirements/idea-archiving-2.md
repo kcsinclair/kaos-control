@@ -1,7 +1,7 @@
 ---
 title: Recursive Subdirectory Support for Artifact Directories
 type: requirement
-status: draft
+status: approved
 lineage: idea-archiving
 created: "2026-07-05T15:30:00+10:00"
 priority: high
