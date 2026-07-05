@@ -8,6 +8,7 @@ import { useLocksStore } from '@/stores/locks'
 import { useAgentsStore } from '@/stores/agents'
 import { useSchedulerStore } from '@/stores/scheduler'
 import { useAppStore } from '@/stores/app'
+import { useOpenQuestionsStore } from '@/stores/openQuestions'
 import { getProjectWs } from '@/api/ws'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
@@ -19,6 +20,7 @@ const locksStore = useLocksStore()
 const agentsStore = useAgentsStore()
 const schedulerStore = useSchedulerStore()
 const appStore = useAppStore()
+const openQuestionsStore = useOpenQuestionsStore()
 
 const AGENT_EVENTS     = new Set(['agent.started', 'agent.progress', 'agent.finished', 'agent.failed', 'agent.permission'])
 const LOCK_EVENTS      = new Set(['lock.acquired', 'lock.released'])
@@ -26,6 +28,7 @@ const SCHEDULER_EVENTS = new Set(['scheduler.job.started', 'scheduler.job.comple
 
 let wsUnsub: (() => void) | null = null
 let _readyCountDebounce: ReturnType<typeof setTimeout> | null = null
+let _awaitingCountDebounce: ReturnType<typeof setTimeout> | null = null
 
 function getProject() { return route.params.project as string }
 
@@ -34,6 +37,7 @@ async function syncProject() {
   if (!projectStore.projects.length) await projectStore.fetchProjects()
   projectStore.setCurrent(name)
   await projectStore.checkInitRequired(name)
+  void openQuestionsStore.fetchAwaitingAnswersCount(name)
 }
 
 function scheduleReadyCountRefresh(project: string) {
@@ -41,6 +45,14 @@ function scheduleReadyCountRefresh(project: string) {
   _readyCountDebounce = setTimeout(() => {
     _readyCountDebounce = null
     void agentsStore.fetchReadyCounts(project)
+  }, 500)
+}
+
+function scheduleAwaitingCountRefresh(project: string) {
+  if (_awaitingCountDebounce !== null) clearTimeout(_awaitingCountDebounce)
+  _awaitingCountDebounce = setTimeout(() => {
+    _awaitingCountDebounce = null
+    void openQuestionsStore.fetchAwaitingAnswersCount(project)
   }, 500)
 }
 
@@ -56,6 +68,7 @@ function subscribeWs(project: string) {
       schedulerStore.onWsEvent(e.type, e.payload as Record<string, unknown>)
     } else if (e.type === 'artifact.indexed') {
       scheduleReadyCountRefresh(project)
+      scheduleAwaitingCountRefresh(project)
     }
   })
 }
@@ -76,6 +89,7 @@ watch(() => route.params.project, (newProject) => {
 onUnmounted(() => {
   wsUnsub?.()
   if (_readyCountDebounce !== null) clearTimeout(_readyCountDebounce)
+  if (_awaitingCountDebounce !== null) clearTimeout(_awaitingCountDebounce)
 })
 </script>
 

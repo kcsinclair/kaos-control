@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { api } from './client'
-import type { ArtifactRow, ArtifactDetail, ArtifactFilter, ArtifactFrontmatter, LineageSummary } from '@/types/api'
+import type { ArtifactRow, ArtifactDetail, ArtifactFilter, ArtifactFrontmatter, LineageSummary, OpenQuestionsResponse } from '@/types/api'
 
 function filterParams(f: ArtifactFilter): string {
   const p = new URLSearchParams()
@@ -16,6 +16,7 @@ function filterParams(f: ArtifactFilter): string {
   if (f.sort)      p.set('sort', f.sort)
   if (f.limit !== undefined) p.set('limit', String(f.limit))
   if (f.offset)   p.set('offset', String(f.offset))
+  if (f.awaiting_answers) p.set('awaiting_answers', 'true')
   const s = p.toString()
   return s ? '?' + s : ''
 }
@@ -23,6 +24,30 @@ function filterParams(f: ArtifactFilter): string {
 export function listArtifacts(project: string, filter: ArtifactFilter = {}) {
   return api.get<{ items: ArtifactRow[]; total: number }>(
     `/p/${encodeURIComponent(project)}/artifacts${filterParams(filter)}`,
+  )
+}
+
+export function fetchAwaitingAnswersCount(project: string) {
+  return api.get<{ count: number }>(
+    `/p/${encodeURIComponent(project)}/artifacts?awaiting_answers=true&count_only=true`,
+  )
+}
+
+export function getOpenQuestions(project: string, path: string) {
+  return api.get<OpenQuestionsResponse>(
+    `/p/${encodeURIComponent(project)}/artifacts/${path}/open-questions`,
+  )
+}
+
+export function previewOpenQuestions(
+  project: string,
+  path: string,
+  answers: Record<number, string>,
+  complete: boolean,
+) {
+  return api.post<{ body: string }>(
+    `/p/${encodeURIComponent(project)}/artifacts/${path}/open-questions/preview`,
+    { answers, complete },
   )
 }
 

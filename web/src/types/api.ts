@@ -208,6 +208,21 @@ export interface ArtifactFilter {
   sort?: string
   limit?: number
   offset?: number
+  /** Restrict to artefacts that are `blocked` with a non-empty `## Open Questions` section. */
+  awaiting_answers?: boolean
+}
+
+export interface OpenQuestion {
+  index: number
+  text: string
+  answer: string
+}
+
+export interface OpenQuestionsResponse {
+  heading: string
+  format: string
+  questions: OpenQuestion[]
+  can_resolve: boolean
 }
 
 export interface LineageSummary {
