@@ -94,6 +94,8 @@ The tool should treat every markdown artifact under an artifact root as a first-
 
 3. **Watch-limit strategy.** For very large repositories, should nested watching be capped or fall back to periodic rescans if OS inotify/kqueue limits are hit, and what limit is acceptable before degrading?
 
+> 5000
+
 4. **Excluded folder conventions.** Beyond dot-directories, should any well-known folders (e.g. `node_modules`, `dist`) be ignored by default, or is dot-prefix the only exclusion rule?
 
 5. **Index migration.** Does adding the relative-path column require an index schema version bump and rebuild on upgrade, or can it be back-filled lazily?
