@@ -213,6 +213,10 @@ func (s *Server) buildRouter() chi.Router {
 					s.handleAllowedTargets(w, r)
 					return
 				}
+				if strings.HasSuffix(param, "/open-questions") {
+					s.handleGetOpenQuestions(w, r)
+					return
+				}
 				s.handleGetArtifact(w, r)
 			})
 			r.Put("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
