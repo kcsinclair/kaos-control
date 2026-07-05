@@ -4,6 +4,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -557,21 +558,43 @@ type RoadmapConfig struct {
 	DefaultPeriodMode string `yaml:"default_period_mode" json:"default_period_mode"`
 }
 
+// OpenQuestionsConfig holds per-project settings for the open-questions
+// resolution flow.
+type OpenQuestionsConfig struct {
+	// AnswerFormat names the strategy used to write answers back into the
+	// "## Open Questions" section. Accepted values: "blockquote" (default).
+	AnswerFormat string `yaml:"answer_format" json:"answer_format"`
+}
+
+// EffectiveFormat returns the configured answer format, falling back to
+// "blockquote" when empty or unrecognised.
+func (c OpenQuestionsConfig) EffectiveFormat() string {
+	switch c.AnswerFormat {
+	case "", "blockquote":
+		return "blockquote"
+	default:
+		slog.Warn("open_questions.answer_format: unknown value, falling back to blockquote",
+			"value", c.AnswerFormat)
+		return "blockquote"
+	}
+}
+
 // Project is the per-project configuration (lifecycle/config.yaml).
 type Project struct {
-	Stages        []Stage         `yaml:"stages"`
-	Git           GitConfig       `yaml:"git"`
-	Roles         []string        `yaml:"roles"`
-	Transitions   []Transition    `yaml:"transitions,omitempty"`
-	Users         []UserBinding   `yaml:"users"`
-	Agents        []AgentConfig   `yaml:"agents"`
-	RequiredPlans RequiredPlans   `yaml:"required_plans"`
-	Ignore        []string        `yaml:"ignore"`
-	Kanban        *KanbanConfig   `yaml:"kanban,omitempty"`
-	Feed          FeedConfig      `yaml:"feed"`
-	Scheduler     SchedulerConfig `yaml:"scheduler"`
-	Dashboard     DashboardConfig `yaml:"dashboard"`
-	Roadmap       RoadmapConfig   `yaml:"roadmap,omitempty" json:"roadmap,omitempty"`
+	Stages        []Stage             `yaml:"stages"`
+	Git           GitConfig           `yaml:"git"`
+	Roles         []string            `yaml:"roles"`
+	Transitions   []Transition        `yaml:"transitions,omitempty"`
+	Users         []UserBinding       `yaml:"users"`
+	Agents        []AgentConfig       `yaml:"agents"`
+	RequiredPlans RequiredPlans       `yaml:"required_plans"`
+	Ignore        []string            `yaml:"ignore"`
+	Kanban        *KanbanConfig       `yaml:"kanban,omitempty"`
+	Feed          FeedConfig          `yaml:"feed"`
+	Scheduler     SchedulerConfig     `yaml:"scheduler"`
+	Dashboard     DashboardConfig     `yaml:"dashboard"`
+	Roadmap       RoadmapConfig       `yaml:"roadmap,omitempty" json:"roadmap,omitempty"`
+	OpenQuestions OpenQuestionsConfig `yaml:"open_questions,omitempty" json:"open_questions,omitempty"`
 }
 
 // Transition overrides one edge in the state machine.

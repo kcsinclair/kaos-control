@@ -292,6 +292,41 @@ func TestRoadmapConfig(t *testing.T) {
 	})
 }
 
+func TestOpenQuestionsConfig(t *testing.T) {
+	t.Run("omitted section defaults to blockquote", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, "")
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if got := cfg.OpenQuestions.EffectiveFormat(); got != "blockquote" {
+			t.Errorf("EffectiveFormat() = %q, want %q", got, "blockquote")
+		}
+	})
+
+	t.Run("explicit blockquote override", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, "open_questions:\n  answer_format: blockquote\n")
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if got := cfg.OpenQuestions.EffectiveFormat(); got != "blockquote" {
+			t.Errorf("EffectiveFormat() = %q, want %q", got, "blockquote")
+		}
+	})
+
+	t.Run("unknown value falls back to blockquote", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, "open_questions:\n  answer_format: numbered\n")
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if got := cfg.OpenQuestions.EffectiveFormat(); got != "blockquote" {
+			t.Errorf("EffectiveFormat() = %q, want %q (unknown value must fall back)", got, "blockquote")
+		}
+	})
+}
+
 // containsString is a helper used by TestRoadmapConfig.
 func containsString(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || len(sub) == 0 ||

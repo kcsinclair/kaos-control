@@ -299,6 +299,7 @@ func (s *Server) buildRouter() chi.Router {
 			r.Put("/config", s.handleUpdateConfig)
 			r.Get("/config/kanban", s.handleGetKanbanConfig)
 			r.Get("/config/roadmap", s.handleGetRoadmapConfig)
+			r.Get("/config/open-questions", s.handleGetOpenQuestionsConfig)
 
 			// Roles and users
 			r.Get("/roles", s.handleGetRoles)

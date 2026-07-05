@@ -45,6 +45,11 @@ required_plans:
     - plan-frontend
     - plan-test
 
+# Answer format for the "## Open Questions" resolution flow. Currently the
+# only supported value is "blockquote" (the default).
+open_questions:
+  answer_format: blockquote
+
 # The initial user. `kaos-control init -owner-email …` populates this
 # with the supplied email; otherwise edit the placeholder below before
 # starting the server — every project needs at least one user.
