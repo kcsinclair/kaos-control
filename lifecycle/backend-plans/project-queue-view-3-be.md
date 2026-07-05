@@ -1,9 +1,12 @@
 ---
 title: Project Queue View — Backend Plan
 type: plan-backend
-status: in-development
+status: blocked
 lineage: project-queue-view
 parent: lifecycle/requirements/project-queue-view-2.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Project Queue View — Backend Plan
@@ -125,3 +128,56 @@ query path, new storage, or polling.
 - [ ] The chosen path (option 1 default, option 2 contingency) is recorded so the
       frontend plan [[project-queue-view]] and test plan know which data source
       to wire against.
+
+## Open Questions
+
+Milestone 1 verification (read-only, no files under `internal/` changed) found
+that the plan's premise for FR-5 — "real-time updates already broadcast over
+the app-level WebSocket ... which the store already consumes" — **does not
+fully hold today**, in a way that neither Milestone 1 nor Milestone 2 as
+written resolves:
+
+1. **`queue.added` is not broadcast on the normal enqueue path.**
+   `POST /api/queue` (`internal/http/queue.go: handleEnqueue`) calls
+   `Dispatcher.Enqueue`, which is a bare one-line proxy to `Store.Enqueue`
+   (`internal/queue/dispatcher.go:533`) with no broadcast call anywhere in
+   that call chain. The only places `queue.added` is actually broadcast are
+   two internal auto-retry paths — rate-limit re-enqueue
+   (`internal/queue/dispatcher.go:462`) and auth-error re-enqueue
+   (`internal/queue/dispatcher.go:514`) — and even there the payload carries
+   only `id`, `position`, `attempts`, `reason` (no `project`, `artifact_path`,
+   or `agent_name`), unlike `broadcastJobEvent`'s payload used for
+   `queue.started`/`queue.finished`.
+2. **`queue.cancelled` is never broadcast anywhere in the codebase.**
+   `DELETE /api/queue/{id}` (`internal/http/queue.go: handleCancelQueue`)
+   calls `Dispatcher.Cancel`, itself a bare proxy to `Store.Cancel`
+   (`internal/queue/dispatcher.go:544`) with no broadcast call. No other code
+   path emits `queue.cancelled`.
+3. Consequently, a second connected client's queue view does **not** learn
+   about a newly enqueued or newly cancelled job in real time — only the
+   originating tab sees it (via the client-side optimistic insert in
+   `web/src/stores/queue.ts: enqueue()`), until that other client does a full
+   manual refetch. `web/src/stores/queue.ts` already contains handlers for
+   both events, i.e. the frontend was written assuming they fire.
+
+This gap is orthogonal to project-scoping: it exists identically whether the
+plan takes option 1 (client-side filter) or option 2 (contingency endpoint),
+because Milestone 2's endpoint only reshapes the on-demand snapshot — it does
+not add the missing broadcast calls. So neither milestone as currently
+written can be completed and marked correct without a product decision:
+
+1. Is fixing the missing `queue.added` (on normal enqueue) and
+   `queue.cancelled` broadcasts **in scope for this plan**, or is it a
+   pre-existing defect to raise and fix independently of project-queue-view?
+2. If in scope: is the expected fix adding
+   `d.broadcastJobEvent("queue.added", &job, "pending")` in
+   `Dispatcher.Enqueue` and `d.broadcastJobEvent("queue.cancelled", job,
+   "cancelled")` in `Dispatcher.Cancel` (mirroring the existing
+   `broadcastJobEvent` payload shape used by `queue.started`/`queue.finished`,
+   which already includes `project`)? Does making this change count as
+   "impact on the global queue" under NFR-1, or is it welcomed because it
+   makes the existing global queue actually satisfy the real-time behaviour
+   FR-5 already assumes?
+3. Should Milestone 1's acceptance criteria be reworded — as literally
+   written they can never be satisfied, since the events in question do not
+   reliably fire (or carry `project`) on the primary user-facing code paths?
