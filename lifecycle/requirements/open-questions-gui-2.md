@@ -1,7 +1,7 @@
 ---
 title: GUI Flow for Resolving Open Questions on Blocked Artefacts
 type: requirement
-status: planning
+status: done
 lineage: open-questions-gui
 created: "2026-07-05T00:00:00+10:00"
 priority: high
