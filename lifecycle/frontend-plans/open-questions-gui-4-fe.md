@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: Open-Questions Resolution GUI"
 type: plan-frontend
-status: in-development
+status: done
 lineage: open-questions-gui
 parent: lifecycle/requirements/open-questions-gui-2.md
 ---
