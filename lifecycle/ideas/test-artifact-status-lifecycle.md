@@ -5,14 +5,14 @@ status: clarifying
 lineage: test-artifact-status-lifecycle
 created: "2026-04-28T10:02:27+10:00"
 priority: low
+parent: lifecycle/ideas/kaos-control-devops-cli.md
 labels:
     - test
     - testing
     - qa
     - workflow
     - artefacts
-release: KC-Release5
-parent: lifecycle/ideas/kaos-control-devops-cli.md
+release: KC-Release6
 ---
 
 # Test Artifact Status Lifecycle

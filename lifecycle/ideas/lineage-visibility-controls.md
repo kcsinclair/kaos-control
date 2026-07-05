@@ -5,12 +5,12 @@ status: planning
 lineage: lineage-visibility-controls
 created: "2026-04-28T09:27:07+10:00"
 priority: normal
+parent: lifecycle/ideas/inherit-priority-and-release.md
 labels:
     - feature
     - frontend
     - architecture
-release: KC-Release5
-parent: lifecycle/ideas/inherit-priority-and-release.md
+release: KC-Release6
 ---
 
 # Lineage Visibility Controls

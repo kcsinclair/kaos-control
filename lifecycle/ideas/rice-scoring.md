@@ -4,6 +4,7 @@ type: idea
 status: approved
 lineage: rice-scoring
 priority: high
+parent: lifecycle/ideas/kaos-control-devops-cli.md
 labels:
     - feature
     - frontend
@@ -11,8 +12,7 @@ labels:
     - ux
     - artifacts
     - usability
-release: KC-Release4
-parent: lifecycle/ideas/kaos-control-devops-cli.md
+release: KC-Release5
 ---
 
 ## Raw Idea

@@ -11,6 +11,8 @@ labels:
     - usability
     - operability
     - onboarding
+release: KC-Release4
+parent: lifecycle/ideas/artefact-sub-directories.md
 ---
 
 # Show Usage Guide by Default; Require -d/--daemon for Daemon Mode

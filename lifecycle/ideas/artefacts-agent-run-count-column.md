@@ -11,6 +11,8 @@ labels:
     - agent
     - enhancement
     - feature
+release: KC-Release3
+parent: lifecycle/ideas/artefact-sub-directories.md
 ---
 
 # Artefacts View: Agent Run Count Column

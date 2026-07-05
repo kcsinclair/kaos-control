@@ -5,13 +5,13 @@ status: draft
 lineage: qa-agent-defect-role-assignment
 created: "2026-04-28T10:30:51+10:00"
 priority: normal
+parent: lifecycle/ideas/inherit-priority-and-release.md
 labels:
     - qa
     - defect
     - workflow
     - agent
-release: KC-Release5
-parent: lifecycle/ideas/inherit-priority-and-release.md
+release: KC-Release6
 ---
 
 # QA Agent Should Assign Defects to the Correct Role

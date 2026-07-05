@@ -11,7 +11,8 @@ labels:
     - frontend
     - enhancement
     - usability
-release: KC-Release5
+release: KC-Release6
+parent: lifecycle/ideas/artefact-sub-directories.md
 ---
 
 # Bulk Edit Artifacts (Status, Priority, Release)

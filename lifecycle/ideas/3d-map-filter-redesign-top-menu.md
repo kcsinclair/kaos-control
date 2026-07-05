@@ -5,13 +5,13 @@ status: planning
 lineage: 3d-map-filter-redesign-top-menu
 created: "2026-05-10T09:11:27+10:00"
 priority: normal
+parent: lifecycle/ideas/inherit-priority-and-release.md
 labels:
     - enhancement
     - frontend
     - usability
     - vue
-release: KC-Release5
-parent: lifecycle/ideas/inherit-priority-and-release.md
+release: KC-Release6
 ---
 
 # 2D and 3D Map Filter Redesign: Top Menu Bar
