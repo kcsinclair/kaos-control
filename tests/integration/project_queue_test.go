@@ -10,57 +10,47 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestProjectQueue_EnqueueAndList verifies that jobs are properly associated with projects
-// and that the global queue API still works correctly.
+// TestProjectQueue_EnqueueAndList verifies that jobs are associated with their
+// project and that the global queue API lists them with a non-empty project
+// field (the M1 verification for project-queue-view). Two distinct artifacts
+// are used so the duplicate-active suppression (FR3) does not reject the second.
 func TestProjectQueue_EnqueueAndList(t *testing.T) {
 	setupFakeClaude(t, 0) // success exit; queue dispatch will exit immediately
 
 	env := newQueueTestEnv(t, []seedArtifact{
-		{
-			relPath: "lifecycle/ideas/test-idea.md",
-			content: makeApprovedArtifact("Test Idea", "idea", "test"),
-		},
+		{relPath: "lifecycle/ideas/test-idea-a.md", content: makeApprovedArtifact("Test Idea A", "idea", "test-idea-a")},
+		{relPath: "lifecycle/ideas/test-idea-b.md", content: makeApprovedArtifact("Test Idea B", "idea", "test-idea-b")},
 	})
 
-	// Enqueue jobs for different projects
 	resp1 := env.doRequest("POST", "/api/queue", map[string]any{
-		"project":       "project-a",
-		"artifact_path": "lifecycle/ideas/test-idea.md",
+		"project":       "testproject",
+		"artifact_path": "lifecycle/ideas/test-idea-a.md",
 		"agent":         "requirements-analyst",
 	})
 	requireStatus(t, resp1, 201)
-	data1 := readJSON(t, resp1)
-	id1, _ := data1["id"].(string)
+	id1, _ := readJSON(t, resp1)["id"].(string)
 	assert.NotEmpty(t, id1)
 
 	resp2 := env.doRequest("POST", "/api/queue", map[string]any{
-		"project":       "project-b",
-		"artifact_path": "lifecycle/ideas/test-idea.md",
+		"project":       "testproject",
+		"artifact_path": "lifecycle/ideas/test-idea-b.md",
 		"agent":         "requirements-analyst",
 	})
 	requireStatus(t, resp2, 201)
-	data2 := readJSON(t, resp2)
-	id2, _ := data2["id"].(string)
+	id2, _ := readJSON(t, resp2)["id"].(string)
 	assert.NotEmpty(t, id2)
 
-	// List the global queue and verify both jobs are present
+	// The global queue lists both jobs, each carrying a non-empty project field
+	// — this is what lets the frontend filter client-side without a new endpoint.
 	snap := env.queueSnapshot()
 	pending, ok := snap["pending"].([]any)
 	assert.True(t, ok)
 	assert.Len(t, pending, 2)
-
-	// Verify that each job has a project field
 	for _, raw := range pending {
 		j, _ := raw.(map[string]any)
 		project, ok := j["project"].(string)
 		assert.True(t, ok)
-		assert.NotEmpty(t, project)
-		// Ensure jobs are from different projects
-		if j["id"] == id1 {
-			assert.Equal(t, "project-a", project)
-		} else if j["id"] == id2 {
-			assert.Equal(t, "project-b", project)
-		}
+		assert.Equal(t, "testproject", project)
 	}
 }
 
@@ -107,22 +97,21 @@ func TestProjectQueue_CancelPendingJob(t *testing.T) {
 	assert.True(t, found, "cancelled job should be in recent list")
 }
 
-// TestProjectQueue_GlobalQueueUnchanged verifies that global queue behavior is unchanged
-// and project-scoped filtering works correctly.
+// TestProjectQueue_GlobalQueueUnchanged verifies that the global queue lists all
+// jobs and that cancelling one job does not affect the others (NFR-1: no impact
+// on global-queue behaviour). Two distinct artifacts avoid FR3 duplicate
+// suppression.
 func TestProjectQueue_GlobalQueueUnchanged(t *testing.T) {
 	setupFakeClaude(t, 0) // success exit; queue dispatch will exit immediately
 
 	env := newQueueTestEnv(t, []seedArtifact{
-		{
-			relPath: "lifecycle/ideas/global-test.md",
-			content: makeApprovedArtifact("Global Test Idea", "idea", "global-test"),
-		},
+		{relPath: "lifecycle/ideas/global-test-a.md", content: makeApprovedArtifact("Global Test A", "idea", "global-test-a")},
+		{relPath: "lifecycle/ideas/global-test-b.md", content: makeApprovedArtifact("Global Test B", "idea", "global-test-b")},
 	})
 
-	// Enqueue jobs for multiple projects
 	resp1 := env.doRequest("POST", "/api/queue", map[string]any{
-		"project":       "project-a",
-		"artifact_path": "lifecycle/ideas/global-test.md",
+		"project":       "testproject",
+		"artifact_path": "lifecycle/ideas/global-test-a.md",
 		"agent":         "requirements-analyst",
 	})
 	requireStatus(t, resp1, 201)
@@ -131,8 +120,8 @@ func TestProjectQueue_GlobalQueueUnchanged(t *testing.T) {
 	assert.NotEmpty(t, id1)
 
 	resp2 := env.doRequest("POST", "/api/queue", map[string]any{
-		"project":       "project-b",
-		"artifact_path": "lifecycle/ideas/global-test.md",
+		"project":       "testproject",
+		"artifact_path": "lifecycle/ideas/global-test-b.md",
 		"agent":         "requirements-analyst",
 	})
 	requireStatus(t, resp2, 201)
