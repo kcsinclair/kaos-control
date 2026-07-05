@@ -22,6 +22,7 @@ import LockBanner from '@/components/common/LockBanner.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import QueueWorkButton from '@/components/artifact/QueueWorkButton.vue'
 import TriageNowButton from '@/components/artifact/TriageNowButton.vue'
+import ResolveQuestionsModal from '@/components/artifact/ResolveQuestionsModal.vue'
 import { useGraphStore } from '@/stores/graph'
 import { useQueueStore } from '@/stores/queue'
 import { useAgentsStore } from '@/stores/agents'
@@ -138,6 +139,12 @@ async function loadOpenQuestions() {
 function openResolveModal() {
   if (!userCanResolve.value) return
   showResolveModal.value = true
+}
+
+async function onQuestionsFinished() {
+  showResolveModal.value = false
+  ui.success('Answers saved — artefact unblocked')
+  await load()
 }
 
 // ── lock ────────────────────────────────────────────────────────────────────
@@ -412,6 +419,15 @@ onMounted(async () => {
     :target-path="artifactPath"
     @started="showRunAgent = false"
     @cancel="showRunAgent = false"
+  />
+
+  <ResolveQuestionsModal
+    v-if="showResolveModal && artifact"
+    :project="project"
+    :path="artifactPath"
+    :frontmatter="artifact.frontmatter"
+    @close="showResolveModal = false"
+    @finished="onQuestionsFinished"
   />
 
   <BrainDumpModal
