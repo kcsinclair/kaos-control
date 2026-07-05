@@ -9,6 +9,8 @@ labels:
     - artefacts
     - workflow
     - feature
+release: KC-Release2
+parent: lifecycle/ideas/open-questions-gui.md
 ---
 
 # Add 'raw' Artefact Status Before Draft
