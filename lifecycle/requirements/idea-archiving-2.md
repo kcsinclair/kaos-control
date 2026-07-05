@@ -98,4 +98,6 @@ The tool should treat every markdown artifact under an artifact root as a first-
 
 4. **Excluded folder conventions.** Beyond dot-directories, should any well-known folders (e.g. `node_modules`, `dist`) be ignored by default, or is dot-prefix the only exclusion rule?
 
+> only dot-prefix
+
 5. **Index migration.** Does adding the relative-path column require an index schema version bump and rebuild on upgrade, or can it be back-filled lazily?
