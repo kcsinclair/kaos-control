@@ -237,29 +237,55 @@ func EnsureFrontmatterField(raw []byte, key, value string) ([]byte, bool) {
 	return []byte("---" + newFm + s[fmEnd:]), true
 }
 
-// HasOpenQuestions reports whether the markdown body contains a non-empty
-// "## Open Questions" section. The heading text is matched case-sensitively.
-// The section is considered non-empty when at least one non-whitespace line
-// appears after the heading before the next "## " heading or end-of-file.
+// openQuestionSentinels are placeholder section contents that mean "there are
+// no open questions". Agents sometimes emit one of these instead of omitting
+// the section entirely; they must NOT trip the auto-block gate. Compared
+// case-insensitively after stripping list markers and surrounding punctuation.
+var openQuestionSentinels = map[string]bool{
+	"none":              true,
+	"n/a":               true,
+	"na":                true,
+	"nil":               true,
+	"no open questions": true,
+	"no questions":      true,
+	"tbd":               true,
+}
+
+// HasOpenQuestions reports whether the markdown body contains a "## Open
+// Questions" section with genuine, unresolved questions. The heading is matched
+// case-sensitively. The section is treated as empty (returns false) when it has
+// no content before the next "## " heading or end-of-file, OR when its only
+// content is "no questions" sentinels (e.g. "None", "- N/A") — see
+// openQuestionSentinels. Any other non-whitespace line is a real open question.
 func HasOpenQuestions(body string) bool {
 	lines := strings.Split(body, "\n")
 	inSection := false
+	sawRealQuestion := false
 	for _, line := range lines {
 		if inSection {
 			if strings.HasPrefix(line, "## ") {
-				// Reached the next H2 heading — section ended with no content.
-				return false
+				break // next H2 heading ends the section
 			}
-			if strings.TrimSpace(line) != "" {
-				return true
+			if strings.TrimSpace(line) == "" {
+				continue
 			}
-		} else {
-			if line == "## Open Questions" {
-				inSection = true
+			if !isOpenQuestionSentinel(line) {
+				sawRealQuestion = true
 			}
+		} else if line == "## Open Questions" {
+			inSection = true
 		}
 	}
-	return false
+	return sawRealQuestion
+}
+
+// isOpenQuestionSentinel reports whether a section content line is a placeholder
+// meaning "no open questions" (e.g. "None", "- N/A", "_none_.").
+func isOpenQuestionSentinel(line string) bool {
+	s := strings.TrimSpace(line)
+	s = strings.TrimLeft(s, "-*+") // drop a leading list marker
+	s = strings.Trim(s, " \t_*`.,!()[]")
+	return openQuestionSentinels[strings.ToLower(strings.TrimSpace(s))]
 }
 
 // RenderHTML renders markdown source to HTML using goldmark.
