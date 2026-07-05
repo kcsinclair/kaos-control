@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Open-Questions Resolution GUI"
 type: plan-test
-status: draft
+status: approved
 lineage: open-questions-gui
 parent: lifecycle/requirements/open-questions-gui-2.md
 ---
