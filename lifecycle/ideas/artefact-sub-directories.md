@@ -1,7 +1,7 @@
 ---
 title: Artefact Sub Directories to Assist with Artefact Management
 type: idea
-status: planning
+status: in-development
 lineage: idea-archiving
 priority: high
 labels:
