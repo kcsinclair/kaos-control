@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -48,6 +49,7 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Stage       string               `json:"stage"`
 		Slug        string               `json:"slug"`
+		Subdir      string               `json:"subdir"`
 		Frontmatter artifact.Frontmatter `json:"frontmatter"`
 		Body        string               `json:"body"`
 	}
@@ -84,11 +86,13 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build filename.
+	// Build filename. An optional subdir places the artifact in a nested
+	// folder under the stage dir; empty subdir preserves flat behaviour
+	// exactly (path.Join drops empty elements).
 	filename := buildFilename(req.Slug, nextIdx, stageDir)
-	relPath := "lifecycle/" + stageDir + "/" + filename
+	relPath := path.Join("lifecycle", stageDir, req.Subdir, filename)
 
-	// Sandbox check.
+	// Sandbox check — rejects a subdir/path escaping the project root via "..".
 	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))

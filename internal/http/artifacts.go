@@ -15,6 +15,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	git "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/index"
+	"github.com/kaos-control/kaos-control/internal/sandbox"
 )
 
 // handleListArtifacts handles GET /api/p/:project/artifacts
@@ -108,7 +109,11 @@ func (s *Server) handleGetArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read the raw file for body + HTML rendering.
-	absPath := filepath.Join(p.Entry.Path, relPath)
+	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+		return
+	}
 	raw, err := os.ReadFile(absPath)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("read_error", err.Error()))
