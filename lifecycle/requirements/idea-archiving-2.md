@@ -1,7 +1,7 @@
 ---
 title: Recursive Subdirectory Support for Artifact Directories
 type: requirement
-status: blocked
+status: draft
 lineage: idea-archiving
 created: "2026-07-05T15:30:00+10:00"
 priority: high
@@ -82,7 +82,7 @@ The tool should treat every markdown artifact under an artifact root as a first-
 - [ ] Lineage index collisions across two different subfolders are detected and surfaced the same way as flat collisions.
 - [ ] Relevant integration coverage is added — see [[end-to-end-smoke-tests]] and [[editor-live-refresh-on-disk-change]] for watcher/index refresh patterns to extend.
 
-## Open Questions
+## Resolved Questions
 
 1. **Move detection fidelity.** fsnotify does not reliably emit atomic rename/move events across all platforms; a move may surface as delete-then-create. Is keying artifacts by lineage+index (rather than path) sufficient to preserve identity across such split events, or is an explicit move endpoint needed?
 
@@ -101,3 +101,5 @@ The tool should treat every markdown artifact under an artifact root as a first-
 > only dot-prefix
 
 5. **Index migration.** Does adding the relative-path column require an index schema version bump and rebuild on upgrade, or can it be back-filled lazily?
+
+> back-filled lazily
