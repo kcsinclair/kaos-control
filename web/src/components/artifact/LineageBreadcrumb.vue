@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router'
 const props = defineProps<{
   project: string
   path: string
+  relPath: string
   lineage: string
 }>()
 
@@ -14,8 +15,19 @@ const router = useRouter()
 
 type SegmentRole = 'intermediate' | 'current'
 
+// Folder segments come from rel_path (path under the stage dir) so a nested
+// artifact's breadcrumb shows its subfolders; the stage/lifecycle prefix
+// still comes from the full path. Falls back to splitting the full path when
+// rel_path isn't a suffix of it (e.g. stale pre-migration index rows with
+// rel_path === '').
 const segments = computed(() => {
-  const parts = props.path.split('/')
+  const suffix = '/' + props.relPath
+  const prefix = props.relPath && props.path.endsWith(suffix)
+    ? props.path.slice(0, -suffix.length)
+    : null
+  const parts = prefix !== null
+    ? [...prefix.split('/').filter(Boolean), ...props.relPath.split('/')]
+    : props.path.split('/')
   const result: { label: string; path: string; role: SegmentRole }[] = []
   for (let i = 0; i < parts.length; i++) {
     result.push({

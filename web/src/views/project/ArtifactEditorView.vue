@@ -316,6 +316,7 @@ onMounted(async () => {
         v-if="artifact"
         :project="project"
         :path="artifactPath"
+        :rel-path="artifact.rel_path"
         :lineage="artifact.lineage"
       />
       <div v-else class="crumb-back-wrap">
