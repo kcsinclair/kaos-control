@@ -1,7 +1,7 @@
 ---
 title: Project Queue View — Test Plan
 type: plan-test
-status: in-development
+status: done
 lineage: project-queue-view
 parent: lifecycle/requirements/project-queue-view-2.md
 ---
