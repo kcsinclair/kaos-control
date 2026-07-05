@@ -349,8 +349,17 @@ func (idx *Index) Scan(stages []config.Stage) error {
 			continue
 		}
 		walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
+			if err != nil {
 				return err
+			}
+			if d.IsDir() {
+				if strings.HasPrefix(d.Name(), ".") {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if strings.HasPrefix(d.Name(), ".") || !strings.HasSuffix(path, ".md") {
+				return nil
 			}
 			if config.ShouldIgnore(path, idx.ignore) {
 				return nil
