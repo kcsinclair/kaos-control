@@ -1,7 +1,7 @@
 ---
 title: Project Queue View — Backend Plan
 type: plan-backend
-status: draft
+status: approved
 lineage: project-queue-view
 parent: lifecycle/requirements/project-queue-view-2.md
 ---
