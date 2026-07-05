@@ -117,6 +117,11 @@ func Open(dbPath, projectRoot string, stages []config.Stage, opts ...Option) (*I
 	if err := idx.ensureReleasesSlugColumn(); err != nil {
 		slog.Warn("index: releases slug migration failed", "err", err)
 	}
+	// Add rel_path column to artifacts if missing (migration from pre-rel_path
+	// schema). Existing rows keep '' until their next re-index back-fills it.
+	if err := idx.ensureRelPathColumn(); err != nil {
+		slog.Warn("index: rel_path migration failed", "err", err)
+	}
 	// Always scan on startup: the index is a cache and files may have changed
 	// while the server was not running (watcher only covers live changes).
 	if err := idx.Scan(stages); err != nil {
@@ -541,12 +546,12 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 
 	_, err = tx.Exec(`
 		INSERT OR REPLACE INTO artifacts
-			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime, created, has_open_questions)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime, created, has_open_questions, rel_path)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.Path, a.Slug, a.FM.Lineage, a.Index, a.Stage,
 		a.FM.Type, a.FM.Status, a.FM.Title, a.FM.Priority,
 		string(fmJSON), a.SHA256[:], a.Mtime.Unix(), createdUnix,
-		artifact.HasOpenQuestions(a.Body),
+		artifact.HasOpenQuestions(a.Body), a.RelPath,
 	)
 	if err != nil {
 		return fmt.Errorf("upserting artifact: %w", err)
@@ -638,6 +643,7 @@ func (f *Filter) withDefaults() Filter {
 // ArtifactRow is a lightweight summary row returned from list/graph queries.
 type ArtifactRow struct {
 	Path              string               `json:"path"`
+	RelPath           string               `json:"rel_path"`
 	Slug              string               `json:"slug"`
 	Lineage           string               `json:"lineage"`
 	Index             int                  `json:"index"`
@@ -665,7 +671,7 @@ func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 		return nil, 0, err
 	}
 
-	const sel = `SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
+	const sel = `SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created, rel_path
 		 FROM artifacts`
 	orderBy := buildOrderBy(f)
 	var rows *sql.Rows
@@ -704,7 +710,7 @@ func (idx *Index) Count(f Filter) (int, error) {
 // Get returns a single artifact by project-relative path, or nil if not found.
 func (idx *Index) Get(relPath string) (*ArtifactRow, error) {
 	rows, err := idx.db.Query(
-		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
+		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created, rel_path
 		 FROM artifacts WHERE path = ?`, relPath,
 	)
 	if err != nil {
@@ -1692,6 +1698,18 @@ func (idx *Index) ensureReleasesSlugColumn() error {
 	return nil
 }
 
+// ensureRelPathColumn adds the rel_path column to artifacts if it is missing
+// (migration from a pre-rel_path schema). Deliberately does not bump
+// schemaVersion or trigger dropAndRecreate: existing rows keep rel_path=''
+// until their next re-index (the startup Scan or an API write) back-fills it.
+func (idx *Index) ensureRelPathColumn() error {
+	// ADD COLUMN returns "duplicate column name" once the column already
+	// exists; that error is expected and discarded, matching the pattern used
+	// for agent_runs and releases migrations above.
+	_, _ = idx.db.Exec(`ALTER TABLE artifacts ADD COLUMN rel_path TEXT NOT NULL DEFAULT ''`)
+	return nil
+}
+
 // indexReleaseSlugify is a copy of release.Slugify used during migrations to
 // avoid an import cycle (index ← release ← index).
 var indexReleaseStripRe = regexp.MustCompile(`[^a-z0-9-]`)
@@ -1727,7 +1745,8 @@ CREATE TABLE artifacts (
     body_sha256         BLOB NOT NULL,
     mtime               INTEGER NOT NULL,
     created             INTEGER NOT NULL DEFAULT 0,
-    has_open_questions  INTEGER NOT NULL DEFAULT 0
+    has_open_questions  INTEGER NOT NULL DEFAULT 0,
+    rel_path            TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX idx_artifacts_lineage  ON artifacts(lineage);
 CREATE INDEX idx_artifacts_stage    ON artifacts(stage);
@@ -2292,8 +2311,8 @@ func isoWeekMonday(t time.Time) time.Time {
 
 // ScanArtifactRows scans a *sql.Rows result set of the standard artifact
 // projection (path, slug, lineage, idx, stage, type, status, title,
-// frontmatter_json, mtime, created) into []*ArtifactRow. It is exported so
-// other packages (e.g. internal/release) can reuse the scan logic.
+// frontmatter_json, mtime, created, rel_path) into []*ArtifactRow. It is
+// exported so other packages (e.g. internal/release) can reuse the scan logic.
 func ScanArtifactRows(rows *sql.Rows) ([]*ArtifactRow, error) {
 	out, _, err := scanRows(rows)
 	return out, err
@@ -2308,7 +2327,7 @@ func scanRows(rows *sql.Rows) ([]*ArtifactRow, int, error) {
 		var createdUnix int64
 		if err := rows.Scan(
 			&r.Path, &r.Slug, &r.Lineage, &r.Index, &r.Stage,
-			&r.Type, &r.Status, &r.Title, &fmJSON, &mtimeUnix, &createdUnix,
+			&r.Type, &r.Status, &r.Title, &fmJSON, &mtimeUnix, &createdUnix, &r.RelPath,
 		); err != nil {
 			return nil, 0, err
 		}
