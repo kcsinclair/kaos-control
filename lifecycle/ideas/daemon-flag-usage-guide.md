@@ -1,7 +1,7 @@
 ---
 title: Show Usage Guide by Default; Require -d/--daemon for Daemon Mode
 type: idea
-status: planning
+status: done
 lineage: daemon-flag-usage-guide
 created: "2026-06-27T14:04:17+10:00"
 priority: normal
