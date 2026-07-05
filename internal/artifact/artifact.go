@@ -58,6 +58,7 @@ type Artifact struct {
 	Index       int         // 0 = originating file; >=2 for descendants
 	StageSuffix string      // e.g. "be", "fe" from filename
 	Stage       string      // lifecycle stage dir name, e.g. "ideas"
+	RelPath     string      // path under the stage dir, e.g. "login.md" or "done/login.md"
 	FM          Frontmatter
 	Body        string      // raw markdown body (after frontmatter)
 	Links       []Link
@@ -117,7 +118,7 @@ var md = goldmark.New(
 // relPath is relative to the project root (e.g. "lifecycle/ideas/login.md").
 func Parse(raw []byte, relPath string, mtime time.Time) *Artifact {
 	sum := sha256.Sum256(raw)
-	stage, slug, idx, sfx := parsePathComponents(relPath)
+	stage, rel, slug, idx, sfx := parsePathComponents(relPath)
 
 	a := &Artifact{
 		Path:        relPath,
@@ -125,6 +126,7 @@ func Parse(raw []byte, relPath string, mtime time.Time) *Artifact {
 		Index:       idx,
 		StageSuffix: sfx,
 		Stage:       stage,
+		RelPath:     rel,
 		Mtime:       mtime,
 		SHA256:      sum,
 		Raw:         raw,
@@ -305,13 +307,17 @@ func RenderHTML(src string) string {
 // Group 1 = slug, group 2 = index digits, group 3 = optional alpha suffix.
 var indexSuffixRe = regexp.MustCompile(`^(.+)-(\d+)(?:-([a-zA-Z]+))?$`)
 
-// parsePathComponents extracts stage, slug, index, and stage-suffix from a
-// project-relative path like "lifecycle/backend-plans/login-3-be.md".
-func parsePathComponents(relPath string) (stage, slug string, idx int, sfx string) {
-	// relPath is like "lifecycle/<stage>/<filename>.md"
-	parts := strings.SplitN(relPath, "/", 3)
-	if len(parts) >= 2 {
-		stage = parts[len(parts)-2] // parent directory name
+// parsePathComponents extracts stage, root-relative path, slug, index, and
+// stage-suffix from a project-relative path like
+// "lifecycle/backend-plans/login-3-be.md". Stage is always the top-level
+// directory under lifecycle/, never a nested one; rel is everything below the
+// stage directory, joined with "/" (a bare filename for flat artifacts).
+// relPath must already use "/" separators — callers pass filepath.ToSlash'd paths.
+func parsePathComponents(relPath string) (stage, rel, slug string, idx int, sfx string) {
+	parts := strings.Split(relPath, "/")
+	if len(parts) >= 2 && parts[0] == "lifecycle" {
+		stage = parts[1]
+		rel = strings.Join(parts[2:], "/")
 	}
 	stem := strings.TrimSuffix(filepath.Base(relPath), ".md")
 	slug, idx, sfx = ParseFilename(stem)
