@@ -11,17 +11,17 @@ import (
 // TestOpenQuestionsConfigDefaultFormat verifies that the default answer format
 // is "blockquote" when no open_questions configuration is present.
 func TestOpenQuestionsConfigDefaultFormat(t *testing.T) {
-	seeds := []SeedArtifact{
+	seeds := []seedArtifact{
 		{
-			RelPath: "lifecycle/ideas/test-config-default.md",
-			Content: MakeArtifact("Test Config Default", "idea", "draft", "test-config-default", "", "Initial body."),
+			relPath: "lifecycle/ideas/test-config-default.md",
+			content: makeArtifact("Test Config Default", "idea", "draft", "test-config-default", "", "Initial body."),
 		},
 	}
-	env := NewTestEnv(t, seeds)
+	env := newTestEnv(t, seeds)
 
-	resp := env.DoRequest("GET", "/api/p/testproject/config/open-questions", nil)
-	RequireStatus(t, resp, 200)
-	data := ReadJSON(t, resp)
+	resp := env.doRequest("GET", "/api/p/testproject/config/open-questions", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
 
 	format, ok := data["answer_format"].(string)
 	if !ok {
