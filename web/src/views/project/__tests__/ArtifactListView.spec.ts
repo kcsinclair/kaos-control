@@ -31,6 +31,7 @@ const mockFetchPriorities = vi.fn()
 const mockItems: ArtifactRow[] = [
   {
     path: 'lifecycle/ideas/raw-idea.md',
+    rel_path: 'raw-idea.md',
     slug: 'raw-idea',
     lineage: 'raw-idea',
     index: 0,
@@ -45,6 +46,7 @@ const mockItems: ArtifactRow[] = [
   },
   {
     path: 'lifecycle/ideas/draft-idea.md',
+    rel_path: 'draft-idea.md',
     slug: 'draft-idea',
     lineage: 'draft-idea',
     index: 0,
@@ -59,6 +61,7 @@ const mockItems: ArtifactRow[] = [
   },
   {
     path: 'lifecycle/ideas/done-idea.md',
+    rel_path: 'done-idea.md',
     slug: 'done-idea',
     lineage: 'done-idea',
     index: 0,
@@ -67,6 +70,21 @@ const mockItems: ArtifactRow[] = [
     status: 'done',
     title: 'Done Idea',
     frontmatter: { title: 'Done Idea', type: 'idea', status: 'done', lineage: 'done-idea' },
+    mtime: '2026-01-01T00:00:00Z',
+    created: '2026-01-01T00:00:00Z',
+    agent_run_count: 0,
+  },
+  {
+    path: 'lifecycle/ideas/archive/nested-idea.md',
+    rel_path: 'archive/nested-idea.md',
+    slug: 'nested-idea',
+    lineage: 'nested-idea',
+    index: 0,
+    stage: 'ideas',
+    type: 'idea',
+    status: 'draft',
+    title: 'Nested Idea',
+    frontmatter: { title: 'Nested Idea', type: 'idea', status: 'draft', lineage: 'nested-idea' },
     mtime: '2026-01-01T00:00:00Z',
     created: '2026-01-01T00:00:00Z',
     agent_run_count: 0,
@@ -160,5 +178,32 @@ describe('ArtifactListView — raw artefact visibility', () => {
     expect(html).toContain('Raw Idea')
     expect(html).toContain('Draft Idea')
     expect(html).toContain('Done Idea')
+  })
+})
+
+// Frontend plan: lifecycle/frontend-plans/idea-archiving-4-fe.md — Milestone 3
+//
+// Verifies the path chip prefers rel_path (root-relative, shorter) over the
+// full repo path, so nested/archived artefacts are recognisable at a glance.
+describe('ArtifactListView — rel_path display', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mockFetchList.mockResolvedValue(undefined)
+    mockFetchLabels.mockResolvedValue(undefined)
+    mockFetchPriorities.mockResolvedValue(undefined)
+  })
+
+  it('shows rel_path for a nested artefact and the bare filename for a flat one', async () => {
+    const wrapper = shallowMount(ArtifactListView, {
+      global: { stubs: { RouterLink: true } },
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    const pathChips = wrapper.findAll('.artifact-path').map(n => n.text())
+    expect(pathChips).toContain('archive/nested-idea.md')
+    expect(pathChips).toContain('raw-idea.md')
+    expect(pathChips).not.toContain('lifecycle/ideas/archive/nested-idea.md')
   })
 })

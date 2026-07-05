@@ -367,7 +367,7 @@ onMounted(async () => {
                 class="agent-status-pill"
                 :data-status="row.active_agent_status"
               >{{ row.active_agent_status === 'running' ? 'Agent Running' : 'Work Queued' }}</span>
-              <span class="artifact-path">{{ row.path }}</span>
+              <span class="artifact-path">{{ row.rel_path || row.path }}</span>
             </td>
             <td><span class="stage-tag">{{ row.stage }}</span></td>
             <td><span class="badge" :data-status="row.status">{{ row.status }}</span></td>
