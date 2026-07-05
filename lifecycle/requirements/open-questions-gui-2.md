@@ -1,7 +1,7 @@
 ---
 title: GUI Flow for Resolving Open Questions on Blocked Artefacts
 type: requirement
-status: blocked
+status: approved
 lineage: open-questions-gui
 created: "2026-07-05T00:00:00+10:00"
 priority: high
@@ -125,10 +125,24 @@ Every step is manual and error-prone: inconsistent answer formatting, and — mo
 - [ ] Write-back preserves all unrelated body content and frontmatter; re-saving the same answers is idempotent.
 - [ ] The badge, banner, and completion routing are exercised by an end-to-end/integration test (write questions → block → resolve via UI flow → `draft`).
 
-## Open Questions
+## Resolved Questions
 
 1. **Answer-format configuration scope.** Is the answer format an app-level config key (`~/.kaos-control/config.yaml`), a per-project key (`lifecycle/config.yaml`), or both with project overriding app? The default (blockquote) is agreed; only the location/precedence is unspecified.
+
+> Per-project configuration, default added to the onboarding template.
+
 2. **"Authorised role" definition.** The idea says the product-owner *or any authorised role* may resolve. What is the precise authorisation rule — any role listed in the artefact `assignees`, any role permitted to write that artefact type, or a specific configured set? This affects who sees the Resolve action.
+
+> For now it can be product-owner
+
 3. **Where the badge navigates.** Should the menu-bar count deep-link to a dedicated filtered "awaiting answers" list, reuse an existing list/kanban filter, or open the single artefact when N == 1?
+
+> It can navigate to the artefact list using a query to show current blocked items.
+
 4. **Partial-answer persistence medium.** Should partial answers persist by writing them into the artefact body incrementally (kept under `## Open Questions`, hence still blocked) or held in client/server-side draft state separate from the artefact until completion? This determines what an external reader sees mid-resolution.
+
+> Yes, update partial answers into the document.
+
 5. **Developer-role recovery.** For the developer-raised case, exactly which field identifies the originating role to requeue — the artefact `type`, the current `assignees`, or run history — when multiple roles have touched the artefact?
+
+> Two roles work with an artefact, the role which creates it, and the role which actions it.
