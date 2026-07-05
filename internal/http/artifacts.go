@@ -26,15 +26,16 @@ func (s *Server) handleListArtifacts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	f := index.Filter{
-		Stage:    r.URL.Query().Get("stage"),
-		Status:   r.URL.Query().Get("status"),
-		Label:    r.URL.Query().Get("label"),
-		Lineage:  r.URL.Query().Get("lineage"),
-		Type:     r.URL.Query().Get("type"),
-		Priority: r.URL.Query().Get("priority"),
-		Q:        r.URL.Query().Get("q"),
-		Release:  r.URL.Query().Get("release"),
-		Sort:     r.URL.Query().Get("sort"),
+		Stage:           r.URL.Query().Get("stage"),
+		Status:          r.URL.Query().Get("status"),
+		Label:           r.URL.Query().Get("label"),
+		Lineage:         r.URL.Query().Get("lineage"),
+		Type:            r.URL.Query().Get("type"),
+		Priority:        r.URL.Query().Get("priority"),
+		Q:               r.URL.Query().Get("q"),
+		Release:         r.URL.Query().Get("release"),
+		Sort:            r.URL.Query().Get("sort"),
+		AwaitingAnswers: r.URL.Query().Get("awaiting_answers") == "true",
 	}
 	if v := r.URL.Query().Get("limit"); v != "" {
 		n, _ := strconv.Atoi(v)

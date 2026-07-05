@@ -33,7 +33,7 @@ type Transitioner interface {
 	CanTransition(from, to string, userRoles []string, artifactType string) bool
 }
 
-const schemaVersion = 4
+const schemaVersion = 5
 
 // Index wraps the SQLite database for one project.
 type Index struct {
@@ -541,11 +541,12 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 
 	_, err = tx.Exec(`
 		INSERT OR REPLACE INTO artifacts
-			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime, created)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime, created, has_open_questions)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.Path, a.Slug, a.FM.Lineage, a.Index, a.Stage,
 		a.FM.Type, a.FM.Status, a.FM.Title, a.FM.Priority,
 		string(fmJSON), a.SHA256[:], a.Mtime.Unix(), createdUnix,
+		artifact.HasOpenQuestions(a.Body),
 	)
 	if err != nil {
 		return fmt.Errorf("upserting artifact: %w", err)
@@ -614,6 +615,10 @@ type Filter struct {
 	Limit     int
 	Offset    int
 	Unlimited bool // when true, no LIMIT is applied (returns all matching rows)
+	// AwaitingAnswers, when true, restricts the result to artifacts that are
+	// blocked with a non-empty "## Open Questions" section, regardless of
+	// the Status field above.
+	AwaitingAnswers bool
 }
 
 func (f *Filter) withDefaults() Filter {
@@ -1709,19 +1714,20 @@ CREATE TABLE schema_version (version INTEGER NOT NULL);
 INSERT INTO schema_version VALUES (` + fmt.Sprint(schemaVersion) + `);
 
 CREATE TABLE artifacts (
-    path              TEXT PRIMARY KEY,
-    slug              TEXT NOT NULL,
-    lineage           TEXT NOT NULL,
-    idx               INTEGER NOT NULL,
-    stage             TEXT NOT NULL,
-    type              TEXT NOT NULL,
-    status            TEXT NOT NULL,
-    title             TEXT NOT NULL,
-    priority          TEXT NOT NULL DEFAULT '',
-    frontmatter_json  TEXT NOT NULL,
-    body_sha256       BLOB NOT NULL,
-    mtime             INTEGER NOT NULL,
-    created           INTEGER NOT NULL DEFAULT 0
+    path                TEXT PRIMARY KEY,
+    slug                TEXT NOT NULL,
+    lineage             TEXT NOT NULL,
+    idx                 INTEGER NOT NULL,
+    stage               TEXT NOT NULL,
+    type                TEXT NOT NULL,
+    status              TEXT NOT NULL,
+    title               TEXT NOT NULL,
+    priority            TEXT NOT NULL DEFAULT '',
+    frontmatter_json    TEXT NOT NULL,
+    body_sha256         BLOB NOT NULL,
+    mtime               INTEGER NOT NULL,
+    created             INTEGER NOT NULL DEFAULT 0,
+    has_open_questions  INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX idx_artifacts_lineage  ON artifacts(lineage);
 CREATE INDEX idx_artifacts_stage    ON artifacts(stage);
@@ -1729,6 +1735,7 @@ CREATE INDEX idx_artifacts_status   ON artifacts(status);
 CREATE INDEX idx_artifacts_slug     ON artifacts(slug);
 CREATE INDEX idx_artifacts_type     ON artifacts(type);
 CREATE INDEX idx_artifacts_priority ON artifacts(priority);
+CREATE INDEX idx_artifacts_has_open_questions ON artifacts(has_open_questions);
 
 CREATE TABLE links (
     src    TEXT NOT NULL,
@@ -1868,6 +1875,9 @@ func buildWhere(f Filter) (clause string, args []any) {
 			`(title LIKE ? ESCAPE '\' OR slug LIKE ? ESCAPE '\' OR lineage LIKE ? ESCAPE '\' OR type LIKE ? ESCAPE '\' OR status LIKE ? ESCAPE '\')`,
 		)
 		args = append(args, pattern, pattern, pattern, pattern, pattern)
+	}
+	if f.AwaitingAnswers {
+		conds = append(conds, "status = 'blocked' AND has_open_questions = 1")
 	}
 	if f.Release == "__unassigned__" {
 		conds = append(conds,

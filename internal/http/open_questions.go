@@ -57,9 +57,10 @@ func (s *Server) handleGetOpenQuestions(w http.ResponseWriter, r *http.Request) 
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"heading":   "## Open Questions",
-		"format":    cfg.OpenQuestions.EffectiveFormat(),
-		"questions": questions,
+		"heading":     "## Open Questions",
+		"format":      cfg.OpenQuestions.EffectiveFormat(),
+		"questions":   questions,
+		"can_resolve": isProductOwner(r.Context()),
 	})
 }
 
@@ -72,6 +73,10 @@ func (s *Server) handlePreviewOpenQuestions(w http.ResponseWriter, r *http.Reque
 	p := projectFromCtx(r.Context())
 	if p == nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	if !isProductOwner(r.Context()) {
+		writeJSON(w, http.StatusForbidden, apiError("forbidden", "role required: product-owner"))
 		return
 	}
 

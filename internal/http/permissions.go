@@ -3,6 +3,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -86,6 +87,19 @@ func (s *Server) requireAppRole(w http.ResponseWriter, r *http.Request, allowed 
 		return false
 	}
 	return true
+}
+
+// isProductOwner reports whether the authenticated user and project stored in
+// ctx (by projectMiddleware / the auth middleware) resolve to a user holding
+// the product-owner role in that project. Used by the open-questions
+// resolution flow, which is scoped to product-owner (Resolved Q2, FR8).
+func isProductOwner(ctx context.Context) bool {
+	p := projectFromCtx(ctx)
+	user := userFromCtx(ctx)
+	if p == nil || user == nil {
+		return false
+	}
+	return hasAnyRole(p.Cfg.RolesFor(user.Email), RoleProductOwner)
 }
 
 // appUserHasRole reports whether user holds role in at least one configured project.
