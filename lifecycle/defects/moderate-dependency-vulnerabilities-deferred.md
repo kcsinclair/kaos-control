@@ -1,7 +1,7 @@
 ---
 title: Dependency Vulnerabilities — residual dev-only advisories after Vite 6 / Vitest 4 upgrade
 type: defect
-status: planning
+status: done
 lineage: moderate-dependency-vulnerabilities-deferred
 created: "2026-05-09T09:53:43+10:00"
 priority: low
@@ -16,6 +16,24 @@ parent: lifecycle/tests/release-artefacts-6-test.md
 # Dependency Vulnerabilities — residual dev-only advisories after Vite 6 / Vitest 4 upgrade
 
 **Dev/test-only exposure — none of these ship in the Go binary. Real-world risk ≈ zero.**
+
+## Closed — 2026-07-05 (resolved)
+
+Closing this defect: its documented scope is satisfied, and it had drifted into
+a stale rolling tracker. **Dependabot on the default branch (`main`) is now the
+tracker of record** for dependency advisories.
+
+- The two **blocking** CVEs are fixed (see the 2026-06-13 table below): vite
+  `.map` traversal and the esbuild dev-server advisory.
+- The two **residual** advisories are dev/test-only with ≈zero real exposure:
+  - `esbuild` GHSA-gv7w-rqvm-qjhr — **not applicable** (Deno-only integrity
+    check; we install via pnpm/Node and esbuild is build-time only). Previously
+    dismissed in Dependabot as *not_used*.
+  - `ws` GHSA-58qx-3vcg-4xpx — test-time only (happy-dom → ws), negligible.
+- Separately, the current live Dependabot set (#31–#35: vite, echarts, js-yaml,
+  golang.org/x/net) was **fixed on 2026-07-05** (bumped on `main`, merged to
+  `kc-dev`) — the Dependabot page is clear. New advisories will be handled
+  directly via Dependabot rather than reopened here.
 
 ## Update — 2026-06-13: Vite and Vitest already upgraded
 
