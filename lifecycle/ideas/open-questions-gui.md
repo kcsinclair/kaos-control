@@ -1,7 +1,7 @@
 ---
 title: GUI View for Resolving Open Questions
 type: idea
-status: clarifying
+status: planning
 lineage: open-questions-gui
 created: "2026-05-19T15:23:33+10:00"
 priority: high
