@@ -1,7 +1,7 @@
 ---
 title: Project Queue View in Agents Panel
 type: requirement
-status: approved
+status: planning
 lineage: project-queue-view
 created: "2026-06-27T00:00:00+10:00"
 priority: high
