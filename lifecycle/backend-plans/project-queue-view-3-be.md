@@ -131,12 +131,6 @@ query path, new storage, or polling.
 
 ## Open Questions
 
-Milestone 1 verification (read-only, no files under `internal/` changed) found
-that the plan's premise for FR-5 — "real-time updates already broadcast over
-the app-level WebSocket ... which the store already consumes" — **does not
-fully hold today**, in a way that neither Milestone 1 nor Milestone 2 as
-written resolves:
-
 1. **`queue.added` is not broadcast on the normal enqueue path.**
    `POST /api/queue` (`internal/http/queue.go: handleEnqueue`) calls
    `Dispatcher.Enqueue`, which is a bare one-line proxy to `Store.Enqueue`
@@ -148,11 +142,13 @@ written resolves:
    only `id`, `position`, `attempts`, `reason` (no `project`, `artifact_path`,
    or `agent_name`), unlike `broadcastJobEvent`'s payload used for
    `queue.started`/`queue.finished`.
+
 2. **`queue.cancelled` is never broadcast anywhere in the codebase.**
    `DELETE /api/queue/{id}` (`internal/http/queue.go: handleCancelQueue`)
    calls `Dispatcher.Cancel`, itself a bare proxy to `Store.Cancel`
    (`internal/queue/dispatcher.go:544`) with no broadcast call. No other code
    path emits `queue.cancelled`.
+
 3. Consequently, a second connected client's queue view does **not** learn
    about a newly enqueued or newly cancelled job in real time — only the
    originating tab sees it (via the client-side optimistic insert in
@@ -169,6 +165,7 @@ written can be completed and marked correct without a product decision:
 1. Is fixing the missing `queue.added` (on normal enqueue) and
    `queue.cancelled` broadcasts **in scope for this plan**, or is it a
    pre-existing defect to raise and fix independently of project-queue-view?
+
 2. If in scope: is the expected fix adding
    `d.broadcastJobEvent("queue.added", &job, "pending")` in
    `Dispatcher.Enqueue` and `d.broadcastJobEvent("queue.cancelled", job,
@@ -178,6 +175,7 @@ written can be completed and marked correct without a product decision:
    "impact on the global queue" under NFR-1, or is it welcomed because it
    makes the existing global queue actually satisfy the real-time behaviour
    FR-5 already assumes?
+
 3. Should Milestone 1's acceptance criteria be reworded — as literally
    written they can never be satisfied, since the events in question do not
    reliably fire (or carry `project`) on the primary user-facing code paths?
