@@ -3,6 +3,7 @@
 package artifact_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/kaos-control/kaos-control/internal/artifact"
@@ -130,6 +131,106 @@ func TestParseOpenQuestions_HeadingRenamedToResolved(t *testing.T) {
 	qs, ok := artifact.ParseOpenQuestions("## Resolved Questions\n\n- Q1?\n\n> A1.\n")
 	if ok || qs != nil {
 		t.Errorf("expected (nil, false) for renamed heading, got (%v, %v)", qs, ok)
+	}
+}
+
+func TestApplyAnswers_PartialInsertsAnswerKeepsHeading(t *testing.T) {
+	body := "## Open Questions\n\n- Q1?\n\n- Q2?\n"
+	out, err := artifact.ApplyAnswers(body, map[int]string{0: "A1."}, "blockquote", false)
+	if err != nil {
+		t.Fatalf("ApplyAnswers: %v", err)
+	}
+	if !contains(out, "## Open Questions") {
+		t.Errorf("expected heading to remain 'Open Questions', got:\n%s", out)
+	}
+	if contains(out, "## Resolved Questions") {
+		t.Errorf("heading must not be renamed on partial answers:\n%s", out)
+	}
+	qs, ok := artifact.ParseOpenQuestions(out)
+	if !ok || len(qs) != 2 {
+		t.Fatalf("expected 2 questions parseable from output, got ok=%v qs=%v", ok, qs)
+	}
+	if qs[0].Answer != "A1." {
+		t.Errorf("q0.Answer = %q, want %q", qs[0].Answer, "A1.")
+	}
+	if qs[1].Answer != "" {
+		t.Errorf("q1.Answer = %q, want empty", qs[1].Answer)
+	}
+}
+
+func TestApplyAnswers_CompleteAllAnsweredRenamesHeading(t *testing.T) {
+	body := "## Open Questions\n\n- Q1?\n\n- Q2?\n"
+	out, err := artifact.ApplyAnswers(body, map[int]string{0: "A1.", 1: "A2."}, "blockquote", true)
+	if err != nil {
+		t.Fatalf("ApplyAnswers: %v", err)
+	}
+	if !contains(out, "## Resolved Questions") {
+		t.Errorf("expected heading renamed to 'Resolved Questions', got:\n%s", out)
+	}
+	if contains(out, "## Open Questions") {
+		t.Errorf("old heading must not remain:\n%s", out)
+	}
+}
+
+func TestApplyAnswers_CompleteWithEmptyAnswerErrors(t *testing.T) {
+	body := "## Open Questions\n\n- Q1?\n\n- Q2?\n"
+	_, err := artifact.ApplyAnswers(body, map[int]string{0: "A1."}, "blockquote", true)
+	if !errors.Is(err, artifact.ErrIncompleteAnswers) {
+		t.Fatalf("expected ErrIncompleteAnswers, got %v", err)
+	}
+	if !contains(body, "## Open Questions") {
+		t.Fatal("sanity: original body unchanged")
+	}
+}
+
+func TestApplyAnswers_Idempotent(t *testing.T) {
+	body := "## Open Questions\n\n- Q1?\n\n- Q2?\n"
+	answers := map[int]string{0: "A1.", 1: "A2."}
+
+	out1, err := artifact.ApplyAnswers(body, answers, "blockquote", false)
+	if err != nil {
+		t.Fatalf("first ApplyAnswers: %v", err)
+	}
+	out2, err := artifact.ApplyAnswers(out1, answers, "blockquote", false)
+	if err != nil {
+		t.Fatalf("second ApplyAnswers: %v", err)
+	}
+	if out1 != out2 {
+		t.Errorf("ApplyAnswers is not idempotent:\n--- out1 ---\n%s\n--- out2 ---\n%s", out1, out2)
+	}
+}
+
+func TestApplyAnswers_PreservesOtherSectionsAndFrontmatterVerbatim(t *testing.T) {
+	full := "---\ntitle: T\ntype: idea\nstatus: blocked\nlineage: t\n---\n\n" +
+		"## Summary\n\nSome unrelated content.\n\n" +
+		"## Open Questions\n\n- Q1?\n\n" +
+		"## Footer\n\nFooter content.\n"
+	// Only the body (post-frontmatter) is passed to ApplyAnswers, matching how
+	// the HTTP layer separates frontmatter from body.
+	bodyStart := "## Summary\n\nSome unrelated content.\n\n" +
+		"## Open Questions\n\n- Q1?\n\n" +
+		"## Footer\n\nFooter content.\n"
+	out, err := artifact.ApplyAnswers(bodyStart, map[int]string{0: "A1."}, "blockquote", false)
+	if err != nil {
+		t.Fatalf("ApplyAnswers: %v", err)
+	}
+	if !contains(out, "## Summary\n\nSome unrelated content.") {
+		t.Errorf("Summary section not preserved verbatim:\n%s", out)
+	}
+	if !contains(out, "## Footer\n\nFooter content.") {
+		t.Errorf("Footer section not preserved verbatim:\n%s", out)
+	}
+	_ = full
+}
+
+func TestApplyAnswers_NoOpenQuestionsSectionReturnsBodyUnchanged(t *testing.T) {
+	body := "## Summary\n\nNo questions here.\n"
+	out, err := artifact.ApplyAnswers(body, map[int]string{0: "A1."}, "blockquote", false)
+	if err != nil {
+		t.Fatalf("ApplyAnswers: %v", err)
+	}
+	if out != body {
+		t.Errorf("expected unchanged body, got:\n%s", out)
 	}
 }
 

@@ -3,12 +3,15 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kaos-control/kaos-control/internal/artifact"
 )
 
 func TestHandleGetOpenQuestions_ReturnsParsedQuestions(t *testing.T) {
@@ -113,5 +116,98 @@ func TestHandleGetOpenQuestions_NotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d; body: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandlePreviewOpenQuestions_PartialDoesNotWriteToDisk(t *testing.T) {
+	p, cleanup := newTestProject(t)
+	defer cleanup()
+
+	content := "---\ntitle: Test OQ Preview\ntype: idea\nstatus: blocked\nlineage: oq-preview\n---\n\n" +
+		"## Open Questions\n\n- Q1?\n\n- Q2?\n"
+	relPath := "lifecycle/ideas/oq-preview.md"
+	absPath := filepath.Join(p.Entry.Path, relPath)
+	if err := os.WriteFile(absPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := p.Idx.IndexFile(absPath); err != nil {
+		t.Fatalf("IndexFile: %v", err)
+	}
+
+	before, err := os.Stat(absPath)
+	if err != nil {
+		t.Fatalf("Stat: %v", err)
+	}
+
+	reqBody, _ := json.Marshal(map[string]any{
+		"answers":  map[string]string{"0": "A1."},
+		"complete": false,
+	})
+
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
+	req = withProjectAndUser(req, p, "po@test")
+	req = withChiWildcard(req, relPath+"/open-questions/preview")
+
+	w := httptest.NewRecorder()
+	s.handlePreviewOpenQuestions(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body: %s", w.Code, w.Body.String())
+	}
+
+	after, err := os.Stat(absPath)
+	if err != nil {
+		t.Fatalf("Stat: %v", err)
+	}
+	if !before.ModTime().Equal(after.ModTime()) {
+		t.Errorf("preview endpoint modified the file on disk: before=%v after=%v", before.ModTime(), after.ModTime())
+	}
+
+	var resp struct {
+		Body string `json:"body"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	qs, ok := artifact.ParseOpenQuestions(resp.Body)
+	if !ok || len(qs) != 2 {
+		t.Fatalf("expected 2 questions in previewed body, got ok=%v qs=%v", ok, qs)
+	}
+	if qs[0].Answer != "A1." {
+		t.Errorf("q0.Answer = %q, want %q", qs[0].Answer, "A1.")
+	}
+}
+
+func TestHandlePreviewOpenQuestions_CompleteWithMissingAnswerReturns422(t *testing.T) {
+	p, cleanup := newTestProject(t)
+	defer cleanup()
+
+	content := "---\ntitle: Test OQ Preview 2\ntype: idea\nstatus: blocked\nlineage: oq-preview-2\n---\n\n" +
+		"## Open Questions\n\n- Q1?\n\n- Q2?\n"
+	relPath := "lifecycle/ideas/oq-preview-2.md"
+	absPath := filepath.Join(p.Entry.Path, relPath)
+	if err := os.WriteFile(absPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := p.Idx.IndexFile(absPath); err != nil {
+		t.Fatalf("IndexFile: %v", err)
+	}
+
+	reqBody, _ := json.Marshal(map[string]any{
+		"answers":  map[string]string{"0": "A1."},
+		"complete": true,
+	})
+
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(reqBody))
+	req = withProjectAndUser(req, p, "po@test")
+	req = withChiWildcard(req, relPath+"/open-questions/preview")
+
+	w := httptest.NewRecorder()
+	s.handlePreviewOpenQuestions(w, req)
+
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422, got %d; body: %s", w.Code, w.Body.String())
 	}
 }

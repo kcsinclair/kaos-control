@@ -239,6 +239,10 @@ func (s *Server) buildRouter() chi.Router {
 					s.handleTransitionArtifact(w, r)
 					return
 				}
+				if strings.HasSuffix(param, "/open-questions/preview") {
+					s.handlePreviewOpenQuestions(w, r)
+					return
+				}
 				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
 			})
 			r.Patch("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
