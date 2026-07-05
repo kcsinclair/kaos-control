@@ -23,6 +23,7 @@ import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import QueueWorkButton from '@/components/artifact/QueueWorkButton.vue'
 import TriageNowButton from '@/components/artifact/TriageNowButton.vue'
 import ResolveQuestionsModal from '@/components/artifact/ResolveQuestionsModal.vue'
+import PostResolutionPrompt from '@/components/artifact/PostResolutionPrompt.vue'
 import { useGraphStore } from '@/stores/graph'
 import { useQueueStore } from '@/stores/queue'
 import { useAgentsStore } from '@/stores/agents'
@@ -126,6 +127,7 @@ const userCanResolve = computed(() =>
   authStore.rolesForProject(project.value).includes('product-owner'),
 )
 const showResolveModal = ref(false)
+const showPostResolutionPrompt = ref(false)
 
 async function loadOpenQuestions() {
   try {
@@ -145,6 +147,7 @@ async function onQuestionsFinished() {
   showResolveModal.value = false
   ui.success('Answers saved — artefact unblocked')
   await load()
+  showPostResolutionPrompt.value = true
 }
 
 // ── lock ────────────────────────────────────────────────────────────────────
@@ -287,7 +290,10 @@ function onTriageStarted(_runId: string) {
   void agentsStore.fetchRunsByTargetPath(project.value, artifactPath.value)
 }
 
-watch(artifactPath, () => load(), { immediate: false })
+watch(artifactPath, () => {
+  showPostResolutionPrompt.value = false
+  load()
+}, { immediate: false })
 onMounted(async () => {
   await load()
   if (graphStore.rawEdges.length === 0) {
@@ -363,6 +369,17 @@ onMounted(async () => {
       <button class="btn-link" @click="reloadFromDisk">Reload from disk</button>
       <button class="btn-link muted" @click="acknowledge">Keep editing</button>
     </div>
+
+    <!-- Post-resolution routing affordance (Milestone 6) -->
+    <PostResolutionPrompt
+      v-if="showPostResolutionPrompt && artifact && !editing"
+      :project="project"
+      :path="artifactPath"
+      :artifact="artifact"
+      @dismiss="showPostResolutionPrompt = false"
+      @approved="showPostResolutionPrompt = false"
+      @requeued="showPostResolutionPrompt = false"
+    />
 
     <!-- Body -->
     <div v-if="loading" class="state-msg">Loading…</div>
