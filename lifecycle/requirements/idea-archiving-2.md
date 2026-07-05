@@ -85,7 +85,13 @@ The tool should treat every markdown artifact under an artifact root as a first-
 ## Open Questions
 
 1. **Move detection fidelity.** fsnotify does not reliably emit atomic rename/move events across all platforms; a move may surface as delete-then-create. Is keying artifacts by lineage+index (rather than path) sufficient to preserve identity across such split events, or is an explicit move endpoint needed?
+
+> I think type+lineage+index is unique.
+
 2. **Relative-path surfacing in UI.** Should the folder path be shown as a column, a breadcrumb, a filter facet, or hidden by default? (Deferred to a follow-up UI requirement, but the field must be exposed now.)
+
 3. **Watch-limit strategy.** For very large repositories, should nested watching be capped or fall back to periodic rescans if OS inotify/kqueue limits are hit, and what limit is acceptable before degrading?
+
 4. **Excluded folder conventions.** Beyond dot-directories, should any well-known folders (e.g. `node_modules`, `dist`) be ignored by default, or is dot-prefix the only exclusion rule?
+
 5. **Index migration.** Does adding the relative-path column require an index schema version bump and rebuild on upgrade, or can it be back-filled lazily?
