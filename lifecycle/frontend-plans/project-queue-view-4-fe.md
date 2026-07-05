@@ -1,7 +1,7 @@
 ---
 title: Project Queue View — Frontend Plan
 type: plan-frontend
-status: draft
+status: approved
 lineage: project-queue-view
 parent: lifecycle/requirements/project-queue-view-2.md
 ---
