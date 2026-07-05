@@ -1,7 +1,7 @@
 ---
 title: 'Requirements Analyst: Suppress Empty Open Questions Section'
 type: idea
-status: draft
+status: approved
 lineage: requirements-analyst-suppress-empty-open-questions
 created: "2026-05-10T10:25:37+10:00"
 priority: normal
@@ -9,6 +9,7 @@ labels:
     - agent
     - defect-fix
     - workflow
+release: KC-Release4
 ---
 
 # Requirements Analyst: Suppress Empty Open Questions Section
