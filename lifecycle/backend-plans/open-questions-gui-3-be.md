@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan: Open-Questions Resolution GUI Support"
 type: plan-backend
-status: approved
+status: in-development
 lineage: open-questions-gui
 parent: lifecycle/requirements/open-questions-gui-2.md
 ---
