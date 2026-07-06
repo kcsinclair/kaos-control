@@ -1,9 +1,8 @@
 ---
-title: Test Suite: Recursive Subdirectory Support for Artifact Directories
+title: 'Test Suite: Recursive Subdirectory Support for Artifact Directories'
 type: test
 status: approved
 lineage: idea-archiving
-parent: lifecycle/test-plans/idea-archiving-5-test.md
 ---
 
 # Test Suite: Recursive Subdirectory Support for Artifact Directories
