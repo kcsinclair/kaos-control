@@ -460,10 +460,18 @@ func (idx *Index) IndexFile(absPath string) error {
 	// was the dominant cost (~4 s per file) of the M2 startup scan.
 	var storedHash []byte
 	var storedCreated int64
+	var storedStatus string
 	if err := idx.db.QueryRow(
-		`SELECT body_sha256, created FROM artifacts WHERE path = ?`, relPath,
-	).Scan(&storedHash, &storedCreated); err == nil {
-		if bytes.Equal(storedHash, a.SHA256[:]) {
+		`SELECT body_sha256, created, status FROM artifacts WHERE path = ?`, relPath,
+	).Scan(&storedHash, &storedCreated, &storedStatus); err == nil {
+		// Skip re-index only when the content is unchanged AND the indexed
+		// status already matches the file. The hash alone is NOT a safe proxy
+		// for "the row is current": if the indexed status ever drifts from the
+		// file (observed from a concurrent-write / external-sync race), a
+		// content-hash-only guard would lock the stale status in forever, since
+		// the file's hash keeps matching. Comparing status lets the next index
+		// (a transition, watcher event, or startup scan) self-heal the row.
+		if bytes.Equal(storedHash, a.SHA256[:]) && storedStatus == a.FM.Status {
 			return nil
 		}
 	}
