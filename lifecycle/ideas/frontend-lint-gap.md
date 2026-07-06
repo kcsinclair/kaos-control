@@ -8,6 +8,7 @@ labels:
     - frontend
     - tooling
     - quality
+release: KC-Release5
 assignees:
     - role: product-owner
       who: agent
