@@ -213,9 +213,9 @@ describe('ProjectQueuePanel component', () => {
     _snapshotRef.value = {
       running: null,
       pending: [
-        makeJob({ id: 'p1', project: 'project-a', position: 1 }),
-        makeJob({ id: 'p2', project: 'project-b', position: 2 }),
-        makeJob({ id: 'p3', project: 'testproject', position: 3 }),
+        makeJob({ id: 'p1', project: 'project-a', position: 1, artifact_path: 'lifecycle/ideas/other-a.md' }),
+        makeJob({ id: 'p2', project: 'project-b', position: 2, artifact_path: 'lifecycle/ideas/other-b.md' }),
+        makeJob({ id: 'p3', project: 'testproject', position: 3, artifact_path: 'lifecycle/ideas/mine.md' }),
       ],
       recent: [],
       paused: false,
@@ -226,9 +226,9 @@ describe('ProjectQueuePanel component', () => {
     const wrapper = await mountProjectQueuePanel('testproject')
 
     // Should only show jobs for testproject
-    expect(wrapper.text()).toContain('p3') // job from current project
-    expect(wrapper.text()).not.toContain('p1') // job from other project
-    expect(wrapper.text()).not.toContain('p2') // job from other project
+    expect(wrapper.text()).toContain('lifecycle/ideas/mine.md') // job from current project
+    expect(wrapper.text()).not.toContain('lifecycle/ideas/other-a.md') // job from other project
+    expect(wrapper.text()).not.toContain('lifecycle/ideas/other-b.md') // job from other project
   })
 
   // Test FR-3: Sections shown
@@ -236,12 +236,13 @@ describe('ProjectQueuePanel component', () => {
     _snapshotRef.value.running = makeJob({
       id: 'run-1',
       project: 'testproject',
-      state: 'running'
+      state: 'running',
+      artifact_path: 'lifecycle/ideas/running-job.md',
     })
 
     const wrapper = await mountProjectQueuePanel()
 
-    expect(wrapper.text()).toContain('run-1')
+    expect(wrapper.text()).toContain('lifecycle/ideas/running-job.md')
     expect(wrapper.text()).toContain('requirements-analyst')
   })
 
@@ -259,9 +260,9 @@ describe('ProjectQueuePanel component', () => {
 
   it('shows pending jobs in position order', async () => {
     _snapshotRef.value.pending = [
-      makeJob({ id: 'p2', project: 'testproject', position: 2 }),
-      makeJob({ id: 'p1', project: 'testproject', position: 1 }),
-      makeJob({ id: 'p3', project: 'testproject', position: 3 }),
+      makeJob({ id: 'p2', project: 'testproject', position: 2, artifact_path: 'lifecycle/ideas/second.md' }),
+      makeJob({ id: 'p1', project: 'testproject', position: 1, artifact_path: 'lifecycle/ideas/first.md' }),
+      makeJob({ id: 'p3', project: 'testproject', position: 3, artifact_path: 'lifecycle/ideas/third.md' }),
     ]
 
     const wrapper = await mountProjectQueuePanel()
@@ -269,9 +270,9 @@ describe('ProjectQueuePanel component', () => {
     // Should be sorted by position
     const pendingRows = wrapper.findAll('.pending-row')
     expect(pendingRows.length).toBe(3)
-    expect(pendingRows[0].text()).toContain('p1') // first in position order
-    expect(pendingRows[1].text()).toContain('p2') // second in position order
-    expect(pendingRows[2].text()).toContain('p3') // third in position order
+    expect(pendingRows[0].text()).toContain('lifecycle/ideas/first.md') // first in position order
+    expect(pendingRows[1].text()).toContain('lifecycle/ideas/second.md') // second in position order
+    expect(pendingRows[2].text()).toContain('lifecycle/ideas/third.md') // third in position order
   })
 
   it('shows pending count indicator with aria-label', async () => {
@@ -365,16 +366,16 @@ describe('ProjectQueuePanel component', () => {
   // Test that the panel properly filters by project
   it('filters out jobs from other projects', async () => {
     _snapshotRef.value.pending = [
-      makeJob({ id: 'p1', project: 'testproject' }),
-      makeJob({ id: 'p2', project: 'otherproject' }),
-      makeJob({ id: 'p3', project: 'testproject' }),
+      makeJob({ id: 'p1', project: 'testproject', artifact_path: 'lifecycle/ideas/mine-1.md' }),
+      makeJob({ id: 'p2', project: 'otherproject', artifact_path: 'lifecycle/ideas/other.md' }),
+      makeJob({ id: 'p3', project: 'testproject', artifact_path: 'lifecycle/ideas/mine-2.md' }),
     ]
 
     const wrapper = await mountProjectQueuePanel()
 
     // Should only show jobs from testproject
-    expect(wrapper.text()).toContain('p1')
-    expect(wrapper.text()).toContain('p3')
-    expect(wrapper.text()).not.toContain('p2')
+    expect(wrapper.text()).toContain('lifecycle/ideas/mine-1.md')
+    expect(wrapper.text()).toContain('lifecycle/ideas/mine-2.md')
+    expect(wrapper.text()).not.toContain('lifecycle/ideas/other.md')
   })
 })
