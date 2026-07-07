@@ -12,19 +12,19 @@ assignees:
 
 ## Reproduction Steps
 
-1. Run the Go integration test suite containing `TestDotDirExclusion_RuntimeCreation`:
+1. Run the targeted Go integration test containing `TestDotDirExclusion_RuntimeCreation` from the root directory:
    ```sh
-   go test ./tests/integration -run TestDotDirExclusion_RuntimeCreation -tags=integration -count=1
+   go test -tags integration ./tests/integration/... -run "TestDotDirExclusion_RuntimeCreation"
    ```
 2. Observe the test failure in `recursive_subdir_test.go`.
 
 ## Expected Behaviour
 
-At runtime, if a dot-prefixed directory (e.g., `.trash`) and a markdown file (e.g., `dot.md`) are created together under the project's ideas folder, the watcher should skip indexing it because it is inside a dot-prefixed folder.
+At runtime, if a dot-prefixed directory (e.g., `.trash`) and a markdown file (e.g., `dot.md`) are created together under the project's ideas folder, the watcher should skip indexing it because it is inside a dot-prefixed directory.
 
 ## Actual Behaviour
 
-The file `.trash/dot.md` gets scanned and indexed.
+The file `.trash/dot.md` is scanned, indexed, and cached.
 
 ## Logs / Output
 
