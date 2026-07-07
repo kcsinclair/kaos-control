@@ -1,7 +1,7 @@
 ---
 title: "Test Suite: Agent Usage Analytics Report"
 type: test
-status: approved
+status: in-qa
 lineage: agent-usage-analytics-report
 parent: lifecycle/defects/agent-usage-analytics-report-10-defect.md
 ---
