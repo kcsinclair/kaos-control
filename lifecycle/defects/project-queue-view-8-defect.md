@@ -1,7 +1,7 @@
 ---
 title: AgentsRunsView projectQueue tests crash because agents store mock lacks runs array
 type: defect
-status: draft
+status: approved
 lineage: project-queue-view
 parent: lifecycle/tests/project-queue-view-5-test.md
 labels: [defect]
