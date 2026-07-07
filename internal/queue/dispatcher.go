@@ -549,8 +549,17 @@ func (d *Dispatcher) FindActiveByPath(project, path string) (*Job, error) {
 	return d.store.FindActiveByPath(project, path)
 }
 
-// Cancel cancels a pending job (returns ErrCannotCancelRunning for running jobs).
-func (d *Dispatcher) Cancel(id string) error { return d.store.Cancel(id) }
+// Cancel cancels a pending job (returns ErrCannotCancelRunning for running
+// jobs), and broadcasts queue.cancelled on success.
+func (d *Dispatcher) Cancel(id string) error {
+	if err := d.store.Cancel(id); err != nil {
+		return err
+	}
+	if job, err := d.store.GetByID(id); err == nil && job != nil {
+		d.broadcastJobEvent("queue.cancelled", job, "cancelled")
+	}
+	return nil
+}
 
 // StateSnapshot assembles the GET /api/queue response payload.
 func (d *Dispatcher) StateSnapshot() (*queueSnapshot, error) {
