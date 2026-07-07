@@ -1,7 +1,7 @@
 ---
 title: End-to-End Smoke Tests for Server Startup
 type: test
-status: approved
+status: in-qa
 lineage: end-to-end-smoke-tests
 parent: lifecycle/defects/end-to-end-smoke-tests-9-defect.md
 ---
