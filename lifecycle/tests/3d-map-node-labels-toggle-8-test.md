@@ -1,7 +1,7 @@
 ---
 title: 'Fix: GraphView.labels ForceGraph3D tests use 3D view mode'
 type: test
-status: approved
+status: in-qa
 lineage: 3d-map-node-labels-toggle
 parent: lifecycle/defects/3d-map-node-labels-toggle-7-defect.md
 ---
