@@ -1,7 +1,7 @@
 ---
 title: "Test fix: stub-agent prompt_templates and TC2 regex (defects 7 & 8)"
 type: test
-status: draft
+status: approved
 lineage: artefacts-agent-run-count-column
 parent: lifecycle/defects/artefacts-agent-run-count-column-7-defect.md
 ---
