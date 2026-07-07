@@ -1,7 +1,7 @@
 ---
 title: "Tests — DevOps Pipeline Run History (Fix)"
 type: test
-status: draft
+status: approved
 lineage: devops-pipeline-run-history
 parent: lifecycle/defects/devops-pipeline-run-history-7-defect.md
 created: "2026-06-27T00:00:00+10:00"
