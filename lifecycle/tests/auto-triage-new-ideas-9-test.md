@@ -1,7 +1,7 @@
 ---
 title: "Auto-Triage API Success — Startup Race Condition Regression Fix"
 type: test
-status: in-qa
+status: approved
 lineage: auto-triage-new-ideas
 parent: lifecycle/defects/auto-triage-new-ideas-api-success-race-7-defect.md
 ---

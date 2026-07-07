@@ -1,7 +1,7 @@
 ---
 title: "Tests — DevOps Pipeline Run History"
 type: test
-status: in-qa
+status: approved
 lineage: devops-pipeline-run-history
 parent: lifecycle/defects/devops-pipeline-run-history-9-defect.md
 ---

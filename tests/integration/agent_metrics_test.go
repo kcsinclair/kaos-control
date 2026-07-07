@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -185,6 +187,63 @@ func TestSupervisor_RecordsTTFTOnce(t *testing.T) {
 	}
 	if *row.TtftMs <= 0 {
 		t.Errorf("TtftMs should be > 0, got %d", *row.TtftMs)
+	}
+}
+
+// TestSupervisor_RecordsTTFTUnderLoad verifies that TTFT is still recorded as
+// a sane, positive value while the test process is under real CPU contention
+// (busy-spinning goroutines on every core, matching the resource-contention
+// scenario from lifecycle/defects/agent-usage-analytics-report-10-defect.md).
+// Unlike TestSupervisor_RecordsTTFT, it deliberately asserts no upper bound:
+// scheduling delays under contention are expected to inflate TTFT, so a
+// strict ceiling would itself be flaky.
+func TestSupervisor_RecordsTTFTUnderLoad(t *testing.T) {
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < runtime.NumCPU(); i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+			}
+		}()
+	}
+	defer func() {
+		close(stop)
+		wg.Wait()
+	}()
+
+	script := fmt.Sprintf("#!/bin/sh\nsleep 0.12\nprintf '%%s\\n' '%s'\nprintf '%%s\\n' '%s'\nexit 0\n",
+		ndjsonAssistantEvent, ndjsonResultLine)
+	setupFakeClaudeWithRawScript(t, script)
+
+	const artifactPath = "lifecycle/ideas/ttft-under-load.md"
+	env := newAgentTestEnv(t, []seedArtifact{{
+		relPath: artifactPath,
+		content: makeArtifact("TTFT Under Load Test", "idea", "draft", "ttft-under-load", "", "Body."),
+	}})
+	env.login("admin@test.local", "admin-pass-123")
+
+	runID := startAgentRun(t, env, "requirements-analyst", artifactPath)
+	waitForRunCompletion(t, env, runID)
+
+	row, err := env.proj.Idx.GetAgentRun(runID)
+	if err != nil {
+		t.Fatalf("GetAgentRun: %v", err)
+	}
+	if row == nil {
+		t.Fatal("GetAgentRun returned nil")
+	}
+	if row.TtftMs == nil {
+		t.Fatal("TtftMs should be non-nil after run with assistant event")
+	}
+	if *row.TtftMs <= 0 {
+		t.Errorf("TtftMs should be > 0 under load, got %d", *row.TtftMs)
 	}
 }
 
