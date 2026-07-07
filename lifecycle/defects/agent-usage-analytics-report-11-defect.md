@@ -1,7 +1,7 @@
 ---
 title: "Missing integration test TestSupervisor_RecordsTTFTUnderLoad"
 type: defect
-status: approved
+status: in-development
 lineage: agent-usage-analytics-report
 parent: lifecycle/tests/agent-usage-analytics-report-10-test.md
 labels: [defect]
