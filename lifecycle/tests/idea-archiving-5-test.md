@@ -1,7 +1,7 @@
 ---
 title: 'Test Suite: Recursive Subdirectory Support for Artifact Directories'
 type: test
-status: in-qa
+status: done
 lineage: idea-archiving
 ---
 
