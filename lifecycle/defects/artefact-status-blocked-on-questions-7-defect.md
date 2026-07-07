@@ -1,7 +1,7 @@
 ---
 title: Blocked questions test fails because getOpenQuestions API endpoint is not mocked
 type: defect
-status: approved
+status: in-development
 lineage: artefact-status-blocked-on-questions
 parent: lifecycle/tests/artefact-status-blocked-on-questions-5.md
 labels: [defect]
