@@ -1,7 +1,7 @@
 ---
 title: ProjectQueuePanel realtime tests fail to inspect mock WebSocket calls due to new instances
 type: defect
-status: approved
+status: in-development
 lineage: project-queue-view
 parent: lifecycle/tests/project-queue-view-5-test.md
 labels: [defect]
