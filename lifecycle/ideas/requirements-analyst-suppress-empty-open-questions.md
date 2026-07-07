@@ -1,7 +1,7 @@
 ---
 title: 'Requirements Analyst: Suppress Empty Open Questions Section'
 type: idea
-status: approved
+status: clarifying
 lineage: requirements-analyst-suppress-empty-open-questions
 created: "2026-05-10T10:25:37+10:00"
 priority: normal
