@@ -1,7 +1,7 @@
 ---
 title: ProjectQueuePanel tests incorrectly assert on job ID in component text
 type: defect
-status: in-development
+status: done
 lineage: project-queue-view
 parent: lifecycle/tests/project-queue-view-5-test.md
 labels: [defect]

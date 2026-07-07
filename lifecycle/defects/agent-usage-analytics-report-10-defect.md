@@ -1,7 +1,7 @@
 ---
 title: "Flaky TestSupervisor_RecordsTTFT under load"
 type: defect
-status: in-development
+status: done
 lineage: agent-usage-analytics-report
 parent: lifecycle/tests/agent-usage-analytics-report-9-test.md
 labels: [defect]

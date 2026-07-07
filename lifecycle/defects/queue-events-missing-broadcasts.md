@@ -1,7 +1,7 @@
 ---
 title: Queue does not broadcast queue.added on normal enqueue, or queue.cancelled at all
 type: defect
-status: in-development
+status: done
 lineage: queue-events-missing-broadcasts
 created: "2026-07-05T00:00:00+10:00"
 priority: medium

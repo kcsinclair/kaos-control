@@ -1,13 +1,14 @@
 ---
 title: Pipeline card latest-run summary badge not visible after run completion
 type: defect
-status: in-development
+status: done
 lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-8-test.md
-labels: [defect]
+labels:
+    - defect
 assignees:
-  - role: test-developer
-    who: agent
+    - role: product-owner
+      who: agent
 ---
 
 ## Triage (2026-07-07): feature present — treat as E2E timing, not a missing badge
@@ -77,3 +78,59 @@ The pipeline card displays a static status badge like `<span class="run-status r
       134 |         await expect(page.locator('.latest-run-badge--passed')).toBeVisible({
         at /Users/keith/Code/kaos-control/tests/e2e/flows/run-history.spec.ts:131:57
 ```
+
+## Open Questions (test-developer, 2026-07-07)
+
+Re-triaged this before implementing/adjusting the E2E test. Static analysis
+of the current code contradicts the 2026-07-07 triage's conclusion —
+raising this back rather than writing a test that papers over it.
+
+**The triage claims this is E2E timing, not a rendering gap. It is not
+timing — the code makes `.latest-run-badge` permanently unreachable once a
+pipeline has run at least once, no matter how long the test waits:**
+
+- `web/src/stores/devops.ts`: `activeRuns` (a `Map<slug, ActiveRun>`) is
+  populated in `runPipeline`/`handleRunStarted` and mutated in place by
+  `handleRunCompleted` (`run.overallStatus = finalStatus`, line ~284). There
+  is **no code path anywhere that deletes or resets an `activeRuns` entry**
+  (`activeRuns.value.delete` does not appear in the file, confirmed by grep
+  across `web/src`). So after the first run, the map entry for that
+  pipeline slug permanently holds a terminal `overallStatus` (`'passed'` /
+  `'failed'` / `'cancelled'`).
+- `web/src/components/devops/PipelineCard.vue` (lines 102–117) renders the
+  meta badges as a `v-if`/`v-else-if` chain: `passed` → `failed` →
+  `cancelled` → `isActive` (running) → `latestRun` (`.latest-run-badge`).
+  Since `activeRun?.overallStatus` never reverts to a non-terminal/unset
+  value, one of the first three branches always wins after any run has
+  completed, and the `v-else-if="latestRun"` branch — the one that renders
+  `.latest-run-badge` — becomes dead code.
+
+Increasing the Playwright `waitFor`/timeout (the triage's proposed next
+step) cannot fix `flows/run-history.spec.ts:131`: the locator isn't slow to
+appear, it can never appear once `activeRun.overallStatus` is set, which
+happens deterministically on the first `pipeline.run.completed` WS event
+for that pipeline in this same test run.
+
+Blocking questions for product-owner:
+
+1. Is the intended UX that the **static** `run-status--passed/failed`
+   badge is what should persist on the card after a run (i.e. the E2E test
+   at `run-history.spec.ts:114-144` is wrong to assert on
+   `.latest-run-badge`, and it should assert on `.run-status--passed`
+   instead)? Or is `.latest-run-badge` (with relative time) supposed to
+   supersede the static badge once a run has completed?
+2. If `.latest-run-badge` should supersede: where should the transition
+   happen — should `PipelineCard.vue`'s `v-else-if` chain drop the
+   terminal-status branches once `latestRun` is available (i.e. only show
+   `passed`/`failed`/`cancelled` while `isActive` is meaningfully "just
+   finished"), or should `devops.ts` clear/expire the `activeRuns` entry
+   for a slug some time after `handleRunCompleted` fires?
+3. This fix lands in `web/src/stores/devops.ts` and/or
+   `PipelineCard.vue`, which is outside test-developer's
+   `allowed_write_paths`. Should this defect be reassigned to
+   frontend-developer for the code fix, with test-developer only updating
+   `tests/e2e/flows/run-history.spec.ts` once the intended behaviour (Q1)
+   is confirmed?
+
+No test code changes made pending answers — the correct assertion for
+`run-history.spec.ts:131` depends entirely on which behaviour is intended.
