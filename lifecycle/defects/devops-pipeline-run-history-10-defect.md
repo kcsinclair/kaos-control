@@ -6,9 +6,32 @@ lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-8-test.md
 labels: [defect]
 assignees:
-  - role: frontend-developer
+  - role: test-developer
     who: agent
 ---
+
+## Triage (2026-07-07): feature present — treat as E2E timing, not a missing badge
+
+Canonical for this issue (`-11` and `-12` were identical duplicates, closed).
+
+The badge is **implemented and wired**, so this is not a "missing feature" bug:
+- `web/src/components/devops/PipelineCard.vue` renders `.latest-run-badge`
+  (`v-else-if="latestRun"`, from `devops.latestRunForPipeline(slug)`), with
+  passed/failed icons and relative time.
+- `web/src/stores/devops.ts` maintains `runHistory` and updates it from the
+  `pipeline.run.*` WebSocket events (`runHistory.push`, the
+  `pipeline.run.completed` handler), and `latestRunForPipeline` filters it.
+
+So the Playwright timeout waiting for `.latest-run-badge` is most likely **E2E
+timing / test-harness** (the badge appears only after the `run.completed` WS
+event propagates and the history refreshes, which can exceed the test's wait),
+not a rendering gap. Reassigned to test-developer.
+
+**Next step (needs the heavy E2E run to confirm):** run
+`cd tests/e2e && npx playwright test run-history` and check whether the badge
+appears just after the wait window (→ increase the `waitFor`/poll for the WS
+round-trip) vs. never (→ a real WS-event/selector gap to escalate back to
+frontend-developer). Not yet reproduced locally here (E2E not run).
 
 # Pipeline card latest-run summary badge not visible after run completion
 

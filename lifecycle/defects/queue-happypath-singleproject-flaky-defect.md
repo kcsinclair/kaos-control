@@ -1,7 +1,7 @@
 ---
 title: Flaky TestQueue_HappyPath_SingleProject test fails due to false truncated stream marking
 type: defect
-status: draft
+status: done
 lineage: agent-rate-limit-queue
 parent: lifecycle/tests/agent-rate-limit-queue-6-test.md
 labels: [defect]
@@ -9,6 +9,14 @@ assignees:
   - role: test-developer
     who: agent
 ---
+
+## Resolution (2026-07-07)
+
+Fixed — same root cause as `supervisor-persists-metrics-flaky` (see that defect
+for the full write-up): `cmd.Wait()` closed the `StdoutPipe` while the scanner
+was still reading, truncating a fast-exiting run's terminal `result` line →
+false `truncated_stream`. The reaper now drains the readers before reaping
+(bounded by `readerDrainGrace`). Flaky pair passed 15/15.
 
 ## Reproduction Steps
 

@@ -1,7 +1,7 @@
 ---
 title: Dot-prefixed directories created at runtime are indexed due to watcher walk race condition
 type: defect
-status: draft
+status: abandoned
 lineage: idea-archiving
 parent: lifecycle/tests/idea-archiving-5-test.md
 labels: [defect]
@@ -9,6 +9,12 @@ assignees:
   - role: backend-developer
     who: agent
 ---
+
+## Closed — duplicate (2026-07-07)
+
+Duplicate of `recursive-subdir-runtime-creation` (same
+`TestDotDirExclusion_RuntimeCreation` / `.trash/` runtime-indexing bug), which is
+fixed in `watcher.shouldProcess`. Closing as duplicate.
 
 ## Reproduction Steps
 

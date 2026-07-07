@@ -202,6 +202,12 @@ func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) 
 }
 
 // startCommandProcess is the shared subprocess launcher used by CLI drivers.
+// readerDrainGrace bounds how long the process-reaper waits for the stdout/
+// stderr readers to hit EOF before calling cmd.Wait() (which force-closes the
+// pipe FDs). Normal runs drain in well under this; the grace only bites the
+// abnormal case of a detached grandchild holding a write end open.
+const readerDrainGrace = 5 * time.Second
+
 // It takes an already-configured exec.Cmd (with Dir and Env set by the caller)
 // plus the arg list (only used for the log-file header) and returns a process
 // with stdout/stderr piped, progress events streaming, and the log file open
@@ -298,11 +304,28 @@ func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []strin
 		}
 	}()
 
-	// Watcher goroutine: cmd.Wait() reaps the process and closes the parent
-	// pipe FDs, which unblocks the readers above even if a detached
-	// grandchild is still holding the write ends. Stash the result so
-	// proc.Wait() can return it without double-calling cmd.Wait.
+	// Watcher goroutine: reap the process, then stash the result so proc.Wait()
+	// can return it without double-calling cmd.Wait.
+	//
+	// cmd.Wait() closes the StdoutPipe FDs; the Go docs warn it is "incorrect to
+	// call Wait before all reads from the pipe have completed." Calling it
+	// concurrently with the stdout scanner truncates a fast-exiting process's
+	// final lines — including the terminal `{"type":"result",...}` event — which
+	// trips the truncated-stream check on healthy runs. So wait for the readers
+	// to drain first: in the normal case the process's own exit closes the pipe
+	// write end, so the readers reach EOF on their own and we reap with nothing
+	// lost. Bound the wait with a grace so a detached grandchild still holding a
+	// write end can't hang us — after the grace we reap anyway, and cmd.Wait()
+	// force-closes the FDs to unblock the readers (the prior behaviour).
 	go func() {
+		readersDone := make(chan struct{})
+		go func() { wg.Wait(); close(readersDone) }()
+		select {
+		case <-readersDone:
+		case <-time.After(readerDrainGrace):
+			slog.Warn("agent: stdout readers did not drain within grace; reaping anyway (possible detached grandchild holding the pipe)",
+				"run_id", run.RunID, "grace", readerDrainGrace)
+		}
 		err := cmd.Wait()
 		waitErr <- err
 		close(waitErr)

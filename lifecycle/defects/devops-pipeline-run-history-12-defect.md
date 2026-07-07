@@ -1,7 +1,7 @@
 ---
 title: Pipeline card latest-run summary badge not visible after run completion
 type: defect
-status: draft
+status: abandoned
 lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-7-test.md
 labels: [defect]
@@ -9,6 +9,11 @@ assignees:
   - role: frontend-developer
     who: agent
 ---
+
+## Closed — duplicate (2026-07-07)
+
+Duplicate of `devops-pipeline-run-history-10` (identical title/issue: pipeline
+card latest-run badge not visible after run completion). Tracking under -10.
 
 # Pipeline card latest-run summary badge not visible after run completion
 

@@ -1,7 +1,7 @@
 ---
 title: Flaky TestSupervisor_PersistsMetricsOnFinish test fails due to false truncated stream marking
 type: defect
-status: draft
+status: done
 lineage: agent-usage-analytics-report
 parent: lifecycle/tests/agent-usage-analytics-report-10-test.md
 labels: [defect]
@@ -9,6 +9,29 @@ assignees:
   - role: test-developer
     who: agent
 ---
+
+## Resolution (2026-07-07)
+
+Fixed — this was a **real supervisor race**, not a test bug. In
+`startCommandProcess` (`internal/agent/agent.go`), `cmd.Wait()` ran concurrently
+with the stdout scanner and closes the `StdoutPipe` FDs. The Go docs warn it is
+"incorrect to call Wait before all reads from the pipe have completed": a
+fast-exiting process (the stub prints the terminal `result` line and exits in the
+same instant) loses that final line before the scanner reads it →
+`resultEventSeen=false` → false `truncated_stream` failure → metrics not
+recorded. Real runs rarely hit it because they have a gap between the result
+event and process exit; the stub maximises the window.
+
+Fix: the reaper now waits for the readers to drain (they reach EOF on the
+process's own exit) before calling `cmd.Wait()`, bounded by `readerDrainGrace`
+(5s) so a detached grandchild holding a write end can't hang the supervisor.
+Verified: the flaky pair (`TestSupervisor_PersistsMetricsOnFinish`,
+`TestQueue_HappyPath_SingleProject`) passed 15/15 (previously ~1-in-5 failed).
+Same fix resolves `queue-happypath-singleproject-flaky` (same root cause).
+
+Note: the separate `WARN … hooks API detected="{…}"` log is cosmetic noise — the
+version-check invocation runs the arg-ignoring stub and logs its NDJSON as the
+"version". It does not cause the truncation (separate process/stdout).
 
 ## Reproduction Steps
 

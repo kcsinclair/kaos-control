@@ -326,6 +326,20 @@ func (w *Watcher) shouldProcess(path string) bool {
 	if !strings.HasPrefix(path, w.lifecycleDir) {
 		return false
 	}
+	// Reject files inside a dot-prefixed directory (e.g. ".trash/x.md"). The
+	// base-name checks below only inspect the filename, so a dot-DIR ancestor
+	// created at runtime would otherwise slip through — the runtime dir-create
+	// WalkDir indexes files even where addDirRecursive skipped watching the
+	// dot-dir. Mirrors the startup scan's SkipDir-on-dotdir behaviour.
+	if rel := strings.TrimPrefix(strings.TrimPrefix(path, w.lifecycleDir), string(filepath.Separator)); rel != "" {
+		if dir := filepath.Dir(rel); dir != "." {
+			for _, seg := range strings.Split(dir, string(filepath.Separator)) {
+				if strings.HasPrefix(seg, ".") {
+					return false
+				}
+			}
+		}
+	}
 	if !strings.HasSuffix(path, ".md") {
 		return false
 	}
