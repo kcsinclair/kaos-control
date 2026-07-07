@@ -1,7 +1,7 @@
 ---
 title: "Missing integration test file open_questions_resolve_e2e_test.go"
 type: defect
-status: draft
+status: approved
 lineage: open-questions-gui
 parent: lifecycle/tests/open-questions-gui-5-test.md
 labels: [defect]
