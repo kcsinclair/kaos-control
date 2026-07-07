@@ -1,7 +1,7 @@
 ---
 title: "Auto-Triage Raw Ideas — Watcher Rerun After Status Reset"
 type: test
-status: approved
+status: in-qa
 lineage: auto-triage-new-ideas
 parent: lifecycle/defects/auto-triage-new-ideas-watcher-rerun-reset-7-defect.md
 ---
