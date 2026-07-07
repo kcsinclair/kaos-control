@@ -1,7 +1,7 @@
 ---
 title: "Test Suite: Default to Usage Guide; Require -d/--daemon to Start the Server"
 type: test
-status: approved
+status: in-qa
 lineage: daemon-flag-usage-guide
 parent: lifecycle/test-plans/daemon-flag-usage-guide-5-test.md
 ---
