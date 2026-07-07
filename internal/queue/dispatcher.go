@@ -529,8 +529,17 @@ func (d *Dispatcher) handleAuthError(job *Job) {
 
 // ---- public store-proxy methods (used by HTTP handlers) ----
 
-// Enqueue adds a job to the queue, delegating to the store.
-func (d *Dispatcher) Enqueue(j Job) error { return d.store.Enqueue(j) }
+// Enqueue adds a job to the queue, delegating to the store, and broadcasts
+// queue.added carrying the full persisted job record on success.
+func (d *Dispatcher) Enqueue(j Job) error {
+	if err := d.store.Enqueue(j); err != nil {
+		return err
+	}
+	if job, err := d.store.FindActiveByPath(j.Project, j.ArtifactPath); err == nil && job != nil {
+		d.broadcast("queue.added", job)
+	}
+	return nil
+}
 
 // GetByID returns a single job by ID.
 func (d *Dispatcher) GetByID(id string) (*Job, error) { return d.store.GetByID(id) }
@@ -603,7 +612,7 @@ type queueSnapshot struct {
 
 // ---- broadcast helpers ----
 
-func (d *Dispatcher) broadcast(eventType string, payload map[string]any) {
+func (d *Dispatcher) broadcast(eventType string, payload any) {
 	if d.appHub == nil {
 		return
 	}
