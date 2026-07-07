@@ -106,10 +106,17 @@ vi.mock('@/stores/theme', () => ({
 
 vi.mock('@/stores/agents', () => ({
   useAgentsStore: () => ({
+    runs: [],
     activeRuns: [],
     agents: [],
+    loading: false,
+    readyCounts: {},
+    progressLines: new Map(),
+    permissionEvents: new Map(),
+    runResults: new Map(),
     fetchAgents: vi.fn().mockResolvedValue(undefined),
     fetchRuns: vi.fn().mockResolvedValue(undefined),
+    fetchReadyCounts: vi.fn().mockResolvedValue(undefined),
     killRun: vi.fn().mockResolvedValue(undefined),
   }),
 }))
@@ -287,7 +294,7 @@ describe('AgentsRunsView with ProjectQueuePanel', () => {
     const wrapper = await mountAgentsRunsView()
 
     // Should be able to see the pending job in the panel
-    expect(wrapper.text()).toContain('p1')
+    expect(wrapper.text()).toContain('lifecycle/ideas/test.md')
 
     // Should have access to global queue features like the cancel button
     expect(wrapper.find('.btn-cancel').exists()).toBe(true)
