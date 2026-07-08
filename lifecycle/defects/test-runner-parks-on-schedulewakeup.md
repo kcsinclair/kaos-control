@@ -1,7 +1,7 @@
 ---
 title: Test-runner agent abandons long suites — parks on ScheduleWakeup and never files defects
 type: defect
-status: draft
+status: done
 lineage: test-runner-parks-on-schedulewakeup
 created: "2026-07-07T00:00:00+10:00"
 priority: high
@@ -14,6 +14,20 @@ assignees:
     - role: backend-developer
       who: agent
 ---
+
+## Resolution (2026-07-08, fix committed `193c5ff8`)
+
+Fixed via the test-runner prompt in [config.yaml](../config.yaml) (option 1):
+run every suite **synchronously in the foreground** (make lint / test-unit /
+test-integration / vitest / test-e2e), blocking on each, with an explicit ban on
+backgrounding and `ScheduleWakeup`; `timeout_minutes` 30→45 to cover e2e; and a
+spelled-out defect-filing format + dedup. Config validated via the Go loader.
+
+**Activation:** config is not hot-reloaded (`handleUpdateConfig` writes without
+refreshing the cached `p.Cfg`, and config.yaml isn't watched), so the running
+server must be **restarted** to pick it up. End-to-end confirmation (a single
+`devops run test-all` that runs every suite to completion in one agent run) is
+pending that restart + re-run.
 
 # Test-runner agent abandons long suites — parks on `ScheduleWakeup` and never files defects
 
