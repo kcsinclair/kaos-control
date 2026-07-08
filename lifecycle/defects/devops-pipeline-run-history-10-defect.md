@@ -1,7 +1,7 @@
 ---
 title: Pipeline card latest-run summary badge not visible after run completion
 type: defect
-status: done
+status: draft
 lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-8-test.md
 labels:
@@ -10,6 +10,18 @@ assignees:
     - role: product-owner
       who: agent
 ---
+
+## Reopened (2026-07-08, test-runner)
+
+`make test-e2e` still reproduces this exact failure today —
+`flows/run-history.spec.ts:114:3 › Run History smoke › pipeline card shows
+the latest-run summary badge after a run` times out on the same
+`.latest-run-badge` locator, unchanged since the 2026-07-07 analysis below.
+Status was left as `done` after the initial product-owner triage even
+though the follow-up test-developer analysis (below) refuted that triage
+and left three blocking questions unanswered — reopening to `blocked` so
+it surfaces for product-owner instead of filing a duplicate. No new
+defect file created; see root-cause analysis already captured here.
 
 ## Triage (2026-07-07): feature present — treat as E2E timing, not a missing badge
 
