@@ -206,7 +206,9 @@ func (ls *LogStore) backfillRecord(projectName, runID string) (RunRecord, bool) 
 
 	durationMs := endedAt.Sub(startedAt).Milliseconds()
 
-	if last != nil && last.EventType == EventRunCompleted {
+	// first and last are set together in the scan loop above, so first != nil
+	// (guarded above) guarantees last != nil here.
+	if last.EventType == EventRunCompleted {
 		if m, ok := last.Payload.(map[string]any); ok {
 			status, _ = m["status"].(string)
 			if d, ok := m["duration_seconds"].(float64); ok {
@@ -216,7 +218,7 @@ func (ls *LogStore) backfillRecord(projectName, runID string) (RunRecord, bool) 
 	} else {
 		// No completion entry — infer best-effort status from last step.
 		status = "unknown"
-		if last != nil && last.EventType == EventStepCompleted {
+		if last.EventType == EventStepCompleted {
 			if m, ok := last.Payload.(map[string]any); ok {
 				status, _ = m["status"].(string)
 			}

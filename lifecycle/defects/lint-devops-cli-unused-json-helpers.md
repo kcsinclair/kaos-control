@@ -1,7 +1,7 @@
 ---
 title: 'go vet lint failure: unused artifactRow/parseArtifactList/extractJSONField in devopscmd'
 type: defect
-status: draft
+status: done
 lineage: kaos-control-devops-cli
 parent: cmd/kaos-control/devopscmd/client.go
 labels: [defect]
@@ -9,6 +9,13 @@ assignees:
   - role: backend-developer
     who: agent
 ---
+
+## Resolution (2026-07-09)
+
+Removed the dead `artifactRow` type and the unused `parseArtifactList` /
+`extractJSONField` functions from `cmd/kaos-control/devopscmd/client.go`
+(the `encoding/json` import is still used elsewhere in the file). staticcheck
+clean; `make lint` green.
 
 # go vet lint failure: unused artifactRow/parseArtifactList/extractJSONField in devopscmd
 

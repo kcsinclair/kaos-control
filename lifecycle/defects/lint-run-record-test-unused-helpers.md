@@ -1,7 +1,7 @@
 ---
 title: 'go vet lint failure: unused seedRunRecord/writeMinimalLogFile test helpers'
 type: defect
-status: draft
+status: done
 lineage: devops-pipeline-run-history
 parent: internal/devops/run_record_test.go
 labels: [defect]
@@ -9,6 +9,12 @@ assignees:
   - role: test-developer
     who: agent
 ---
+
+## Resolution (2026-07-09)
+
+Removed the unused `seedRunRecord` and `writeMinimalLogFile` helpers from
+`internal/devops/run_record_test.go`, and dropped the now-unused
+`encoding/json` import. Package tests pass; staticcheck clean; `make lint` green.
 
 # go vet lint failure: unused seedRunRecord/writeMinimalLogFile test helpers
 

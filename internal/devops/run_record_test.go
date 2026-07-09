@@ -10,7 +10,6 @@ package devops
 // Run with: go test ./internal/devops/ -run RunRecord
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -333,39 +332,5 @@ func TestPruneOldRuns_KeepsFiftyAndProtectsActive(t *testing.T) {
 	activeLog := ls.logPath("testproject", activeRunID)
 	if _, err := os.Stat(activeLog); os.IsNotExist(err) {
 		t.Errorf("active run log was incorrectly pruned: %s", activeLog)
-	}
-}
-
-// seedRunRecord is a helper to write a RunRecord directly for integration
-// scenarios within unit tests.
-func seedRunRecord(t *testing.T, ls *LogStore, project string, rec RunRecord) {
-	t.Helper()
-	if err := ls.WriteRecord(project, rec); err != nil {
-		t.Fatalf("seedRunRecord %q: %v", rec.RunID, err)
-	}
-}
-
-// writeMinimalLogFile writes a minimal JSON-lines log to the given path,
-// usable in unit tests that need a .log file to exist alongside a .meta.json.
-func writeMinimalLogFile(t *testing.T, path, runID, slug string) {
-	t.Helper()
-	entry := logEntry{
-		Time:      time.Now().UTC(),
-		EventType: EventRunStarted,
-		Payload: map[string]any{
-			"run_id":       runID,
-			"pipeline_slug": slug,
-			"project":      "testproject",
-		},
-	}
-	data, err := json.Marshal(entry)
-	if err != nil {
-		t.Fatalf("marshal log entry: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir for log: %v", err)
-	}
-	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
-		t.Fatalf("write log file: %v", err)
 	}
 }

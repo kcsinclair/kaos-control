@@ -149,35 +149,3 @@ func defaultConfigPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".kaos-control", "config.yaml")
 }
-
-// artifactRow is a minimal representation for the list table.
-type artifactRow struct {
-	Type    string `json:"type"`
-	Status  string `json:"status"`
-	Lineage string `json:"lineage"`
-	Title   string `json:"title"`
-}
-
-// parseArtifactList extracts the artifacts array from a list-artifacts response.
-func parseArtifactList(body string) []artifactRow {
-	var wrapper struct {
-		Artifacts []artifactRow `json:"artifacts"`
-	}
-	if err := json.Unmarshal([]byte(body), &wrapper); err != nil {
-		return nil
-	}
-	return wrapper.Artifacts
-}
-
-// extractJSONField extracts a single top-level field from a JSON object,
-// returning it as a raw JSON string. Falls back to the original body on error.
-func extractJSONField(body, field string) string {
-	var m map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(body), &m); err != nil {
-		return body
-	}
-	if v, ok := m[field]; ok {
-		return string(v)
-	}
-	return body
-}

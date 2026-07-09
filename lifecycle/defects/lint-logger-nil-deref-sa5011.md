@@ -1,7 +1,7 @@
 ---
 title: 'staticcheck SA5011: possible nil pointer dereference in backfillRecord'
 type: defect
-status: draft
+status: done
 lineage: devops-pipeline-run-history
 parent: internal/devops/logger.go
 labels: [defect]
@@ -9,6 +9,14 @@ assignees:
   - role: backend-developer
     who: agent
 ---
+
+## Resolution (2026-07-09)
+
+`first` and `last` are set together in the scan loop, so the `first == nil`
+guard already guarantees `last != nil`. Removed the redundant `if last != nil`
+checks (which is what made staticcheck flag the `endedAt := last.Time` deref as
+nilable) and added a comment noting the invariant. staticcheck clean; devops
+tests pass; `make lint` green.
 
 # staticcheck SA5011: possible nil pointer dereference in backfillRecord
 
