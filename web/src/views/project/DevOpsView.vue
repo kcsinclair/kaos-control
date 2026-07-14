@@ -8,8 +8,10 @@ import { useDevOpsStore } from '@/stores/devops'
 import { useUiStore } from '@/stores/ui'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
-import type { RunHistoryEntry } from '@/stores/devops'
-import { Plus } from 'lucide-vue-next'
+import { Plus, CheckCircle, XCircle, MinusCircle } from 'lucide-vue-next'
+import { useNow } from '@/composables/useNow'
+import { formatRelativeTime } from '@/composables/useRunFormatters'
+import type { RunHistoryRow } from '@/api/devops'
 import PipelineCard from '@/components/devops/PipelineCard.vue'
 import SplitPane from '@/components/common/SplitPane.vue'
 import PipelineLogPane from '@/components/devops/PipelineLogPane.vue'
@@ -37,6 +39,24 @@ const orderedTypes = computed((): string[] => {
   return [...known, ...dynamic]
 })
 
+const now = useNow()
+
+/** Aggregate latest-run for a group: worst status (failed > cancelled > passed), newest time */
+function groupLatestRun(type: string): RunHistoryRow | null {
+  const pipelines = devops.pipelinesByType[type] ?? []
+  const rows = pipelines
+    .map((p) => devops.latestRunForPipeline(p.slug))
+    .filter((r): r is RunHistoryRow => r != null)
+  if (rows.length === 0) return null
+  const priority = (s: string) => (s === 'failed' ? 2 : s === 'cancelled' ? 1 : 0)
+  return rows.reduce((worst, r) =>
+    priority(r.status) > priority(worst.status) ||
+    (priority(r.status) === priority(worst.status) && r.started_at > worst.started_at)
+      ? r
+      : worst,
+  )
+}
+
 // ── Log pane visibility ───────────────────────────────────────────────────────
 
 const splitPaneRef = ref<InstanceType<typeof SplitPane> | null>(null)
@@ -54,11 +74,6 @@ function showLogPane() {
   splitPaneRef.value?.expandPane()
 }
 
-function hideLogPane() {
-  logPaneVisible.value = false
-  splitPaneRef.value?.collapsePane()
-}
-
 function onLogPaneCollapse() {
   logPaneVisible.value = false
 }
@@ -70,16 +85,6 @@ watch(
     if (id) showLogPane()
   },
 )
-
-// Handle user selecting a completed run from PipelineCard history
-async function handleViewLog(entry: RunHistoryEntry) {
-  try {
-    await devops.loadRunLog(project, entry.runId, entry.pipelineSlug)
-    showLogPane()
-  } catch (e: unknown) {
-    ui.error(e instanceof Error ? e.message : 'Failed to load run log.')
-  }
-}
 
 // Clear log buffer on unmount (route change)
 onUnmounted(() => {
@@ -184,14 +189,26 @@ useWebSocket(project, 'pipeline.updated', () => {
                 :key="type"
                 class="column"
               >
-                <h3 class="column-header">{{ type.charAt(0).toUpperCase() + type.slice(1) }}</h3>
+                <h3 class="column-header">
+                  <span class="column-header__title">{{ type.charAt(0).toUpperCase() + type.slice(1) }}</span>
+                  <span
+                    v-if="groupLatestRun(type)"
+                    class="column-header__badge"
+                    :class="`column-header__badge--${groupLatestRun(type)!.status}`"
+                    :title="`Last run: ${groupLatestRun(type)!.status} — ${new Date(groupLatestRun(type)!.started_at).toLocaleString()}`"
+                  >
+                    <CheckCircle v-if="groupLatestRun(type)!.status === 'passed'" :size="10" />
+                    <XCircle v-else-if="groupLatestRun(type)!.status === 'failed'" :size="10" />
+                    <MinusCircle v-else :size="10" />
+                    {{ formatRelativeTime(groupLatestRun(type)!.started_at, now) }}
+                  </span>
+                </h3>
                 <div class="card-list">
                   <PipelineCard
                     v-for="pipeline in devops.pipelinesByType[type]"
                     :key="pipeline.slug"
                     :pipeline="pipeline"
                     :project="project"
-                    @view-log="handleViewLog"
                     @edit="handleEditPipeline"
                   />
                 </div>
@@ -293,6 +310,9 @@ useWebSocket(project, 'pipeline.updated', () => {
 }
 
 .column-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-xs);
   font-weight: 600;
   text-transform: uppercase;
@@ -301,6 +321,32 @@ useWebSocket(project, 'pipeline.updated', () => {
   margin: 0 0 var(--space-3) 0;
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--color-border);
+}
+
+.column-header__title {
+  flex: 1;
+}
+
+.column-header__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.column-header__badge--passed {
+  color: #22c55e;
+}
+
+.column-header__badge--failed {
+  color: var(--color-error);
+}
+
+.column-header__badge--cancelled {
+  color: var(--color-text-muted);
 }
 
 .card-list {

@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/authcmd"
+	"github.com/kaos-control/kaos-control/cmd/kaos-control/devopscmd"
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/hookcmd"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/backfillcmd"
@@ -30,22 +31,30 @@ import (
 
 var version = "dev"
 
-const usage = `Usage: kaos-control <command> [flags]
+const usage = `kaos-control — lifecycle management for turning ideas into releases.
+
+Usage:
+  kaos-control -d [-config <path>]      Start the HTTP server (daemon mode)
+  kaos-control serve [-config <path>]   Start the HTTP server (equivalent to -d)
+  kaos-control <command> [flags]
 
 Commands:
-  serve              Start the HTTP server (default)
+  serve              Start the HTTP server (same as -d/--daemon)
   init               Initialise a new project directory
   auth               Manage users, passwords, and API tokens
+  devops             DevOps operations against a registered project
   hook-helper        PreToolUse hook helper (called by Claude Code)
   backfill-created   Add created: frontmatter to legacy artefacts using
                      filesystem birth time
   backfill           One-off data backfill utilities
                        backfill agent-run-metrics --project <id>
+  releases           Release management operations
 
 Flags:
+  -d, --daemon       Start the foreground HTTP server (required to run the server)
+  -config <path>     Path to app config.yaml (daemon mode only)
   --version, -V      Print version, copyright, and licence
-  --help, -h         Print this usage banner
-  -config <path>     Path to app config.yaml (serve only)
+  --help, -h         Print this usage guide
 
 Run 'kaos-control <command> --help' for command-specific usage.
 `
@@ -59,6 +68,28 @@ func printVersion() {
 }
 
 func main() {
+	if len(os.Args) == 1 {
+		// No command given — treat as a usage error (Resolved Q3): write the
+		// usage guide to stderr and exit non-zero. No side effects on this path.
+		fmt.Fprint(os.Stderr, usage)
+		os.Exit(2)
+	}
+	// Strip -d/--daemon/-daemon from os.Args before flag.Parse runs in run().
+	// Accept any position so -d -config x and -config x -d both work (Resolved Q1).
+	daemon := false
+	{
+		filtered := os.Args[:1]
+		for _, a := range os.Args[1:] {
+			switch a {
+			case "-d", "--daemon", "-daemon":
+				daemon = true
+			default:
+				filtered = append(filtered, a)
+			}
+		}
+		os.Args = filtered
+	}
+
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "init":
@@ -69,6 +100,8 @@ func main() {
 			return
 		case "auth":
 			os.Exit(authcmd.Run(os.Args[2:]))
+		case "devops":
+			os.Exit(devopscmd.Run(os.Args[2:]))
 		case "hook-helper":
 			hookcmd.Run(os.Args[2:])
 			return
@@ -91,8 +124,9 @@ func main() {
 			}
 			return
 		case "serve":
-			// Strip "serve" so the server's flag.Parse sees only its own flags.
+			// Strip "serve" so flag.Parse in run() sees only server flags.
 			os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
+			daemon = true
 		case "--help", "-help", "-h":
 			fmt.Print(usage)
 			os.Exit(0)
@@ -102,9 +136,8 @@ func main() {
 		default:
 			arg := os.Args[1]
 			if strings.HasPrefix(arg, "-") {
-				// Allow -config / --config (with or without =value) to fall
-				// through to flag.Parse() in run() — that's the implicit
-				// `serve -config /path` form.
+				// -config is valid with -d; let the daemon check below decide
+				// whether to proceed or reject (F3: server requires explicit opt-in).
 				if arg == "-config" || arg == "--config" ||
 					strings.HasPrefix(arg, "-config=") ||
 					strings.HasPrefix(arg, "--config=") {
@@ -117,6 +150,12 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	if !daemon {
+		fmt.Fprintf(os.Stderr, "error: no command given; use -d/--daemon or 'serve' to start the server\n\n%s", usage)
+		os.Exit(2)
+	}
+
 	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)
 		os.Exit(1)

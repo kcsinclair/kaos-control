@@ -1,7 +1,7 @@
 ---
 title: Artefact Sub Directories to Assist with Artefact Management
 type: idea
-status: draft
+status: done
 lineage: idea-archiving
 priority: high
 labels:
@@ -10,6 +10,7 @@ labels:
     - backend
     - watcher
     - enhancement
+release: KC-Release4
 ---
 
 ## Raw Idea

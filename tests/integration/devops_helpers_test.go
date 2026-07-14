@@ -178,3 +178,27 @@ func devopsCancelURL(env *testEnv, slug string) string {
 func devopsRunLogURL(env *testEnv, runID string) string {
 	return env.baseURL + "/api/p/testproject/devops/runs/" + runID
 }
+
+// devopsPipelineRunsURL returns the full URL for the run history listing
+// endpoint for the given slug. Suitable for direct http.Get calls.
+func devopsPipelineRunsURL(env *testEnv, slug string) string {
+	return env.baseURL + "/api/p/testproject/devops/pipelines/" + slug + "/runs"
+}
+
+// devopsPipelineRunsPath returns the path (no host) for the run history listing
+// endpoint for the given slug. Suitable for use with env.doRequest.
+func devopsPipelineRunsPath(slug string) string {
+	return "/api/p/testproject/devops/pipelines/" + slug + "/runs"
+}
+
+// devopsPipelineRunLogURL returns the full URL for the scoped run log endpoint.
+// Suitable for direct http.Get calls.
+func devopsPipelineRunLogURL(env *testEnv, slug, runID string) string {
+	return env.baseURL + "/api/p/testproject/devops/pipelines/" + slug + "/runs/" + runID + "/log"
+}
+
+// devopsPipelineRunLogPath returns the path (no host) for the scoped run log
+// endpoint. Suitable for use with env.doRequest.
+func devopsPipelineRunLogPath(slug, runID string) string {
+	return "/api/p/testproject/devops/pipelines/" + slug + "/runs/" + runID + "/log"
+}

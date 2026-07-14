@@ -102,6 +102,15 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 		sourceContext = buildDocSourceContext(p, req.SourceLineage, req.SourcePath)
 	}
 
+	// Resolve the source artifact's priority and release for inheritance (FR-6).
+	var sourcePriority, sourceRelease string
+	if req.SourcePath != "" {
+		if parentFM, ok := resolveParentFrontmatter(p, req.SourcePath); ok {
+			sourcePriority = parentFM.Priority
+			sourceRelease = parentFM.Release
+		}
+	}
+
 	result, err := ideachat.Generate(r.Context(), ideachat.GenerateOptions{
 		Input:          req.Input,
 		ArtifactType:   artifactType,
@@ -111,6 +120,8 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 		ExistingLabels: existingLabels,
 		ExistingSlugs:  allSlugs,
 		ModelCfg:       modelCfg,
+		SourcePriority: sourcePriority,
+		SourceRelease:  sourceRelease,
 	})
 	if err != nil {
 		if errors.Is(err, ideachat.ErrInputTooShort) {

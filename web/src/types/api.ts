@@ -35,6 +35,12 @@ export interface UpdateProjectPayload {
   path?: string
 }
 
+export interface UserBinding {
+  email: string
+  roles: string[]
+  linux_user?: string
+}
+
 export interface CheckDirectoryResult {
   exists: boolean
   writable: boolean
@@ -77,6 +83,7 @@ export interface ArtifactFrontmatter {
 
 export interface ArtifactRow {
   path: string
+  rel_path: string
   slug: string
   lineage: string
   index: number
@@ -202,6 +209,21 @@ export interface ArtifactFilter {
   sort?: string
   limit?: number
   offset?: number
+  /** Restrict to artefacts that are `blocked` with a non-empty `## Open Questions` section. */
+  awaiting_answers?: boolean
+}
+
+export interface OpenQuestion {
+  index: number
+  text: string
+  answer: string
+}
+
+export interface OpenQuestionsResponse {
+  heading: string
+  format: string
+  questions: OpenQuestion[]
+  can_resolve: boolean
 }
 
 export interface LineageSummary {

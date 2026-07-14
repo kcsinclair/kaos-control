@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -38,6 +39,17 @@ func isBearerAuth(ctx context.Context) bool {
 	return v
 }
 
+// localIdentityContextKey marks requests authenticated via the loopback
+// X-Kaos-Local-User header (CSRF exempt, loopback-only).
+type localIdentityContextKey struct{}
+
+// isLocalIdentity reports whether the request was authenticated via the
+// loopback local-identity path.
+func isLocalIdentity(ctx context.Context) bool {
+	v, _ := ctx.Value(localIdentityContextKey{}).(bool)
+	return v
+}
+
 // sessionMiddleware reads the session cookie and injects the user into the context.
 // If no valid session cookie is found, it falls back to checking an
 // Authorization: Bearer <token> header. Bearer-authenticated requests are
@@ -64,6 +76,20 @@ func (s *Server) sessionMiddleware(next http.Handler) http.Handler {
 					r = r.WithContext(ctx)
 				}
 			}
+			// 3. Try X-Kaos-Local-User (loopback-only trusted identity).
+			if userFromCtx(r.Context()) == nil {
+				if email := r.Header.Get("X-Kaos-Local-User"); email != "" {
+					if isLoopback(r.RemoteAddr) {
+						if user, _ := s.cfg.Auth.GetUser(email); user != nil {
+							ctx := context.WithValue(r.Context(), userContextKey, user)
+							ctx = context.WithValue(ctx, localIdentityContextKey{}, true)
+							r = r.WithContext(ctx)
+						}
+						// Unknown email: leave unauthenticated → downstream 401.
+					}
+					// Non-loopback: ignore header entirely (don't 401 differently).
+				}
+			}
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -77,8 +103,8 @@ func (s *Server) csrfMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		// Bearer-authenticated requests are not vulnerable to CSRF.
-		if isBearerAuth(r.Context()) {
+		// Bearer-authenticated and local-identity requests are not vulnerable to CSRF.
+		if isBearerAuth(r.Context()) || isLocalIdentity(r.Context()) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -304,4 +330,17 @@ func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// isLoopback reports whether addr (host:port or bare host) originates from a
+// loopback address (127.0.0.0/8 or ::1). Returns false for parse errors so
+// that the caller treats unparseable addresses as non-loopback.
+func isLoopback(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		// addr may be a bare host with no port.
+		host = addr
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

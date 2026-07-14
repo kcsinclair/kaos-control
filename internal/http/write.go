@@ -8,8 +8,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -19,6 +21,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
+	"github.com/kaos-control/kaos-control/internal/project"
 	"github.com/kaos-control/kaos-control/internal/release"
 	"github.com/kaos-control/kaos-control/internal/sandbox"
 	"gopkg.in/yaml.v3"
@@ -46,6 +49,7 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Stage       string               `json:"stage"`
 		Slug        string               `json:"slug"`
+		Subdir      string               `json:"subdir"`
 		Frontmatter artifact.Frontmatter `json:"frontmatter"`
 		Body        string               `json:"body"`
 	}
@@ -82,11 +86,13 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build filename.
+	// Build filename. An optional subdir places the artifact in a nested
+	// folder under the stage dir; empty subdir preserves flat behaviour
+	// exactly (path.Join drops empty elements).
 	filename := buildFilename(req.Slug, nextIdx, stageDir)
-	relPath := "lifecycle/" + stageDir + "/" + filename
+	relPath := path.Join("lifecycle", stageDir, req.Subdir, filename)
 
-	// Sandbox check.
+	// Sandbox check — rejects a subdir/path escaping the project root via "..".
 	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
@@ -101,6 +107,12 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 
 	// Stamp created time; always set by the server and never overridden by the caller.
 	req.Frontmatter.Created = time.Now().Format(time.RFC3339)
+
+	// Inherit priority/release from parent when the caller did not supply them.
+	// Inherited release is copied as-is and intentionally not re-validated here (FR-11).
+	if parentFM, ok := resolveParentFrontmatter(p, req.Frontmatter.Parent); ok {
+		artifact.ApplyInheritedFields(&req.Frontmatter, parentFM)
+	}
 
 	// Marshal frontmatter to YAML.
 	content, err := buildMarkdown(req.Frontmatter, req.Body)
@@ -690,6 +702,41 @@ func buildMarkdown(fm artifact.Frontmatter, body string) (string, error) {
 		sb.WriteString("\n")
 	}
 	return sb.String(), nil
+}
+
+// resolveParentFrontmatter looks up the parent artifact's Frontmatter by its
+// lifecycle-relative path. It tries the index first (one DB query); on a miss
+// it falls back to a single os.ReadFile + artifact.Parse. Any failure returns
+// (Frontmatter{}, false) — callers must proceed without inheritance rather than
+// propagating the error (FR-5 / NFR-4).
+func resolveParentFrontmatter(p *project.Project, parentPath string) (artifact.Frontmatter, bool) {
+	if parentPath == "" {
+		return artifact.Frontmatter{}, false
+	}
+	// Try the index first.
+	if row, err := p.Idx.Get(parentPath); err == nil && row != nil {
+		return row.FM, true
+	}
+	// Index miss — fall back to disk.
+	absPath, err := sandbox.Resolve(p.Entry.Path, parentPath)
+	if err != nil {
+		slog.Info("resolveParentFrontmatter: invalid parent path", "path", parentPath, "err", err)
+		return artifact.Frontmatter{}, false
+	}
+	raw, err := os.ReadFile(absPath)
+	if err != nil {
+		slog.Info("resolveParentFrontmatter: parent not on disk", "path", parentPath, "err", err)
+		return artifact.Frontmatter{}, false
+	}
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return artifact.Frontmatter{}, false
+	}
+	a := artifact.Parse(raw, parentPath, info.ModTime())
+	if a == nil {
+		return artifact.Frontmatter{}, false
+	}
+	return a.FM, true
 }
 
 // rewriteLinks replaces references to oldRelPath/oldSlug with newRelPath/newSlug

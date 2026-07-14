@@ -330,7 +330,7 @@ func (s *Store) ListArtifacts(projectID string, releaseID int64) ([]*index.Artif
 	}
 
 	rows, err := s.db.Query(`
-		SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
+		SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created, rel_path
 		FROM artifacts
 		WHERE json_extract(frontmatter_json, '$.release') = ?
 		ORDER BY lineage, idx, path

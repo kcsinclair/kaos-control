@@ -3,7 +3,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as devopsApi from '@/api/devops'
-import type { Pipeline } from '@/api/devops'
+import type { Pipeline, RunHistoryRow } from '@/api/devops'
 
 export type StepStatus = 'pending' | 'running' | 'passed' | 'failed' | 'cancelled'
 
@@ -63,6 +63,11 @@ export const useDevOpsStore = defineStore('devops', () => {
   // Ordered list of run history (most recent last), capped at 50
   const runHistory = ref<RunHistoryEntry[]>([])
 
+  // Per-pipeline persisted history from API, newest-first
+  const pipelineHistory = ref(new Map<string, RunHistoryRow[]>())
+  const historyLoading = ref(new Map<string, boolean>())
+  const historyError = ref(new Map<string, string | null>())
+
   // ── Flat log buffer for PipelineLogPane ────────────────────────────────────
   // Buffers all events for the most recently active/selected pipeline.
   const logBuffer = ref<LogLine[]>([])
@@ -91,6 +96,23 @@ export const useDevOpsStore = defineStore('devops', () => {
 
   function historyForPipeline(slug: string): RunHistoryEntry[] {
     return runHistory.value.filter((e) => e.pipelineSlug === slug)
+  }
+
+  function latestRunForPipeline(slug: string): RunHistoryRow | undefined {
+    return pipelineHistory.value.get(slug)?.[0]
+  }
+
+  async function fetchPipelineHistory(project: string, slug: string, limit = 10): Promise<void> {
+    historyLoading.value.set(slug, true)
+    historyError.value.set(slug, null)
+    try {
+      const res = await devopsApi.listPipelineRuns(project, slug, limit)
+      pipelineHistory.value.set(slug, res.runs ?? [])
+    } catch (e: unknown) {
+      historyError.value.set(slug, e instanceof Error ? e.message : 'Failed to load run history')
+    } finally {
+      historyLoading.value.set(slug, false)
+    }
   }
 
   async function fetchPipelines(project: string): Promise<void> {
@@ -267,6 +289,20 @@ export const useDevOpsStore = defineStore('devops', () => {
       entry.completedAt = Date.now()
     }
 
+    // Prepend to persisted pipeline history (de-duplicate by run_id, trim to 50)
+    const endedAt = new Date().toISOString()
+    const startedAt = entry ? new Date(entry.startedAt).toISOString() : endedAt
+    const newRow: RunHistoryRow = {
+      run_id: run.runId,
+      status: finalStatus,
+      started_at: startedAt,
+      ended_at: endedAt,
+      duration_ms: durationMs ?? null,
+    }
+    const existing = pipelineHistory.value.get(slug) ?? []
+    const deduped = [newRow, ...existing.filter((r) => r.run_id !== run.runId)]
+    pipelineHistory.value.set(slug, deduped.slice(0, 50))
+
     // Append terminal run-end line to flat log buffer
     if (slug === logPipelineSlug.value) {
       logRunCompleted.value = true
@@ -300,6 +336,12 @@ export const useDevOpsStore = defineStore('devops', () => {
     anyRunning,
     pipelinesByType,
     historyForPipeline,
+    // Persisted pipeline history
+    pipelineHistory,
+    historyLoading,
+    historyError,
+    fetchPipelineHistory,
+    latestRunForPipeline,
     fetchPipelines,
     createPipeline,
     updatePipeline,

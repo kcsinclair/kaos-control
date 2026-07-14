@@ -1,7 +1,7 @@
 ---
 title: kaos-control CLI for DevOps
 type: idea
-status: clarifying
+status: done
 lineage: kaos-control-devops-cli
 priority: high
 labels:

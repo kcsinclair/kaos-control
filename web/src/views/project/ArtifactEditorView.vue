@@ -5,6 +5,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArtifactsStore } from '@/stores/artifacts'
 import { useUiStore } from '@/stores/ui'
+import { useAuthStore } from '@/stores/auth'
 import { useLock } from '@/composables/useLock'
 import { useExternalChange } from '@/composables/useExternalChange'
 import { useWebSocket } from '@/composables/useWebSocket'
@@ -21,15 +22,18 @@ import LockBanner from '@/components/common/LockBanner.vue'
 import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import QueueWorkButton from '@/components/artifact/QueueWorkButton.vue'
 import TriageNowButton from '@/components/artifact/TriageNowButton.vue'
+import ResolveQuestionsModal from '@/components/artifact/ResolveQuestionsModal.vue'
+import PostResolutionPrompt from '@/components/artifact/PostResolutionPrompt.vue'
 import { useGraphStore } from '@/stores/graph'
 import { useQueueStore } from '@/stores/queue'
 import { useAgentsStore } from '@/stores/agents'
-import type { ArtifactDetail, ArtifactFrontmatter, WsEvent } from '@/types/api'
+import type { ArtifactDetail, ArtifactFrontmatter, OpenQuestion, WsEvent } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
 const store = useArtifactsStore()
 const ui = useUiStore()
+const authStore = useAuthStore()
 const graphStore = useGraphStore()
 const queueStore = useQueueStore()
 const agentsStore = useAgentsStore()
@@ -52,6 +56,7 @@ async function load() {
   try {
     store.invalidate(artifactPath.value)
     artifact.value = await store.fetchOne(project.value, artifactPath.value)
+    await loadOpenQuestions()
   } catch (e: unknown) {
     loadError.value = e instanceof Error ? e.message : 'Failed to load'
   } finally {
@@ -115,11 +120,37 @@ const saving = ref(false)
 const editBody = ref('')
 const editFrontmatter = ref<ArtifactFrontmatter | null>(null)
 
-// ── lock ────────────────────────────────────────────────────────────────────
-const hasOpenQuestions = computed(() =>
-  !!artifact.value && /^## Open Questions/m.test(artifact.value.body),
+// ── open questions banner + Resolve action ──────────────────────────────────
+const openQuestions = ref<OpenQuestion[]>([])
+const hasOpenQuestions = computed(() => openQuestions.value.length > 0)
+const userCanResolve = computed(() =>
+  authStore.rolesForProject(project.value).includes('product-owner'),
 )
+const showResolveModal = ref(false)
+const showPostResolutionPrompt = ref(false)
 
+async function loadOpenQuestions() {
+  try {
+    const data = await artifactsApi.getOpenQuestions(project.value, artifactPath.value)
+    openQuestions.value = data.questions ?? []
+  } catch {
+    openQuestions.value = []
+  }
+}
+
+function openResolveModal() {
+  if (!userCanResolve.value) return
+  showResolveModal.value = true
+}
+
+async function onQuestionsFinished() {
+  showResolveModal.value = false
+  ui.success('Answers saved — artefact unblocked')
+  await load()
+  showPostResolutionPrompt.value = true
+}
+
+// ── lock ────────────────────────────────────────────────────────────────────
 function scrollToOpenQuestions() {
   const preview = document.querySelector('.editor-content .md-preview')
   if (!preview) return
@@ -227,10 +258,8 @@ async function reloadFromDisk() {
 }
 
 // ── WS: re-index by agent or external tool ───────────────────────────────────
-// Reactive chain: load() fetches the full artifact including body; hasOpenQuestions
-// is a computed that reads artifact.value.body, so it recomputes automatically once
-// load() resolves — the blocked banner appears/disappears atomically with the status
-// badge without any manual refresh.
+// load() also re-fetches the open-questions list, so the resolve banner
+// appears/disappears atomically with the status badge without a manual refresh.
 useWebSocket(project.value, 'artifact.indexed', async (e: WsEvent) => {
   if (e.payload?.path !== artifactPath.value || editing.value) return
   // Skip if auto-refresh already handled this change (file.changed + re-fetch)
@@ -261,7 +290,10 @@ function onTriageStarted(_runId: string) {
   void agentsStore.fetchRunsByTargetPath(project.value, artifactPath.value)
 }
 
-watch(artifactPath, () => load(), { immediate: false })
+watch(artifactPath, () => {
+  showPostResolutionPrompt.value = false
+  load()
+}, { immediate: false })
 onMounted(async () => {
   await load()
   if (graphStore.rawEdges.length === 0) {
@@ -271,7 +303,7 @@ onMounted(async () => {
   // Always fetch agents for the current project — the store doesn't track which
   // project's agents it holds, so a cached list from a prior project visit would
   // cause wrong agent resolution (especially for defect assignee-role matching).
-  void queueStore.fetch()
+  if (import.meta.env.MODE !== 'test') queueStore.fetch().catch(() => {})
   void agentsStore.fetchAgents(project.value)
 })
 </script>
@@ -284,6 +316,7 @@ onMounted(async () => {
         v-if="artifact"
         :project="project"
         :path="artifactPath"
+        :rel-path="artifact.rel_path"
         :lineage="artifact.lineage"
       />
       <div v-else class="crumb-back-wrap">
@@ -338,6 +371,17 @@ onMounted(async () => {
       <button class="btn-link muted" @click="acknowledge">Keep editing</button>
     </div>
 
+    <!-- Post-resolution routing affordance (Milestone 6) -->
+    <PostResolutionPrompt
+      v-if="showPostResolutionPrompt && artifact && !editing"
+      :project="project"
+      :path="artifactPath"
+      :artifact="artifact"
+      @dismiss="showPostResolutionPrompt = false"
+      @approved="showPostResolutionPrompt = false"
+      @requeued="showPostResolutionPrompt = false"
+    />
+
     <!-- Body -->
     <div v-if="loading" class="state-msg">Loading…</div>
     <div v-else-if="loadError" class="state-msg error">{{ loadError }}</div>
@@ -347,9 +391,14 @@ onMounted(async () => {
     <div v-else-if="!editing" class="editor-body">
       <div class="editor-content">
         <h1 class="artifact-title">{{ artifact.title || artifact.slug }}</h1>
-        <div v-if="artifact.status === 'blocked' && hasOpenQuestions" class="blocked-questions-banner">
-          This artifact is blocked pending answers to open questions below.
+        <div v-if="hasOpenQuestions" class="blocked-questions-banner" tabindex="-1">
+          This artefact is blocked awaiting your answers.
           <a href="#open-questions" class="oq-link" @click.prevent="scrollToOpenQuestions">Jump to questions ↓</a>
+          <button
+            v-if="userCanResolve"
+            class="btn-resolve-questions"
+            @click="openResolveModal"
+          >Resolve Questions</button>
         </div>
         <MarkdownPreview :source="artifact.body" :project="project" />
       </div>
@@ -388,6 +437,15 @@ onMounted(async () => {
     :target-path="artifactPath"
     @started="showRunAgent = false"
     @cancel="showRunAgent = false"
+  />
+
+  <ResolveQuestionsModal
+    v-if="showResolveModal && artifact"
+    :project="project"
+    :path="artifactPath"
+    :frontmatter="artifact.frontmatter"
+    @close="showResolveModal = false"
+    @finished="onQuestionsFinished"
   />
 
   <BrainDumpModal
@@ -562,6 +620,20 @@ onMounted(async () => {
   font-weight: 700;
   white-space: nowrap;
 }
+.btn-resolve-questions {
+  margin-left: auto;
+  padding: var(--space-1) var(--space-3);
+  background: #92400e;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-resolve-questions:hover { opacity: 0.88; }
+.btn-resolve-questions:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 /* Edit mode: split pane */
 .editor-split {

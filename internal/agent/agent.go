@@ -202,6 +202,12 @@ func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) 
 }
 
 // startCommandProcess is the shared subprocess launcher used by CLI drivers.
+// readerDrainGrace bounds how long the process-reaper waits for the stdout/
+// stderr readers to hit EOF before calling cmd.Wait() (which force-closes the
+// pipe FDs). Normal runs drain in well under this; the grace only bites the
+// abnormal case of a detached grandchild holding a write end open.
+const readerDrainGrace = 5 * time.Second
+
 // It takes an already-configured exec.Cmd (with Dir and Env set by the caller)
 // plus the arg list (only used for the log-file header) and returns a process
 // with stdout/stderr piped, progress events streaming, and the log file open
@@ -298,11 +304,28 @@ func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []strin
 		}
 	}()
 
-	// Watcher goroutine: cmd.Wait() reaps the process and closes the parent
-	// pipe FDs, which unblocks the readers above even if a detached
-	// grandchild is still holding the write ends. Stash the result so
-	// proc.Wait() can return it without double-calling cmd.Wait.
+	// Watcher goroutine: reap the process, then stash the result so proc.Wait()
+	// can return it without double-calling cmd.Wait.
+	//
+	// cmd.Wait() closes the StdoutPipe FDs; the Go docs warn it is "incorrect to
+	// call Wait before all reads from the pipe have completed." Calling it
+	// concurrently with the stdout scanner truncates a fast-exiting process's
+	// final lines — including the terminal `{"type":"result",...}` event — which
+	// trips the truncated-stream check on healthy runs. So wait for the readers
+	// to drain first: in the normal case the process's own exit closes the pipe
+	// write end, so the readers reach EOF on their own and we reap with nothing
+	// lost. Bound the wait with a grace so a detached grandchild still holding a
+	// write end can't hang us — after the grace we reap anyway, and cmd.Wait()
+	// force-closes the FDs to unblock the readers (the prior behaviour).
 	go func() {
+		readersDone := make(chan struct{})
+		go func() { wg.Wait(); close(readersDone) }()
+		select {
+		case <-readersDone:
+		case <-time.After(readerDrainGrace):
+			slog.Warn("agent: stdout readers did not drain within grace; reaping anyway (possible detached grandchild holding the pipe)",
+				"run_id", run.RunID, "grace", readerDrainGrace)
+		}
 		err := cmd.Wait()
 		waitErr <- err
 		close(waitErr)
@@ -731,6 +754,12 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	// failures. Tracked via the broadcast closure; checked after proc.Wait().
 	var resultEventSeen bool
 
+	// Auth-error tracker: counts consecutive api_retry/401 events; once the
+	// threshold is reached the run is killed early and queue.auth_error is
+	// broadcast so the dispatcher can re-enqueue without pausing the queue.
+	var authErrCount int
+	var authErrKilled bool
+
 	// Event-forwarding closure shared by the precheck (Claude) and the plain
 	// drain loop (Ollama and any other non-Claude driver). Also detects
 	// rate-limit payloads (M4) and re-broadcasts them as queue.rate_limit so
@@ -748,6 +777,23 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 							"kind":     string(kind),
 						},
 					})
+				}
+				// Auth-error fast-fail: kill the run after authErrorThreshold
+				// consecutive api_retry/401 events and signal the dispatcher to
+				// re-enqueue without pausing. The guard prevents double-kill on
+				// both mid-stream retries and the terminal "Not logged in" result.
+				if !authErrKilled && extractAuthError(payload) {
+					authErrCount++
+					if authErrCount >= authErrorThreshold {
+						authErrKilled = true
+						slog.Warn("agent: auth failure detected; killing run for re-enqueue",
+							"run_id", run.RunID, "auth_err_count", authErrCount)
+						m.hub.Broadcast(hub.Event{
+							Type:    "queue.auth_error",
+							Payload: map[string]any{"run_id": run.RunID},
+						})
+						m.killer.Kill(proc)
+					}
 				}
 				// Track terminal result events so we can detect truncated streams.
 				if isResultEvent(payload) {
@@ -840,6 +886,14 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 				status = "killed"
 			}
 		}
+	}
+
+	// Auth-error override: if we broadcast queue.auth_error and the process
+	// had already exited cleanly (e.g. terminal "Not logged in" result), force
+	// status to failed so the run is not incorrectly recorded as successful.
+	if authErrKilled && status == "done" {
+		status = "failed"
+		failureReason = "auth_error"
 	}
 
 	// Truncated-stream detection (claude-code-cli / claude-mediated only).
@@ -1553,6 +1607,49 @@ var quotaExhaustedRE = regexp.MustCompile(`(?i)(out of (extra )?usage|usage[\s\S
 
 func looksLikeQuotaExhausted(text string) bool {
 	return quotaExhaustedRE.MatchString(text)
+}
+
+// authErrorThreshold is the number of api_retry/401 events that must be seen
+// before the supervisor kills the run and signals re-enqueue. A threshold of 2
+// avoids reacting to a single transient blip while still killing far earlier
+// than Claude's internal 10-attempt retry budget.
+const authErrorThreshold = 2
+
+// authErrorRE matches terminal result strings that indicate an expired or
+// missing OAuth token ("Not logged in · Please run /login").
+var authErrorRE = regexp.MustCompile(`(?i)(not logged in|please run /login|authentication.?failed)`)
+
+// extractAuthError inspects a decoded agent.progress event payload and returns
+// true when the stream event signals a transient OAuth token failure:
+//
+//   - {"type":"system","subtype":"api_retry","error":"authentication_failed",...}
+//   - {"type":"result","is_error":true,"result":"Not logged in ..."}
+func extractAuthError(payload map[string]any) bool {
+	ev, _ := payload["event"].(map[string]any)
+	if ev == nil {
+		return false
+	}
+	// api_retry with authentication_failed: the OAuth token was rejected mid-run.
+	if t, _ := ev["type"].(string); t == "system" {
+		if sub, _ := ev["subtype"].(string); sub == "api_retry" {
+			if errStr, _ := ev["error"].(string); errStr == "authentication_failed" {
+				return true
+			}
+			// Also match on numeric error_status 401 as a secondary signal.
+			if status, _ := ev["error_status"].(float64); status == 401 {
+				return true
+			}
+		}
+	}
+	// Terminal result event: Claude exhausted its retry budget with a login error.
+	if t, _ := ev["type"].(string); t == "result" {
+		if isErr, _ := ev["is_error"].(bool); isErr {
+			if result, _ := ev["result"].(string); authErrorRE.MatchString(result) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // driverEmitsResultEvent reports whether the given driver follows the Claude

@@ -4,12 +4,12 @@ type: idea
 status: clarifying
 lineage: ideas-are-features-or-enhancements
 priority: normal
+parent: lifecycle/ideas/inherit-priority-and-release.md
 labels:
     - workflow
     - artefacts
     - feature
-release: KC-Release5
-parent: lifecycle/ideas/inherit-priority-and-release.md
+release: KC-Release6
 ---
 
 # ideas are features or enhancements

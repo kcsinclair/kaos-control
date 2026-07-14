@@ -111,6 +111,7 @@ const selectedLabel = ref(store.filter.label ?? '')
 const selectedType = ref(store.filter.type ?? '')
 const selectedPriority = ref(store.filter.priority ?? '')
 const selectedRelease = ref(store.filter.release ?? '')
+const awaitingOnly = ref(false)
 const searchText = ref('')
 
 function applyFilters() {
@@ -124,6 +125,7 @@ function applyFilters() {
     priority: selectedPriority.value || undefined,
     release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
     q: searchText.value || undefined,
+    awaiting_answers: awaitingOnly.value || undefined,
     limit: 0,
     offset: undefined,
   })
@@ -141,6 +143,7 @@ function resetFilters() {
   selectedType.value = ''
   selectedPriority.value = ''
   selectedRelease.value = ''
+  awaitingOnly.value = false
   searchText.value = ''
   applyFilters()
 }
@@ -209,6 +212,7 @@ function initFiltersFromQuery() {
   if (typeof q.priority === 'string') selectedPriority.value = q.priority
   if (typeof q.release === 'string') selectedRelease.value = q.release
   if (typeof q.q === 'string') searchText.value = q.q
+  if (q.awaiting === '1') awaitingOnly.value = true
 }
 
 onMounted(async () => {
@@ -222,6 +226,7 @@ onMounted(async () => {
       priority: selectedPriority.value || undefined,
       release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
       q: searchText.value || undefined,
+      awaiting_answers: awaitingOnly.value || undefined,
       limit: 0,
       offset: undefined,
     }),
@@ -235,7 +240,7 @@ onMounted(async () => {
 <template>
   <div class="list-view">
     <div class="list-header">
-      <h2 class="list-title">Artefacts</h2>
+      <h2 class="list-title">{{ awaitingOnly ? 'Awaiting your answers' : 'Artefacts' }}</h2>
       <span class="list-count" v-if="!store.loading">{{ visibleItems.length }} total</span>
       <label class="toggle-label" v-if="!store.loading">
         <input
@@ -303,11 +308,23 @@ onMounted(async () => {
         <option v-for="r in releasesStore.releases" :key="r.id" :value="r.name">{{ r.name }}</option>
         <option value="__unassigned__">Unassigned</option>
       </select>
+      <label class="toggle-label">
+        <input
+          type="checkbox"
+          class="toggle-input"
+          v-model="awaitingOnly"
+          @change="applyFilters"
+        />
+        <span class="toggle-text">Awaiting my answers</span>
+      </label>
       <button class="btn-ghost" @click="resetFilters">Reset</button>
     </div>
 
     <div class="table-wrap">
       <div v-if="store.loading" class="state-msg">Loading…</div>
+      <div v-else-if="visibleItems.length === 0 && awaitingOnly" class="state-msg">
+        Nothing is currently awaiting your answers.
+      </div>
       <div v-else-if="visibleItems.length === 0" class="state-msg">No artifacts found.</div>
       <div v-else class="table-scroll">
       <table class="artifact-table">
@@ -350,7 +367,7 @@ onMounted(async () => {
                 class="agent-status-pill"
                 :data-status="row.active_agent_status"
               >{{ row.active_agent_status === 'running' ? 'Agent Running' : 'Work Queued' }}</span>
-              <span class="artifact-path">{{ row.path }}</span>
+              <span class="artifact-path">{{ row.rel_path || row.path }}</span>
             </td>
             <td><span class="stage-tag">{{ row.stage }}</span></td>
             <td><span class="badge" :data-status="row.status">{{ row.status }}</span></td>

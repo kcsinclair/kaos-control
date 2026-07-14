@@ -25,6 +25,10 @@ var KnownTypes = map[string]bool{
 	"plan-backend": true, "plan-frontend": true, "plan-test": true,
 	"test": true, "prototype": true, "defect": true,
 	"doc": true, "release": true,
+	// Catalog artifacts shipped for project onboarding (see
+	// lifecycle/ideas/architecture-templates.md): selectable high-level
+	// architectures and the tech stacks that suit them.
+	"architecture": true, "tech-stack": true,
 }
 
 // Edge kinds used in GraphEdge.Kind and the links table.
@@ -54,6 +58,7 @@ type Artifact struct {
 	Index       int         // 0 = originating file; >=2 for descendants
 	StageSuffix string      // e.g. "be", "fe" from filename
 	Stage       string      // lifecycle stage dir name, e.g. "ideas"
+	RelPath     string      // path under the stage dir, e.g. "login.md" or "done/login.md"
 	FM          Frontmatter
 	Body        string      // raw markdown body (after frontmatter)
 	Links       []Link
@@ -113,7 +118,7 @@ var md = goldmark.New(
 // relPath is relative to the project root (e.g. "lifecycle/ideas/login.md").
 func Parse(raw []byte, relPath string, mtime time.Time) *Artifact {
 	sum := sha256.Sum256(raw)
-	stage, slug, idx, sfx := parsePathComponents(relPath)
+	stage, rel, slug, idx, sfx := parsePathComponents(relPath)
 
 	a := &Artifact{
 		Path:        relPath,
@@ -121,6 +126,7 @@ func Parse(raw []byte, relPath string, mtime time.Time) *Artifact {
 		Index:       idx,
 		StageSuffix: sfx,
 		Stage:       stage,
+		RelPath:     rel,
 		Mtime:       mtime,
 		SHA256:      sum,
 		Raw:         raw,
@@ -233,29 +239,55 @@ func EnsureFrontmatterField(raw []byte, key, value string) ([]byte, bool) {
 	return []byte("---" + newFm + s[fmEnd:]), true
 }
 
-// HasOpenQuestions reports whether the markdown body contains a non-empty
-// "## Open Questions" section. The heading text is matched case-sensitively.
-// The section is considered non-empty when at least one non-whitespace line
-// appears after the heading before the next "## " heading or end-of-file.
+// openQuestionSentinels are placeholder section contents that mean "there are
+// no open questions". Agents sometimes emit one of these instead of omitting
+// the section entirely; they must NOT trip the auto-block gate. Compared
+// case-insensitively after stripping list markers and surrounding punctuation.
+var openQuestionSentinels = map[string]bool{
+	"none":              true,
+	"n/a":               true,
+	"na":                true,
+	"nil":               true,
+	"no open questions": true,
+	"no questions":      true,
+	"tbd":               true,
+}
+
+// HasOpenQuestions reports whether the markdown body contains a "## Open
+// Questions" section with genuine, unresolved questions. The heading is matched
+// case-sensitively. The section is treated as empty (returns false) when it has
+// no content before the next "## " heading or end-of-file, OR when its only
+// content is "no questions" sentinels (e.g. "None", "- N/A") — see
+// openQuestionSentinels. Any other non-whitespace line is a real open question.
 func HasOpenQuestions(body string) bool {
 	lines := strings.Split(body, "\n")
 	inSection := false
+	sawRealQuestion := false
 	for _, line := range lines {
 		if inSection {
 			if strings.HasPrefix(line, "## ") {
-				// Reached the next H2 heading — section ended with no content.
-				return false
+				break // next H2 heading ends the section
 			}
-			if strings.TrimSpace(line) != "" {
-				return true
+			if strings.TrimSpace(line) == "" {
+				continue
 			}
-		} else {
-			if line == "## Open Questions" {
-				inSection = true
+			if !isOpenQuestionSentinel(line) {
+				sawRealQuestion = true
 			}
+		} else if line == "## Open Questions" {
+			inSection = true
 		}
 	}
-	return false
+	return sawRealQuestion
+}
+
+// isOpenQuestionSentinel reports whether a section content line is a placeholder
+// meaning "no open questions" (e.g. "None", "- N/A", "_none_.").
+func isOpenQuestionSentinel(line string) bool {
+	s := strings.TrimSpace(line)
+	s = strings.TrimLeft(s, "-*+") // drop a leading list marker
+	s = strings.Trim(s, " \t_*`.,!()[]")
+	return openQuestionSentinels[strings.ToLower(strings.TrimSpace(s))]
 }
 
 // RenderHTML renders markdown source to HTML using goldmark.
@@ -275,13 +307,17 @@ func RenderHTML(src string) string {
 // Group 1 = slug, group 2 = index digits, group 3 = optional alpha suffix.
 var indexSuffixRe = regexp.MustCompile(`^(.+)-(\d+)(?:-([a-zA-Z]+))?$`)
 
-// parsePathComponents extracts stage, slug, index, and stage-suffix from a
-// project-relative path like "lifecycle/backend-plans/login-3-be.md".
-func parsePathComponents(relPath string) (stage, slug string, idx int, sfx string) {
-	// relPath is like "lifecycle/<stage>/<filename>.md"
-	parts := strings.SplitN(relPath, "/", 3)
-	if len(parts) >= 2 {
-		stage = parts[len(parts)-2] // parent directory name
+// parsePathComponents extracts stage, root-relative path, slug, index, and
+// stage-suffix from a project-relative path like
+// "lifecycle/backend-plans/login-3-be.md". Stage is always the top-level
+// directory under lifecycle/, never a nested one; rel is everything below the
+// stage directory, joined with "/" (a bare filename for flat artifacts).
+// relPath must already use "/" separators — callers pass filepath.ToSlash'd paths.
+func parsePathComponents(relPath string) (stage, rel, slug string, idx int, sfx string) {
+	parts := strings.Split(relPath, "/")
+	if len(parts) >= 2 && parts[0] == "lifecycle" {
+		stage = parts[1]
+		rel = strings.Join(parts[2:], "/")
 	}
 	stem := strings.TrimSuffix(filepath.Base(relPath), ".md")
 	slug, idx, sfx = ParseFilename(stem)

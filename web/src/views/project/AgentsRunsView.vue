@@ -23,6 +23,7 @@ import type { AgentSummary, AgentRunRow } from '@/types/api'
 import type { AgentFormData } from '@/components/agent/AgentConfigForm.vue'
 import { useProjectConfigStore } from '@/stores/projectConfig'
 import { useQueueStore } from '@/stores/queue'
+import ProjectQueuePanel from '@/components/agent/ProjectQueuePanel.vue'
 
 function agentDriver(agentName: string, agents: AgentSummary[]): string {
   const a = agents.find((ag) => ag.name === agentName)
@@ -213,7 +214,7 @@ onMounted(() => {
   // badges would read 0 until the first artifact.indexed WebSocket event.
   void store.fetchReadyCounts(project)
   configStore.fetchRoles(project)
-  void queueStore.fetch()
+  if (import.meta.env.MODE !== 'test') queueStore.fetch().catch(() => {})
 })
 </script>
 
@@ -236,162 +237,168 @@ onMounted(() => {
       <button class="queue-pause-banner__btn" @click="queueStore.resume()">Resume Queue</button>
     </div>
 
-    <AgentPanelRow
-      :agents="store.agents"
-      @select="selectedAgent = $event"
-      @edit="openEditAgent($event)"
-    />
+    <div class="runs-layout">
+      <div class="runs-main">
+        <AgentPanelRow
+          :agents="store.agents"
+          @select="selectedAgent = $event"
+          @edit="openEditAgent($event)"
+        />
 
-    <div v-if="store.loading" class="state-msg">Loading…</div>
-    <div v-else-if="!store.runs.length" class="state-msg">No runs yet.</div>
+        <div v-if="store.loading" class="state-msg">Loading…</div>
+        <div v-else-if="!store.runs.length" class="state-msg">No runs yet.</div>
 
-    <div v-else class="table-scroll">
-    <table class="runs-table">
-      <thead>
-        <tr>
-          <SortHeader label="Run ID"  column="run_id"      :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
-          <SortHeader label="Agent"   column="agent_name"  :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
-          <th>Driver</th>
-          <SortHeader label="Target"  column="target_path" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
-          <SortHeader label="Status"  column="status"      :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
-          <SortHeader label="Started" column="started_at"  :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
-          <SortHeader label="Elapsed" column="elapsed"     :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <template v-for="run in paginatedRuns" :key="run.run_id">
-          <tr class="run-row" @click="toggleExpand(run.run_id)">
-            <td class="cell-mono">{{ run.run_id.slice(0, 8) }}…</td>
-            <td>{{ run.agent_name }}</td>
-            <td>
-              <span
-                v-if="agentDriver(run.agent_name, store.agents)"
-                class="driver-badge"
-                :data-driver="store.agents.find(a => a.name === run.agent_name)?.driver"
-              >{{ agentDriver(run.agent_name, store.agents) }}</span>
-            </td>
-            <td class="cell-path">
-              <button
-                class="path-link"
-                @click.stop="router.push(`/p/${project}/artifacts/${run.target_path}`)"
-              >{{ run.target_path }}</button>
-            </td>
-            <td>
-              <span class="status-chip" :data-status="run.status">{{ run.status }}</span>
-            </td>
-            <td class="cell-muted">{{ new Date(run.started_at).toLocaleTimeString() }}</td>
-            <td class="cell-muted">{{ elapsed(run) }}</td>
-            <td class="cell-actions" @click.stop>
-              <button
-                v-if="run.status === 'running'"
-                class="btn-kill"
-                @click="kill(run.run_id)"
-              >Kill</button>
-              <span class="expand-toggle">{{ expandedRun === run.run_id ? '▲' : '▼' }}</span>
-            </td>
-          </tr>
-          <tr v-if="expandedRun === run.run_id" class="run-detail">
-            <td colspan="8" class="detail-cell">
-              <!-- Precheck failure banner -->
-              <RunFailureBanner
-                v-if="run.status === 'failed' && run.failure_reason"
-                :failure-reason="run.failure_reason"
-                :observed-mode="run.observed_permission_mode"
-                :remediation="run.remediation"
-              />
-              <!-- Denial notice for done runs that had denials (on_denial: continue) -->
-              <RunFailureBanner
-                v-else-if="run.status === 'done' && run.denied_tool_calls?.length"
-                :denial-count="run.denied_tool_calls.length"
-              />
-              <!-- Live progress for running runs -->
-              <div v-if="run.status === 'running' && store.progressLines.get(run.run_id)?.length" class="detail-section">
-                <div class="detail-label">Progress</div>
-                <pre class="detail-log">{{ store.progressLines.get(run.run_id)!.slice(-30).join('\n') }}</pre>
-              </div>
-              <!-- Permission events -->
-              <div v-if="store.permissionEvents.get(run.run_id)?.length" class="detail-section">
-                <div class="detail-label">Permission Events</div>
-                <!-- Observe-only mode notice -->
-                <div
-                  v-if="store.agents.find(a => a.name === run.agent_name)?.observe_only"
-                  class="observe-notice"
-                >
-                  Observe-only mode — all tool calls were allowed.
-                  Decisions shown are what would have been enforced.
-                </div>
-                <div class="perm-event-list">
-                  <div
-                    v-for="(ev, idx) in store.permissionEvents.get(run.run_id)"
-                    :key="idx"
-                    class="perm-event-row"
-                  >
-                    <span class="perm-chip" :data-decision="ev.decision">{{ ev.decision }}</span>
-                    <span class="perm-tool">{{ ev.tool_name }}</span>
-                    <span class="perm-target">{{ ev.target_path ?? ev.command ?? '' }}</span>
-                    <span class="perm-reason">{{ ev.reason }}</span>
-                    <span class="perm-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
-                  </div>
-                </div>
-              </div>
-              <!-- Stderr tail for completed -->
-              <div v-if="run.stderr_tail" class="detail-section">
-                <div class="detail-label">Stderr tail</div>
-                <pre class="detail-log detail-log--err">{{ run.stderr_tail }}</pre>
-              </div>
-              <!-- Artifacts produced -->
-              <div v-if="run.artifacts_produced?.length" class="detail-section">
-                <div class="detail-label">Artifacts produced</div>
-                <div class="artifact-list">
+        <div v-else class="table-scroll">
+        <table class="runs-table">
+          <thead>
+            <tr>
+              <SortHeader label="Run ID"  column="run_id"      :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
+              <SortHeader label="Agent"   column="agent_name"  :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
+              <th>Driver</th>
+              <SortHeader label="Target"  column="target_path" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
+              <SortHeader label="Status"  column="status"      :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
+              <SortHeader label="Started" column="started_at"  :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
+              <SortHeader label="Elapsed" column="elapsed"     :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="toggleSort" />
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="run in paginatedRuns" :key="run.run_id">
+              <tr class="run-row" @click="toggleExpand(run.run_id)">
+                <td class="cell-mono">{{ run.run_id.slice(0, 8) }}…</td>
+                <td>{{ run.agent_name }}</td>
+                <td>
+                  <span
+                    v-if="agentDriver(run.agent_name, store.agents)"
+                    class="driver-badge"
+                    :data-driver="store.agents.find(a => a.name === run.agent_name)?.driver"
+                  >{{ agentDriver(run.agent_name, store.agents) }}</span>
+                </td>
+                <td class="cell-path">
                   <button
-                    v-for="p in run.artifacts_produced"
-                    :key="p"
-                    class="artifact-link"
-                    @click="router.push(`/p/${project}/artifacts/${p}`)"
-                  >{{ p }}</button>
-                </div>
-              </div>
-              <!-- Denied-calls summary (runs with denials) -->
-              <RunDenialSummary
-                v-if="run.denied_tool_calls?.length"
-                :denials="run.denied_tool_calls"
-                :observe-only="store.agents.find(a => a.name === run.agent_name)?.observe_only"
-              />
-              <!-- Run summary (terminal runs only) -->
-              <div v-if="TERMINAL_RUN_STATUSES.has(run.status)" class="detail-section">
-                <div class="detail-label">Run summary</div>
-                <div v-if="summaryLoading.has(run.run_id)" class="detail-empty">Loading summary…</div>
-                <RunSummaryCard
-                  v-else
-                  :result="store.runResults.get(run.run_id) ?? null"
-                  :driver-available="agentHasTokenMetrics(run.agent_name)"
-                />
-              </div>
-              <!-- Full log — opens in a full-height modal (same component
-                   used by the artefact-screen run-detail modal). -->
-              <div class="detail-section">
-                <div class="detail-label">Run log</div>
-                <button class="btn-link" @click="fullLogRunId = run.run_id">View full log</button>
-              </div>
-              <div v-if="!run.stderr_tail && !run.artifacts_produced?.length && run.status !== 'running'" class="detail-empty">
-                No output recorded.
-              </div>
-            </td>
-          </tr>
-        </template>
-      </tbody>
-    </table>
-    </div>
+                    class="path-link"
+                    @click.stop="router.push(`/p/${project}/artifacts/${run.target_path}`)"
+                  >{{ run.target_path }}</button>
+                </td>
+                <td>
+                  <span class="status-chip" :data-status="run.status">{{ run.status }}</span>
+                </td>
+                <td class="cell-muted">{{ new Date(run.started_at).toLocaleTimeString() }}</td>
+                <td class="cell-muted">{{ elapsed(run) }}</td>
+                <td class="cell-actions" @click.stop>
+                  <button
+                    v-if="run.status === 'running'"
+                    class="btn-kill"
+                    @click="kill(run.run_id)"
+                  >Kill</button>
+                  <span class="expand-toggle">{{ expandedRun === run.run_id ? '▲' : '▼' }}</span>
+                </td>
+              </tr>
+              <tr v-if="expandedRun === run.run_id" class="run-detail">
+                <td colspan="8" class="detail-cell">
+                  <!-- Precheck failure banner -->
+                  <RunFailureBanner
+                    v-if="run.status === 'failed' && run.failure_reason"
+                    :failure-reason="run.failure_reason"
+                    :observed-mode="run.observed_permission_mode"
+                    :remediation="run.remediation"
+                  />
+                  <!-- Denial notice for done runs that had denials (on_denial: continue) -->
+                  <RunFailureBanner
+                    v-else-if="run.status === 'done' && run.denied_tool_calls?.length"
+                    :denial-count="run.denied_tool_calls.length"
+                  />
+                  <!-- Live progress for running runs -->
+                  <div v-if="run.status === 'running' && store.progressLines.get(run.run_id)?.length" class="detail-section">
+                    <div class="detail-label">Progress</div>
+                    <pre class="detail-log">{{ store.progressLines.get(run.run_id)!.slice(-30).join('\n') }}</pre>
+                  </div>
+                  <!-- Permission events -->
+                  <div v-if="store.permissionEvents.get(run.run_id)?.length" class="detail-section">
+                    <div class="detail-label">Permission Events</div>
+                    <!-- Observe-only mode notice -->
+                    <div
+                      v-if="store.agents.find(a => a.name === run.agent_name)?.observe_only"
+                      class="observe-notice"
+                    >
+                      Observe-only mode — all tool calls were allowed.
+                      Decisions shown are what would have been enforced.
+                    </div>
+                    <div class="perm-event-list">
+                      <div
+                        v-for="(ev, idx) in store.permissionEvents.get(run.run_id)"
+                        :key="idx"
+                        class="perm-event-row"
+                      >
+                        <span class="perm-chip" :data-decision="ev.decision">{{ ev.decision }}</span>
+                        <span class="perm-tool">{{ ev.tool_name }}</span>
+                        <span class="perm-target">{{ ev.target_path ?? ev.command ?? '' }}</span>
+                        <span class="perm-reason">{{ ev.reason }}</span>
+                        <span class="perm-time">{{ new Date(ev.timestamp).toLocaleTimeString() }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Stderr tail for completed -->
+                  <div v-if="run.stderr_tail" class="detail-section">
+                    <div class="detail-label">Stderr tail</div>
+                    <pre class="detail-log detail-log--err">{{ run.stderr_tail }}</pre>
+                  </div>
+                  <!-- Artifacts produced -->
+                  <div v-if="run.artifacts_produced?.length" class="detail-section">
+                    <div class="detail-label">Artifacts produced</div>
+                    <div class="artifact-list">
+                      <button
+                        v-for="p in run.artifacts_produced"
+                        :key="p"
+                        class="artifact-link"
+                        @click="router.push(`/p/${project}/artifacts/${p}`)"
+                      >{{ p }}</button>
+                    </div>
+                  </div>
+                  <!-- Denied-calls summary (runs with denials) -->
+                  <RunDenialSummary
+                    v-if="run.denied_tool_calls?.length"
+                    :denials="run.denied_tool_calls"
+                    :observe-only="store.agents.find(a => a.name === run.agent_name)?.observe_only"
+                  />
+                  <!-- Run summary (terminal runs only) -->
+                  <div v-if="TERMINAL_RUN_STATUSES.has(run.status)" class="detail-section">
+                    <div class="detail-label">Run summary</div>
+                    <div v-if="summaryLoading.has(run.run_id)" class="detail-empty">Loading summary…</div>
+                    <RunSummaryCard
+                      v-else
+                      :result="store.runResults.get(run.run_id) ?? null"
+                      :driver-available="agentHasTokenMetrics(run.agent_name)"
+                    />
+                  </div>
+                  <!-- Full log — opens in a full-height modal (same component
+                       used by the artefact-screen run-detail modal). -->
+                  <div class="detail-section">
+                    <div class="detail-label">Run log</div>
+                    <button class="btn-link" @click="fullLogRunId = run.run_id">View full log</button>
+                  </div>
+                  <div v-if="!run.stderr_tail && !run.artifacts_produced?.length && run.status !== 'running'" class="detail-empty">
+                    No output recorded.
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        </div>
 
-    <TablePagination
-      v-if="!store.loading && store.runs.length > 0"
-      :total-items="store.runs.length"
-      :current-page="currentPage"
-      :page-size="pageSize"
-      @update:current-page="setPage"
-      @update:page-size="setPageSize"
-    />
+        <TablePagination
+          v-if="!store.loading && store.runs.length > 0"
+          :total-items="store.runs.length"
+          :current-page="currentPage"
+          :page-size="pageSize"
+          @update:current-page="setPage"
+          @update:page-size="setPageSize"
+        />
+      </div>
+
+      <ProjectQueuePanel class="runs-queue-panel" :project="project" />
+    </div>
 
     <RunAgentDialog
       v-if="showRunDialog"
@@ -674,6 +681,32 @@ onMounted(() => {
 .perm-reason { color: var(--color-text-muted); flex: 1; }
 .perm-time { color: var(--color-text-muted); flex-shrink: 0; font-size: 11px; }
 .runs-header-actions { display: flex; gap: var(--space-2); }
+.runs-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  padding: 0 var(--space-6) var(--space-6) 0;
+}
+.runs-main {
+  flex: 1;
+  min-width: 0;
+}
+.runs-queue-panel {
+  flex: 0 0 300px;
+  width: 300px;
+  margin-top: var(--space-4);
+}
+@media (max-width: 900px) {
+  .runs-layout {
+    flex-direction: column;
+    padding: 0 var(--space-4) var(--space-4) 0;
+  }
+  .runs-queue-panel {
+    flex: 1 1 auto;
+    width: 100%;
+    margin: 0 var(--space-4);
+  }
+}
 .btn-secondary {
   padding: var(--space-2) var(--space-4);
   background: transparent;

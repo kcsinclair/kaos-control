@@ -8,6 +8,7 @@ import { useUiStore } from '@/stores/ui'
 import { useThemeStore } from '@/stores/theme'
 import { useAgentsStore } from '@/stores/agents'
 import { useQueueStore } from '@/stores/queue'
+import { useOpenQuestionsStore } from '@/stores/openQuestions'
 import { ApiError } from '@/api/client'
 import { Menu } from 'lucide-vue-next'
 
@@ -18,9 +19,14 @@ const ui = useUiStore()
 const theme = useThemeStore()
 const agentsStore = useAgentsStore()
 const queueStore = useQueueStore()
+const openQuestionsStore = useOpenQuestionsStore()
 
 const project = computed(() => route.params.project as string | undefined)
 const activeCount = computed(() => agentsStore.activeRuns.length)
+const awaitingAnswersCount = computed(() => openQuestionsStore.awaitingAnswersCount)
+const awaitingAnswersTooltip = computed(
+  () => `${awaitingAnswersCount.value} awaiting your answers`,
+)
 const queueBadgeTooltip = computed(() => {
   if (queueStore.isPaused) {
     const until = queueStore.pausedUntilDate
@@ -80,6 +86,16 @@ async function handleLogout() {
         <span v-if="queueStore.isPaused" class="queue-pause-icon">⏸</span>
         <span v-else class="queue-count">{{ queueStore.pendingCount }}</span>
         <span class="queue-label"> pending</span>
+      </RouterLink>
+      <RouterLink
+        v-if="project && awaitingAnswersCount > 0"
+        :to="`/p/${project}/artifacts?status=blocked&awaiting=1`"
+        class="header-awaiting-badge"
+        :aria-label="awaitingAnswersTooltip"
+        :title="awaitingAnswersTooltip"
+      >
+        <span class="awaiting-count">{{ awaitingAnswersCount }}</span>
+        <span class="awaiting-label"> awaiting answers</span>
       </RouterLink>
       <RouterLink
         v-if="project && activeCount > 0"
@@ -242,6 +258,30 @@ async function handleLogout() {
 .queue-count { font-weight: 600; }
 @media (max-width: 768px) {
   .queue-label { display: none; }
+}
+
+.header-awaiting-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid #a855f7;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.12);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.header-awaiting-badge:hover {
+  color: #fff;
+  border-color: #c084fc;
+  background: rgba(168, 85, 247, 0.25);
+}
+.awaiting-count { font-weight: 600; }
+@media (max-width: 768px) {
+  .awaiting-label { display: none; }
 }
 
 .header-run-indicator {

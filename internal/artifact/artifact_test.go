@@ -143,6 +143,45 @@ func TestHasOpenQuestions_HeadingFollowedImmediatelyByNextHeading(t *testing.T) 
 	}
 }
 
+// TestHasOpenQuestions_SentinelIsNotBlocking verifies that a section whose only
+// content is a "no questions" sentinel (None, N/A, etc., with or without a list
+// marker or punctuation) is treated as empty and does NOT block.
+func TestHasOpenQuestions_SentinelIsNotBlocking(t *testing.T) {
+	sentinelBodies := []string{
+		"## Open Questions\n\nNone\n",
+		"## Open Questions\n\n- None\n",
+		"## Open Questions\n\nN/A\n",
+		"## Open Questions\n\n_None._\n",
+		"## Open Questions\n\nNo open questions\n",
+		"## Open Questions\n\n- No questions\n",
+		"## Open Questions\n\nTBD\n",
+	}
+	for _, body := range sentinelBodies {
+		if artifact.HasOpenQuestions(body) {
+			t.Errorf("expected HasOpenQuestions=false (non-blocking) for sentinel body %q", body)
+		}
+	}
+}
+
+// TestHasOpenQuestions_RealQuestionAlongsideSentinelBlocks verifies that a
+// genuine question still blocks even when a sentinel line is also present.
+func TestHasOpenQuestions_RealQuestionAlongsideSentinelBlocks(t *testing.T) {
+	body := "## Open Questions\n\n- None\n- What auth model should we use?\n"
+	if !artifact.HasOpenQuestions(body) {
+		t.Error("expected HasOpenQuestions=true when a real question is present alongside a sentinel")
+	}
+}
+
+// TestHasOpenQuestions_QuestionContainingSentinelWordBlocks verifies that a real
+// question that merely contains a sentinel word (e.g. "none") is not mistaken
+// for a sentinel.
+func TestHasOpenQuestions_QuestionContainingSentinelWordBlocks(t *testing.T) {
+	body := "## Open Questions\n\n- Should none of the users have admin rights?\n"
+	if !artifact.HasOpenQuestions(body) {
+		t.Error("expected HasOpenQuestions=true for a real question containing a sentinel word")
+	}
+}
+
 // TestParse_CreatedFieldRoundTrip verifies that marshalling the parsed Frontmatter
 // back to YAML and re-parsing it preserves the `created` value exactly.
 func TestParse_CreatedFieldRoundTrip(t *testing.T) {

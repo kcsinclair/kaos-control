@@ -4,6 +4,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -508,8 +509,9 @@ type GitIdentity struct {
 
 // UserBinding binds a user email to one or more roles in a project.
 type UserBinding struct {
-	Email string   `yaml:"email"`
-	Roles []string `yaml:"roles"`
+	Email     string   `yaml:"email"`
+	Roles     []string `yaml:"roles"`
+	LinuxUser string   `yaml:"linux_user,omitempty"`
 }
 
 // RequiredPlans maps artifact type to a list of required plan types before advancing.
@@ -556,21 +558,43 @@ type RoadmapConfig struct {
 	DefaultPeriodMode string `yaml:"default_period_mode" json:"default_period_mode"`
 }
 
+// OpenQuestionsConfig holds per-project settings for the open-questions
+// resolution flow.
+type OpenQuestionsConfig struct {
+	// AnswerFormat names the strategy used to write answers back into the
+	// "## Open Questions" section. Accepted values: "blockquote" (default).
+	AnswerFormat string `yaml:"answer_format" json:"answer_format"`
+}
+
+// EffectiveFormat returns the configured answer format, falling back to
+// "blockquote" when empty or unrecognised.
+func (c OpenQuestionsConfig) EffectiveFormat() string {
+	switch c.AnswerFormat {
+	case "", "blockquote":
+		return "blockquote"
+	default:
+		slog.Warn("open_questions.answer_format: unknown value, falling back to blockquote",
+			"value", c.AnswerFormat)
+		return "blockquote"
+	}
+}
+
 // Project is the per-project configuration (lifecycle/config.yaml).
 type Project struct {
-	Stages        []Stage         `yaml:"stages"`
-	Git           GitConfig       `yaml:"git"`
-	Roles         []string        `yaml:"roles"`
-	Transitions   []Transition    `yaml:"transitions,omitempty"`
-	Users         []UserBinding   `yaml:"users"`
-	Agents        []AgentConfig   `yaml:"agents"`
-	RequiredPlans RequiredPlans   `yaml:"required_plans"`
-	Ignore        []string        `yaml:"ignore"`
-	Kanban        *KanbanConfig   `yaml:"kanban,omitempty"`
-	Feed          FeedConfig      `yaml:"feed"`
-	Scheduler     SchedulerConfig `yaml:"scheduler"`
-	Dashboard     DashboardConfig `yaml:"dashboard"`
-	Roadmap       RoadmapConfig   `yaml:"roadmap,omitempty" json:"roadmap,omitempty"`
+	Stages        []Stage             `yaml:"stages"`
+	Git           GitConfig           `yaml:"git"`
+	Roles         []string            `yaml:"roles"`
+	Transitions   []Transition        `yaml:"transitions,omitempty"`
+	Users         []UserBinding       `yaml:"users"`
+	Agents        []AgentConfig       `yaml:"agents"`
+	RequiredPlans RequiredPlans       `yaml:"required_plans"`
+	Ignore        []string            `yaml:"ignore"`
+	Kanban        *KanbanConfig       `yaml:"kanban,omitempty"`
+	Feed          FeedConfig          `yaml:"feed"`
+	Scheduler     SchedulerConfig     `yaml:"scheduler"`
+	Dashboard     DashboardConfig     `yaml:"dashboard"`
+	Roadmap       RoadmapConfig       `yaml:"roadmap,omitempty" json:"roadmap,omitempty"`
+	OpenQuestions OpenQuestionsConfig `yaml:"open_questions,omitempty" json:"open_questions,omitempty"`
 }
 
 // Transition overrides one edge in the state machine.
@@ -725,6 +749,16 @@ func validateProject(cfg *Project) error {
 			}
 		}
 	}
+	seenLinuxUser := make(map[string]bool)
+	for _, u := range cfg.Users {
+		if u.LinuxUser == "" {
+			continue
+		}
+		if seenLinuxUser[u.LinuxUser] {
+			return fmt.Errorf("project config: linux_user %q is bound to more than one user (ambiguous mapping)", u.LinuxUser)
+		}
+		seenLinuxUser[u.LinuxUser] = true
+	}
 	for _, pat := range cfg.Ignore {
 		if _, err := filepath.Match(pat, ""); err != nil {
 			return fmt.Errorf("project config: invalid ignore pattern %q: %w", pat, err)
@@ -798,4 +832,18 @@ func (p *Project) RolesFor(email string) []string {
 		}
 	}
 	return nil
+}
+
+// EmailForLinuxUser returns the email bound to the given Linux username, or
+// ("", false) if unmapped or if linuxUser is empty.
+func (p *Project) EmailForLinuxUser(linuxUser string) (string, bool) {
+	if linuxUser == "" {
+		return "", false
+	}
+	for _, u := range p.Users {
+		if u.LinuxUser == linuxUser {
+			return u.Email, true
+		}
+	}
+	return "", false
 }

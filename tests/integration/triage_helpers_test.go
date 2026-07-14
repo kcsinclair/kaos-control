@@ -146,6 +146,21 @@ func writeRawIdea(t *testing.T, projectRoot, slug, title, body string) string {
 	return relPath
 }
 
+// readArtifactContent returns the raw contents of the artifact at relPath
+// (relative to projectRoot) as a string.
+func readArtifactContent(t *testing.T, projectRoot, relPath string) (string, error) {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(projectRoot, relPath))
+	return string(b), err
+}
+
+// writeArtifactContent overwrites the artifact at relPath (relative to
+// projectRoot) with content.
+func writeArtifactContent(t *testing.T, projectRoot, relPath, content string) error {
+	t.Helper()
+	return os.WriteFile(filepath.Join(projectRoot, relPath), []byte(content), 0o644)
+}
+
 // readArtifactFM reads the artifact at relPath and returns key frontmatter
 // fields as a map. Returns nil if the file does not exist.
 func readArtifactFM(t *testing.T, projectRoot, relPath string) map[string]any {

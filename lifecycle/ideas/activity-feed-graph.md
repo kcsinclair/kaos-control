@@ -9,7 +9,7 @@ labels:
     - feature
     - frontend
     - vue
-release: KC-Release5
+parent: lifecycle/ideas/artefact-sub-directories.md
 ---
 
 # Activity Feed Graph with Stacked Bars

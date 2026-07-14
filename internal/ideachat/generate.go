@@ -23,6 +23,8 @@ type GenerateOptions struct {
 	ExistingLabels []string // label vocabulary to constrain LLM choices
 	ExistingSlugs  []string // existing slugs for collision detection
 	ModelCfg       ModelConfig
+	SourcePriority string // optional: priority inherited from the source/parent artifact (FR-6)
+	SourceRelease  string // optional: release inherited from the source/parent artifact (FR-6)
 }
 
 // GenerateResult holds the LLM-proposed artifact, ready for the caller to preview or persist.
@@ -114,13 +116,20 @@ func Generate(ctx context.Context, opts GenerateOptions) (*GenerateResult, error
 	if artifactType == "doc" && opts.SourceLineage != "" {
 		lineage = opts.SourceLineage
 	}
+	priority := opts.SourcePriority
+	if priority == "" {
+		priority = "normal"
+	}
 	fm := map[string]any{
 		"title":    action.Title,
 		"type":     artifactType,
 		"status":   "draft",
 		"lineage":  lineage,
 		"labels":   labels,
-		"priority": "normal",
+		"priority": priority,
+	}
+	if opts.SourceRelease != "" {
+		fm["release"] = opts.SourceRelease
 	}
 	if artifactType == "doc" && opts.SourcePath != "" {
 		fm["parent"] = opts.SourcePath

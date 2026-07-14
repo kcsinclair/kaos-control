@@ -5,7 +5,8 @@ import { ref, reactive, watch } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
 import { ApiError } from '@/api/client'
-import type { ProjectSummary, CheckDirectoryResult } from '@/types/api'
+import { getUserBindings } from '@/api/config'
+import type { ProjectSummary, CheckDirectoryResult, UserBinding } from '@/types/api'
 
 const props = defineProps<{
   project: ProjectSummary
@@ -34,6 +35,20 @@ const submitting = ref(false)
 const checkingDir = ref(false)
 const dirResult = ref<CheckDirectoryResult | null>(null)
 
+const userBindings = ref<UserBinding[]>([])
+const userBindingsLoading = ref(false)
+
+async function loadUserBindings(projectName: string) {
+  userBindingsLoading.value = true
+  try {
+    userBindings.value = await getUserBindings(projectName)
+  } catch {
+    userBindings.value = []
+  } finally {
+    userBindingsLoading.value = false
+  }
+}
+
 // Pre-populate form when project prop changes
 watch(
   () => props.project,
@@ -44,6 +59,7 @@ watch(
     errors.path = ''
     errors.general = ''
     dirResult.value = null
+    loadUserBindings(p.name)
   },
   { immediate: true },
 )
@@ -201,6 +217,32 @@ async function handleSubmit() {
           </div>
 
           <div v-if="errors.general" class="general-error">{{ errors.general }}</div>
+
+          <!-- User Bindings (read-only) -->
+          <div class="field">
+            <span class="field-label">User Bindings</span>
+            <div v-if="userBindingsLoading" class="users-state">Loading…</div>
+            <div v-else-if="userBindings.length === 0" class="users-state">No user bindings configured.</div>
+            <table v-else class="users-table" aria-label="Project user bindings">
+              <thead>
+                <tr>
+                  <th class="users-th">Email</th>
+                  <th class="users-th">Roles</th>
+                  <th class="users-th">Linux user</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="u in userBindings" :key="u.email" class="users-row">
+                  <td class="users-td">{{ u.email }}</td>
+                  <td class="users-td">{{ u.roles.join(', ') || '—' }}</td>
+                  <td class="users-td">
+                    <code v-if="u.linux_user" class="linux-user-badge">{{ u.linux_user }}</code>
+                    <span v-else class="users-empty">—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           <div class="modal-footer">
             <button type="button" class="btn-secondary" :disabled="submitting" @click="emit('close')">
@@ -381,4 +423,43 @@ async function handleSubmit() {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+.users-state {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: var(--space-1) 0;
+}
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+.users-th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+.users-row:not(:last-child) .users-td {
+  border-bottom: 1px solid var(--color-border);
+}
+.users-td {
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+.linux-user-badge {
+  font-family: 'SFMono-Regular', 'Consolas', monospace;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+  font-size: 11px;
+  color: var(--color-accent);
+}
+.users-empty {
+  color: var(--color-text-muted);
+}
 </style>

@@ -1,7 +1,7 @@
 ---
 title: "Tests: Fix CSS selector in 01-login.spec.ts (summary-card)"
 type: test
-status: draft
+status: done
 lineage: end-to-end-smoke-tests
 parent: lifecycle/defects/end-to-end-smoke-tests-7-defect.md
 ---

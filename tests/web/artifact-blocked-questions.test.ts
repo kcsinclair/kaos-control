@@ -44,6 +44,10 @@ vi.mock('@/api/artifacts', () => ({
   listLabels:       vi.fn().mockResolvedValue({ labels: [] }),
   listPriorities:   vi.fn().mockResolvedValue({ priorities: [] }),
   listArtifacts:    vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  // Default: no open questions. ArtifactEditorView calls this unconditionally
+  // on load(); tests that need a non-empty payload override it with
+  // mockResolvedValueOnce before mounting.
+  getOpenQuestions: vi.fn().mockResolvedValue({ heading: '## Open Questions', format: 'qna', questions: [], can_resolve: false }),
 }))
 
 // ArtifactEditorView calls agentsStore.fetchAgents() on mount → listAgents().
@@ -324,6 +328,14 @@ describe('ArtifactEditorView — no extra toast when saved status matches', () =
 
 describe('ArtifactEditorView — blocked-questions banner visibility', () => {
   it('renders the blocked-questions banner when status is "blocked" and body has Open Questions', async () => {
+    const { getOpenQuestions } = await import('@/api/artifacts')
+    vi.mocked(getOpenQuestions).mockResolvedValueOnce({
+      heading:     '## Open Questions',
+      format:      'qna',
+      questions:   [{ index: 0, text: 'Q1', answer: '' }],
+      can_resolve: true,
+    })
+
     const blocked = makeBlockedArtifact('## Open Questions\n\n- Q1\n')
     const { wrapper } = await mountEditor(blocked)
 

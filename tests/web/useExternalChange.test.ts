@@ -293,3 +293,56 @@ describe('useExternalChange — cleanup on unmount', () => {
     expect(onAutoRefresh).not.toHaveBeenCalled()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Milestone 6 (idea-archiving-5-test.md) — nested-path scenarios
+//
+// The composable compares e.payload.path against artifactPath with plain
+// string equality, so a nested rel_path-bearing full path is matched exactly
+// the same way as a flat one; these cases lock that in.
+// ---------------------------------------------------------------------------
+
+describe('useExternalChange — nested paths behave identically to flat paths', () => {
+  it('calls onAutoRefresh for a single-nested path when not dirty', async () => {
+    const onAutoRefresh = vi.fn()
+    setupComposable('lifecycle/ideas/archive/nested.md', {
+      isDirty: () => false,
+      onAutoRefresh,
+    })
+
+    emitFileChanged('lifecycle/ideas/archive/nested.md')
+    vi.advanceTimersByTime(300)
+    await nextTick()
+
+    expect(onAutoRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('sets hasExternalChange for a deeply-nested path when dirty', async () => {
+    const onAutoRefresh = vi.fn()
+    const { result } = setupComposable('lifecycle/ideas/2026/q3/release-x.md', {
+      isDirty: () => true,
+      onAutoRefresh,
+    })
+
+    emitFileChanged('lifecycle/ideas/2026/q3/release-x.md')
+    await nextTick()
+
+    expect(result.hasExternalChange.value).toBe(true)
+    expect(onAutoRefresh).not.toHaveBeenCalled()
+  })
+
+  it('ignores a file.changed event for a sibling file in the same nested folder', async () => {
+    const onAutoRefresh = vi.fn()
+    const { result } = setupComposable('lifecycle/ideas/archive/nested.md', {
+      isDirty: () => false,
+      onAutoRefresh,
+    })
+
+    emitFileChanged('lifecycle/ideas/archive/other.md')
+    vi.advanceTimersByTime(1000)
+    await nextTick()
+
+    expect(onAutoRefresh).not.toHaveBeenCalled()
+    expect(result.hasExternalChange.value).toBe(false)
+  })
+})

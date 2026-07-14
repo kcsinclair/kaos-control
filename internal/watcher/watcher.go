@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io/fs"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -18,6 +19,12 @@ import (
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
 )
+
+// maxWatchedDirs caps the number of directories fsnotify will watch. Above
+// this cap, new directories are silently left unwatched (logged once) rather
+// than the process panicking or exiting — index consistency degrades
+// gracefully above the cap since the startup Scan still covers every file.
+const maxWatchedDirs = 5000
 
 // Watcher watches lifecycle/ and drives incremental re-indexing + WebSocket events.
 type Watcher struct {
@@ -41,6 +48,13 @@ type Watcher struct {
 	// May be nil; when set, lifecycle/releases/ events are dispatched here
 	// instead of the standard artifact indexer.
 	releaseFn func(absPath string)
+
+	// watchedDirCount tracks how many directories have been added to fsw, so
+	// addDirRecursive can enforce maxWatchedDirs. Only ever touched from the
+	// single goroutine that runs Start's event loop (including the initial
+	// calls made before that loop begins), so it needs no locking.
+	watchedDirCount int
+	watchCapWarned  bool
 }
 
 // New creates a Watcher but does not start it. The optional ignore variadic
@@ -175,9 +189,30 @@ func (w *Watcher) Start(ctx context.Context) error {
 					fire(evt.Name, func() { w.handleChange(evt.Name) })
 				}
 			}
-			// When a new directory is created inside lifecycle/, watch it too.
+			// When a new directory is created inside lifecycle/, watch it (and
+			// any subdirectories it may already contain) too.
 			if evt.Has(fsnotify.Create) {
-				_ = w.fsw.Add(evt.Name)
+				if info, statErr := os.Stat(evt.Name); statErr == nil && info.IsDir() {
+					if err := w.addDirRecursive(evt.Name); err != nil {
+						slog.Warn("watcher: failed to watch new directory", "path", evt.Name, "err", err)
+					}
+					// A directory created together with markdown files already
+					// inside it (e.g. `mkdir sub && cp file sub/` as one
+					// operation) can race the watcher: those files exist before
+					// fsnotify starts watching sub/, so no Create event fires
+					// for them individually. Walk the new directory once and
+					// enqueue any *.md already there through the same
+					// debounced pipeline used for live changes.
+					_ = filepath.WalkDir(evt.Name, func(path string, d fs.DirEntry, err error) error {
+						if err != nil || d.IsDir() || !w.shouldProcess(path) {
+							return nil
+						}
+						fire(path, func() { w.handleChange(path) })
+						return nil
+					})
+				} else {
+					_ = w.fsw.Add(evt.Name)
+				}
 			}
 		case err, ok := <-w.fsw.Errors:
 			if !ok {
@@ -262,7 +297,22 @@ func (w *Watcher) addDirRecursive(root string) error {
 		if err != nil || !d.IsDir() {
 			return nil
 		}
-		return w.fsw.Add(path)
+		if strings.HasPrefix(d.Name(), ".") {
+			return filepath.SkipDir
+		}
+		if w.watchedDirCount >= maxWatchedDirs {
+			if !w.watchCapWarned {
+				w.watchCapWarned = true
+				slog.Warn("watcher: max watched directories reached; further new directories will not be watched",
+					"cap", maxWatchedDirs)
+			}
+			return filepath.SkipDir
+		}
+		if err := w.fsw.Add(path); err != nil {
+			return nil
+		}
+		w.watchedDirCount++
+		return nil
 	})
 }
 
@@ -275,6 +325,20 @@ func (w *Watcher) isReleaseFile(path string) bool {
 func (w *Watcher) shouldProcess(path string) bool {
 	if !strings.HasPrefix(path, w.lifecycleDir) {
 		return false
+	}
+	// Reject files inside a dot-prefixed directory (e.g. ".trash/x.md"). The
+	// base-name checks below only inspect the filename, so a dot-DIR ancestor
+	// created at runtime would otherwise slip through — the runtime dir-create
+	// WalkDir indexes files even where addDirRecursive skipped watching the
+	// dot-dir. Mirrors the startup scan's SkipDir-on-dotdir behaviour.
+	if rel := strings.TrimPrefix(strings.TrimPrefix(path, w.lifecycleDir), string(filepath.Separator)); rel != "" {
+		if dir := filepath.Dir(rel); dir != "." {
+			for _, seg := range strings.Split(dir, string(filepath.Separator)) {
+				if strings.HasPrefix(seg, ".") {
+					return false
+				}
+			}
+		}
 	}
 	if !strings.HasSuffix(path, ".md") {
 		return false

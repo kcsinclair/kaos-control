@@ -266,6 +266,7 @@ func writeRejectionArtifact(p *project.Project, row *index.ArtifactRow, relPath,
 		Lineage: row.FM.Lineage,
 		Parent:  relPath,
 	}
+	artifact.ApplyInheritedFields(&fm, row.FM)
 	content, err := buildMarkdown(fm, comment)
 	if err != nil {
 		return "", err

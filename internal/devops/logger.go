@@ -7,9 +7,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -85,6 +87,268 @@ func (ls *LogStore) ReadLog(projectName, runID string) ([]byte, error) {
 		return nil, fmt.Errorf("devops: reading log %s: %w", runID, err)
 	}
 	return data, nil
+}
+
+// RunRecord is persisted as a sidecar JSON file (<run_id>.meta.json) next to
+// the run log when a run reaches a terminal state.
+type RunRecord struct {
+	RunID      string `json:"run_id"`
+	Slug       string `json:"slug"`
+	StartedAt  string `json:"started_at"`  // RFC 3339
+	EndedAt    string `json:"ended_at"`    // RFC 3339
+	DurationMs int64  `json:"duration_ms"`
+	Status     string `json:"status"`     // passed | failed | cancelled
+	LogRef     string `json:"log_ref"`    // "<run_id>.log"
+}
+
+// metaPath returns the absolute path of the sidecar meta file for runID.
+func (ls *LogStore) metaPath(projectName, runID string) string {
+	return filepath.Join(ls.projectLogsDir(projectName), runID+".meta.json")
+}
+
+// WriteRecord atomically persists a RunRecord as a sidecar JSON file.
+// Uses a temp-file + rename so a killed server never leaves a partial file.
+func (ls *LogStore) WriteRecord(projectName string, rec RunRecord) error {
+	dir := ls.projectLogsDir(projectName)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("devops: create log dir: %w", err)
+	}
+
+	data, err := json.Marshal(rec)
+	if err != nil {
+		return fmt.Errorf("devops: marshal run record: %w", err)
+	}
+
+	destPath := ls.metaPath(projectName, rec.RunID)
+	tmp, err := os.CreateTemp(dir, rec.RunID+".meta.json.tmp*")
+	if err != nil {
+		return fmt.Errorf("devops: create temp record file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("devops: write run record: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("devops: sync run record: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("devops: close run record: %w", err)
+	}
+	if err := os.Rename(tmpPath, destPath); err != nil {
+		return fmt.Errorf("devops: rename run record: %w", err)
+	}
+	return nil
+}
+
+// readRecord decodes a single .meta.json sidecar file.
+func readRecord(path string) (RunRecord, bool) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return RunRecord{}, false
+	}
+	var rec RunRecord
+	if err := json.Unmarshal(data, &rec); err != nil {
+		return RunRecord{}, false
+	}
+	return rec, true
+}
+
+// Record looks up a run record by project and runID.
+func (ls *LogStore) Record(projectName, runID string) (RunRecord, bool) {
+	return readRecord(ls.metaPath(projectName, runID))
+}
+
+// backfillRecord derives a RunRecord from a legacy .log file that has no
+// matching .meta.json sidecar. It persists the result so future calls are fast.
+// Returns (record, true) on success; (zero, false) if the log cannot be parsed.
+func (ls *LogStore) backfillRecord(projectName, runID string) (RunRecord, bool) {
+	path := ls.logPath(projectName, runID)
+	f, err := os.Open(path)
+	if err != nil {
+		return RunRecord{}, false
+	}
+	defer f.Close()
+
+	var first, last *logEntry
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var e logEntry
+		if err := json.Unmarshal(line, &e); err != nil {
+			continue
+		}
+		if first == nil {
+			first = &e
+		}
+		last = &e
+	}
+
+	if first == nil {
+		return RunRecord{}, false
+	}
+
+	var slug, status string
+	startedAt := first.Time
+	endedAt := last.Time
+
+	if first.EventType == EventRunStarted {
+		if m, ok := first.Payload.(map[string]any); ok {
+			slug, _ = m["pipeline_slug"].(string)
+		}
+	}
+
+	durationMs := endedAt.Sub(startedAt).Milliseconds()
+
+	// first and last are set together in the scan loop above, so first != nil
+	// (guarded above) guarantees last != nil here.
+	if last.EventType == EventRunCompleted {
+		if m, ok := last.Payload.(map[string]any); ok {
+			status, _ = m["status"].(string)
+			if d, ok := m["duration_seconds"].(float64); ok {
+				durationMs = int64(d * 1000)
+			}
+		}
+	} else {
+		// No completion entry — infer best-effort status from last step.
+		status = "unknown"
+		if last.EventType == EventStepCompleted {
+			if m, ok := last.Payload.(map[string]any); ok {
+				status, _ = m["status"].(string)
+			}
+		}
+	}
+
+	if slug == "" {
+		return RunRecord{}, false
+	}
+
+	rec := RunRecord{
+		RunID:      runID,
+		Slug:       slug,
+		StartedAt:  startedAt.UTC().Format(time.RFC3339),
+		EndedAt:    endedAt.UTC().Format(time.RFC3339),
+		DurationMs: durationMs,
+		Status:     status,
+		LogRef:     runID + ".log",
+	}
+
+	if err := ls.WriteRecord(projectName, rec); err != nil {
+		slog.Warn("devops: backfill write record", "project", projectName, "run_id", runID, "err", err)
+	}
+	return rec, true
+}
+
+// ListPipelineRuns returns finished runs for one pipeline slug, newest-first.
+// limit<=0 means all; callers should cap at 50. Corrupt records are skipped
+// with a WARN log (NF3). Legacy .log files without a sidecar are back-filled
+// lazily.
+func (ls *LogStore) ListPipelineRuns(projectName, slug string, limit int) ([]RunRecord, error) {
+	dir := ls.projectLogsDir(projectName)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("devops: listing pipeline runs: %w", err)
+	}
+
+	// Build a set of run IDs that already have a sidecar.
+	hasMeta := make(map[string]bool)
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".meta.json") {
+			runID := strings.TrimSuffix(e.Name(), ".meta.json")
+			hasMeta[runID] = true
+		}
+	}
+
+	var records []RunRecord
+
+	// Read existing sidecar records.
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".meta.json") {
+			continue
+		}
+		path := filepath.Join(dir, e.Name())
+		rec, ok := readRecord(path)
+		if !ok {
+			slog.Warn("devops: skipping corrupt run record", "project", projectName, "file", e.Name())
+			continue
+		}
+		if rec.Slug != slug {
+			continue
+		}
+		records = append(records, rec)
+	}
+
+	// Back-fill from .log files that have no sidecar.
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".log") {
+			continue
+		}
+		runID := strings.TrimSuffix(e.Name(), ".log")
+		if hasMeta[runID] {
+			continue
+		}
+		rec, ok := ls.backfillRecord(projectName, runID)
+		if !ok {
+			slog.Warn("devops: cannot backfill run from log", "project", projectName, "run_id", runID)
+			continue
+		}
+		if rec.Slug != slug {
+			continue
+		}
+		records = append(records, rec)
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].StartedAt > records[j].StartedAt
+	})
+
+	if limit > 0 && len(records) > limit {
+		records = records[:limit]
+	}
+	return records, nil
+}
+
+// PruneOldRuns removes the oldest finished runs for slug beyond the keep
+// threshold. Both .meta.json and .log files are deleted for each pruned run.
+// isActive must return true for any runID that is currently executing; those
+// runs are never pruned. Returns the count of run pairs removed.
+func (ls *LogStore) PruneOldRuns(projectName, slug string, keep int, isActive func(runID string) bool) (int, error) {
+	// Collect all sidecar records for this slug, sorted newest-first.
+	records, err := ls.ListPipelineRuns(projectName, slug, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(records) <= keep {
+		return 0, nil
+	}
+
+	toRemove := records[keep:]
+	removed := 0
+	for _, rec := range toRemove {
+		if isActive != nil && isActive(rec.RunID) {
+			continue
+		}
+		metaPath := ls.metaPath(projectName, rec.RunID)
+		logPath := ls.logPath(projectName, rec.RunID)
+		_ = os.Remove(metaPath)
+		_ = os.Remove(logPath)
+		removed++
+	}
+
+	if removed > 0 {
+		slog.Info("devops: pruned old runs", "project", projectName, "slug", slug, "removed", removed)
+	}
+	return removed, nil
 }
 
 // RunSummary is a brief description of a past pipeline run extracted from its
@@ -167,6 +431,52 @@ func (ls *LogStore) ReadLogNDJSON(projectName, runID string) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// StreamLogNDJSON writes the run log to w as NDJSON, flushing after each line
+// so callers receive data progressively without buffering the whole file.
+func (ls *LogStore) StreamLogNDJSON(projectName, runID string, w io.Writer) error {
+	path := ls.logPath(projectName, runID)
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("devops: reading log %s: %w", runID, err)
+	}
+	defer f.Close()
+
+	flusher, canFlush := w.(interface{ Flush() error })
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+
+		var entry logEntry
+		if err := json.Unmarshal(line, &entry); err != nil {
+			continue
+		}
+
+		out := make(map[string]any)
+		if payload, ok := entry.Payload.(map[string]any); ok {
+			for k, v := range payload {
+				out[k] = v
+			}
+		}
+		out["type"] = entry.EventType
+
+		data, err := json.Marshal(out)
+		if err != nil {
+			continue
+		}
+		if _, err := w.Write(append(data, '\n')); err != nil {
+			return err
+		}
+		if canFlush {
+			_ = flusher.Flush()
+		}
+	}
+	return scanner.Err()
 }
 
 // summariseLog reads the first and last relevant log entries to build a RunSummary.

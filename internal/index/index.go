@@ -33,7 +33,7 @@ type Transitioner interface {
 	CanTransition(from, to string, userRoles []string, artifactType string) bool
 }
 
-const schemaVersion = 4
+const schemaVersion = 5
 
 // Index wraps the SQLite database for one project.
 type Index struct {
@@ -116,6 +116,11 @@ func Open(dbPath, projectRoot string, stages []config.Stage, opts ...Option) (*I
 	// Add slug column to releases if missing (migration from pre-B2 schema).
 	if err := idx.ensureReleasesSlugColumn(); err != nil {
 		slog.Warn("index: releases slug migration failed", "err", err)
+	}
+	// Add rel_path column to artifacts if missing (migration from pre-rel_path
+	// schema). Existing rows keep '' until their next re-index back-fills it.
+	if err := idx.ensureRelPathColumn(); err != nil {
+		slog.Warn("index: rel_path migration failed", "err", err)
 	}
 	// Always scan on startup: the index is a cache and files may have changed
 	// while the server was not running (watcher only covers live changes).
@@ -344,8 +349,17 @@ func (idx *Index) Scan(stages []config.Stage) error {
 			continue
 		}
 		walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
+			if err != nil {
 				return err
+			}
+			if d.IsDir() {
+				if strings.HasPrefix(d.Name(), ".") {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if strings.HasPrefix(d.Name(), ".") || !strings.HasSuffix(path, ".md") {
+				return nil
 			}
 			if config.ShouldIgnore(path, idx.ignore) {
 				return nil
@@ -446,10 +460,18 @@ func (idx *Index) IndexFile(absPath string) error {
 	// was the dominant cost (~4 s per file) of the M2 startup scan.
 	var storedHash []byte
 	var storedCreated int64
+	var storedStatus string
 	if err := idx.db.QueryRow(
-		`SELECT body_sha256, created FROM artifacts WHERE path = ?`, relPath,
-	).Scan(&storedHash, &storedCreated); err == nil {
-		if bytes.Equal(storedHash, a.SHA256[:]) {
+		`SELECT body_sha256, created, status FROM artifacts WHERE path = ?`, relPath,
+	).Scan(&storedHash, &storedCreated, &storedStatus); err == nil {
+		// Skip re-index only when the content is unchanged AND the indexed
+		// status already matches the file. The hash alone is NOT a safe proxy
+		// for "the row is current": if the indexed status ever drifts from the
+		// file (observed from a concurrent-write / external-sync race), a
+		// content-hash-only guard would lock the stale status in forever, since
+		// the file's hash keeps matching. Comparing status lets the next index
+		// (a transition, watcher event, or startup scan) self-heal the row.
+		if bytes.Equal(storedHash, a.SHA256[:]) && storedStatus == a.FM.Status {
 			return nil
 		}
 	}
@@ -541,11 +563,12 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 
 	_, err = tx.Exec(`
 		INSERT OR REPLACE INTO artifacts
-			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime, created)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime, created, has_open_questions, rel_path)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.Path, a.Slug, a.FM.Lineage, a.Index, a.Stage,
 		a.FM.Type, a.FM.Status, a.FM.Title, a.FM.Priority,
 		string(fmJSON), a.SHA256[:], a.Mtime.Unix(), createdUnix,
+		artifact.HasOpenQuestions(a.Body), a.RelPath,
 	)
 	if err != nil {
 		return fmt.Errorf("upserting artifact: %w", err)
@@ -614,6 +637,10 @@ type Filter struct {
 	Limit     int
 	Offset    int
 	Unlimited bool // when true, no LIMIT is applied (returns all matching rows)
+	// AwaitingAnswers, when true, restricts the result to artifacts that are
+	// blocked with a non-empty "## Open Questions" section, regardless of
+	// the Status field above.
+	AwaitingAnswers bool
 }
 
 func (f *Filter) withDefaults() Filter {
@@ -633,6 +660,7 @@ func (f *Filter) withDefaults() Filter {
 // ArtifactRow is a lightweight summary row returned from list/graph queries.
 type ArtifactRow struct {
 	Path              string               `json:"path"`
+	RelPath           string               `json:"rel_path"`
 	Slug              string               `json:"slug"`
 	Lineage           string               `json:"lineage"`
 	Index             int                  `json:"index"`
@@ -660,7 +688,7 @@ func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 		return nil, 0, err
 	}
 
-	const sel = `SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
+	const sel = `SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created, rel_path
 		 FROM artifacts`
 	orderBy := buildOrderBy(f)
 	var rows *sql.Rows
@@ -699,7 +727,7 @@ func (idx *Index) Count(f Filter) (int, error) {
 // Get returns a single artifact by project-relative path, or nil if not found.
 func (idx *Index) Get(relPath string) (*ArtifactRow, error) {
 	rows, err := idx.db.Query(
-		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created
+		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created, rel_path
 		 FROM artifacts WHERE path = ?`, relPath,
 	)
 	if err != nil {
@@ -1687,6 +1715,18 @@ func (idx *Index) ensureReleasesSlugColumn() error {
 	return nil
 }
 
+// ensureRelPathColumn adds the rel_path column to artifacts if it is missing
+// (migration from a pre-rel_path schema). Deliberately does not bump
+// schemaVersion or trigger dropAndRecreate: existing rows keep rel_path=''
+// until their next re-index (the startup Scan or an API write) back-fills it.
+func (idx *Index) ensureRelPathColumn() error {
+	// ADD COLUMN returns "duplicate column name" once the column already
+	// exists; that error is expected and discarded, matching the pattern used
+	// for agent_runs and releases migrations above.
+	_, _ = idx.db.Exec(`ALTER TABLE artifacts ADD COLUMN rel_path TEXT NOT NULL DEFAULT ''`)
+	return nil
+}
+
 // indexReleaseSlugify is a copy of release.Slugify used during migrations to
 // avoid an import cycle (index ← release ← index).
 var indexReleaseStripRe = regexp.MustCompile(`[^a-z0-9-]`)
@@ -1709,19 +1749,21 @@ CREATE TABLE schema_version (version INTEGER NOT NULL);
 INSERT INTO schema_version VALUES (` + fmt.Sprint(schemaVersion) + `);
 
 CREATE TABLE artifacts (
-    path              TEXT PRIMARY KEY,
-    slug              TEXT NOT NULL,
-    lineage           TEXT NOT NULL,
-    idx               INTEGER NOT NULL,
-    stage             TEXT NOT NULL,
-    type              TEXT NOT NULL,
-    status            TEXT NOT NULL,
-    title             TEXT NOT NULL,
-    priority          TEXT NOT NULL DEFAULT '',
-    frontmatter_json  TEXT NOT NULL,
-    body_sha256       BLOB NOT NULL,
-    mtime             INTEGER NOT NULL,
-    created           INTEGER NOT NULL DEFAULT 0
+    path                TEXT PRIMARY KEY,
+    slug                TEXT NOT NULL,
+    lineage             TEXT NOT NULL,
+    idx                 INTEGER NOT NULL,
+    stage               TEXT NOT NULL,
+    type                TEXT NOT NULL,
+    status              TEXT NOT NULL,
+    title               TEXT NOT NULL,
+    priority            TEXT NOT NULL DEFAULT '',
+    frontmatter_json    TEXT NOT NULL,
+    body_sha256         BLOB NOT NULL,
+    mtime               INTEGER NOT NULL,
+    created             INTEGER NOT NULL DEFAULT 0,
+    has_open_questions  INTEGER NOT NULL DEFAULT 0,
+    rel_path            TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX idx_artifacts_lineage  ON artifacts(lineage);
 CREATE INDEX idx_artifacts_stage    ON artifacts(stage);
@@ -1729,6 +1771,7 @@ CREATE INDEX idx_artifacts_status   ON artifacts(status);
 CREATE INDEX idx_artifacts_slug     ON artifacts(slug);
 CREATE INDEX idx_artifacts_type     ON artifacts(type);
 CREATE INDEX idx_artifacts_priority ON artifacts(priority);
+CREATE INDEX idx_artifacts_has_open_questions ON artifacts(has_open_questions);
 
 CREATE TABLE links (
     src    TEXT NOT NULL,
@@ -1868,6 +1911,9 @@ func buildWhere(f Filter) (clause string, args []any) {
 			`(title LIKE ? ESCAPE '\' OR slug LIKE ? ESCAPE '\' OR lineage LIKE ? ESCAPE '\' OR type LIKE ? ESCAPE '\' OR status LIKE ? ESCAPE '\')`,
 		)
 		args = append(args, pattern, pattern, pattern, pattern, pattern)
+	}
+	if f.AwaitingAnswers {
+		conds = append(conds, "status = 'blocked' AND has_open_questions = 1")
 	}
 	if f.Release == "__unassigned__" {
 		conds = append(conds,
@@ -2282,8 +2328,8 @@ func isoWeekMonday(t time.Time) time.Time {
 
 // ScanArtifactRows scans a *sql.Rows result set of the standard artifact
 // projection (path, slug, lineage, idx, stage, type, status, title,
-// frontmatter_json, mtime, created) into []*ArtifactRow. It is exported so
-// other packages (e.g. internal/release) can reuse the scan logic.
+// frontmatter_json, mtime, created, rel_path) into []*ArtifactRow. It is
+// exported so other packages (e.g. internal/release) can reuse the scan logic.
 func ScanArtifactRows(rows *sql.Rows) ([]*ArtifactRow, error) {
 	out, _, err := scanRows(rows)
 	return out, err
@@ -2298,7 +2344,7 @@ func scanRows(rows *sql.Rows) ([]*ArtifactRow, int, error) {
 		var createdUnix int64
 		if err := rows.Scan(
 			&r.Path, &r.Slug, &r.Lineage, &r.Index, &r.Stage,
-			&r.Type, &r.Status, &r.Title, &fmJSON, &mtimeUnix, &createdUnix,
+			&r.Type, &r.Status, &r.Title, &fmJSON, &mtimeUnix, &createdUnix, &r.RelPath,
 		); err != nil {
 			return nil, 0, err
 		}
