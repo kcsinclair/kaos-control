@@ -186,6 +186,127 @@ If you plan to run agents, the [Claude Code permissions](#claude-code-permission
 
 ---
 
+## Run as a service (Linux, systemd)
+
+`kaos-control -d` runs in the foreground and does not fork or write a PID file — backgrounding is the caller's job. On Linux, [`packaging/systemd/kaos-control.service`](packaging/systemd/kaos-control.service) does that as a **systemd user service**.
+
+A *user* unit (not a system unit) is deliberate: the server runs as your login user, so agent runs inherit your `HOME`, your `claude` credentials in `~/.claude`, your git identity, and your `~/.kaos-control` config. **The whole path is rootless** — binary, unit, and boot persistence all live under your home directory, so you can run kaos-control as a service on a machine where you have no sudo.
+
+### 1. Install the binary and the unit
+
+The unit expects the binary at `~/.local/bin/kaos-control`:
+
+```bash
+install -Dm755 ./dist/kaos-control ~/.local/bin/kaos-control    # or ./kaos-control from a release archive
+mkdir -p ~/.config/systemd/user
+cp packaging/systemd/kaos-control.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+```
+
+Make sure `~/.local/bin` is on your `PATH` for interactive use — most distributions add it from `~/.profile` when the directory exists; log out and back in if you just created it. The unit itself uses an absolute path, so it works either way.
+
+If you'd rather install once for everyone on a shared machine, `sudo install -Dm755 ./dist/kaos-control /usr/local/bin/kaos-control` and change `ExecStart=` to match (`systemctl --user edit --full kaos-control` after installing also works). Each user still gets their own unit, config, and credentials.
+
+The unit invokes the `serve` subcommand rather than the `-d` flag. They are equivalent on current builds, but `serve` also works on binaries older than v0.2.0, which reject `-d` with `unknown flag "-d"` and exit 1.
+
+### 2. Keep it running when you're not logged in
+
+By default a user manager starts at login and stops at logout. To have kaos-control start at boot and survive logout, enable lingering once:
+
+```bash
+loginctl enable-linger
+```
+
+No sudo: systemd's default policy (`org.freedesktop.login1.set-self-linger`) lets you enable lingering **for yourself**. Only enabling it for *another* user needs root (`sudo loginctl enable-linger someone-else`), and a hardened polkit configuration can withdraw the self-permission — if the command is refused, ask an admin.
+
+Skip this if you only want the service while you're logged in.
+
+### 3. Start it
+
+```bash
+systemctl --user enable --now kaos-control     # start now + start at login/boot
+systemctl --user status kaos-control
+curl -s http://localhost:8042/api/health       # {"ok":true,"version":"..."}
+```
+
+Then open <http://localhost:8042>. If this is a fresh install, create the first user as described in [First run](#2-first-run).
+
+### Everyday commands
+
+| Task              | Command                                          |
+| ----------------- | ------------------------------------------------ |
+| Start             | `systemctl --user start kaos-control`            |
+| Stop              | `systemctl --user stop kaos-control`             |
+| Restart           | `systemctl --user restart kaos-control`          |
+| Status            | `systemctl --user status kaos-control`           |
+| Enable at boot    | `systemctl --user enable kaos-control`           |
+| Disable at boot   | `systemctl --user disable kaos-control`          |
+| Follow logs       | `journalctl --user -u kaos-control -f`           |
+| Logs since boot   | `journalctl --user -u kaos-control -b`           |
+| Clear start-limit | `systemctl --user reset-failed kaos-control`     |
+
+The server logs structured JSON to stdout, which the unit routes to the journal under the `kaos-control` identifier. Per-run agent logs still land in `~/.kaos-control/data/<project>/runs/`.
+
+### Configuration overrides
+
+The unit pins `-config ~/.kaos-control/config.yaml` explicitly, because the systemd user manager does not necessarily inherit `XDG_CONFIG_HOME` from your login shell. If you keep your config elsewhere, change the `-config` path in the unit.
+
+Environment overrides go in an optional file — no need to edit the unit:
+
+```bash
+mkdir -p ~/.config/kaos-control
+cat > ~/.config/kaos-control/service.env <<'EOF'
+LOG_LEVEL=debug
+KAOS_PUBLIC_HOST=kaos.example.com
+# GEMINI_API_KEY=...
+EOF
+systemctl --user restart kaos-control
+```
+
+**PATH matters for agent runs.** Agents shell out to `claude`, `git`, `go`, `node` and your DevOps pipeline steps, and the user manager's default `PATH` is minimal. The unit sets a sensible default (`~/.local/bin`, `~/bin`, `~/go/bin`, `/usr/local/go/bin`, then the system paths). If your toolchains live elsewhere — nvm-managed Node is the common case — override it wholesale:
+
+```bash
+echo "PATH=$HOME/.nvm/versions/node/v22.22.1/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin" \
+  >> ~/.config/kaos-control/service.env
+systemctl --user restart kaos-control
+```
+
+Write absolute paths in `service.env` — systemd reads it literally, so `$HOME` and `~` inside that file are **not** expanded (the command above expands `$HOME` in your shell before writing).
+
+A quick way to confirm what the service can actually see: `systemctl --user show-environment` and `journalctl --user -u kaos-control` after a failed agent run.
+
+### Stop and shutdown behaviour
+
+`systemctl --user stop` sends `SIGTERM`; the server stops accepting connections and drains in-flight requests with a 10-second deadline. `TimeoutStopSec=30` gives it room, after which systemd kills the whole control group — including any agent subprocesses (`claude`, `git`, pipeline steps) still running. Stopping mid-run therefore aborts that run; check the Runs view when you start back up.
+
+`Restart=on-failure` restarts a crashed server after 5s. Five failed starts in 60s (typically a bad config or a port already in use) stops the unit for good until you fix it and run `systemctl --user reset-failed kaos-control`.
+
+### Upgrading
+
+```bash
+systemctl --user stop kaos-control
+install -Dm755 ./dist/kaos-control ~/.local/bin/kaos-control   # or wherever ExecStart points
+systemctl --user start kaos-control
+curl -s http://localhost:8042/api/health                       # confirm the new version
+```
+
+`install` replaces the file by rename, so it also works while a copy is running — but stop first anyway, so the restart is a clean shutdown rather than a swap under a live process.
+
+### Uninstall
+
+```bash
+systemctl --user disable --now kaos-control
+rm ~/.config/systemd/user/kaos-control.service
+systemctl --user daemon-reload
+sudo loginctl disable-linger "$USER"       # only if you enabled it
+```
+
+### System-wide instead of per-user
+
+Running kaos-control as a system service (`/etc/systemd/system/`) works, but the unit then needs an explicit `User=`/`Group=`, a `HOME=` that matches that account, and that account must have its own `claude` login, git identity, and `~/.kaos-control`. Agents run as that user with that user's credentials. The per-user unit above avoids all of it; prefer it unless you specifically need a shared, headless, multi-admin install.
+
+---
+
 ## Getting started building from source
 
 ### Prerequisites
@@ -338,6 +459,8 @@ Restart the server (or wait for it to pick up the new entry on the next scan) an
 | Path                                               | Purpose                                                         |
 | -------------------------------------------------- | --------------------------------------------------------------- |
 | `~/.kaos-control/config.yaml`                      | App-level config (server, auth, agents, ollama)                 |
+| `~/.config/systemd/user/kaos-control.service`      | systemd user unit (Linux), if installed                         |
+| `~/.config/kaos-control/service.env`               | Optional env overrides read by the systemd unit                 |
 | `~/.kaos-control/projects/*.yaml`                  | One file per registered project                                 |
 | `~/.kaos-control/data/<project>/index.db`          | Per-project SQLite cache (rebuilt from disk on startup)         |
 | `~/.kaos-control/data/<project>/runs/<run_id>.log` | Per-agent-run log (header, streamed events, summary footer)     |
@@ -354,6 +477,7 @@ internal/           Backend packages (agent, artifact, http, index, …)
 web/                Vue 3 SPA (built into web/dist/, embedded by Go)
 lifecycle/          This project's own artifacts (the meta-bootstrap)
 tests/              Integration test code
+packaging/          systemd user unit for running the server as a service
 plans/              Project plan + per-change implementation plans
 ```
 

@@ -1,0 +1,67 @@
+# kaos-control — systemd **user** service (Linux)
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp packaging/systemd/kaos-control.service ~/.config/systemd/user/
+#   install -Dm755 ./dist/kaos-control ~/.local/bin/kaos-control
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now kaos-control
+#
+# The server runs as your login user so that agent runs inherit your HOME,
+# your `claude` credentials (~/.claude), and your git identity. Nothing here
+# needs root — including the binary location, which defaults to ~/.local/bin
+# so that install, upgrade, and `loginctl enable-linger` are all rootless.
+#
+# Edit ExecStart if the binary lives elsewhere (e.g. /usr/local/bin on a
+# shared machine where an admin installs it once for everyone).
+
+[Unit]
+Description=kaos-control — lifecycle management for turning ideas into releases
+Documentation=https://github.com/kcsinclair/kaos-control
+Documentation=https://kaos-control.io
+
+# Don't hammer a permanently broken config: 5 failed starts in 60s stops the unit
+# (clear with `systemctl --user reset-failed kaos-control`).
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=exec
+
+# `serve` rather than `-d`: both start the foreground server on current
+# builds, but `serve` also works on binaries older than v0.2.0, which reject
+# `-d` with "unknown flag" and exit 1.
+#
+# The config path is pinned explicitly: the systemd user manager does not
+# necessarily inherit XDG_CONFIG_HOME from your login shell, and without
+# -config the binary would silently fall back to ~/.kaos-control/config.yaml.
+ExecStart=%h/.local/bin/kaos-control serve -config %h/.kaos-control/config.yaml
+WorkingDirectory=%h
+
+# Optional overrides — create the file to set LOG_LEVEL, PATH, KAOS_PUBLIC_HOST,
+# GEMINI_API_KEY, … one KEY=value per line. The leading "-" makes it optional.
+EnvironmentFile=-%h/.config/kaos-control/service.env
+
+Environment=LOG_LEVEL=info
+# Agent runs shell out to `claude`, `git`, `go`, `node`, … The user manager's
+# default PATH is minimal, so spell out the usual per-user tool directories.
+# Override wholesale in service.env if your toolchains live elsewhere (nvm is
+# the common case) — note that file is read literally, so write absolute paths:
+#   PATH=/home/you/.nvm/versions/node/v22.22.1/bin:/home/you/.local/bin:/usr/bin:/bin
+Environment=PATH=%h/.local/bin:%h/bin:%h/go/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin
+
+# The server handles SIGTERM: it stops accepting connections and drains
+# in-flight requests with a 10s deadline. Give it room, then kill the whole
+# control group so any agent subprocesses (claude, git, pipeline steps) go too.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kaos-control
+
+[Install]
+WantedBy=default.target
