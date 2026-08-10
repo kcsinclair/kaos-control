@@ -87,11 +87,13 @@ func TestReleaseCreate_WritesFile(t *testing.T) {
 	}
 }
 
-// fallbackSlugFileRe matches the fallback file path lifecycle/releases/release-{digits}.md.
-var fallbackSlugFileRe = regexp.MustCompile(`^lifecycle/releases/release-\d+\.md$`)
+// fallbackSlugFileRe matches the fallback file path
+// lifecycle/releases/release-{hex}.md. Since release-artefacts-9 the fallback
+// slug is derived from a hash of the name (DB-independent), not the row id.
+var fallbackSlugFileRe = regexp.MustCompile(`^lifecycle/releases/release-[0-9a-f]+\.md$`)
 
 // TestReleaseCreate_FallbackSlug verifies that POST with an emoji-only name
-// assigns a fallback slug "release-{ID}" and the file exists at that path.
+// assigns a hash-based fallback slug "release-{hex}" and the file exists there.
 func TestReleaseCreate_FallbackSlug(t *testing.T) {
 	env := newTestEnv(t, nil)
 

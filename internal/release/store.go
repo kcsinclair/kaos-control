@@ -3,7 +3,9 @@
 package release
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -128,65 +130,63 @@ func (s *Store) Count(projectID string) (int, error) {
 	return n, err
 }
 
-// Create inserts r into the database and sets r.ID, r.Slug, r.FilePath,
-// r.CreatedAt, r.UpdatedAt. When sync is non-nil the markdown file is written
-// to disk inside the same transaction; a disk failure causes the transaction
-// to roll back. Returns an error if the name or slug is already taken within
-// the project.
+// Create writes the release's markdown file (the authoritative store) and then
+// refreshes the SQLite cache from it, setting r.ID, r.Slug, r.FilePath,
+// r.CreatedAt, r.UpdatedAt. The markdown file is written first: if the disk
+// write fails, the cache is left untouched. Returns ErrConflict if a release
+// with the same name or slug already exists within the project.
+//
+// See requirements/release-artefacts-9.md (DR-1): markdown is authoritative,
+// the `releases` table is a rebuildable cache written after disk.
 func (s *Store) Create(r *Release, sync *DiskSync, projectRoot string) error {
 	now := time.Now().UTC()
 	r.CreatedAt = now
 	r.UpdatedAt = now
 
 	slug := Slugify(r.Name)
-
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback() //nolint:errcheck
-
-	// Insert with the computed slug (may be empty for emoji-only names; the
-	// partial unique index excludes empty strings so this is safe to insert).
-	res, err := tx.Exec(`
-		INSERT INTO releases (project_id, name, slug, status, start_date, end_date, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`,
-		r.ProjectID, r.Name, slug, r.Status,
-		formatDate(r.StartDate), formatDate(r.EndDate),
-		now.Format(time.RFC3339), now.Format(time.RFC3339),
-	)
-	if err != nil {
-		return err
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	r.ID = id
-
-	// Resolve fallback slug for emoji-only names now that we have the ID.
 	if slug == "" {
-		slug = fmt.Sprintf("release-%d", id)
-		if _, err := tx.Exec(`UPDATE releases SET slug=? WHERE id=?`, slug, id); err != nil {
-			return err
-		}
+		slug = fallbackSlug(r.Name)
 	}
 	r.Slug = slug
 	r.FilePath = relPath(slug)
 
+	// Conflict check against the cache before touching disk, so a duplicate
+	// create never overwrites an existing release file.
+	var existing int
+	if err := s.db.QueryRow(
+		`SELECT COUNT(*) FROM releases WHERE project_id = ? AND (name = ? OR slug = ?)`,
+		r.ProjectID, r.Name, slug,
+	).Scan(&existing); err != nil {
+		return err
+	}
+	if existing > 0 {
+		return ErrConflict
+	}
+
+	// Markdown first (authoritative). A disk failure aborts before any cache write.
 	if sync != nil && projectRoot != "" {
 		if _, err := sync.Write(projectRoot, r); err != nil {
 			return fmt.Errorf("writing release file: %w", err)
 		}
 	}
 
-	return tx.Commit()
+	// Refresh the cache from the release we just wrote, then read back the
+	// autoincrement id (cache-local identity) for the response.
+	if err := s.UpsertBySlug(r); err != nil {
+		return err
+	}
+	if got, err := s.GetBySlug(r.ProjectID, slug); err == nil && got != nil {
+		r.ID = got.ID
+		r.CreatedAt = got.CreatedAt
+	}
+	return nil
 }
 
-// Update saves changes to name, status, and dates; bumps UpdatedAt.
-// Returns the old name (before the update) so the caller can trigger rename propagation.
-// When sync is non-nil the markdown file is rewritten (or renamed if the slug changed).
+// Update rewrites the release's markdown file (renaming it if the slug changed)
+// and then refreshes the SQLite cache row by id. Markdown is written first; if
+// the disk write fails, the cache is left untouched and the error is returned.
+// Returns the old name (before the update) so the caller can trigger rename
+// propagation. See release-artefacts-9.md (DR-1).
 func (s *Store) Update(r *Release, sync *DiskSync, projectRoot string) (string, error) {
 	// Fetch the current name and slug first.
 	var oldName, oldSlug string
@@ -205,31 +205,18 @@ func (s *Store) Update(r *Release, sync *DiskSync, projectRoot string) (string, 
 
 	newSlug := Slugify(r.Name)
 	if newSlug == "" {
-		newSlug = fmt.Sprintf("release-%d", r.ID)
+		// Emoji-only name: keep the existing slug if there is one (avoids churn),
+		// otherwise derive a stable, id-independent fallback.
+		if oldSlug != "" {
+			newSlug = oldSlug
+		} else {
+			newSlug = fallbackSlug(r.Name)
+		}
 	}
 	r.Slug = newSlug
 	r.FilePath = relPath(newSlug)
 
-	tx, err := s.db.Begin()
-	if err != nil {
-		return "", err
-	}
-	defer tx.Rollback() //nolint:errcheck
-
-	_, err = tx.Exec(`
-		UPDATE releases
-		SET name = ?, slug = ?, status = ?, start_date = ?, end_date = ?, updated_at = ?
-		WHERE project_id = ? AND id = ?
-	`,
-		r.Name, newSlug, r.Status,
-		formatDate(r.StartDate), formatDate(r.EndDate),
-		now.Format(time.RFC3339),
-		r.ProjectID, r.ID,
-	)
-	if err != nil {
-		return "", err
-	}
-
+	// Markdown first (authoritative). A disk failure aborts before any cache write.
 	if sync != nil && projectRoot != "" {
 		if oldSlug != newSlug {
 			if _, err := sync.Rename(projectRoot, oldSlug, newSlug, r); err != nil {
@@ -242,7 +229,18 @@ func (s *Store) Update(r *Release, sync *DiskSync, projectRoot string) (string, 
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	// Refresh the cache row in place by id (cache-local identity survives a
+	// name/slug change, which an ON CONFLICT(name) upsert would not).
+	if _, err := s.db.Exec(`
+		UPDATE releases
+		SET name = ?, slug = ?, status = ?, start_date = ?, end_date = ?, updated_at = ?
+		WHERE project_id = ? AND id = ?
+	`,
+		r.Name, newSlug, r.Status,
+		formatDate(r.StartDate), formatDate(r.EndDate),
+		now.Format(time.RFC3339),
+		r.ProjectID, r.ID,
+	); err != nil {
 		return "", err
 	}
 	return oldName, nil
@@ -278,6 +276,42 @@ func (s *Store) DeleteBySlug(projectID, slug string) error {
 	return err
 }
 
+// PruneExcept deletes every release for the project whose slug is not in keep.
+// Used by Rehydrate to drop cache rows whose markdown file no longer exists on
+// disk (e.g. a release file deleted while the server was not running), so the
+// cache reflects disk. A nil/empty keep set deletes all releases for the project.
+func (s *Store) PruneExcept(projectID string, keep map[string]struct{}) (int, error) {
+	rows, err := s.db.Query(`SELECT slug FROM releases WHERE project_id = ?`, projectID)
+	if err != nil {
+		return 0, err
+	}
+	var toDelete []string
+	for rows.Next() {
+		var slug string
+		if err := rows.Scan(&slug); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		if _, ok := keep[slug]; !ok {
+			toDelete = append(toDelete, slug)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, err
+	}
+	rows.Close()
+
+	for _, slug := range toDelete {
+		if _, err := s.db.Exec(
+			`DELETE FROM releases WHERE project_id = ? AND slug = ?`, projectID, slug,
+		); err != nil {
+			return 0, err
+		}
+	}
+	return len(toDelete), nil
+}
+
 // Delete removes the release and returns its name and the count of artifacts
 // that referenced it (for use in warnings or reassignment).
 // When sync is non-nil the markdown file is also removed from disk.
@@ -302,17 +336,30 @@ func (s *Store) Delete(projectID string, id int64, sync *DiskSync, projectRoot s
 		return "", 0, err
 	}
 
+	// Markdown first (authoritative): remove the file, then the cache row. If the
+	// file cannot be removed, abort before touching the cache — otherwise the
+	// next rehydrate would resurrect the release from the surviving file.
+	if sync != nil && projectRoot != "" && slug != "" {
+		if err := sync.Delete(projectRoot, slug); err != nil {
+			return "", 0, fmt.Errorf("removing release file: %w", err)
+		}
+	}
+
 	if _, err := s.db.Exec(
 		`DELETE FROM releases WHERE project_id = ? AND id = ?`, projectID, id,
 	); err != nil {
 		return "", 0, err
 	}
 
-	if sync != nil && projectRoot != "" && slug != "" {
-		_ = sync.Delete(projectRoot, slug)
-	}
-
 	return name, count, nil
+}
+
+// fallbackSlug derives a stable, DB-independent slug for a release whose name
+// produces an empty slug (e.g. emoji-only). It is deterministic in the name, so
+// it needs no autoincrement id and survives a cache rebuild.
+func fallbackSlug(name string) string {
+	sum := sha256.Sum256([]byte(name))
+	return "release-" + hex.EncodeToString(sum[:4])
 }
 
 // ListArtifacts returns all indexed artifacts whose release frontmatter field
