@@ -1,7 +1,7 @@
 ---
 title: Release Artefacts in Markdown — reverse to markdown-authoritative
 type: requirement
-status: draft
+status: done
 lineage: release-artefacts
 priority: high
 parent: requirements/release-artefacts-2.md
