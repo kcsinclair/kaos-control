@@ -47,9 +47,11 @@ vi.mock('@/stores/docs', () => ({
   }),
 }))
 
+const mockRouterPush = vi.fn()
+
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { project: 'testproject' } }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockRouterPush }),
 }))
 
 // Import component after all mocks are in place
@@ -153,7 +155,10 @@ describe('DocsView', () => {
     // (router is mocked, so the call is to the mocked push which is a new fn here)
   })
 
-  it('renders non-markdown doc as an anchor link', async () => {
+  it('renders a non-markdown doc as an in-app viewer button (not an anchor) and opens it via the docs-editor route', async () => {
+    // All docs — markdown and non-markdown — now open in the in-app viewer
+    // (openDoc → router.push to docs-editor), rather than non-markdown docs
+    // being external anchor links to /docs/<path>.
     const docs = makeDocs([{ title: 'Image', path: 'photo.png', is_markdown: false }])
     storeDocs = docs
     storeFilteredDocs = docs
@@ -162,10 +167,18 @@ describe('DocsView', () => {
     const wrapper = shallowMount(DocsView)
     await wrapper.vm.$nextTick()
 
-    const link = wrapper.find('a.doc-card')
-    expect(link.exists()).toBe(true)
-    expect(link.attributes('href')).toContain('/docs/photo.png')
-    expect(link.attributes('target')).toBe('_blank')
+    // Rendered as a button card, not an anchor.
+    expect(wrapper.find('a.doc-card').exists()).toBe(false)
+    const card = wrapper.find('button.doc-card')
+    expect(card.exists()).toBe(true)
+    expect(card.html()).toContain('photo.png')
+
+    // Clicking opens the in-app docs viewer for that path.
+    await card.trigger('click')
+    expect(mockRouterPush).toHaveBeenCalledWith({
+      name: 'docs-editor',
+      params: { project: 'testproject', pathMatch: ['photo.png'] },
+    })
   })
 
   it('shows subgroup heading for non-root sub_dir', async () => {
