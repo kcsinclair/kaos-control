@@ -6,9 +6,7 @@ package project
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -271,7 +269,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	releaseSync := release.NewDiskSync(releaseExpected)
 
 	// Startup release sync: rehydrate DB from disk or backfill disk from DB.
-	go startupReleaseSyncTyped(entry.Name, entry.Path, release.NewStore(idx.DB()), releaseSync)
+	go startupReleaseSyncTyped(entry.Name, entry.Path, release.NewStore(idx.DB()))
 
 	return &Project{
 		Entry:          entry,
@@ -365,64 +363,21 @@ func (p *Project) BranchForLineage(lineage, slug string) string {
 	return kgit.BranchNameFor(p.Cfg.Git.BranchTemplate, slug, lineage)
 }
 
-// startupReleaseSyncTyped synchronises the release DB and disk on project open.
+// startupReleaseSyncTyped rebuilds the releases cache from disk on project open.
 //
-// Logic (per DR-5):
-//   - If DB has 0 rows and lifecycle/releases/ has .md files → Rehydrate.
-//   - If DB has >0 rows and lifecycle/releases/ has no .md files → Backfill.
-//   - Otherwise (both present or both empty) → no-op.
+// Markdown is authoritative (release-artefacts-9.md DR-2/DR-3): disk always wins
+// on load. Rehydrate upserts every release file into the cache and prunes cache
+// rows whose file no longer exists — so a populated cache with an empty
+// lifecycle/releases/ directory yields zero releases (no DB→disk backfill).
 //
-// Runs in a goroutine so Open returns immediately; failures are logged but
-// do not prevent the project from loading.
-func startupReleaseSyncTyped(projectID, projectRoot string, store *release.Store, sync *release.DiskSync) {
-	ctx := context.Background()
-
-	count, err := store.Count(projectID)
+// Runs in a goroutine so Open returns immediately; failures are logged but do
+// not prevent the project from loading.
+func startupReleaseSyncTyped(projectID, projectRoot string, store *release.Store) {
+	result, err := release.Rehydrate(context.Background(), store, projectID, projectRoot)
 	if err != nil {
-		slog.Warn("release startup sync: count failed", "project", projectID, "err", err)
+		slog.Warn("release startup sync: rehydrate failed", "project", projectID, "err", err)
 		return
 	}
-
-	releasesDir := filepath.Join(projectRoot, "lifecycle", "releases")
-	hasDiskFiles := dirHasMDFiles(releasesDir)
-
-	switch {
-	case count == 0 && hasDiskFiles:
-		result, err := release.Rehydrate(ctx, store, projectID, projectRoot)
-		if err != nil {
-			slog.Warn("release startup sync: rehydrate failed", "project", projectID, "err", err)
-			return
-		}
-		slog.Info("release startup sync: rehydrated", "project", projectID,
-			"inserted", result.Inserted, "skipped", result.Skipped)
-
-	case count > 0 && !hasDiskFiles:
-		result, err := release.Backfill(ctx, store, sync, projectID, projectRoot)
-		if err != nil {
-			slog.Error("release startup sync: backfill failed", "project", projectID, "err", err)
-			return
-		}
-		slog.Info("release startup sync: backfilled", "project", projectID,
-			"written", result.Written, "skipped", result.Skipped)
-	}
-}
-
-// dirHasMDFiles reports whether dir contains at least one *.md file (non-recursive).
-func dirHasMDFiles(dir string) bool {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return false
-	}
-	for _, de := range entries {
-		if !de.IsDir() {
-			info, err := de.Info()
-			if err != nil {
-				continue
-			}
-			if info.Mode()&fs.ModeSymlink == 0 && filepath.Ext(de.Name()) == ".md" {
-				return true
-			}
-		}
-	}
-	return false
+	slog.Info("release startup sync: rehydrated", "project", projectID,
+		"inserted", result.Inserted, "skipped", result.Skipped, "pruned", result.Pruned)
 }

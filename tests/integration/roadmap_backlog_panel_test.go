@@ -23,15 +23,15 @@ import (
 //     an empty list (empty-state scenario).
 
 // TestBacklogPanel_UnassignedQueryExcludesReleaseAndSprint verifies that
-// artifacts of type "release" and "sprint" do NOT appear in
+// artifacts of type "release" and "sprint" do NOT surface as backlog items in
 // GET /artifacts?release=__unassigned__ (FR3.2).
 //
-// The client-side filter in RoadmapView.vue is:
-//   a.type !== 'release' && a.type !== 'sprint'
-//
-// At the API level the type field must be present so the client can perform
-// that filtering.  This test also confirms the __unassigned__ sentinel works
-// correctly alongside those types.
+// Since release-artefacts-9 (DR-4) releases are single-cached in the dedicated
+// `releases` table and are NOT indexed into the artifacts table, so they never
+// appear in this query at all. Sprints are still artifacts, so they are still
+// returned by the API's __unassigned__ filter (no release field) and the client
+// filters them out via `a.type !== 'sprint'` in RoadmapView.vue — the type field
+// must therefore be present on each item.
 func TestBacklogPanel_UnassignedQueryExcludesReleaseAndSprint(t *testing.T) {
 	seeds := []seedArtifact{
 		{
@@ -65,9 +65,10 @@ func TestBacklogPanel_UnassignedQueryExcludesReleaseAndSprint(t *testing.T) {
 
 	items, _ := body["items"].([]any)
 
-	// Expected: bp-idea-no-release, bp-req-no-release, bp-release-artifact, bp-sprint-artifact
-	// (the unassigned filter returns all artifacts with no release field regardless of type).
-	// The type field is present on every item so the client can apply its own filter.
+	// Expected: bp-idea-no-release, bp-req-no-release, bp-sprint-artifact.
+	// Release-type artifacts are NOT in the artifacts table (DR-4), so
+	// bp-release-artifact must be absent. Sprint IS still an artifact and is
+	// returned (client filters it), so its type field must be present.
 	foundTypes := map[string]int{}
 	for _, raw := range items {
 		item, _ := raw.(map[string]any)
@@ -75,13 +76,11 @@ func TestBacklogPanel_UnassignedQueryExcludesReleaseAndSprint(t *testing.T) {
 		foundTypes[typ]++
 	}
 
-	// release and sprint type artifacts have no release field so they ARE returned
-	// by the API's __unassigned__ filter — the client is responsible for excluding them.
-	// This test verifies the type field is present and has the correct value so the
-	// client-side filter can work.
-	if foundTypes["release"] == 0 {
-		t.Error("expected at least one item of type 'release' in unassigned list (type field must be present for client filtering)")
+	// Releases are single-cached in the releases table and must not appear here.
+	if foundTypes["release"] != 0 {
+		t.Errorf("release-type artifacts must not appear in the artifacts list (DR-4); found %d", foundTypes["release"])
 	}
+	// Sprint is still an artifact, returned by the API for the client to filter.
 	if foundTypes["sprint"] == 0 {
 		t.Error("expected at least one item of type 'sprint' in unassigned list (type field must be present for client filtering)")
 	}

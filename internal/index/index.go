@@ -117,6 +117,13 @@ func Open(dbPath, projectRoot string, stages []config.Stage, opts ...Option) (*I
 	if err := idx.ensureReleasesSlugColumn(); err != nil {
 		slog.Warn("index: releases slug migration failed", "err", err)
 	}
+	// Purge any release-type rows the artifacts table accumulated before releases
+	// became single-cached in the dedicated `releases` table. IndexFile no longer
+	// admits them (release-artefacts-9.md DR-4); this clears the historical rows.
+	// Idempotent: a no-op once none remain.
+	if _, err := idx.db.Exec(`DELETE FROM artifacts WHERE type = 'release'`); err != nil {
+		slog.Warn("index: purging stale release artifacts failed", "err", err)
+	}
 	// Add rel_path column to artifacts if missing (migration from pre-rel_path
 	// schema). Existing rows keep '' until their next re-index back-fills it.
 	if err := idx.ensureRelPathColumn(); err != nil {
@@ -447,6 +454,17 @@ func (idx *Index) IndexFile(absPath string) error {
 
 	if a.NoFrontmatter {
 		slog.Info("skipping file — no frontmatter detected", "path", relPath)
+		return nil
+	}
+
+	// Release files are cached exclusively in the dedicated `releases` table
+	// (release.Store), which is disk-authoritative and rebuilt via the release
+	// watcher/rehydrate path. They must NOT also live in the generic artifacts
+	// table — that was a second, uncoordinated cache of the same files. Skipping
+	// here covers every entry point (startup scan, watcher, API writes) because
+	// they all funnel through IndexFile. See requirements/release-artefacts-9.md
+	// (DR-4). Stale rows from before this change are purged in ensureSchema.
+	if a.FM.Type == "release" {
 		return nil
 	}
 

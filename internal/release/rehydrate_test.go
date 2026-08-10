@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -173,14 +172,18 @@ func TestRehydrate_EmptyDir(t *testing.T) {
 	}
 }
 
-func TestBackfill_WritesFiles(t *testing.T) {
+// TestRehydrate_EmptyDirPrunesCache verifies the DR-3 reversal: markdown is
+// authoritative, so a populated cache whose lifecycle/releases/ directory is
+// empty (or missing) is pruned to zero on rehydrate. The old DB→disk Backfill
+// behaviour (resurrecting files from cache rows) is gone.
+func TestRehydrate_EmptyDirPrunesCache(t *testing.T) {
 	root := t.TempDir()
 
 	db := openTestDB(t)
 	defer db.Close()
 	store := NewStore(db)
 
-	// Seed 3 rows in DB.
+	// Seed 3 cache rows with no corresponding files on disk.
 	now := time.Now().UTC()
 	for _, name := range []string{"Q1 2026", "Q2 2026", "Q3 2026"} {
 		r := &Release{
@@ -195,64 +198,20 @@ func TestBackfill_WritesFiles(t *testing.T) {
 		}
 	}
 
-	expected := NewExpectedEvents()
-	sync := NewDiskSync(expected)
-
-	result, err := Backfill(context.Background(), store, sync, "proj", root)
+	// Missing releases directory: rehydrate must prune the cache to empty and
+	// must NOT write any files back to disk.
+	result, err := Rehydrate(context.Background(), store, "proj", root)
 	if err != nil {
-		t.Fatalf("Backfill: %v", err)
+		t.Fatalf("Rehydrate: %v", err)
 	}
-	if result.Written != 3 {
-		t.Errorf("Written = %d, want 3", result.Written)
+	if result.Pruned != 3 {
+		t.Errorf("Pruned = %d, want 3", result.Pruned)
 	}
-
-	// Verify files exist on disk.
-	for _, slug := range []string{"q1-2026", "q2-2026", "q3-2026"} {
-		p := filepath.Join(root, "lifecycle", "releases", slug+".md")
-		if _, err := os.Stat(p); err != nil {
-			t.Errorf("expected file at %s: %v", p, err)
-		}
+	if n, err := store.Count("proj"); err != nil || n != 0 {
+		t.Errorf("cache Count = %d (err=%v), want 0", n, err)
 	}
-}
-
-func TestBackfill_UnwritableDirEmitsError(t *testing.T) {
-	root := t.TempDir()
 	dir := filepath.Join(root, "lifecycle", "releases")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	// Make the directory read-only.
-	if err := os.Chmod(dir, 0o555); err != nil {
-		t.Fatal(err)
-	}
-	// Restore permissions so TempDir cleanup can remove it.
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
-
-	db := openTestDB(t)
-	defer db.Close()
-	store := NewStore(db)
-
-	r := &Release{
-		ProjectID: "proj",
-		Name:      "Q1 2026",
-		Slug:      "q1-2026",
-		Status:    "planned",
-		UpdatedAt: time.Now().UTC(),
-	}
-	if err := store.Create(r, nil, ""); err != nil {
-		t.Fatalf("seeding: %v", err)
-	}
-
-	expected := NewExpectedEvents()
-	sync := NewDiskSync(expected)
-
-	result, err := Backfill(context.Background(), store, sync, "proj", root)
-	// Backfill failure must NOT propagate as a hard error (project still loads).
-	if err != nil {
-		t.Fatalf("Backfill returned error (should be non-fatal): %v", err)
-	}
-	if result.Skipped == 0 && !strings.Contains(strings.Join(result.Errors, " "), "") {
-		// Accept either a skipped write or an error entry.
-		t.Logf("result: %+v", result)
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("releases directory should not have been created, stat err = %v", err)
 	}
 }

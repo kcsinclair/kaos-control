@@ -4,6 +4,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -690,6 +691,9 @@ func humanDuration(from, to time.Time) string {
 func isDuplicateError(err error) bool {
 	if err == nil {
 		return false
+	}
+	if errors.Is(err, release.ErrConflict) {
+		return true
 	}
 	return strings.Contains(err.Error(), "UNIQUE constraint failed")
 }

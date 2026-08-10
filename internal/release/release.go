@@ -12,6 +12,10 @@ import (
 // ErrNotFound is returned by Store methods when the requested release does not exist.
 var ErrNotFound = errors.New("release not found")
 
+// ErrConflict is returned by Store.Create when a release with the same name or
+// slug already exists in the project. The HTTP layer maps it to 409.
+var ErrConflict = errors.New("release name or slug already in use")
+
 // ValidStatuses is the set of allowed release status values.
 var ValidStatuses = map[string]bool{
 	"planned":     true,
