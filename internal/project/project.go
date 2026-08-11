@@ -277,7 +277,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	// Startup release sync: rehydrate DB from disk or backfill disk from DB.
 	go startupReleaseSyncTyped(entry.Name, entry.Path, release.NewStore(idx.DB()))
 
-	return &Project{
+	p := &Project{
 		Entry:          entry,
 		Cfg:            cfg,
 		Idx:            idx,
@@ -294,7 +294,24 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		SchedulerStore: schedulerStore,
 		TriageMgr:      triageMgr,
 		ReleaseSync:    releaseSync,
-	}, nil
+	}
+
+	// Wire the config-reload callback so watcher-driven changes to
+	// lifecycle/config.yaml (including external edits, e.g. Obsidian sync)
+	// take effect without a server restart. Safe to close over p here: the
+	// watcher goroutine is only started later via StartWatcher, by which
+	// point p is fully constructed.
+	if w != nil {
+		w.SetConfigCallback(func() {
+			if err := p.ReloadConfig(); err != nil {
+				slog.Warn("project: config reload failed", "name", entry.Name, "err", err)
+			} else {
+				slog.Info("project: config reloaded", "name", entry.Name, "agents", len(p.Config().Agents))
+			}
+		})
+	}
+
+	return p, nil
 }
 
 // StartWatcher launches the fsnotify watcher goroutine.
@@ -378,6 +395,27 @@ func (p *Project) SetConfig(cfg *config.Project) {
 	p.cfgMu.Lock()
 	p.Cfg = cfg
 	p.cfgMu.Unlock()
+}
+
+// ReloadConfig re-reads lifecycle/config.yaml from disk and, if it parses and
+// validates successfully, swaps the cached config and refreshes the live
+// agent roster so newly added/edited agents are usable without a restart.
+// On failure the previous config remains active and the error is returned.
+func (p *Project) ReloadConfig() error {
+	cfg, err := config.LoadProject(p.Entry.Path)
+	if err != nil {
+		return fmt.Errorf("project %q: reloading config: %w", p.Entry.Name, err)
+	}
+	p.SetConfig(cfg)
+	if p.Agents != nil {
+		p.Agents.SetAgents(cfg.Agents)
+	}
+	if p.Hub != nil {
+		p.Hub.Broadcast(hub.Event{Type: "config.reloaded", Payload: map[string]any{
+			"agents": len(cfg.Agents),
+		}})
+	}
+	return nil
 }
 
 // BranchForLineage returns the branch name for a lineage using the project's template.
