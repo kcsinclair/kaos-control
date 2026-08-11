@@ -132,13 +132,16 @@ func (s *Server) handleGetRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.ParseInt(chi.URLParam(r, "releaseID"), 10, 64)
+	store := release.NewStore(p.Idx.DB())
+	id, ok, err := resolveReleaseID(store, p.Entry.Name, chi.URLParam(r, "releaseID"))
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid release ID"))
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
 	}
-
-	store := release.NewStore(p.Idx.DB())
+	if !ok {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
+		return
+	}
 	rel, err := store.Get(p.Entry.Name, id)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
@@ -172,9 +175,14 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.ParseInt(chi.URLParam(r, "releaseID"), 10, 64)
+	store := release.NewStore(p.Idx.DB())
+	id, ok, err := resolveReleaseID(store, p.Entry.Name, chi.URLParam(r, "releaseID"))
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid release ID"))
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+	if !ok {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
 		return
 	}
 
@@ -221,8 +229,6 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, apiError("validation_error", err.Error()))
 		return
 	}
-
-	store := release.NewStore(p.Idx.DB())
 
 	// Conflict detection: if the caller supplied an updated_at, verify it is
 	// not stale against the current DB row.
@@ -296,20 +302,27 @@ func (s *Server) handleDeleteRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.ParseInt(chi.URLParam(r, "releaseID"), 10, 64)
+	store := release.NewStore(p.Idx.DB())
+	id, ok, err := resolveReleaseID(store, p.Entry.Name, chi.URLParam(r, "releaseID"))
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid release ID"))
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
 	}
-
-	store := release.NewStore(p.Idx.DB())
+	if !ok {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
+		return
+	}
 
 	// Optional: reassign artifacts to another release before deleting.
 	reassignTo := r.URL.Query().Get("reassign_to")
 	if reassignTo != "" {
-		reassignID, err := strconv.ParseInt(reassignTo, 10, 64)
-		if err != nil {
-			writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid reassign_to value"))
+		reassignID, rok, rerr := resolveReleaseID(store, p.Entry.Name, reassignTo)
+		if rerr != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("db_error", rerr.Error()))
+			return
+		}
+		if !rok {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "reassign_to release not found"))
 			return
 		}
 		target, err := store.Get(p.Entry.Name, reassignID)
@@ -367,13 +380,16 @@ func (s *Server) handleListReleaseArtifacts(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	id, err := strconv.ParseInt(chi.URLParam(r, "releaseID"), 10, 64)
+	store := release.NewStore(p.Idx.DB())
+	id, ok, err := resolveReleaseID(store, p.Entry.Name, chi.URLParam(r, "releaseID"))
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid release ID"))
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
 	}
-
-	store := release.NewStore(p.Idx.DB())
+	if !ok {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
+		return
+	}
 	items, err := store.ListArtifacts(p.Entry.Name, id)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
@@ -688,6 +704,33 @@ func humanDuration(from, to time.Time) string {
 }
 
 // isDuplicateError returns true when err is a SQLite unique constraint violation.
+// resolveReleaseID resolves a release URL ref to its current autoincrement id.
+// The slug is the durable, disk-derived key (from lifecycle/releases/<slug>.md),
+// so it is preferred: a request keyed by slug survives an index rebuild that
+// reassigns the cache-local autoincrement ids (release-artefacts-9 DR-5). A
+// purely numeric ref that matches no slug falls back to an id lookup, so older
+// links/clients that still address releases by id keep working.
+// Returns (id, true, nil) on success, (0, false, nil) when not found.
+func resolveReleaseID(store *release.Store, projectID, ref string) (int64, bool, error) {
+	rel, err := store.GetBySlug(projectID, ref)
+	if err != nil {
+		return 0, false, err
+	}
+	if rel != nil {
+		return rel.ID, true, nil
+	}
+	if id, perr := strconv.ParseInt(ref, 10, 64); perr == nil {
+		byID, err := store.Get(projectID, id)
+		if err != nil {
+			return 0, false, err
+		}
+		if byID != nil {
+			return byID.ID, true, nil
+		}
+	}
+	return 0, false, nil
+}
+
 func isDuplicateError(err error) bool {
 	if err == nil {
 		return false

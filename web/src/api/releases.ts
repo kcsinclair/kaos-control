@@ -33,26 +33,30 @@ export function createRelease(project: string, data: CreateReleasePayload): Prom
     .then((r) => normaliseDates(r.release))
 }
 
-export function getRelease(project: string, id: number): Promise<ReleaseDetail> {
+// Releases are addressed by their slug — the durable, disk-derived key. The
+// backend also accepts a numeric id for backward compatibility, but the slug
+// survives an index rebuild (which reassigns the cache-local autoincrement ids),
+// so a stale roadmap can no longer produce "release not found" on update.
+export function getRelease(project: string, ref: string): Promise<ReleaseDetail> {
   return api
-    .get<{ release: ReleaseDetail }>(`/p/${encodeURIComponent(project)}/releases/${id}`)
+    .get<{ release: ReleaseDetail }>(`/p/${encodeURIComponent(project)}/releases/${encodeURIComponent(ref)}`)
     .then((r) => normaliseDates(r.release))
 }
 
-export function updateRelease(project: string, id: number, data: UpdateReleasePayload): Promise<Release> {
+export function updateRelease(project: string, ref: string, data: UpdateReleasePayload): Promise<Release> {
   return api
-    .put<{ release: Release }>(`/p/${encodeURIComponent(project)}/releases/${id}`, data)
+    .put<{ release: Release }>(`/p/${encodeURIComponent(project)}/releases/${encodeURIComponent(ref)}`, data)
     .then((r) => normaliseDates(r.release))
 }
 
-export function deleteRelease(project: string, id: number, reassignTo?: number): Promise<{ orphaned_artifact_count: number }> {
-  const qs = reassignTo !== undefined ? `?reassign_to=${reassignTo}` : ''
-  return api.delete<{ orphaned_artifact_count: number }>(`/p/${encodeURIComponent(project)}/releases/${id}${qs}`)
+export function deleteRelease(project: string, ref: string, reassignTo?: string): Promise<{ orphaned_artifact_count: number }> {
+  const qs = reassignTo !== undefined ? `?reassign_to=${encodeURIComponent(reassignTo)}` : ''
+  return api.delete<{ orphaned_artifact_count: number }>(`/p/${encodeURIComponent(project)}/releases/${encodeURIComponent(ref)}${qs}`)
 }
 
-export function listReleaseArtifacts(project: string, id: number): Promise<ArtifactRow[]> {
+export function listReleaseArtifacts(project: string, ref: string): Promise<ArtifactRow[]> {
   return api
-    .get<{ items: ArtifactRow[] | null }>(`/p/${encodeURIComponent(project)}/releases/${id}/artifacts`)
+    .get<{ items: ArtifactRow[] | null }>(`/p/${encodeURIComponent(project)}/releases/${encodeURIComponent(ref)}/artifacts`)
     .then((r) => r.items ?? [])
 }
 

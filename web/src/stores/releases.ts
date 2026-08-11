@@ -62,19 +62,22 @@ export const useReleasesStore = defineStore('releases', () => {
     return release
   }
 
-  async function update(project: string, id: number, data: UpdateReleasePayload): Promise<Release> {
-    const current = releases.value.find((r) => r.id === id)
+  // Releases are addressed by their durable slug, not the cache-local
+  // autoincrement id — a stale roadmap (loaded before an index rebuild that
+  // reassigned ids) still holds the correct slug, so writes keep working.
+  async function update(project: string, slug: string, data: UpdateReleasePayload): Promise<Release> {
+    const current = releases.value.find((r) => r.slug === slug)
     const payload: UpdateReleasePayload = current
       ? { ...data, updated_at: current.updated_at }
       : data
-    const release = await releasesApi.updateRelease(project, id, payload)
-    releases.value = releases.value.map((r) => (r.id === id ? release : r))
+    const release = await releasesApi.updateRelease(project, slug, payload)
+    releases.value = releases.value.map((r) => (r.slug === slug ? release : r))
     return release
   }
 
-  async function remove(project: string, id: number, reassignTo?: number): Promise<{ orphaned_artifact_count: number }> {
-    const result = await releasesApi.deleteRelease(project, id, reassignTo)
-    releases.value = releases.value.filter((r) => r.id !== id)
+  async function remove(project: string, slug: string, reassignTo?: string): Promise<{ orphaned_artifact_count: number }> {
+    const result = await releasesApi.deleteRelease(project, slug, reassignTo)
+    releases.value = releases.value.filter((r) => r.slug !== slug)
     return result
   }
 

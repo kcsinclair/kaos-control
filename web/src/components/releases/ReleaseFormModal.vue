@@ -171,7 +171,7 @@ async function submit() {
     }
     let release: Release
     if (isEdit.value && props.release) {
-      release = await store.update(props.project, props.release.id, payload)
+      release = await store.update(props.project, props.release.slug, payload)
     } else {
       release = await store.create(props.project, payload)
     }
