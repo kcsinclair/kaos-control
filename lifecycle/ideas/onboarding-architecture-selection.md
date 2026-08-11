@@ -4,13 +4,13 @@ type: idea
 status: draft
 lineage: onboarding-architecture-selection
 priority: normal
+parent: lifecycle/ideas/architecture-templates.md
 labels:
     - architecture
     - onboarding
     - ux
     - feature
 release: KC-Release5
-parent: lifecycle/ideas/architecture-templates.md
 ---
 
 # Onboarding — Guided Architecture & Stack Selection
