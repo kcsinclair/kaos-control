@@ -1,7 +1,7 @@
 ---
 title: New agents added to config.yaml don't appear until the app is restarted
 type: defect
-status: approved
+status: in-development
 lineage: agent-config-requires-restart
 created: "2026-08-11T00:00:00+10:00"
 priority: low
