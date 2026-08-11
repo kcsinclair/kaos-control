@@ -1,7 +1,7 @@
 ---
 title: 'Requirements Analyst: Suppress Empty Open Questions Section'
 type: requirement
-status: blocked
+status: draft
 lineage: requirements-analyst-suppress-empty-open-questions
 created: "2026-07-07T00:00:00+10:00"
 priority: normal
@@ -144,7 +144,7 @@ gate.
 - [ ] Related GUI work for surfacing open questions is unaffected. See
       [[open-questions-gui]].
 
-## Open Questions
+## Resolved Questions
 
 _None — the fix scope is well defined; the primary detector hardening is already
 implemented and this requirement covers the remaining prompt cleanup._
