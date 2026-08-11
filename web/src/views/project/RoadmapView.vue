@@ -98,7 +98,7 @@ async function loadDetails() {
   for (const r of store.releases) {
     if (!releaseDetails.value.has(r.id)) {
       try {
-        const detail = await releasesApi.getRelease(project, r.id)
+        const detail = await releasesApi.getRelease(project, r.slug)
         releaseDetails.value = new Map(releaseDetails.value).set(r.id, detail)
       } catch {
         // non-fatal; badge just won't show
@@ -134,7 +134,7 @@ function onReleaseCreated(release: Release) {
   showCreateModal.value = false
   editRelease.value = null
   // Refresh detail cache for the new release
-  releasesApi.getRelease(project, release.id).then((detail) => {
+  releasesApi.getRelease(project, release.slug).then((detail) => {
     releaseDetails.value = new Map(releaseDetails.value).set(release.id, detail)
   }).catch(() => {})
 }
@@ -145,16 +145,16 @@ async function openDelete(releaseId: number) {
   if (!release) return
   deleteRelease.value = release
   try {
-    const arts = await releasesApi.listReleaseArtifacts(project, releaseId)
+    const arts = await releasesApi.listReleaseArtifacts(project, release.slug)
     deleteArtifactCount.value = arts?.length ?? 0
   } catch {
     deleteArtifactCount.value = 0
   }
 }
 
-async function confirmDelete(reassignTo?: number) {
+async function confirmDelete(reassignTo?: string) {
   if (!deleteRelease.value) return
-  await store.remove(project, deleteRelease.value.id, reassignTo)
+  await store.remove(project, deleteRelease.value.slug, reassignTo)
   deleteRelease.value = null
 }
 

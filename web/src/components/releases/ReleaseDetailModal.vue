@@ -47,8 +47,8 @@ async function load() {
   error.value = null
   try {
     const [d, arts] = await Promise.all([
-      releasesApi.getRelease(props.project, props.releaseId),
-      releasesApi.listReleaseArtifacts(props.project, props.releaseId),
+      releasesApi.getRelease(props.project, String(props.releaseId)),
+      releasesApi.listReleaseArtifacts(props.project, String(props.releaseId)),
     ])
     detail.value = d
     artifacts.value = arts ?? []

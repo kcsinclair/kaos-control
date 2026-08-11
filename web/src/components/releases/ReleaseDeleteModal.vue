@@ -12,23 +12,24 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  confirmed: [reassignTo?: number]
+  confirmed: [reassignTo?: string]
   close: []
 }>()
 
 const store = useReleasesStore()
 
-const reassignId = ref<number | ''>('')
+// Reassign target is addressed by slug (the durable key), not the autoincrement id.
+const reassignSlug = ref<string>('')
 const confirming = ref(false)
 
 const otherReleases = computed(() =>
-  store.releases.filter((r) => r.id !== props.release.id)
+  store.releases.filter((r) => r.slug !== props.release.slug)
 )
 
 async function confirm() {
   confirming.value = true
   try {
-    const reassignTo = reassignId.value !== '' ? Number(reassignId.value) : undefined
+    const reassignTo = reassignSlug.value !== '' ? reassignSlug.value : undefined
     emit('confirmed', reassignTo)
   } finally {
     confirming.value = false
@@ -56,14 +57,14 @@ async function confirm() {
 
         <div v-if="artifactCount > 0 && otherReleases.length > 0" class="form-field">
           <label class="field-label" for="reassign-select">Reassign artifacts to</label>
-          <select id="reassign-select" v-model="reassignId" class="field-input field-select">
+          <select id="reassign-select" v-model="reassignSlug" class="field-input field-select">
             <option value="">Leave unassigned (orphaned)</option>
-            <option v-for="r in otherReleases" :key="r.id" :value="r.id">
+            <option v-for="r in otherReleases" :key="r.slug" :value="r.slug">
               {{ r.name }}
             </option>
           </select>
           <span class="field-hint">
-            {{ reassignId !== '' ? 'Artifacts will be reassigned to the selected release.' : 'Artifacts will have no release assigned.' }}
+            {{ reassignSlug !== '' ? 'Artifacts will be reassigned to the selected release.' : 'Artifacts will have no release assigned.' }}
           </span>
         </div>
 
