@@ -25,7 +25,7 @@
     "cytoscape-dagre": "^2.5.0",
     "cytoscape-fcose": "^2.2.0",
     "echarts": "^6.1.0",
-    "js-yaml": "^4.3.0",
+    "js-yaml": "^4.3.1",
     "lucide-vue-next": "^1.0.0",
     "markdown-it": "^14.2.0",
     "pinia": "^2.1.7",
@@ -52,7 +52,8 @@
     "overrides": {
       "undici": "^7.29.0",
       "postcss": "^8.5.18",
-      "linkify-it": "^5.0.2"
+      "linkify-it": "^5.0.2",
+      "brace-expansion": "^2.1.2"
     }
   }
 }
