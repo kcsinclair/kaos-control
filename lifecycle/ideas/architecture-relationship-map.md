@@ -1,9 +1,10 @@
 ---
 title: Architecture Relationship Map
 type: idea
-status: draft
+status: blocked
 lineage: architecture-relationship-map
 priority: normal
+parent: lifecycle/ideas/architecture-templates.md
 labels:
     - architecture
     - onboarding
@@ -11,7 +12,9 @@ labels:
     - graph
     - feature
 release: KC-Release5
-parent: lifecycle/ideas/architecture-templates.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Architecture Relationship Map
@@ -76,13 +79,18 @@ move to (2) when typed relationships land.
 - Entry point from the project-create / onboarding flow and from the catalog
   README.
 
-## Open questions
+## Open Questions
 
 - New dedicated view, or a saved preset/filter on the existing graph engine?
+
+> New dedicated view, new left menu for Architecture, this will be the primary view for now.
+
 - 2D (Cytoscape, better for a small curated set + labelled edges) or reuse the
   3D force graph? A small, typed graph probably reads better in 2D.
+
 - Do we show stacks in the same map (bipartite) or only on node-select to keep
   it legible?
+
 - Should the map be editable by maintainers in-app, or is it purely derived from
   the catalog artifacts? (Leaning: derived — the artifacts are the source of
   truth.)
