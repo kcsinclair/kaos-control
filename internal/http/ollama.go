@@ -45,7 +45,7 @@ func findOllamaInstance(instances []config.OllamaInstance, name string) int {
 // isInstanceReferencedByProjects checks whether any project agent uses the named instance.
 func (s *Server) isInstanceReferencedByProjects(name string) bool {
 	for _, p := range s.projects {
-		for _, ag := range p.Cfg.Agents {
+		for _, ag := range p.Config().Agents {
 			if ag.OllamaInstanceName == name {
 				return true
 			}

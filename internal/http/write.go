@@ -68,7 +68,7 @@ func (s *Server) handleCreateArtifact(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Resolve stage directory.
-	stageDir := p.Cfg.StageDir(req.Stage)
+	stageDir := p.Config().StageDir(req.Stage)
 	if stageDir == "" {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "unknown stage: "+req.Stage))
 		return
@@ -209,8 +209,9 @@ func (s *Server) handleUpdateArtifact(w http.ResponseWriter, r *http.Request) {
 
 	// Validate assignee roles against the project's configured role list.
 	if len(req.Frontmatter.Assignees) > 0 {
-		validRoles := make(map[string]bool, len(p.Cfg.Roles))
-		for _, r := range p.Cfg.Roles {
+		roles := p.Config().Roles
+		validRoles := make(map[string]bool, len(roles))
+		for _, r := range roles {
 			validRoles[r] = true
 		}
 		var invalid []string

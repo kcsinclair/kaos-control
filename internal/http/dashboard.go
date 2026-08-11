@@ -28,7 +28,7 @@ func (s *Server) handleGetDashboardStats(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	stats, err := p.Idx.DashboardStats(isoWeekStart(), p.Cfg.Dashboard.TrackedTypes)
+	stats, err := p.Idx.DashboardStats(isoWeekStart(), p.Config().Dashboard.TrackedTypes)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
@@ -45,7 +45,7 @@ func (s *Server) handleGetStatusDistribution(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	distribution, err := p.Idx.StatusDistribution(p.Cfg.Dashboard.TrackedTypes)
+	distribution, err := p.Idx.StatusDistribution(p.Config().Dashboard.TrackedTypes)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
@@ -62,7 +62,7 @@ func (s *Server) handleGetStageDistribution(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	distribution, err := p.Idx.StageDistribution(p.Cfg.Dashboard.TrackedTypes)
+	distribution, err := p.Idx.StageDistribution(p.Config().Dashboard.TrackedTypes)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
@@ -98,7 +98,7 @@ func (s *Server) handleGetVelocity(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	buckets, err := p.Idx.CompletionVelocity(granularity, days, p.Cfg.Dashboard.TrackedTypes)
+	buckets, err := p.Idx.CompletionVelocity(granularity, days, p.Config().Dashboard.TrackedTypes)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return

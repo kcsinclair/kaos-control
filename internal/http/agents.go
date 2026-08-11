@@ -75,10 +75,11 @@ func (s *Server) handleStartAgentRun(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	// Derive allowed roles: product-owner always permitted, plus the agent's own configured roles.
+	cfg := p.Config()
 	var agentCfg *config.AgentConfig
-	for i := range p.Cfg.Agents {
-		if p.Cfg.Agents[i].Name == name {
-			agentCfg = &p.Cfg.Agents[i]
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == name {
+			agentCfg = &cfg.Agents[i]
 			break
 		}
 	}

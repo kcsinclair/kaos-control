@@ -61,7 +61,7 @@ func requireRole(w http.ResponseWriter, r *http.Request, p *project.Project, all
 		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
 		return false
 	}
-	roles := p.Cfg.RolesFor(user.Email)
+	roles := p.Config().RolesFor(user.Email)
 	if !hasAnyRole(roles, allowed...) {
 		writeJSON(w, http.StatusForbidden, apiError("forbidden", "role required: "+strings.Join(allowed, ",")))
 		return false
@@ -80,7 +80,7 @@ func (s *Server) requireAppRole(w http.ResponseWriter, r *http.Request, allowed 
 	}
 	var union []string
 	for _, p := range s.projects {
-		union = append(union, p.Cfg.RolesFor(user.Email)...)
+		union = append(union, p.Config().RolesFor(user.Email)...)
 	}
 	if !hasAnyRole(union, allowed...) {
 		writeJSON(w, http.StatusForbidden, apiError("forbidden", "role required: "+strings.Join(allowed, ",")))
@@ -99,13 +99,13 @@ func isProductOwner(ctx context.Context) bool {
 	if p == nil || user == nil {
 		return false
 	}
-	return hasAnyRole(p.Cfg.RolesFor(user.Email), RoleProductOwner)
+	return hasAnyRole(p.Config().RolesFor(user.Email), RoleProductOwner)
 }
 
 // appUserHasRole reports whether user holds role in at least one configured project.
 func (s *Server) appUserHasRole(user *auth.User, role string) bool {
 	for _, p := range s.projects {
-		for _, r := range p.Cfg.RolesFor(user.Email) {
+		for _, r := range p.Config().RolesFor(user.Email) {
 			if r == role {
 				return true
 			}

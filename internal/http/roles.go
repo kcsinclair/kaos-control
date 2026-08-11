@@ -19,13 +19,14 @@ func (s *Server) handleGetRoles(w http.ResponseWriter, r *http.Request) {
 		Roles []string `json:"roles"`
 	}
 
-	users := make([]userBinding, 0, len(p.Cfg.Users))
-	for _, u := range p.Cfg.Users {
+	cfg := p.Config()
+	users := make([]userBinding, 0, len(cfg.Users))
+	for _, u := range cfg.Users {
 		users = append(users, userBinding{Email: u.Email, Roles: u.Roles})
 	}
 
 	// Ensure roles is never null in JSON output.
-	roles := p.Cfg.Roles
+	roles := cfg.Roles
 	if roles == nil {
 		roles = []string{}
 	}

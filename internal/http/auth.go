@@ -269,7 +269,7 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	}
 	roleMap := map[string][]string{}
 	for name, p := range s.projects {
-		if roles := p.Cfg.RolesFor(user.Email); len(roles) > 0 {
+		if roles := p.Config().RolesFor(user.Email); len(roles) > 0 {
 			roleMap[name] = roles
 		}
 	}

@@ -48,7 +48,7 @@ func (s *Server) handleTriageIdea(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Role check: product-owner, analyst, or reviewer may trigger triage.
-	roles := p.Cfg.RolesFor(user.Email)
+	roles := p.Config().RolesFor(user.Email)
 	if !hasAnyRole(roles, "product-owner", "analyst", "reviewer") {
 		writeJSON(w, http.StatusForbidden, apiError("forbidden", "role product-owner, analyst, or reviewer required"))
 		return

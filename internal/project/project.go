@@ -28,8 +28,14 @@ import (
 
 // Project is the runtime services container for one registered project.
 type Project struct {
-	Entry          *config.ProjectEntry
-	Cfg            *config.Project
+	Entry *config.ProjectEntry
+
+	// Cfg is the cached lifecycle/config.yaml snapshot. It is swapped by
+	// ReloadConfig after a live edit, so reads must go through Config()
+	// (not this field directly) to observe reloads safely. cfgMu guards it.
+	Cfg   *config.Project
+	cfgMu sync.RWMutex
+
 	Idx            *index.Index
 	Git            *kgit.Repo // nil if the project directory is not a git repo
 	Hub            *hub.Hub
@@ -358,9 +364,25 @@ func (p *Project) LifecycleDir() string {
 	return filepath.Join(p.Entry.Path, "lifecycle")
 }
 
+// Config returns the current lifecycle/config.yaml snapshot. Callers must use
+// this instead of reading the Cfg field directly, since ReloadConfig may swap
+// it concurrently.
+func (p *Project) Config() *config.Project {
+	p.cfgMu.RLock()
+	defer p.cfgMu.RUnlock()
+	return p.Cfg
+}
+
+// SetConfig replaces the cached config snapshot.
+func (p *Project) SetConfig(cfg *config.Project) {
+	p.cfgMu.Lock()
+	p.Cfg = cfg
+	p.cfgMu.Unlock()
+}
+
 // BranchForLineage returns the branch name for a lineage using the project's template.
 func (p *Project) BranchForLineage(lineage, slug string) string {
-	return kgit.BranchNameFor(p.Cfg.Git.BranchTemplate, slug, lineage)
+	return kgit.BranchNameFor(p.Config().Git.BranchTemplate, slug, lineage)
 }
 
 // startupReleaseSyncTyped rebuilds the releases cache from disk on project open.

@@ -62,7 +62,7 @@ func (s *Server) handleAllowedTargets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userRoles := p.Cfg.RolesFor(user.Email)
+	userRoles := p.Config().RolesFor(user.Email)
 	targets := p.Workflow.AllowedTargets(row.Status, userRoles, row.Type)
 	if targets == nil {
 		targets = []string{}
@@ -105,7 +105,7 @@ func (s *Server) handleTransitionArtifact(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userRoles := p.Cfg.RolesFor(user.Email)
+	userRoles := p.Config().RolesFor(user.Email)
 	if !p.Workflow.CanTransition(row.Status, req.To, userRoles, row.Type) {
 		allowed := p.Workflow.AllowedTargets(row.Status, userRoles, row.Type)
 		writeJSON(w, http.StatusForbidden, map[string]any{
@@ -121,7 +121,7 @@ func (s *Server) handleTransitionArtifact(w http.ResponseWriter, r *http.Request
 	// Required-plans gate: requirement leaving 'planning' must have all required plan
 	// types approved. Product-owner bypasses the gate for maintenance / recovery.
 	if !workflow.HasProductOwner(userRoles) && row.Status == "planning" && req.To == "in-development" {
-		required := p.Cfg.RequiredPlans[row.Type]
+		required := p.Config().RequiredPlans[row.Type]
 		if ok, missing, err := workflow.GateReady(p.Idx, row.FM.Lineage, required); err != nil {
 			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 			return

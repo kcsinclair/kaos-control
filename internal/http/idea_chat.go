@@ -223,7 +223,7 @@ func resolveIdeaCaptureConfig(p *project.Project, templateKey string) (ideachat.
 		agentName = "docs-capture"
 	}
 
-	for _, a := range p.Cfg.Agents {
+	for _, a := range p.Config().Agents {
 		if a.Name == agentName {
 			prompt, ok := a.PromptTemplates[templateKey]
 			if !ok {

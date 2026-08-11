@@ -31,7 +31,7 @@ func (s *Server) handleStatusCheck(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lineageSlug := r.URL.Query().Get("lineage")
-	userRoles := p.Cfg.RolesFor(user.Email)
+	userRoles := p.Config().RolesFor(user.Email)
 
 	var allResults []statuscheck.Result
 
@@ -120,7 +120,7 @@ func (s *Server) handleStatusCheckAdvance(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userRoles := p.Cfg.RolesFor(user.Email)
+	userRoles := p.Config().RolesFor(user.Email)
 
 	type advanceResult struct {
 		Path       string `json:"path"`

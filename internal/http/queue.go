@@ -50,10 +50,11 @@ func (s *Server) handleEnqueue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find the agent config so we can check the required roles.
+	cfg := p.Config()
 	var agentCfg *config.AgentConfig
-	for i := range p.Cfg.Agents {
-		if p.Cfg.Agents[i].Name == req.Agent {
-			agentCfg = &p.Cfg.Agents[i]
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == req.Agent {
+			agentCfg = &cfg.Agents[i]
 			break
 		}
 	}
@@ -65,7 +66,7 @@ func (s *Server) handleEnqueue(w http.ResponseWriter, r *http.Request) {
 	// product-owner may always enqueue; otherwise the user must hold one of
 	// the agent's configured roles (same logic as handleStartAgentRun).
 	allowed := append([]string{RoleProductOwner}, agentCfg.Roles...)
-	userRoles := p.Cfg.RolesFor(user.Email)
+	userRoles := cfg.RolesFor(user.Email)
 	if !hasAnyRole(userRoles, allowed...) {
 		writeJSON(w, http.StatusForbidden, apiError("forbidden", "insufficient role to enqueue this agent"))
 		return
