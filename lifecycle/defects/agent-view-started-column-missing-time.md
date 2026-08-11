@@ -1,7 +1,7 @@
 ---
 title: 'Agent View: Started Column Must Display Date and Time'
 type: defect
-status: approved
+status: in-development
 lineage: agent-view-started-column-missing-time
 created: "2026-08-11T17:40:37+10:00"
 priority: normal
