@@ -115,5 +115,16 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, apiError("write_error", err.Error()))
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+
+	// Reload the live config (agent roster, roles, etc.) so the write takes
+	// effect immediately rather than waiting for the debounced watcher event
+	// or a restart. The file is already written at this point; if the new
+	// config fails full validation (e.g. an agent missing a required field),
+	// the previous config stays active and the caller is told reload failed
+	// so they know to fix and re-save rather than assume it's live.
+	resp := map[string]any{"ok": true}
+	if err := p.ReloadConfig(); err != nil {
+		resp["reload_error"] = err.Error()
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
