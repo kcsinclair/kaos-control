@@ -26,6 +26,20 @@ func TestParseOpenQuestions_DashMarkers(t *testing.T) {
 	}
 }
 
+// TestParseOpenQuestions_LowercaseHeading verifies the answer parser locates the
+// section under a naturally-cased heading ("## Open questions"), matching
+// HasOpenQuestions, so the resolve-questions flow works on such artifacts.
+func TestParseOpenQuestions_LowercaseHeading(t *testing.T) {
+	body := "## Open questions\n\n- Why is X?\n- What about Y?\n"
+	qs, ok := artifact.ParseOpenQuestions(body)
+	if !ok {
+		t.Fatal("expected ok=true for lowercase heading")
+	}
+	if len(qs) != 2 {
+		t.Fatalf("expected 2 questions, got %d", len(qs))
+	}
+}
+
 func TestParseOpenQuestions_NumberedMarkers(t *testing.T) {
 	body := "## Open Questions\n\n1. First question?\n2. Second question?\n"
 	qs, ok := artifact.ParseOpenQuestions(body)

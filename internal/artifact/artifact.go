@@ -274,7 +274,7 @@ func HasOpenQuestions(body string) bool {
 			if !isOpenQuestionSentinel(line) {
 				sawRealQuestion = true
 			}
-		} else if line == "## Open Questions" {
+		} else if isOpenQuestionsHeading(line) {
 			inSection = true
 		}
 	}

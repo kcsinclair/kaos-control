@@ -25,6 +25,19 @@ const openQuestionsHeading = "## Open Questions"
 // resolvedQuestionsHeading is the heading ApplyAnswers renames to on completion.
 const resolvedQuestionsHeading = "## Resolved Questions"
 
+// isOpenQuestionsHeading reports whether a line is the "## Open Questions"
+// section heading, tolerating case and surrounding whitespace (e.g.
+// "## Open questions", "##  OPEN QUESTIONS ") — humans and agents author the
+// heading with natural casing, and an exact match silently drops those
+// artifacts from open-question detection, auto-blocking, and the answer parser.
+func isOpenQuestionsHeading(line string) bool {
+	rest, ok := strings.CutPrefix(strings.TrimSpace(line), "##")
+	if !ok {
+		return false // not an H2 (rejects "### Open Questions", "# Open Questions")
+	}
+	return strings.EqualFold(strings.TrimSpace(rest), "Open Questions")
+}
+
 // topLevelItemRe matches a top-level "- " or "1. " list item marker at the
 // start of a line, capturing the remainder of the line as question text.
 var topLevelItemRe = regexp.MustCompile(`^(?:-|\d+\.)\s+(.*)$`)
@@ -44,7 +57,7 @@ type questionEntry struct {
 func locateOpenQuestionsSection(lines []string) (headingIdx, sectionEnd int) {
 	headingIdx = -1
 	for i, line := range lines {
-		if line == openQuestionsHeading {
+		if isOpenQuestionsHeading(line) {
 			headingIdx = i
 			break
 		}

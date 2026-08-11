@@ -89,6 +89,20 @@ func TestHasOpenQuestions_HeadingWithBulletList(t *testing.T) {
 
 // TestHasOpenQuestions_HeadingWithParagraph verifies that a "## Open
 // Questions" heading followed by a prose paragraph is detected as non-empty.
+// TestHasOpenQuestions_HeadingLowercaseAndWhitespace verifies the heading match
+// tolerates natural casing and surrounding whitespace, so an artifact authored
+// with "## Open questions" is still detected (and thus auto-blocked / listed).
+func TestHasOpenQuestions_HeadingLowercaseAndWhitespace(t *testing.T) {
+	for _, heading := range []string{"## Open questions", "##  OPEN QUESTIONS ", "## open questions"} {
+		body := heading + "\n\n- Q1\n- Q2\n"
+		if !artifact.HasOpenQuestions(body) {
+			t.Errorf("expected HasOpenQuestions=true for heading %q", heading)
+		}
+	}
+}
+
+// TestHasOpenQuestions_HeadingWithParagraph verifies that a "## Open
+// Questions" heading followed by a prose paragraph is detected as non-empty.
 func TestHasOpenQuestions_HeadingWithParagraph(t *testing.T) {
 	body := "## Open Questions\n\nSome question here.\n"
 	if !artifact.HasOpenQuestions(body) {
