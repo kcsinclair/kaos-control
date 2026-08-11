@@ -9,7 +9,7 @@ labels:
     - workflow
     - artefacts
     - feature
-release: KC-Release5
+release: KC-Release6
 assignees:
     - role: product-owner
       who: agent

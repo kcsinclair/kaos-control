@@ -1,7 +1,7 @@
 ---
 title: Detect Claude Code rate_limit_event for Precise Quota Signalling
 type: requirement
-status: draft
+status: blocked
 lineage: rate-limit-event-detection
 created: "2026-06-12T00:00:00+10:00"
 priority: medium
