@@ -1,7 +1,7 @@
 ---
 title: Rice Scoring Support for Product Management Prioritisation
 type: idea
-status: approved
+status: clarifying
 lineage: rice-scoring
 priority: high
 parent: lifecycle/ideas/kaos-control-devops-cli.md
