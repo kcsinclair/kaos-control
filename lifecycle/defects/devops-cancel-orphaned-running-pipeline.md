@@ -1,7 +1,7 @@
 ---
 title: Cannot cancel a broken DevOps pipeline stuck in "Running" (orphaned run, in-memory cancel state)
 type: defect
-status: approved
+status: in-development
 lineage: devops-cancel-orphaned-running-pipeline
 created: "2026-08-11T00:00:00+10:00"
 priority: medium
