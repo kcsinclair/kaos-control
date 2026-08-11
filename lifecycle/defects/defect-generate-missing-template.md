@@ -5,6 +5,7 @@ status: draft
 lineage: defect-generate-missing-template
 created: "2026-08-11T00:00:00+10:00"
 priority: medium
+release: KC-Release5
 labels:
     - defect
     - agent
