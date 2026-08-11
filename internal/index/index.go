@@ -33,7 +33,13 @@ type Transitioner interface {
 	CanTransition(from, to string, userRoles []string, artifactType string) bool
 }
 
-const schemaVersion = 5
+// schemaVersion gates a full rebuild-from-disk of the artifact cache on startup
+// (dropAndRecreate; agent_runs / events / scheduler are excluded and survive).
+// Bumped to 6 to force re-evaluation of every artifact after the open-questions
+// heading detector became case-insensitive (fix f0d5d17e) — already-indexed,
+// unchanged files are otherwise skipped by the mtime/SHA guards, so the fix
+// would never reach them (e.g. a draft with "## Open questions" stays unblocked).
+const schemaVersion = 6
 
 // Index wraps the SQLite database for one project.
 type Index struct {
