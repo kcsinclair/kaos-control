@@ -1,7 +1,7 @@
 ---
 title: Architecture Relationship Map
 type: idea
-status: blocked
+status: draft
 lineage: architecture-relationship-map
 priority: normal
 parent: lifecycle/ideas/architecture-templates.md
@@ -79,7 +79,7 @@ move to (2) when typed relationships land.
 - Entry point from the project-create / onboarding flow and from the catalog
   README.
 
-## Open Questions
+## Resolved Questions
 
 - New dedicated view, or a saved preset/filter on the existing graph engine?
 
@@ -98,3 +98,5 @@ move to (2) when typed relationships land.
 - Should the map be editable by maintainers in-app, or is it purely derived from
   the catalog artifacts? (Leaning: derived — the artifacts are the source of
   truth.)
+
+> Derived, artifacts are the source of truth.
