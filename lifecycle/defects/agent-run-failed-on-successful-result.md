@@ -1,7 +1,7 @@
 ---
 title: Agent run shows status "failed" despite a successful result (non-zero exit overrides success)
 type: defect
-status: draft
+status: done
 lineage: agent-run-failed-on-successful-result
 created: "2026-08-11T00:00:00+10:00"
 priority: high
@@ -16,6 +16,23 @@ assignees:
 ---
 
 # Agent run shows status "failed" despite a successful result
+
+## Resolution (2026-08-11)
+
+Fixed in [internal/agent/agent.go](../../internal/agent/agent.go): the
+`broadcast` closure now records `resultEventSuccess` alongside `resultEventSeen`
+(via a new `resultEventIsError` helper), and a **success-reconciliation** step
+after the exit-code branch upgrades a plain `failed` (non-zero exit that was not
+a user kill or timeout) back to `done` when a terminal result event with
+`is_error:false` was observed. Scoped so explicit kills, timeouts, and error
+results (`is_error:true`, incl. auth) are unaffected.
+
+Regression tests in
+[internal/agent/precheck_test.go](../../internal/agent/precheck_test.go):
+`TestSupervise_NonZeroExitWithSuccessResultMarkedDone` (success result + non-zero
+exit → done) and `TestSupervise_NonZeroExitWithErrorResultStaysFailed` (error
+result + non-zero exit → stays failed). Full agent package green. Live
+confirmation pending a server restart.
 
 ## Source
 

@@ -5,6 +5,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -337,6 +338,12 @@ func TestPrecheck_LogLineAppended(t *testing.T) {
 // lineage lock, then drives supervise to completion with the given driver and
 // pre-loaded stream events. It returns the final run-row status.
 func superviseTestRun(t *testing.T, driver string, events ...ProgressEvent) string {
+	return superviseTestRunErr(t, driver, nil, events...)
+}
+
+// superviseTestRunErr is superviseTestRun with a controllable process exit: when
+// waitErr is non-nil the mock process reports a non-zero exit (proc.Wait() != nil).
+func superviseTestRunErr(t *testing.T, driver string, waitErr error, events ...ProgressEvent) string {
 	t.Helper()
 	m, cleanup := newTestManager(t)
 	defer cleanup()
@@ -356,6 +363,7 @@ func superviseTestRun(t *testing.T, driver string, events ...ProgressEvent) stri
 	}
 
 	proc := newMockProcess(events...)
+	proc.waitErr = waitErr
 	m.mu.Lock()
 	m.active[runID] = &activeRun{proc: proc, cancel: func() {}}
 	m.mu.Unlock()
@@ -388,6 +396,33 @@ func TestSupervise_ClaudeRunWithResultEventMarkedDone(t *testing.T) {
 	)
 	if status != "done" {
 		t.Errorf("run status = %q, want \"done\" (a clean run with a result event must not be marked failed)", status)
+	}
+}
+
+// TestSupervise_NonZeroExitWithSuccessResultMarkedDone is the regression test
+// for GitHub #14: a run that emits a terminal result event with is_error:false
+// but whose process then exits non-zero must be recorded as done — a non-zero
+// exit code alone must not override a clean success.
+func TestSupervise_NonZeroExitWithSuccessResultMarkedDone(t *testing.T) {
+	status := superviseTestRunErr(t, "claude-code-cli", errors.New("exit status 1"),
+		initEvent("bypassPermissions"),
+		resultEvent("success"),
+	)
+	if status != "done" {
+		t.Errorf("run status = %q, want \"done\" (a non-zero exit must not override a successful result event)", status)
+	}
+}
+
+// TestSupervise_NonZeroExitWithErrorResultStaysFailed verifies the reconciliation
+// is scoped: a terminal result event with is_error:true plus a non-zero exit
+// remains failed (only a clean success upgrades the status).
+func TestSupervise_NonZeroExitWithErrorResultStaysFailed(t *testing.T) {
+	status := superviseTestRunErr(t, "claude-code-cli", errors.New("exit status 1"),
+		initEvent("bypassPermissions"),
+		resultEvent("error"), // is_error:true
+	)
+	if status != "failed" {
+		t.Errorf("run status = %q, want \"failed\" (an error result must not be upgraded)", status)
 	}
 }
 

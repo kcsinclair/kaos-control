@@ -753,6 +753,10 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	// wasn't actually finished — silently marking it "done" hides real
 	// failures. Tracked via the broadcast closure; checked after proc.Wait().
 	var resultEventSeen bool
+	// resultEventSuccess is true when the terminal result event carried
+	// is_error:false — i.e. the agent task completed successfully. Used to stop a
+	// non-zero process exit code from overriding a clean success (GitHub #14).
+	var resultEventSuccess bool
 
 	// Auth-error tracker: counts consecutive api_retry/401 events; once the
 	// threshold is reached the run is killed early and queue.auth_error is
@@ -795,9 +799,11 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 						m.killer.Kill(proc)
 					}
 				}
-				// Track terminal result events so we can detect truncated streams.
+				// Track terminal result events so we can detect truncated streams,
+				// and whether the result was a success (is_error:false).
 				if isResultEvent(payload) {
 					resultEventSeen = true
+					resultEventSuccess = !resultEventIsError(payload)
 				}
 			}
 		}
@@ -886,6 +892,18 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 				status = "killed"
 			}
 		}
+	}
+
+	// Success reconciliation (GitHub #14): a non-zero exit code alone must not
+	// override a clean success. If the stream emitted a terminal result event
+	// with is_error:false, the agent task completed — record it as done. Scoped
+	// to a plain "failed" (a non-zero exit that was not a user kill or timeout),
+	// so explicit kills and error results (is_error:true, incl. auth) are
+	// unaffected.
+	if status == "failed" && resultEventSeen && resultEventSuccess {
+		slog.Warn("agent: process exited non-zero but emitted a successful result event — recording done",
+			"run_id", run.RunID, "agent", run.AgentName, "driver", run.Driver)
+		status = "done"
 	}
 
 	// Auth-error override: if we broadcast queue.auth_error and the process
@@ -1691,6 +1709,17 @@ func isResultEvent(payload map[string]any) bool {
 	}
 	t, _ := ev["type"].(string)
 	return t == "result"
+}
+
+// resultEventIsError reports whether a terminal stream-json result event carries
+// is_error:true. Only meaningful when isResultEvent(payload) is true.
+func resultEventIsError(payload map[string]any) bool {
+	ev, _ := payload["event"].(map[string]any)
+	if ev == nil {
+		return false
+	}
+	isErr, _ := ev["is_error"].(bool)
+	return isErr
 }
 
 // isFirstContentToken reports whether a decoded stream-json event represents
