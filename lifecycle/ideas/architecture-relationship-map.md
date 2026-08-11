@@ -88,6 +88,8 @@ move to (2) when typed relationships land.
 - 2D (Cytoscape, better for a small curated set + labelled edges) or reuse the
   3D force graph? A small, typed graph probably reads better in 2D.
 
+> 2D and 3D options, we have the engines already.
+
 - Do we show stacks in the same map (bipartite) or only on node-select to keep
   it legible?
 
