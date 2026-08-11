@@ -381,9 +381,10 @@ type DenialRecord struct {
 
 // Manager runs agents with lineage locking and a global concurrency semaphore.
 type Manager struct {
-	agents  []config.AgentConfig
-	drivers map[string]Driver
-	sem     chan struct{}
+	agentsMu sync.RWMutex // guards agents, so SetAgents can hot-swap the roster
+	agents   []config.AgentConfig
+	drivers  map[string]Driver
+	sem      chan struct{}
 
 	mu     sync.Mutex
 	active map[string]*activeRun
@@ -501,16 +502,32 @@ func (m *Manager) LogPath(runID string) string {
 }
 
 // Agents returns the configured agent list (read-only).
-func (m *Manager) Agents() []config.AgentConfig { return m.agents }
+func (m *Manager) Agents() []config.AgentConfig {
+	m.agentsMu.RLock()
+	defer m.agentsMu.RUnlock()
+	return m.agents
+}
 
 // GetAgent returns the named agent config.
 func (m *Manager) GetAgent(name string) (*config.AgentConfig, bool) {
+	m.agentsMu.RLock()
+	defer m.agentsMu.RUnlock()
 	for i := range m.agents {
 		if m.agents[i].Name == name {
-			return &m.agents[i], true
+			ag := m.agents[i]
+			return &ag, true
 		}
 	}
 	return nil, false
+}
+
+// SetAgents hot-swaps the configured agent roster, e.g. after a config.yaml
+// reload. Existing runs are unaffected; new runs and roster queries
+// (Agents/GetAgent) observe the new list immediately.
+func (m *Manager) SetAgents(agents []config.AgentConfig) {
+	m.agentsMu.Lock()
+	m.agents = agents
+	m.agentsMu.Unlock()
 }
 
 // StartRun initiates an agent run and returns the run_id.
