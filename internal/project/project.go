@@ -201,6 +201,20 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	logStore := devops.NewLogStore(devopsLogDir)
 	devopsRunner := devops.NewRunner()
 
+	// Reconcile orphaned pipeline runs left "Running" by a prior process
+	// (crash, restart, or a run goroutine that ended without persisting a
+	// terminal status). devopsRunner was just created, so no run is live yet
+	// — anything still showing as in-progress from disk cannot actually be
+	// running. Runs in a goroutine so a large backlog of logs doesn't delay
+	// Open().
+	go func() {
+		if n, err := logStore.ReconcileOrphanedRuns(entry.Name, devopsRunner.IsRunningID); err != nil {
+			slog.Warn("project: reconcile orphaned devops runs", "name", entry.Name, "err", err)
+		} else if n > 0 {
+			slog.Info("project: reconciled orphaned devops runs at startup", "name", entry.Name, "count", n)
+		}
+	}()
+
 	// runInfoMu guards runInfos, which tracks start time + slug for each
 	// in-flight run so the completion event can assemble the RunRecord.
 	type runStartInfo struct {
