@@ -193,7 +193,7 @@ mis-configured.
 - Per-tool allow-listing (`--allowedTools`).
 - Detecting non-permission init-event errors (e.g. malformed prompt).
 
-## Open questions
+## Developer questions
 
 None blocking. Two minor calls the developer can make:
 

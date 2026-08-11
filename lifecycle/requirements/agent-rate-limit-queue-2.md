@@ -245,7 +245,7 @@ on Claude rate-limit errors; UI to inspect and control the queue.
 - Backfilling failed jobs from before the feature shipped.
 - A public REST API for external schedulers.
 
-## Open questions
+## Developer questions
 
 None blocking. Two minor items the implementer can resolve:
 

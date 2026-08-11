@@ -136,7 +136,7 @@ DR-1, DR-2, DR-3, DR-4 are **implemented**. DR-5 (id→slug external key) is
   on `{id}` today). Existing `{id}` routes either move to `{slug}` or resolve
   `id` through the slug so links survive a rehydrate.
 
-## Open questions
+## Resolved & deferred questions
 
 - **Artifact-list visibility (the main UI ripple).** Removing release files from
   the `artifacts` table drops them from the artifact list stage filter
