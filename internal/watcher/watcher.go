@@ -49,6 +49,13 @@ type Watcher struct {
 	// instead of the standard artifact indexer.
 	releaseFn func(absPath string)
 
+	// configPath is the absolute path to lifecycle/config.yaml.
+	configPath string
+
+	// configFn is called (debounced, 150 ms) when lifecycle/config.yaml
+	// changes on disk. May be nil.
+	configFn func()
+
 	// watchedDirCount tracks how many directories have been added to fsw, so
 	// addDirRecursive can enforce maxWatchedDirs. Only ever touched from the
 	// single goroutine that runs Start's event loop (including the initial
@@ -72,6 +79,7 @@ func New(projectRoot string, idx *index.Index, h *hub.Hub, ignore ...string) (*W
 		idx:          idx,
 		hub:          h,
 		ignore:       ignore,
+		configPath:   filepath.Join(projectRoot, "lifecycle", "config.yaml"),
 	}, nil
 }
 
@@ -96,6 +104,12 @@ func (w *Watcher) SetTriageCallback(fn func(relPath string)) {
 // absolute path of the changed file. It must be called before Start.
 func (w *Watcher) SetReleaseCallback(fn func(absPath string)) {
 	w.releaseFn = fn
+}
+
+// SetConfigCallback registers a callback that is invoked (debounced, 150 ms)
+// whenever lifecycle/config.yaml changes on disk. It must be called before Start.
+func (w *Watcher) SetConfigCallback(fn func()) {
+	w.configFn = fn
 }
 
 // Start begins watching the lifecycle/ tree and blocks until ctx is cancelled.
@@ -169,6 +183,13 @@ func (w *Watcher) Start(ctx context.Context) error {
 			// Git-state files: debounce and call the git status callback.
 			if w.gitStatusFn != nil && (evt.Name == gitHEAD || evt.Name == gitIndex) {
 				fire(evt.Name, w.gitStatusFn)
+				continue
+			}
+			// lifecycle/config.yaml: debounce and call the config reload callback.
+			// It is not a .md file, so it would otherwise be silently dropped by
+			// shouldProcess below.
+			if w.configFn != nil && evt.Name == w.configPath {
+				fire(evt.Name, w.configFn)
 				continue
 			}
 			// Docs files: emit doc.changed without touching the index.
