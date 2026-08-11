@@ -14,6 +14,7 @@ related_to:
     - architecture/tech-stacks/python-fastapi.md
     - architecture/tech-stacks/php-symfony-postgres.md
     - architecture/tech-stacks/python-mongodb.md
+    - architecture/tech-stacks/php-simple.md
 summary: One cloud-hosted web application serving many tenants — the classic SaaS shape, without the cost of full microservices.
 ---
 
@@ -58,6 +59,7 @@ Most B2B and B2C web products: dashboards, productivity tools, vertical SaaS. Th
 - [Python + FastAPI](../tech-stacks/python-fastapi.md) — data- and AI-centric SaaS.
 - [PHP + Symfony / PostgreSQL](../tech-stacks/php-symfony-postgres.md) — productive multi-tenant web on cheap, ubiquitous hosting.
 - [Python + MongoDB](../tech-stacks/python-mongodb.md) — document-per-tenant models scale simply.
+- [Simple PHP](../tech-stacks/php-simple.md) — a simple hosted site at the low-complexity end, on cheap ubiquitous hosting.
 
 ## Related architectures
 Internally almost always a [[architecture/architectures/modular-monolith|Modular Monolith]]; scales into [[architecture/architectures/cloud-native-microservices|Cloud-Native Microservices]] when domains need independent scaling; can shed infrastructure entirely toward [[architecture/architectures/serverless-faas|Serverless / FaaS]].

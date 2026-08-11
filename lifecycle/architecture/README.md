@@ -38,11 +38,15 @@ compatibility edges in the graph and the filter for stack selection.
 | [Event-Driven / Streaming](architectures/event-driven-streaming.md) | Async events, stream processing | Very high (throughput) |
 | [Serverless / FaaS](architectures/serverless-faas.md) | Managed functions, scale-to-zero | Elastic |
 | [Edge / Distributed Hybrid](architectures/edge-hybrid.md) | Edge + cloud split | High (many devices) |
+| [Static Website / JAMstack](architectures/static-site.md) | Static files on a CDN, no app server | Very high read / near-zero cost |
 
 ## Tech stacks
 
 | Stack | Layer | Strength |
 | --- | --- | --- |
+| [Static HTML / CSS / JS](tech-stacks/static-html-js.md) | Frontend (static) | Simplest possible site (kaos-control.io's own) |
+| [Hugo](tech-stacks/hugo.md) | Frontend (static, generated) | Content-first blogs/docs/marketing (tek42.io's own) |
+| [Simple PHP](tech-stacks/php-simple.md) | Full-stack web (server-rendered) | Simplest dynamic site, ubiquitous hosting |
 | [Go + Vue](tech-stacks/go-vue.md) | Full-stack web | Lean, high-concurrency (kaos-control's own) |
 | [TypeScript React + NestJS](tech-stacks/ts-react-nest.md) | Full-stack web | Ecosystem & velocity |
 | [Python + FastAPI](tech-stacks/python-fastapi.md) | Backend | AI/ML & rapid prototyping |
