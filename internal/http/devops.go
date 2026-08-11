@@ -173,7 +173,12 @@ func serverPort(r *http.Request, listen string) string {
 }
 
 // handleCancelPipeline handles POST /api/p/{project}/devops/pipelines/{slug}/cancel.
-// Cancels the active run for the given pipeline slug, or returns 404 if none.
+// Cancels the active run for the given pipeline slug. If no live handle
+// exists (e.g. the server restarted while the run was in progress, or its
+// goroutine ended without persisting a terminal status), the most recent
+// orphaned run for the slug is reconciled to "cancelled" instead of
+// returning 404 — the persisted state is not left stuck showing "Running".
+// Returns 404 only when there is truly nothing to cancel.
 func (s *Server) handleCancelPipeline(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
 	if !requireRole(w, r, p, RolesDevopsOrAdmin...) {
@@ -183,7 +188,17 @@ func (s *Server) handleCancelPipeline(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	runID, ok := p.DevopsRunner.ActiveRunID(slug)
 	if !ok {
-		writeJSON(w, http.StatusNotFound, apiError("not_found", "no active run for pipeline: "+slug))
+		rec, reconciled, err := p.DevopsLogs.ReconcileSlugOrphan(p.Entry.Name, slug)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("server_error", err.Error()))
+			return
+		}
+		if !reconciled {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "no active run for pipeline: "+slug))
+			return
+		}
+		p.Hub.Broadcast(hub.Event{Type: devops.EventRunCompleted, Payload: rec})
+		writeJSON(w, http.StatusOK, map[string]any{"cancelled": true, "reconciled": true})
 		return
 	}
 
