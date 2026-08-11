@@ -283,7 +283,7 @@ onMounted(() => {
                 <td>
                   <span class="status-chip" :data-status="run.status">{{ run.status }}</span>
                 </td>
-                <td class="cell-muted">{{ new Date(run.started_at).toLocaleTimeString() }}</td>
+                <td class="cell-muted">{{ new Date(run.started_at).toLocaleString() }}</td>
                 <td class="cell-muted">{{ elapsed(run) }}</td>
                 <td class="cell-actions" @click.stop>
                   <button
