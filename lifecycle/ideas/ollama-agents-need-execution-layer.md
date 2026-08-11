@@ -1,10 +1,10 @@
 ---
 title: Ollama Agents Need an Execution Layer
 type: idea
-status: blocked
+status: abandoned
 lineage: ollama-agents-need-execution-layer
 created: "2026-05-13T19:50:00+10:00"
-priority: high
+priority: normal
 labels:
     - agent
     - ollama
@@ -129,7 +129,7 @@ whether the gap to **Option 2** is worth closing for the few agent
 roles that need iterative tool use (qa is the obvious candidate
 because it needs to actually run tests).
 
-## Open Questions
+## Potential Questions if Reopened
 
 - Should the post-processor reject responses that contain *any* text
   outside fenced file blocks (strict mode), or accept them and just
