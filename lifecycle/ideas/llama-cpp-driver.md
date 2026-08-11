@@ -1,7 +1,7 @@
 ---
 title: llama.cpp Agent Driver for Local Models
 type: idea
-status: approved
+status: clarifying
 lineage: llama-cpp-driver
 created: "2026-08-11T16:42:45+10:00"
 priority: normal
