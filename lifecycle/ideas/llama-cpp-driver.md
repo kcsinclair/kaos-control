@@ -1,7 +1,7 @@
 ---
 title: llama.cpp Agent Driver for Local Models
 type: idea
-status: draft
+status: approved
 lineage: llama-cpp-driver
 created: "2026-08-11T16:42:45+10:00"
 priority: normal
@@ -13,6 +13,7 @@ labels:
     - go
     - portability
     - feature
+release: KC-Release5
 ---
 
 # llama.cpp Agent Driver for Local Models
