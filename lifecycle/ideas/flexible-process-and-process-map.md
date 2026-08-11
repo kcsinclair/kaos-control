@@ -4,6 +4,7 @@ type: idea
 status: draft
 lineage: flexible-process-and-process-map
 priority: normal
+parent: lifecycle/ideas/devops-pipeline-run-history.md
 labels:
     - workflow
     - process
@@ -11,8 +12,7 @@ labels:
     - ux
     - feature
     - frontend
-release: KC-Release5
-parent: lifecycle/ideas/devops-pipeline-run-history.md
+release: KC-Release6
 ---
 
 # flexible process and process map

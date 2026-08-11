@@ -1,7 +1,7 @@
 ---
 title: Onboarding — Guided Architecture & Stack Selection
 type: idea
-status: draft
+status: blocked
 lineage: onboarding-architecture-selection
 priority: normal
 parent: lifecycle/ideas/architecture-templates.md
@@ -11,6 +11,9 @@ labels:
     - ux
     - feature
 release: KC-Release5
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Onboarding — Guided Architecture & Stack Selection
