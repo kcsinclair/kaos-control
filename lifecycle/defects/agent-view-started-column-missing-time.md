@@ -12,6 +12,10 @@ labels:
     - ui
     - usability
     - vue
+release: KC-Release5
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Agent View: Started Column Must Display Date and Time
