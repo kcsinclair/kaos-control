@@ -1,7 +1,7 @@
 ---
 title: Agent picker list overflows the viewport with many agents — lower options unreachable
 type: defect
-status: approved
+status: in-development
 lineage: agent-picker-overflow-unreachable-options
 created: "2026-08-11T00:00:00+10:00"
 priority: medium
