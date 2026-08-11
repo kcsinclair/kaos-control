@@ -68,40 +68,42 @@ onMounted(() => {
 
       <div v-if="!store.agents.length" class="rad-empty">No agents configured for this project.</div>
       <template v-else>
-        <div class="rad-field">
-          <div class="rad-label">Agent</div>
-          <div class="agent-list">
-            <button
-              v-for="a in store.agents"
-              :key="a.name"
-              class="agent-chip"
-              :class="{ 'agent-chip--active': selectedAgent?.name === a.name }"
-              @click="selectAgent(a)"
-            >
-              <span class="agent-name">{{ a.name }}</span>
-              <span class="agent-driver">{{ a.driver }}</span>
-            </button>
+        <div class="rad-body">
+          <div class="rad-field">
+            <div class="rad-label">Agent</div>
+            <div class="agent-list">
+              <button
+                v-for="a in store.agents"
+                :key="a.name"
+                class="agent-chip"
+                :class="{ 'agent-chip--active': selectedAgent?.name === a.name }"
+                @click="selectAgent(a)"
+              >
+                <span class="agent-name">{{ a.name }}</span>
+                <span class="agent-driver">{{ a.driver }}</span>
+              </button>
+            </div>
           </div>
+
+          <label class="rad-field" v-if="roles.length > 1">
+            <span class="rad-label">Role</span>
+            <select class="rad-select" v-model="selectedRole">
+              <option v-for="r in roles" :key="r" :value="r">{{ r }}</option>
+            </select>
+          </label>
+
+          <label class="rad-field">
+            <span class="rad-label">Target artifact path</span>
+            <input
+              class="rad-input"
+              type="text"
+              v-model="targetPath"
+              placeholder="lifecycle/requirements/…"
+            />
+          </label>
+
+          <div v-if="error" class="rad-error">{{ error }}</div>
         </div>
-
-        <label class="rad-field" v-if="roles.length > 1">
-          <span class="rad-label">Role</span>
-          <select class="rad-select" v-model="selectedRole">
-            <option v-for="r in roles" :key="r" :value="r">{{ r }}</option>
-          </select>
-        </label>
-
-        <label class="rad-field">
-          <span class="rad-label">Target artifact path</span>
-          <input
-            class="rad-input"
-            type="text"
-            v-model="targetPath"
-            placeholder="lifecycle/requirements/…"
-          />
-        </label>
-
-        <div v-if="error" class="rad-error">{{ error }}</div>
 
         <div class="rad-actions">
           <button
@@ -136,6 +138,7 @@ onMounted(() => {
   box-shadow: var(--shadow-lg);
   padding: var(--space-6);
   width: 420px;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -145,10 +148,18 @@ onMounted(() => {
   font-weight: 600;
   margin: 0;
   color: var(--color-text);
+  flex-shrink: 0;
 }
 .rad-empty {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+}
+.rad-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+  min-height: 0;
 }
 .rad-field {
   display: flex;
@@ -202,7 +213,7 @@ onMounted(() => {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
 }
-.rad-actions { display: flex; gap: var(--space-2); }
+.rad-actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
 .btn-primary {
   padding: var(--space-2) var(--space-4);
   background: var(--color-accent);
