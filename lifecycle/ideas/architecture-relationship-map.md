@@ -93,6 +93,8 @@ move to (2) when typed relationships land.
 - Do we show stacks in the same map (bipartite) or only on node-select to keep
   it legible?
 
+> Option to show related tech stack
+
 - Should the map be editable by maintainers in-app, or is it purely derived from
   the catalog artifacts? (Leaning: derived — the artifacts are the source of
   truth.)
