@@ -1,7 +1,7 @@
 ---
 title: "Integration Tests — Architecture Relationship Map"
 type: test
-status: approved
+status: in-qa
 lineage: architecture-relationship-map
 parent: lifecycle/test-plans/architecture-relationship-map-5-test.md
 ---
