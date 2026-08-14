@@ -260,6 +260,19 @@ export interface GraphData {
   edges: GraphEdge[]
 }
 
+/**
+ * Relationship kinds the architecture map knows how to style distinctly.
+ * Loose string-compatible (not a strict enum) so unknown/future kinds still
+ * type-check and degrade to generic edge styling (NFR-5).
+ */
+export type ArchitectureEdgeKind =
+  | 'related'
+  | 'evolves_into'
+  | 'alternative_to'
+  | 'composed_with'
+  | 'related_to'
+  | (string & {})
+
 export interface GraphFilter {
   types?: string[]
   statuses?: string[]
