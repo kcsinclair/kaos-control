@@ -207,7 +207,7 @@ consumers/producers of the model defined here.
   summary + standards cover the human-facing narrative; a dedicated diagram home is out of
   scope pending [[architecture-overview-view]].
 
-> kaos-control would keep lifecycle related docs in lifecycle/docs, end user docs in a docs directory the project root directory, this is implemented now in kaos-control, generated documentation is in docs in the root.
+> kaos-control would keep lifecycle related docs in lifecycle/docs, end user docs in a docs directory the project root directory, this is the Documentation link in the gui,  implemented now in kaos-control, any diagrams can live in that docs directory.
 
 - **OQ-2** Should the summary and standards eventually get dedicated `type:` values, or is
   `type: doc` sufficient long-term? v1 uses `doc`.
