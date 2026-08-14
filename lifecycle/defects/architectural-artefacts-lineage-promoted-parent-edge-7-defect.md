@@ -1,7 +1,7 @@
 ---
 title: Promoted architecture copy parent graph edge missing after startup scan
 type: defect
-status: draft
+status: approved
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
 labels: [defect]
