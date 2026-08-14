@@ -386,7 +386,7 @@ onMounted(async () => {
                 v-if="row.active_agent_status"
                 class="agent-status-pill"
                 :data-status="row.active_agent_status"
-              >{{ row.active_agent_status === 'running' ? 'Agent Running' : 'Work Queued' }}</span>
+              >{{ row.active_agent_status === 'running' ? 'Agent Running' : 'Queued for Agent' }}</span>
               <span class="artifact-path">{{ row.rel_path || row.path }}</span>
             </td>
             <td><span class="stage-tag">{{ row.stage }}</span></td>

@@ -7,6 +7,7 @@ import type { ArtifactDetail, GraphEdge } from '@/types/api'
 import { edgeLabel } from '@/components/map/graphConstants'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
 import { isArchitecturePath } from '@/utils/architecturePath'
+import { useQueueStore } from '@/stores/queue'
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 import StatusDropdown from './StatusDropdown.vue'
@@ -20,6 +21,24 @@ const props = defineProps<{
   edges?: GraphEdge[]
   readonly?: boolean
 }>()
+
+const queueStore = useQueueStore()
+
+// Whether this artifact currently has an agent run queued or running against
+// it — derived from the live queue snapshot (same source QueueWorkButton
+// uses) rather than the artifact's `status` field, so it stays accurate
+// regardless of which lifecycle status the artifact is in.
+const queuedState = computed<'running' | 'queued' | null>(() => {
+  if (!props.project) return null
+  const { running, pending } = queueStore.snapshot
+  if (running && running.project === props.project && running.artifact_path === props.artifact.path) {
+    return 'running'
+  }
+  if (pending.some((j) => j.project === props.project && j.artifact_path === props.artifact.path)) {
+    return 'queued'
+  }
+  return null
+})
 
 const emit = defineEmits<{
   transitioned: [newStatus: string]
@@ -65,6 +84,11 @@ function fmt(v: string | undefined): string {
             @error="emit('error', $event)"
           />
           <span v-else class="badge" :data-status="artifact.status">{{ fmt(artifact.status) }}</span>
+          <span
+            v-if="queuedState"
+            class="agent-status-pill"
+            :data-status="queuedState"
+          >{{ queuedState === 'running' ? 'Agent Running' : 'Queued for Agent' }}</span>
         </dd>
       </div>
       <div class="fm-row">
@@ -289,6 +313,29 @@ function fmt(v: string | undefined): string {
   .badge[data-status="abandoned"]      { background: #1f2937; color: #9ca3af; }
   .badge[data-status="in-progress"]    { background: #422006; color: #fcd34d; }
 }
+.agent-status-pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-left: var(--space-2);
+}
+.agent-status-pill[data-status="running"] {
+  background: var(--badge-in-progress-bg);
+  color: var(--badge-in-progress-text);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+.agent-status-pill[data-status="queued"] {
+  background: var(--badge-planning-bg);
+  color: var(--badge-planning-text);
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
 /* Static release badge shown when project/targetPath are absent */
 .release-badge-static {
   display: inline-block;
