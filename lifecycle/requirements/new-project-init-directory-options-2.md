@@ -100,6 +100,8 @@ The "New Project" flow assumes the user is creating a fresh location for their p
 
 - When scaffolding into an existing directory that already has a partial `lifecycle/` tree (some but not all expected subdirectories), should the tool complete the missing pieces silently, or warn the user first?
 
+> complete the missing pieces with an information notification.
+
 - Should the New Project form pre-fill or suggest a default parent location (e.g. last-used path or the server user's home directory)?
 
 - Is there a maximum-depth or allowlist policy on where projects may be created (e.g. must live under a configured projects root), or is any writable path permitted?
