@@ -104,4 +104,6 @@ The "New Project" flow assumes the user is creating a fresh location for their p
 
 - Should the New Project form pre-fill or suggest a default parent location (e.g. last-used path or the server user's home directory)?
 
+> no prefill
+
 - Is there a maximum-depth or allowlist policy on where projects may be created (e.g. must live under a configured projects root), or is any writable path permitted?
