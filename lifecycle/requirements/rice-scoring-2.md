@@ -177,6 +177,8 @@ automatically, and surface it where items are compared (list views) and edited
   should Confidence be a 0–1 fraction? Chosen 0–100 for editing ergonomics;
   needs product-owner confirmation.
 
+> 0-100 as a percentage
+
 - **Effort units** — person-months is assumed as the conventional unit; should
   the unit be labelled/configurable in the UI?
 
