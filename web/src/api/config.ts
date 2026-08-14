@@ -2,10 +2,14 @@
 
 import { api } from './client'
 import yaml from 'js-yaml'
-import type { UserBinding } from '@/types/api'
+import type { ConfigHealthResponse, UserBinding } from '@/types/api'
 
 export function getConfig(project: string) {
   return api.get<{ raw: string }>(`/p/${encodeURIComponent(project)}/config`)
+}
+
+export function getConfigHealth(project: string) {
+  return api.get<ConfigHealthResponse>(`/p/${encodeURIComponent(project)}/config/health`)
 }
 
 export function updateConfig(project: string, raw: string) {

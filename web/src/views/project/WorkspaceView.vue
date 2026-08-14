@@ -13,6 +13,7 @@ import { getProjectWs } from '@/api/ws'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import InitRequiredBanner from '@/components/project/InitRequiredBanner.vue'
+import ConfigHealthBanner from '@/components/project/ConfigHealthBanner.vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -103,7 +104,10 @@ onUnmounted(() => {
           v-if="projectStore.initRequired && projectStore.current"
           :path="projectStore.current.path"
         />
-        <RouterView v-else />
+        <template v-else>
+          <ConfigHealthBanner :project="getProject()" />
+          <RouterView />
+        </template>
       </main>
     </div>
   </div>

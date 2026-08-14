@@ -58,6 +58,17 @@ export interface ApiErrorBody {
   message: string
 }
 
+/** One config self-repair applied in-memory when the project config loaded. */
+export interface RepairNote {
+  agent: string
+  template_key: string
+  reason: string
+}
+
+export interface ConfigHealthResponse {
+  repairs: RepairNote[]
+}
+
 export interface ArtifactAssignee {
   role: string
   who: string
