@@ -1,7 +1,7 @@
 ---
 title: Architecture Wizard — Guided Architecture & Stack Selection
 type: idea
-status: draft
+status: approved
 lineage: onboarding-architecture-selection
 priority: normal
 parent: lifecycle/ideas/architecture-templates.md
