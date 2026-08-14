@@ -10,6 +10,10 @@ export const typeToAgent: Record<string, string> = {
   'plan-test': 'test-developer',
   test: 'qa',
   doc: 'tech-writer',
+  // architecture, tech-stack: promoted from the catalog by the onboarding wizard, never
+  // agent-authored directly — intentionally left unmapped.
+  // adr: raised by a human or proposed by any agent via its write scope — no single owning
+  // agent, so intentionally left unmapped.
 }
 
 // agentForArtifact returns the agent name to use for an artefact.

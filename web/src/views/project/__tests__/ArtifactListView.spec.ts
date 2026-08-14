@@ -207,3 +207,49 @@ describe('ArtifactListView — rel_path display', () => {
     expect(pathChips).not.toContain('lifecycle/ideas/archive/nested-idea.md')
   })
 })
+
+// Frontend plan: lifecycle/frontend-plans/architectural-artefacts-4-fe.md — Milestone 1
+//
+// Verifies the type filter dropdown includes the new architectural artefact types, and
+// that selecting one requests the corresponding server-side filter.
+describe('ArtifactListView — architectural artefact type filter', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mockFetchList.mockResolvedValue(undefined)
+    mockFetchLabels.mockResolvedValue(undefined)
+    mockFetchPriorities.mockResolvedValue(undefined)
+  })
+
+  it('lists architecture, tech-stack and adr as type filter options', async () => {
+    const wrapper = shallowMount(ArtifactListView, {
+      global: { stubs: { RouterLink: true } },
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    // Type filter is the 3rd <select> in the filter bar: stage, status, type, release.
+    const typeSelect = wrapper.findAll('select')[2]
+    const options = typeSelect.findAll('option').map(o => o.attributes('value'))
+    expect(options).toContain('architecture')
+    expect(options).toContain('tech-stack')
+    expect(options).toContain('adr')
+  })
+
+  it('requests type: adr from the store when the adr option is selected', async () => {
+    const wrapper = shallowMount(ArtifactListView, {
+      global: { stubs: { RouterLink: true } },
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    mockFetchList.mockClear()
+
+    const typeSelect = wrapper.findAll('select')[2]
+    await typeSelect.setValue('adr')
+
+    expect(mockFetchList).toHaveBeenCalledWith(
+      'testproject',
+      expect.objectContaining({ type: 'adr' }),
+    )
+  })
+})

@@ -60,6 +60,9 @@ const DARK_PALETTE: GraphPalette = {
     label:           '#a855f7',  // purple-500
     release:         '#93c5fd',  // blue-300
     backlog:         '#6b7280',  // gray-500
+    architecture:    '#6366f1',  // indigo-500
+    'tech-stack':    '#818cf8',  // indigo-400
+    adr:             '#d946ec',  // fuchsia-500
   },
   priorityColors: {
     high:   '#ef4444',  // red-500
@@ -120,6 +123,9 @@ const LIGHT_PALETTE: GraphPalette = {
     label:           '#9333ea',  // purple-600
     release:         '#3b82f6',  // blue-500
     backlog:         '#4b5563',  // gray-600
+    architecture:    '#4f46e5',  // indigo-600
+    'tech-stack':    '#6366f1',  // indigo-500
+    adr:             '#c026d3',  // fuchsia-600
   },
   priorityColors: {
     high:   '#dc2626',  // red-600
