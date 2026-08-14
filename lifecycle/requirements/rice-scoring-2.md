@@ -1,7 +1,7 @@
 ---
 title: RICE Scoring for Ideas and Defects
 type: requirement
-status: blocked
+status: draft
 lineage: rice-scoring
 priority: high
 parent: lifecycle/ideas/rice-scoring.md
@@ -165,7 +165,7 @@ automatically, and surface it where items are compared (list views) and edited
       [[artefact-inline-status-change]] for the inline-edit interaction pattern,
       and [[sortable-table-columns]] for the sortable column behaviour.
 
-## Open Questions
+## Resolved Questions
 
 - **Impact scale enforcement** — should Impact be a free number, or constrained
   to the conventional RICE tiers (0.25 / 0.5 / 1 / 2 / 3) via a dropdown? This
@@ -198,3 +198,5 @@ automatically, and surface it where items are compared (list views) and edited
 - **Scope of list views** — should the RICE column appear in every list that
   can contain ideas/defects (search, kanban side lists, release panels), or
   only the primary artifact list in this iteration?
+
+> Lets start with pimary artifact list for now.  I will raise an enhancement for adding to more places.
