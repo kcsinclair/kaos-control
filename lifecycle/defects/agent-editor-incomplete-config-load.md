@@ -1,7 +1,7 @@
 ---
 title: Agent Editor Does Not Load All Data from config.yaml
 type: defect
-status: clarifying
+status: approved
 lineage: agent-editor-incomplete-config-load
 created: "2026-05-22T10:14:42+10:00"
 priority: normal
