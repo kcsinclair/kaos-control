@@ -25,6 +25,25 @@ function deriveTitle(text: string): string {
   return (first || text).slice(0, 120)
 }
 
+// Error codes that mean "generation is unavailable because of project
+// config", as opposed to a transient/unknown failure — see
+// lifecycle/frontend-plans/defect-generate-missing-template-3-fe.md Milestone 1.
+const CONFIG_ERROR_CODES = new Set(['template_unavailable', 'config_error'])
+
+export type BrainDumpErrorKind = 'config' | 'generic'
+
+const GENERATION_LABEL: Record<'idea' | 'defect' | 'doc', string> = {
+  idea: 'Idea',
+  defect: 'Defect',
+  doc: 'Doc',
+}
+
+const GENERATION_TEMPLATE_KEY: Record<'idea' | 'defect' | 'doc', string> = {
+  idea: 'idea-generate',
+  defect: 'defect-generate',
+  doc: 'doc-generate',
+}
+
 export type BrainDumpPhase = 'input' | 'generating' | 'preview' | 'editing'
 
 export const useBrainDumpStore = defineStore('brainDump', () => {
@@ -32,8 +51,25 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
   const artifactType = ref<'idea' | 'defect' | 'doc'>('idea')
   const phase = ref<BrainDumpPhase>('input')
   const error = ref<string | null>(null)
+  const errorKind = ref<BrainDumpErrorKind | null>(null)
   const proposal = ref<IdeaGenerateResponse | null>(null)
   const editedBody = ref<string | null>(null)
+
+  // Maps a caught error to a display message and a kind, so the UI can branch
+  // on a stable classification (config vs. generic) rather than message text.
+  function applyError(e: unknown): void {
+    if (e instanceof ApiError && CONFIG_ERROR_CODES.has(e.code)) {
+      const type = artifactType.value
+      error.value = `${GENERATION_LABEL[type]} generation isn't configured for this project. Ask an admin to add a \`${GENERATION_TEMPLATE_KEY[type]}\` template to the idea-capture agent, or create the ${type} manually.`
+      errorKind.value = 'config'
+    } else if (e instanceof ApiError) {
+      error.value = e.message
+      errorKind.value = 'generic'
+    } else {
+      error.value = 'Something went wrong — please try again.'
+      errorKind.value = 'generic'
+    }
+  }
 
   const canSubmit = computed(
     () => input.value.trim().length > 0 && phase.value === 'input',
@@ -44,6 +80,7 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     opts?: { sourceLineage?: string; sourcePath?: string },
   ): Promise<void> {
     error.value = null
+    errorKind.value = null
     phase.value = 'generating'
     try {
       const res = await generateIdea(
@@ -56,11 +93,7 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
       proposal.value = res
       phase.value = 'preview'
     } catch (e: unknown) {
-      if (e instanceof ApiError) {
-        error.value = e.message
-      } else {
-        error.value = 'Something went wrong — please try again.'
-      }
+      applyError(e)
       phase.value = 'input'
     }
   }
@@ -121,6 +154,7 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     const raw = input.value.trim()
     if (!raw) return null
     error.value = null
+    errorKind.value = null
     phase.value = 'generating'
     try {
       const slug = opts?.sourceLineage ?? slugify(raw)
@@ -138,11 +172,7 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
       )
       return res.artifact.path
     } catch (e: unknown) {
-      if (e instanceof ApiError) {
-        error.value = e.message
-      } else {
-        error.value = 'Something went wrong — please try again.'
-      }
+      applyError(e)
       phase.value = 'input'
       return null
     }
@@ -153,6 +183,7 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     artifactType.value = 'idea'
     phase.value = 'input'
     error.value = null
+    errorKind.value = null
     proposal.value = null
     editedBody.value = null
   }
@@ -166,6 +197,7 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     artifactType,
     phase,
     error,
+    errorKind,
     proposal,
     editedBody,
     canSubmit,
