@@ -219,3 +219,102 @@ func TestParse_CreatedFieldRoundTrip(t *testing.T) {
 		t.Errorf("round-trip: want %q, got %q", created, a2.FM.Created)
 	}
 }
+
+// TestParse_ArchitectureZoneCleanSlugNoLineage verifies that a clean-slug file
+// under lifecycle/architecture/ with no lineage: field parses with zero
+// ParseErrs, Index == 0, and Lineage left empty (not backfilled to slug).
+func TestParse_ArchitectureZoneCleanSlugNoLineage(t *testing.T) {
+	raw := []byte("---\ntitle: Postgres Modular Monolith\ntype: architecture\nstatus: approved\n---\n\nBody.\n")
+	a := artifact.Parse(raw, "lifecycle/architecture/postgres-modular-monolith.md", time.Now())
+
+	if len(a.ParseErrs) != 0 {
+		t.Errorf("expected zero ParseErrs, got %v", a.ParseErrs)
+	}
+	if a.Index != 0 {
+		t.Errorf("Index: want 0, got %d", a.Index)
+	}
+	if a.FM.Lineage != "" {
+		t.Errorf("Lineage: want empty, got %q", a.FM.Lineage)
+	}
+}
+
+// TestParse_ArchitectureZonePromotedCopyParentEdge verifies that a promoted
+// copy whose parent: points at a catalog entry parses with zero ParseErrs and
+// emits a parent edge to that target.
+func TestParse_ArchitectureZonePromotedCopyParentEdge(t *testing.T) {
+	raw := []byte("---\ntitle: Postgres Modular Monolith\ntype: architecture\nstatus: approved\nparent: lifecycle/architecture/architectures/postgres-modular-monolith.md\n---\n\nBody.\n")
+	a := artifact.Parse(raw, "lifecycle/architecture/postgres-modular-monolith.md", time.Now())
+
+	if len(a.ParseErrs) != 0 {
+		t.Errorf("expected zero ParseErrs, got %v", a.ParseErrs)
+	}
+	found := false
+	for _, l := range a.Links {
+		if l.Kind == artifact.EdgeKindParent && l.To == "lifecycle/architecture/architectures/postgres-modular-monolith.md" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected a parent edge to the catalog source, got links: %+v", a.Links)
+	}
+}
+
+// TestParse_ADRTypeValid verifies that type: adr validates (no "unknown type"
+// ParseErr) and that type: doc still validates.
+func TestParse_ADRTypeValid(t *testing.T) {
+	raw := []byte("---\ntitle: Adopt X\ntype: adr\nstatus: draft\n---\n\nBody.\n")
+	a := artifact.Parse(raw, "lifecycle/architecture/decisions/adr-0001-adopt-x.md", time.Now())
+	for _, e := range a.ParseErrs {
+		if strings.Contains(e, "unknown type") {
+			t.Errorf("unexpected unknown-type parse error: %s", e)
+		}
+	}
+
+	raw2 := []byte("---\ntitle: A doc\ntype: doc\nstatus: draft\nlineage: a-doc\n---\n\nBody.\n")
+	a2 := artifact.Parse(raw2, "lifecycle/docs/a-doc.md", time.Now())
+	for _, e := range a2.ParseErrs {
+		if strings.Contains(e, "unknown type") {
+			t.Errorf("unexpected unknown-type parse error: %s", e)
+		}
+	}
+}
+
+// TestParse_OutsideArchitectureZoneStillRequiresLineage is a regression guard:
+// a file outside lifecycle/architecture/ with no lineage: still records the
+// "missing required field: lineage" ParseErr — the relaxation is path-scoped.
+func TestParse_OutsideArchitectureZoneStillRequiresLineage(t *testing.T) {
+	raw := []byte("---\ntitle: Some idea\ntype: idea\nstatus: draft\n---\n\nBody.\n")
+	a := artifact.Parse(raw, "lifecycle/ideas/some-idea.md", time.Now())
+
+	found := false
+	for _, e := range a.ParseErrs {
+		if e == "missing required field: lineage" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected missing-lineage ParseErr for a non-architecture path, got %v", a.ParseErrs)
+	}
+	if a.FM.Lineage != "some-idea" {
+		t.Errorf("Lineage: want backfilled slug %q, got %q", "some-idea", a.FM.Lineage)
+	}
+}
+
+// TestIsArchitecturePath verifies the path-prefix helper directly, including
+// Windows-style separators normalised via filepath.ToSlash.
+func TestIsArchitecturePath(t *testing.T) {
+	cases := []struct {
+		path string
+		want bool
+	}{
+		{"lifecycle/architecture/postgres-modular-monolith.md", true},
+		{"lifecycle/architecture/decisions/adr-0001-adopt-x.md", true},
+		{"lifecycle/ideas/login.md", false},
+		{"lifecycle/architecture-templates/foo.md", false},
+	}
+	for _, c := range cases {
+		if got := artifact.IsArchitecturePath(c.path); got != c.want {
+			t.Errorf("IsArchitecturePath(%q): want %v, got %v", c.path, c.want, got)
+		}
+	}
+}

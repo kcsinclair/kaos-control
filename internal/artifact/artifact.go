@@ -27,8 +27,10 @@ var KnownTypes = map[string]bool{
 	"doc": true, "release": true,
 	// Catalog artifacts shipped for project onboarding (see
 	// lifecycle/ideas/architecture-templates.md): selectable high-level
-	// architectures and the tech stacks that suit them.
-	"architecture": true, "tech-stack": true,
+	// architectures and the tech stacks that suit them. Promoted copies of
+	// these, the architecture summary, and ADRs are standing reference
+	// artefacts under lifecycle/architecture/ — see IsArchitecturePath.
+	"architecture": true, "tech-stack": true, "adr": true,
 }
 
 // Edge kinds used in GraphEdge.Kind and the links table.
@@ -173,7 +175,7 @@ func Parse(raw []byte, relPath string, mtime time.Time) *Artifact {
 		a.ParseErrs = append(a.ParseErrs, "missing required field: status")
 		a.FM.Status = "draft"
 	}
-	if a.FM.Lineage == "" {
+	if a.FM.Lineage == "" && !IsArchitecturePath(relPath) {
 		a.ParseErrs = append(a.ParseErrs, "missing required field: lineage")
 		a.FM.Lineage = slug
 	}
@@ -299,6 +301,14 @@ func RenderHTML(src string) string {
 		return "<p>render error</p>"
 	}
 	return buf.String()
+}
+
+// IsArchitecturePath reports whether relPath falls under lifecycle/architecture/,
+// the standing reference zone (catalog entries, promoted choices, ADRs, the
+// architecture summary) that is exempt from lineage/index validation.
+// filepath.ToSlash normalises Windows separators before the prefix check.
+func IsArchitecturePath(relPath string) bool {
+	return strings.HasPrefix(filepath.ToSlash(relPath), "lifecycle/architecture/")
 }
 
 // ----- filename / path helpers -----
