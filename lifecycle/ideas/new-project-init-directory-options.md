@@ -1,7 +1,7 @@
 ---
 title: 'New Project Init: Existing or New Directory'
 type: idea
-status: approved
+status: clarifying
 lineage: new-project-init-directory-options
 created: "2026-08-14T11:38:41+10:00"
 priority: normal
@@ -12,6 +12,7 @@ labels:
     - ux
     - ui
     - v1
+release: KC-Release5
 ---
 
 # New Project Init: Existing or New Directory
