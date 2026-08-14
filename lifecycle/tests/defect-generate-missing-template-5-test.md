@@ -1,7 +1,7 @@
 ---
 title: "Integration Tests — Defect Generate Template Fallback"
 type: test
-status: draft
+status: approved
 lineage: defect-generate-missing-template
 parent: lifecycle/test-plans/defect-generate-missing-template-4-test.md
 ---
