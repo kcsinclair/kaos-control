@@ -1,7 +1,7 @@
 ---
 title: Architecture Relationship Map
 type: requirement
-status: planning
+status: done
 lineage: architecture-relationship-map
 parent: lifecycle/ideas/architecture-relationship-map.md
 labels:
