@@ -1,7 +1,7 @@
 ---
 title: Pre-seeded architecture, tech-stack, and adr artefacts not indexed on startup scan
 type: defect
-status: approved
+status: in-development
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
 labels: [defect]
