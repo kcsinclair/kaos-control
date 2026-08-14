@@ -1,7 +1,7 @@
 ---
 title: Queued-for-Agent status not shown in artefact list or detail view
 type: defect
-status: draft
+status: approved
 lineage: queued-for-agent-status-not-shown-in-list-or-detail
 created: "2026-08-15T09:28:41+10:00"
 priority: normal
