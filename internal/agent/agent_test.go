@@ -32,6 +32,22 @@ func TestBuildArgs_DualFlagOrder(t *testing.T) {
 	}
 }
 
+// TestBuildArgs_DeniesScheduleWakeup verifies that ClaudeCodeDriver denies the
+// ScheduleWakeup tool on every invocation, so a one-shot run can't silently
+// drop deferred work on a wakeup nothing will ever honour.
+func TestBuildArgs_DeniesScheduleWakeup(t *testing.T) {
+	d := &ClaudeCodeDriver{}
+	args := d.buildArgs(Run{PromptText: "hello"})
+
+	dtIdx := slices.Index(args, "--disallowedTools")
+	if dtIdx < 0 {
+		t.Fatal("--disallowedTools not found in args")
+	}
+	if dtIdx+1 >= len(args) || args[dtIdx+1] != "ScheduleWakeup" {
+		t.Fatalf("expected --disallowedTools ScheduleWakeup, got args[%d+1]=%q", dtIdx, args[dtIdx+1])
+	}
+}
+
 // TestExtractRateLimitText covers all stream-json rate-limit / overload formats.
 func TestExtractRateLimitText(t *testing.T) {
 	type tc struct {

@@ -187,12 +187,23 @@ func (d *ClaudeCodeDriver) buildArgs(run Run) []string {
 		"-p", run.PromptText,
 		"--output-format", "stream-json",
 		"--verbose",
+		"--disallowedTools", scheduleWakeupTool,
 	}
 	if run.Model != "" {
 		args = append(args, "--model", run.Model)
 	}
 	return args
 }
+
+// scheduleWakeupTool is denied on every claude-code-cli invocation (and, by
+// extension, claude-env, which reuses this buildArgs, and claude-mediated,
+// which denies it via its own buildArgs). Agent runs in kaos-control are
+// one-shot: once the process exits the run is terminal and nothing
+// re-invokes it, so a scheduled wakeup the agent depends on is silently
+// dropped and its deferred work is lost. Denying the tool makes calling it
+// return a tool-result error instead, forcing the agent to finish inline
+// within the run's timeout.
+const scheduleWakeupTool = "ScheduleWakeup"
 
 func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) {
 	args := d.buildArgs(run)
