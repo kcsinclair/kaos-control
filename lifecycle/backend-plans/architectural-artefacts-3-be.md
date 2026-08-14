@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Architectural Artefacts On-Disk Model"
 type: plan-backend
-status: approved
+status: in-development
 lineage: architectural-artefacts
 parent: lifecycle/requirements/architectural-artefacts-2.md
 labels:
