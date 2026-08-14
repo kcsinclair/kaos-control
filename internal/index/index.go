@@ -356,12 +356,11 @@ func (idx *Index) Scan(stages []config.Stage) error {
 		storedMtimes = map[string]int64{}
 	}
 
-	for _, stage := range stages {
-		dir := filepath.Join(resolvedLifecycle, stage.Dir)
+	walkStageDir := func(dir string) error {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			continue
+			return nil
 		}
-		walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -399,9 +398,21 @@ func (idx *Index) Scan(stages []config.Stage) error {
 			indexed++
 			return nil
 		})
-		if walkErr != nil {
-			return fmt.Errorf("walking stage %s: %w", stage.Name, walkErr)
+	}
+
+	for _, stage := range stages {
+		if err := walkStageDir(filepath.Join(resolvedLifecycle, stage.Dir)); err != nil {
+			return fmt.Errorf("walking stage %s: %w", stage.Name, err)
 		}
+	}
+
+	// lifecycle/architecture/ is the standing catalog + project-own reference
+	// zone (see artifact.IsArchitecturePath) — it is not a lineage stage, so it
+	// is never listed in config.Project.Stages, but its artefacts must still be
+	// discovered on startup the same way the watcher already picks them up live
+	// (the watcher recurses the whole lifecycle/ tree, unscoped by stage).
+	if err := walkStageDir(filepath.Join(resolvedLifecycle, "architecture")); err != nil {
+		return fmt.Errorf("walking architecture zone: %w", err)
 	}
 
 	slog.Info("scan complete",
