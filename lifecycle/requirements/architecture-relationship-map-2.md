@@ -210,6 +210,8 @@ to neutral/generic rendering.
   scale? Needs a definitive label→colour table (ideally shared with the
   onboarding decision-signal key).
 
+> For the first iteration lets use anything starting with low is green, medium is yellow and high is orange, if the label does not include low, medium or high, use blue.
+
 - **Default engine.** Should the view open in 2D or 3D by default? (2D is likely
   clearer for a small labelled set, but the idea asks for both.)
 
