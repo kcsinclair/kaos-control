@@ -218,6 +218,8 @@ consumers/producers of the model defined here.
   promoted root copies be hard-deleted (relying on git history) or moved to an archive
   location? FR-7 currently assumes deletion via overwrite/replacement.
 
+> moved to archive location
+
 - **OQ-4** Should agent-*proposed* ADRs land as `status: draft` awaiting human approval, or be
   written directly? Assumed `draft` pending confirmation, aligning with the normal transition
   gating.
