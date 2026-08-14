@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Architectural Artefacts On-Disk Model"
 type: plan-test
-status: draft
+status: approved
 lineage: architectural-artefacts
 parent: lifecycle/requirements/architectural-artefacts-2.md
 labels:
