@@ -1,7 +1,7 @@
 ---
 title: Project Queue View — Test Suite
 type: test
-status: approved
+status: done
 lineage: project-queue-view
 parent: lifecycle/test-plans/project-queue-view-5-test.md
 ---
