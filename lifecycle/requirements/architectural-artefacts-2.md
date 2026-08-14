@@ -212,6 +212,8 @@ consumers/producers of the model defined here.
 - **OQ-2** Should the summary and standards eventually get dedicated `type:` values, or is
   `type: doc` sufficient long-term? v1 uses `doc`.
 
+> type doc for now works.
+
 - **OQ-3** When a *different* architecture is chosen (re-promotion), should the previously
   promoted root copies be hard-deleted (relying on git history) or moved to an archive
   location? FR-7 currently assumes deletion via overwrite/replacement.
