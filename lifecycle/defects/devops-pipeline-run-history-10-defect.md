@@ -6,6 +6,7 @@ lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-8-test.md
 labels:
     - defect
+release: KC-Release5
 assignees:
     - role: product-owner
       who: agent
