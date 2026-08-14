@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Architecture Relationship Map"
 type: plan-test
-status: in-development
+status: done
 lineage: architecture-relationship-map
 parent: lifecycle/requirements/architecture-relationship-map-2.md
 labels:
