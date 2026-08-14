@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kaos-control/kaos-control/internal/config/defaults"
 	"gopkg.in/yaml.v3"
 )
 
@@ -595,6 +596,84 @@ type Project struct {
 	Dashboard     DashboardConfig     `yaml:"dashboard"`
 	Roadmap       RoadmapConfig       `yaml:"roadmap,omitempty" json:"roadmap,omitempty"`
 	OpenQuestions OpenQuestionsConfig `yaml:"open_questions,omitempty" json:"open_questions,omitempty"`
+
+	// RepairNotes records the generation-template self-repairs applied by
+	// ValidateAndRepair when this config was loaded. Not persisted to disk.
+	RepairNotes []RepairNote `yaml:"-" json:"-"`
+}
+
+// RepairNote describes one in-memory self-repair applied by
+// ValidateAndRepair: a generation agent or template key that was missing
+// from the on-disk config and was filled from the built-in defaults.
+type RepairNote struct {
+	Agent       string `json:"agent"`
+	TemplateKey string `json:"template_key"`
+	Reason      string `json:"reason"`
+}
+
+// requiredGenerationCapabilities lists, per agent, the prompt_templates keys
+// that agent must expose for the idea/defect/doc generation endpoints to
+// work without falling back to a built-in default.
+var requiredGenerationCapabilities = []struct {
+	Agent        string
+	Keys         []string
+	AllowedPaths []string
+}{
+	{Agent: "idea-capture", Keys: []string{"idea-capture", "idea-generate", "defect-generate"}, AllowedPaths: []string{"lifecycle/ideas"}},
+	{Agent: "docs-capture", Keys: []string{"doc-generate"}, AllowedPaths: []string{"lifecycle/docs"}},
+}
+
+// ValidateAndRepair ensures the idea-capture and docs-capture agents exist
+// and expose their required generation template keys (see
+// requiredGenerationCapabilities), filling any gaps in-memory from the
+// built-in defaults in internal/config/defaults. Existing user-defined
+// agents and templates are never modified or overwritten, and the on-disk
+// lifecycle/config.yaml is never rewritten by this method — repairs apply
+// only to this in-memory Project. It returns one RepairNote per repair
+// applied and also stores them on RepairNotes.
+func (c *Project) ValidateAndRepair() []RepairNote {
+	templates := defaults.DefaultGenerationTemplates()
+	var notes []RepairNote
+
+	for _, req := range requiredGenerationCapabilities {
+		idx := -1
+		for i := range c.Agents {
+			if c.Agents[i].Name == req.Agent {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			newAgent := AgentConfig{
+				Name:            req.Agent,
+				Roles:           []string{"product-owner"},
+				Driver:          "inline",
+				Model:           defaults.DefaultModel,
+				AllowedPaths:    append([]string(nil), req.AllowedPaths...),
+				PromptTemplates: make(map[string]string, len(req.Keys)),
+			}
+			for _, key := range req.Keys {
+				newAgent.PromptTemplates[key] = templates[key]
+				notes = append(notes, RepairNote{Agent: req.Agent, TemplateKey: key, Reason: "agent not configured"})
+			}
+			c.Agents = append(c.Agents, newAgent)
+			continue
+		}
+		a := &c.Agents[idx]
+		for _, key := range req.Keys {
+			if _, ok := a.PromptTemplates[key]; ok {
+				continue
+			}
+			if a.PromptTemplates == nil {
+				a.PromptTemplates = make(map[string]string, len(req.Keys))
+			}
+			a.PromptTemplates[key] = templates[key]
+			notes = append(notes, RepairNote{Agent: req.Agent, TemplateKey: key, Reason: "template missing"})
+		}
+	}
+
+	c.RepairNotes = notes
+	return notes
 }
 
 // Transition overrides one edge in the state machine.
@@ -679,6 +758,12 @@ func LoadProject(projectRoot string) (*Project, error) {
 	if err := validateProject(&cfg); err != nil {
 		return nil, err
 	}
+
+	for _, note := range cfg.ValidateAndRepair() {
+		slog.Warn("project config: self-repaired missing generation template",
+			"project", projectRoot, "agent", note.Agent, "template_key", note.TemplateKey, "reason", note.Reason)
+	}
+
 	return &cfg, nil
 }
 
