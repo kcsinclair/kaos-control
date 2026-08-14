@@ -1,7 +1,7 @@
 ---
 title: Architecture Relationship Map
 type: idea
-status: planning
+status: done
 lineage: architecture-relationship-map
 priority: normal
 parent: lifecycle/ideas/architecture-templates.md
