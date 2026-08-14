@@ -224,6 +224,8 @@ consumers/producers of the model defined here.
   written directly? Assumed `draft` pending confirmation, aligning with the normal transition
   gating.
 
+> status draft until reviewed and approved.
+
 - **OQ-5** Is there a maximum/duplicate-detection rule for standards seeded from both the
   architecture *and* the tech-stack (e.g. two secrets-handling standards)? Assumed the seed set
   is de-duplicated by [[architecture-templates]] before promotion.
