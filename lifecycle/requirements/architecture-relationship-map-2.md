@@ -1,7 +1,7 @@
 ---
 title: Architecture Relationship Map
 type: requirement
-status: blocked
+status: draft
 lineage: architecture-relationship-map
 parent: lifecycle/ideas/architecture-relationship-map.md
 labels:
@@ -189,7 +189,7 @@ to neutral/generic rendering.
   surface; typed-edge styling depends on
   [[artefact-relationship-labels-and-links]] and [[architecture-templates]].
 
-## Open Questions
+## Resolved Questions
 
 - **Edge label density in 3D.** Labelled relationship edges read well in 2D; in
   3d-force-graph edge labels are harder. Is a legend-only (unlabelled edges)
