@@ -67,6 +67,22 @@ function nodeVal(n: GraphNode): number {
   return Math.max(1, 4 - n.index * 0.3)
 }
 
+// 3D has no dashed-line support, so edgeStyle only drives width/arrow here —
+// colour keeps coming from edgeColor() and per-edge labels stay omitted for
+// non-timeline kinds (legend carries the key in 3D, per the resolved question).
+function linkWidth(e: GraphEdge): number {
+  if (props.edgeStyle) return props.edgeStyle(e).width ?? 1.2
+  if (e.kind === 'timeline') return 2.0
+  if (e.kind === 'assigned') return 0.8
+  return 1.2  // parent, depends_on, blocks, related_to, label
+}
+
+function linkArrowLength(e: GraphEdge): number {
+  if (props.edgeStyle) return props.edgeStyle(e).arrow ? 3 : 0
+  // Assigned edges are undirected membership links — no arrow needed.
+  return e.kind === 'assigned' ? 0 : 3
+}
+
 // Canvas-based text sprite — used for label nodes so their name is always visible.
 function textSprite(
   text: string,
@@ -250,17 +266,9 @@ onMounted(() => {
     .linkTarget('target')
     .linkColor((l: object) => edgeColor(l as GraphEdge))
     .linkLabel((l: object) => timelineLinkLabel(l as GraphEdge))
-    .linkWidth((l: object) => {
-      const kind = (l as GraphEdge).kind
-      if (kind === 'timeline') return 2.0
-      if (kind === 'assigned') return 0.8
-      return 1.2  // parent, depends_on, blocks, related_to, label
-    })
+    .linkWidth((l: object) => linkWidth(l as GraphEdge))
     .linkOpacity(1.0)
-    .linkDirectionalArrowLength((l: object) => {
-      // Assigned edges are undirected membership links — no arrow needed.
-      return (l as GraphEdge).kind === 'assigned' ? 0 : 3
-    })
+    .linkDirectionalArrowLength((l: object) => linkArrowLength(l as GraphEdge))
     .linkDirectionalArrowRelPos(1)
     .linkCurvature(0.1)
     .backgroundColor(p.canvasBg)
@@ -351,12 +359,7 @@ watch(isDark, () => {
   // Refresh link colours (edgeColor encodes per-link opacity in RGBA alpha)
   graph.linkColor((l: object) => edgeColor(l as GraphEdge))
   // Re-apply linkWidth so the library picks up any future theme-dependent widths
-  graph.linkWidth((l: object) => {
-    const kind = (l as GraphEdge).kind
-    if (kind === 'timeline') return 2.0
-    if (kind === 'assigned') return 0.8
-    return 1.2
-  })
+  graph.linkWidth((l: object) => linkWidth(l as GraphEdge))
   // Refresh tooltip and link label callbacks so subsequent hovers use new palette
   graph.nodeLabel((n: object) => tooltipHtml(n as GraphNode))
   graph.linkLabel((l: object) => timelineLinkLabel(l as GraphEdge))

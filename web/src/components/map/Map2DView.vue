@@ -72,16 +72,24 @@ function buildElements() {
       },
     }
   })
-  const edges = props.edges.map((e, i) => ({
-    data: {
-      id: `e${i}`,
-      source: e.source,
-      target: e.target,
-      kind: e.kind,
-      // Show duration for timeline edges; hide kind label for other edges
-      label: e.kind === 'timeline' && e.label ? e.label : '',
-    },
-  }))
+  const edges = props.edges.map((e, i) => {
+    const style = props.edgeStyle?.(e)
+    return {
+      data: {
+        id: `e${i}`,
+        source: e.source,
+        target: e.target,
+        kind: e.kind,
+        // Show duration for timeline edges; hide kind label for other edges
+        label: style ? (style.label ?? '') : (e.kind === 'timeline' && e.label ? e.label : ''),
+        ...(style ? {
+          lineStyle: style.lineStyle ?? 'solid',
+          edgeWidth: style.width ?? 1,
+          arrowShape: style.arrow ? 'triangle' : 'none',
+        } : {}),
+      },
+    }
+  })
   return [...nodes, ...edges]
 }
 
@@ -227,6 +235,16 @@ function buildCyStyle(p: GraphPalette) {
         'target-arrow-shape': 'none',
         width: 1,
         label: '',
+      },
+    },
+    {
+      // Typed/generic relationship edges styled via an optional edgeStyle
+      // prop (e.g. the architecture map, FR-4) — only present when supplied.
+      selector: 'edge[edgeWidth]',
+      style: {
+        width: 'data(edgeWidth)',
+        'line-style': 'data(lineStyle)',
+        'target-arrow-shape': 'data(arrowShape)',
       },
     },
   ]
