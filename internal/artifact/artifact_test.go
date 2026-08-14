@@ -318,3 +318,63 @@ func TestIsArchitecturePath(t *testing.T) {
 		}
 	}
 }
+
+// TestParse_TypedRelationshipFieldsAbsent verifies that omitting evolves_into,
+// alternative_to, and composed_with produces zero new ParseErrs and no
+// corresponding links (regression-safe degrade, FR-4/NFR-5).
+func TestParse_TypedRelationshipFieldsAbsent(t *testing.T) {
+	raw := []byte("---\ntitle: Postgres Modular Monolith\ntype: architecture\nstatus: approved\n---\n\nBody.\n")
+	a := artifact.Parse(raw, "lifecycle/architecture/architectures/postgres-modular-monolith.md", time.Now())
+
+	if len(a.ParseErrs) != 0 {
+		t.Errorf("expected zero ParseErrs, got %v", a.ParseErrs)
+	}
+	for _, l := range a.Links {
+		switch l.Kind {
+		case artifact.EdgeKindEvolvesInto, artifact.EdgeKindAlternativeTo, artifact.EdgeKindComposedWith:
+			t.Errorf("unexpected typed relationship link with no source field: %+v", l)
+		}
+	}
+}
+
+// TestParse_TypedRelationshipFieldEvolvesInto verifies that evolves_into
+// yields a link classified with Kind == "evolves_into" whose target resolves
+// the same way related_to targets do.
+func TestParse_TypedRelationshipFieldEvolvesInto(t *testing.T) {
+	raw := []byte("---\ntitle: Postgres Modular Monolith\ntype: architecture\nstatus: approved\nevolves_into:\n  - architecture/architectures/foo.md\n---\n\nBody.\n")
+	a := artifact.Parse(raw, "lifecycle/architecture/architectures/postgres-modular-monolith.md", time.Now())
+
+	if len(a.ParseErrs) != 0 {
+		t.Errorf("expected zero ParseErrs, got %v", a.ParseErrs)
+	}
+	found := false
+	for _, l := range a.Links {
+		if l.Kind == artifact.EdgeKindEvolvesInto {
+			found = true
+			if l.To != "lifecycle/architecture/architectures/foo.md" {
+				t.Errorf("evolves_into target: want %q, got %q", "lifecycle/architecture/architectures/foo.md", l.To)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("expected an evolves_into link, got links: %+v", a.Links)
+	}
+}
+
+// TestParse_TypedRelationshipFieldMalformedDoesNotPanic verifies that a
+// scalar value in place of a list fails only that artifact's parse via the
+// existing frontmatter-unmarshal error path and does not panic.
+func TestParse_TypedRelationshipFieldMalformedDoesNotPanic(t *testing.T) {
+	raw := []byte("---\ntitle: Postgres Modular Monolith\ntype: architecture\nstatus: approved\nevolves_into: not-a-list\n---\n\nBody.\n")
+	a := artifact.Parse(raw, "lifecycle/architecture/architectures/postgres-modular-monolith.md", time.Now())
+
+	found := false
+	for _, e := range a.ParseErrs {
+		if strings.Contains(e, "frontmatter decode error") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected a frontmatter decode error, got %v", a.ParseErrs)
+	}
+}

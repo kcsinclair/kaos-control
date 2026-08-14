@@ -43,6 +43,11 @@ const (
 	EdgeKindWiki      = "wiki"
 	EdgeKindAssigned  = "assigned"
 	EdgeKindTimeline  = "timeline"
+	// Typed architecture-relationship edge kinds (parse-ready; see
+	// lifecycle/backend-plans/architecture-relationship-map-3-be.md milestone 1).
+	EdgeKindEvolvesInto   = "evolves_into"
+	EdgeKindAlternativeTo = "alternative_to"
+	EdgeKindComposedWith  = "composed_with"
 )
 
 // KnownStatuses is the allowed vocabulary for the status field.
@@ -55,21 +60,21 @@ var KnownStatuses = map[string]bool{
 
 // Artifact is a fully parsed lifecycle markdown file.
 type Artifact struct {
-	Path        string      // relative to project root, e.g. "lifecycle/ideas/login.md"
-	Slug        string      // derived from filename stem before any -N suffix
-	Index       int         // 0 = originating file; >=2 for descendants
-	StageSuffix string      // e.g. "be", "fe" from filename
-	Stage       string      // lifecycle stage dir name, e.g. "ideas"
-	RelPath     string      // path under the stage dir, e.g. "login.md" or "done/login.md"
+	Path        string // relative to project root, e.g. "lifecycle/ideas/login.md"
+	Slug        string // derived from filename stem before any -N suffix
+	Index       int    // 0 = originating file; >=2 for descendants
+	StageSuffix string // e.g. "be", "fe" from filename
+	Stage       string // lifecycle stage dir name, e.g. "ideas"
+	RelPath     string // path under the stage dir, e.g. "login.md" or "done/login.md"
 	FM          Frontmatter
-	Body        string      // raw markdown body (after frontmatter)
+	Body        string // raw markdown body (after frontmatter)
 	Links       []Link
 	Mtime       time.Time
 	// CreatedAt holds the artifact creation time for index storage.
 	// Set from FM.Created when present; otherwise backfilled by the indexer
 	// from git history or filesystem mtime. The on-disk file is never modified
 	// during backfill.
-	CreatedAt   time.Time
+	CreatedAt     time.Time
 	SHA256        [32]byte
 	Raw           []byte   // full file content; not stored in index
 	ParseErrs     []string // non-fatal validation messages
@@ -78,23 +83,26 @@ type Artifact struct {
 
 // Frontmatter holds the structured YAML header fields.
 type Frontmatter struct {
-	Title     string     `yaml:"title"               json:"title"`
-	Type      string     `yaml:"type"                json:"type"`
-	Status    string     `yaml:"status"              json:"status"`
-	Lineage   string     `yaml:"lineage"             json:"lineage"`
-	Created   string     `yaml:"created,omitempty"   json:"created,omitempty"`
-	Priority  string     `yaml:"priority,omitempty"  json:"priority,omitempty"`
-	Parent    string     `yaml:"parent,omitempty"    json:"parent,omitempty"`
-	Labels    []string   `yaml:"labels,omitempty"    json:"labels,omitempty"`
-	DependsOn []string   `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
-	Blocks    []string   `yaml:"blocks,omitempty"    json:"blocks,omitempty"`
-	Related   []string   `yaml:"related_to,omitempty" json:"related_to,omitempty"`
-	Members   []string   `yaml:"members,omitempty"   json:"members,omitempty"`
-	Release     string     `yaml:"release,omitempty"      json:"release,omitempty"`
-	Sprint      string     `yaml:"sprint,omitempty"       json:"sprint,omitempty"`
-	Assignees   []Assignee `yaml:"assignees,omitempty"    json:"assignees,omitempty"`
-	Summary     string     `yaml:"summary,omitempty"      json:"summary,omitempty"`
-	Description string     `yaml:"description,omitempty"  json:"description,omitempty"`
+	Title         string     `yaml:"title"               json:"title"`
+	Type          string     `yaml:"type"                json:"type"`
+	Status        string     `yaml:"status"              json:"status"`
+	Lineage       string     `yaml:"lineage"             json:"lineage"`
+	Created       string     `yaml:"created,omitempty"   json:"created,omitempty"`
+	Priority      string     `yaml:"priority,omitempty"  json:"priority,omitempty"`
+	Parent        string     `yaml:"parent,omitempty"    json:"parent,omitempty"`
+	Labels        []string   `yaml:"labels,omitempty"    json:"labels,omitempty"`
+	DependsOn     []string   `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+	Blocks        []string   `yaml:"blocks,omitempty"    json:"blocks,omitempty"`
+	Related       []string   `yaml:"related_to,omitempty" json:"related_to,omitempty"`
+	Members       []string   `yaml:"members,omitempty"   json:"members,omitempty"`
+	EvolvesInto   []string   `yaml:"evolves_into,omitempty"   json:"evolves_into,omitempty"`
+	AlternativeTo []string   `yaml:"alternative_to,omitempty" json:"alternative_to,omitempty"`
+	ComposedWith  []string   `yaml:"composed_with,omitempty"  json:"composed_with,omitempty"`
+	Release       string     `yaml:"release,omitempty"      json:"release,omitempty"`
+	Sprint        string     `yaml:"sprint,omitempty"       json:"sprint,omitempty"`
+	Assignees     []Assignee `yaml:"assignees,omitempty"    json:"assignees,omitempty"`
+	Summary       string     `yaml:"summary,omitempty"      json:"summary,omitempty"`
+	Description   string     `yaml:"description,omitempty"  json:"description,omitempty"`
 }
 
 // Assignee is a role/who binding from the assignees field.
@@ -376,6 +384,9 @@ func extractLinks(fm Frontmatter, body, fromPath string) []Link {
 	addFM(EdgeKindBlocks, fm.Blocks)
 	addFM(EdgeKindRelatedTo, fm.Related)
 	addFM(EdgeKindMembers, fm.Members)
+	addFM(EdgeKindEvolvesInto, fm.EvolvesInto)
+	addFM(EdgeKindAlternativeTo, fm.AlternativeTo)
+	addFM(EdgeKindComposedWith, fm.ComposedWith)
 
 	// Wiki-style body links.
 	for _, m := range wikiLinkRe.FindAllStringSubmatch(body, -1) {
