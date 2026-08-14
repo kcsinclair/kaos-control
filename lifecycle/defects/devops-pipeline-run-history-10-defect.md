@@ -1,14 +1,14 @@
 ---
 title: Pipeline card latest-run summary badge not visible after run completion
 type: defect
-status: draft
+status: approved
 lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-8-test.md
 labels:
     - defect
 release: KC-Release5
 assignees:
-    - role: product-owner
+    - role: frontend-developer
       who: agent
 ---
 
@@ -132,18 +132,26 @@ Blocking questions for product-owner:
    `.latest-run-badge`, and it should assert on `.run-status--passed`
    instead)? Or is `.latest-run-badge` (with relative time) supposed to
    supersede the static badge once a run has completed?
+
+> The latest-run-badge should win. It's the run-history feature's deliverable (status color/icon + "5m ago"), and the static "Passed/Failed" text badge is redundant with it. So the test is correct; the code is wrong. No change to run-history.spec.ts.
+
 2. If `.latest-run-badge` should supersede: where should the transition
    happen — should `PipelineCard.vue`'s `v-else-if` chain drop the
    terminal-status branches once `latestRun` is available (i.e. only show
    `passed`/`failed`/`cancelled` while `isActive` is meaningfully "just
    finished"), or should `devops.ts` clear/expire the `activeRuns` entry
    for a slug some time after `handleRunCompleted` fires?
+
+> In PipelineCard.vue (view layer), not by clearing activeRuns. Clearing the store entry on completion would also nuke the step list (showSteps = activeRun != null, line 42) and the card coloring (lines 92-93) the instant a run finishes — a real regression. So keep activeRuns as the "last-run detail" holder, and fix the badge chain: show "Running" while active, otherwise the latest-run-badge; drop the persistent static terminal text badges. That makes .latest-run-badge reachable and keeps the steps. One consequence: DevOpsView.test.ts:324 must switch its assertion from .run-status--failed to the latest-run-badge (or the card's failed class).
+
 3. This fix lands in `web/src/stores/devops.ts` and/or
    `PipelineCard.vue`, which is outside test-developer's
    `allowed_write_paths`. Should this defect be reassigned to
    frontend-developer for the code fix, with test-developer only updating
    `tests/e2e/flows/run-history.spec.ts` once the intended behaviour (Q1)
    is confirmed?
+
+> Yes — frontend-developer. The entire fix is PipelineCard.vue plus that one component-test update (both frontend paths). The existing E2E test is the verification — test-developer has nothing to change.
 
 No test code changes made pending answers — the correct assertion for
 `run-history.spec.ts:131` depends entirely on which behaviour is intended.
