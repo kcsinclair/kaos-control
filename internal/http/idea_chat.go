@@ -5,6 +5,7 @@ package http
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -110,7 +111,7 @@ func (s *Server) handleIdeaConverse(w http.ResponseWriter, r *http.Request) {
 	// Regular conversation turn – look up the idea-capture agent config.
 	modelCfg, err := resolveIdeaCaptureConfig(p, "idea-capture")
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, apiError("config_error", err.Error()))
+		writeJSON(w, http.StatusUnprocessableEntity, templateUnavailableError("idea-capture", err))
 		return
 	}
 
@@ -254,6 +255,19 @@ func resolveIdeaCaptureConfig(p *project.Project, templateKey string) (ideachat.
 		}, nil
 	}
 	return ideachat.ModelConfig{}, fmt.Errorf("%s agent not configured", agentName)
+}
+
+// templateUnavailableError builds the actionable "template_unavailable" API
+// error body returned when resolveIdeaCaptureConfig cannot resolve a system
+// prompt for templateKey. The underlying resolver error may name internal
+// agent/template details, so it is logged rather than sent to the client —
+// callers must never forward err.Error() in the HTTP response.
+func templateUnavailableError(templateKey string, err error) map[string]any {
+	slog.Warn("idea generation: no prompt template available", "template_key", templateKey, "err", err)
+	return apiError("template_unavailable", fmt.Sprintf(
+		"No prompt template is configured for %q generation. Ask a project admin to add it under lifecycle/config.yaml (agents[].prompt_templates), or check GET /config/health for repair details.",
+		templateKey,
+	))
 }
 
 // defaultTemplateFor returns the built-in default system prompt for a

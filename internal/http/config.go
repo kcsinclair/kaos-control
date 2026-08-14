@@ -84,6 +84,30 @@ func (s *Server) handleGetOpenQuestionsConfig(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, map[string]any{"answer_format": cfg.OpenQuestions.EffectiveFormat()})
 }
 
+// handleGetConfigHealth returns the config self-repair notes recorded the
+// last time this project's lifecycle/config.yaml was loaded (see
+// config.Project.ValidateAndRepair). An empty "repairs" list means the
+// on-disk config already satisfies the required generation capabilities.
+// Never includes secret fields (e.g. auth_token) — RepairNote only carries
+// agent name, template key, and reason.
+func (s *Server) handleGetConfigHealth(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	notes := p.Config().RepairNotes
+	repairs := make([]map[string]string, 0, len(notes))
+	for _, n := range notes {
+		repairs = append(repairs, map[string]string{
+			"agent":        n.Agent,
+			"template_key": n.TemplateKey,
+			"reason":       n.Reason,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"repairs": repairs})
+}
+
 // handleUpdateConfig validates and writes lifecycle/config.yaml.
 func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())

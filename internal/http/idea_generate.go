@@ -74,7 +74,7 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 
 	modelCfg, err := resolveIdeaCaptureConfig(p, templateKey)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, apiError("config_error", err.Error()))
+		writeJSON(w, http.StatusUnprocessableEntity, templateUnavailableError(templateKey, err))
 		return
 	}
 
