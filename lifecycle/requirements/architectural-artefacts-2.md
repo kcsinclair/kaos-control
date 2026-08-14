@@ -1,7 +1,7 @@
 ---
 title: Architectural Artefacts — On-Disk Model
 type: requirement
-status: planning
+status: done
 lineage: architectural-artefacts
 parent: lifecycle/ideas/architectural-artefacts.md
 labels:
