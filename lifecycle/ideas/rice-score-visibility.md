@@ -1,7 +1,7 @@
 ---
 title: Display RICE Scores in More Places
 type: idea
-status: draft
+status: approved
 lineage: rice-score-visibility
 created: "2026-08-15T09:49:28+10:00"
 priority: normal
@@ -12,6 +12,7 @@ labels:
     - artifacts
     - frontend
     - ux
+release: KC-Release6
 ---
 
 # Display RICE Scores in More Places
