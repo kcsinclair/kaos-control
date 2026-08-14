@@ -118,6 +118,7 @@ vi.mock('vue-router', () => ({
 
 // Import component after all mocks are in place.
 import ArtifactListView from '../ArtifactListView.vue'
+import NewAdrModal from '@/components/artifact/NewAdrModal.vue'
 
 describe('ArtifactListView — raw artefact visibility', () => {
   beforeEach(() => {
@@ -251,5 +252,32 @@ describe('ArtifactListView — architectural artefact type filter', () => {
       'testproject',
       expect.objectContaining({ type: 'adr' }),
     )
+  })
+})
+
+// Frontend plan: lifecycle/frontend-plans/architectural-artefacts-4-fe.md — Milestone 3
+describe('ArtifactListView — New ADR affordance', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mockFetchList.mockResolvedValue(undefined)
+    mockFetchLabels.mockResolvedValue(undefined)
+    mockFetchPriorities.mockResolvedValue(undefined)
+  })
+
+  it('opens the NewAdrModal when "New ADR" is clicked', async () => {
+    const wrapper = shallowMount(ArtifactListView, {
+      global: { stubs: { RouterLink: true } },
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findComponent(NewAdrModal).exists()).toBe(false)
+
+    const newAdrButton = wrapper.findAll('button').find((b) => b.text().includes('New ADR'))
+    expect(newAdrButton).toBeTruthy()
+    await newAdrButton!.trigger('click')
+
+    expect(wrapper.findComponent(NewAdrModal).exists()).toBe(true)
   })
 })

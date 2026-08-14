@@ -9,13 +9,14 @@ import { useWebSocket } from '@/composables/useWebSocket'
 import { usePagination } from '@/composables/usePagination'
 import { useSortableTable } from '@/composables/useSortableTable'
 import BrainDumpModal from '@/components/idea/BrainDumpModal.vue'
+import NewAdrModal from '@/components/artifact/NewAdrModal.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
 import StatusCheckPanel from '@/components/artifact/StatusCheckPanel.vue'
 import TextFilter from '@/components/TextFilter.vue'
 import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 import { useUiStore } from '@/stores/ui'
-import { MessageSquarePlus, Bug, ShieldCheck, BookOpen, Bot } from 'lucide-vue-next'
+import { MessageSquarePlus, Bug, ShieldCheck, BookOpen, Bot, FileText } from 'lucide-vue-next'
 import type { WsEvent } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
@@ -29,6 +30,7 @@ const ui = useUiStore()
 const showBrainDump = ref(false)
 const brainDumpType = ref<'idea' | 'defect' | 'doc'>('idea')
 const newIdeaButtonEl = ref<HTMLButtonElement | null>(null)
+const showNewAdrModal = ref(false)
 const showCompleted = ref(false)
 const showStatusPanel = ref(false)
 
@@ -96,6 +98,13 @@ function onBrainDumpClose() {
 function onBrainDumpCreated(path: string) {
   showBrainDump.value = false
   ui.success('Artifact created!')
+  router.push(`/p/${project}/artifacts/${path}`)
+}
+
+function onAdrCreated(path: string) {
+  showNewAdrModal.value = false
+  ui.success('ADR created!')
+  store.invalidate()
   router.push(`/p/${project}/artifacts/${path}`)
 }
 
@@ -266,6 +275,10 @@ onMounted(async () => {
         <BookOpen :size="15" />
         New Docs
       </button>
+      <button class="btn-new-adr" @click="showNewAdrModal = true">
+        <FileText :size="15" />
+        New ADR
+      </button>
     </div>
 
     <BrainDumpModal
@@ -274,6 +287,13 @@ onMounted(async () => {
       :artifact-type="brainDumpType"
       @close="onBrainDumpClose"
       @created="onBrainDumpCreated"
+    />
+
+    <NewAdrModal
+      v-if="showNewAdrModal"
+      :project="project"
+      @close="showNewAdrModal = false"
+      @created="onAdrCreated"
     />
 
     <div v-if="showStatusPanel" class="status-panel-wrap">
@@ -481,6 +501,21 @@ onMounted(async () => {
 }
 .btn-new-docs:hover { background: var(--color-surface); color: var(--color-text); }
 .btn-new-docs:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.btn-new-adr {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.btn-new-adr:hover { background: var(--color-surface); color: var(--color-text); }
+.btn-new-adr:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .btn-new-idea {
   display: inline-flex;
   align-items: center;
