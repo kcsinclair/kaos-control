@@ -13,6 +13,10 @@ labels:
     - queue
     - ui
     - ux
+release: KC-Release5
+assignees:
+    - role: frontend-developer
+      who: agent
 ---
 
 # Queued-for-Agent status not shown in artefact list or detail view
