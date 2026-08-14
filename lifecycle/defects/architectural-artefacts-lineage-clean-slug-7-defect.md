@@ -1,7 +1,7 @@
 ---
 title: Clean-slug architecture artifact returns 404 after startup scan
 type: defect
-status: approved
+status: in-development
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
 labels: [defect]
