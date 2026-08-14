@@ -644,16 +644,16 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 
 // Filter holds list/graph query parameters.
 type Filter struct {
-	Stage     string
-	Status    string
-	Label     string
-	Lineage   string
-	Type      string
-	Priority  string
-	Q         string // free-text substring match across title, slug, lineage, type, status
+	Stage    string
+	Status   string
+	Label    string
+	Lineage  string
+	Type     string
+	Priority string
+	Q        string // free-text substring match across title, slug, lineage, type, status
 	// Release filters to artifacts whose frontmatter release field equals this value.
 	// The special value "__unassigned__" matches artifacts with a null or empty release field.
-	Release   string
+	Release string
 	// Sort specifies the desired sort order as "<column>:<direction>".
 	// Supported columns: created, mtime, title, status, type, lineage.
 	// Direction must be "asc" or "desc". Invalid values fall back to the default order.
@@ -825,39 +825,8 @@ func (idx *Index) Graph(f Filter) (*GraphData, error) {
 		return nil, err
 	}
 
-	// Populate labels for each node from labels_index.
-	if len(nodes) > 0 {
-		labelMap := map[string][]string{}
-		placeholders := make([]string, len(nodes))
-		labelArgs := make([]any, len(nodes))
-		for i, n := range nodes {
-			placeholders[i] = "?"
-			labelArgs[i] = n.ID
-		}
-		lq := `SELECT artifact, label FROM labels_index WHERE artifact IN (` +
-			strings.Join(placeholders, ",") + `) ORDER BY artifact, label`
-		lrows, err := idx.db.Query(lq, labelArgs...)
-		if err != nil {
-			return nil, err
-		}
-		defer lrows.Close()
-		for lrows.Next() {
-			var art, lbl string
-			if err := lrows.Scan(&art, &lbl); err != nil {
-				return nil, err
-			}
-			labelMap[art] = append(labelMap[art], lbl)
-		}
-		if err := lrows.Err(); err != nil {
-			return nil, err
-		}
-		for _, n := range nodes {
-			if lbls, ok := labelMap[n.ID]; ok {
-				n.Labels = lbls
-			} else {
-				n.Labels = []string{}
-			}
-		}
+	if err := idx.populateLabels(nodes); err != nil {
+		return nil, err
 	}
 
 	// Edges: only include edges where both endpoints are in the node set.
@@ -884,6 +853,195 @@ func (idx *Index) Graph(f Filter) (*GraphData, error) {
 	}
 
 	return &GraphData{Nodes: nodes, Edges: edges}, nil
+}
+
+// populateLabels fills each node's Labels from labels_index, in place.
+// Nodes with no matching rows get an empty (non-nil) slice.
+func (idx *Index) populateLabels(nodes []*GraphNode) error {
+	if len(nodes) == 0 {
+		return nil
+	}
+	labelMap := map[string][]string{}
+	placeholders := make([]string, len(nodes))
+	labelArgs := make([]any, len(nodes))
+	for i, n := range nodes {
+		placeholders[i] = "?"
+		labelArgs[i] = n.ID
+	}
+	lq := `SELECT artifact, label FROM labels_index WHERE artifact IN (` +
+		strings.Join(placeholders, ",") + `) ORDER BY artifact, label`
+	lrows, err := idx.db.Query(lq, labelArgs...)
+	if err != nil {
+		return err
+	}
+	defer lrows.Close()
+	for lrows.Next() {
+		var art, lbl string
+		if err := lrows.Scan(&art, &lbl); err != nil {
+			return err
+		}
+		labelMap[art] = append(labelMap[art], lbl)
+	}
+	if err := lrows.Err(); err != nil {
+		return err
+	}
+	for _, n := range nodes {
+		if lbls, ok := labelMap[n.ID]; ok {
+			n.Labels = lbls
+		} else {
+			n.Labels = []string{}
+		}
+	}
+	return nil
+}
+
+// ArchMapData is the derived read model for the architecture relationship
+// map: nodes are the type: architecture catalog artifacts, edges are the
+// architecture↔architecture links among them (typed when the source artifact
+// carries evolves_into/alternative_to/composed_with, otherwise generic
+// "related"). See lifecycle/backend-plans/architecture-relationship-map-3-be.md.
+type ArchMapData struct {
+	Nodes []*GraphNode `json:"nodes"`
+	Edges []*GraphEdge `json:"edges"`
+}
+
+// archRelationshipLabels maps the typed architecture-relationship edge kinds
+// to the human-readable label surfaced on the edge.
+var archRelationshipLabels = map[string]string{
+	artifact.EdgeKindEvolvesInto:   "evolves into",
+	artifact.EdgeKindAlternativeTo: "alternative to",
+	artifact.EdgeKindComposedWith:  "composed with",
+}
+
+// archPairKey returns an order-independent key for the unordered {a, b} pair,
+// used to de-duplicate multiple links between the same two architectures.
+func archPairKey(a, b string) string {
+	if a > b {
+		a, b = b, a
+	}
+	return a + "\x00" + b
+}
+
+// ArchitectureMap returns the derived relationship-map payload: one node per
+// type: architecture artifact, and one edge per pair of architectures linked
+// by a wiki body-link, related_to, or a typed relationship field. A pair
+// linked by more than one of these collapses to a single edge; a typed kind
+// wins over the generic "related" classification. Links that do not resolve
+// to two architecture nodes are dropped, never rendered as dangling nodes
+// (NFR-5). When stackFor names a known architecture node, its related_to
+// tech-stack targets are added as nodes plus the connecting related_to edges
+// (FR-8); an empty or unrecognised stackFor yields the base map, no error.
+func (idx *Index) ArchitectureMap(stackFor string) (*ArchMapData, error) {
+	rows, err := idx.db.Query(
+		`SELECT path, slug, lineage, idx, stage, type, status, title, priority
+		 FROM artifacts WHERE type = 'architecture' ORDER BY lineage, idx`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	archIDs := map[string]bool{}
+	var nodes []*GraphNode
+	for rows.Next() {
+		n := &GraphNode{}
+		if err := rows.Scan(&n.ID, &n.Slug, &n.Lineage, &n.Index, &n.Stage, &n.Type, &n.Status, &n.Title, &n.Priority); err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, n)
+		archIDs[n.ID] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := idx.populateLabels(nodes); err != nil {
+		return nil, err
+	}
+
+	linkRows, err := idx.db.Query(`SELECT src, dst, kind FROM links`)
+	if err != nil {
+		return nil, err
+	}
+	defer linkRows.Close()
+
+	type pairEdge struct {
+		edge  *GraphEdge
+		typed bool
+	}
+	pairs := map[string]pairEdge{}
+	var pairOrder []string
+	for linkRows.Next() {
+		var src, dst, kind string
+		if err := linkRows.Scan(&src, &dst, &kind); err != nil {
+			return nil, err
+		}
+		if !archIDs[src] || !archIDs[dst] {
+			continue
+		}
+
+		var candidate *GraphEdge
+		typed := false
+		if label, ok := archRelationshipLabels[kind]; ok {
+			candidate = &GraphEdge{Source: src, Target: dst, Kind: kind, Label: label}
+			typed = true
+		} else if kind == artifact.EdgeKindWiki || kind == artifact.EdgeKindRelatedTo {
+			candidate = &GraphEdge{Source: src, Target: dst, Kind: "related"}
+		} else {
+			continue // not an architecture-relationship kind (e.g. parent, depends_on)
+		}
+
+		key := archPairKey(src, dst)
+		existing, seen := pairs[key]
+		switch {
+		case !seen:
+			pairs[key] = pairEdge{edge: candidate, typed: typed}
+			pairOrder = append(pairOrder, key)
+		case typed && !existing.typed:
+			pairs[key] = pairEdge{edge: candidate, typed: true} // typed wins over generic
+		}
+	}
+	if err := linkRows.Err(); err != nil {
+		return nil, err
+	}
+
+	edges := make([]*GraphEdge, 0, len(pairOrder))
+	for _, key := range pairOrder {
+		edges = append(edges, pairs[key].edge)
+	}
+
+	if stackFor != "" && archIDs[stackFor] {
+		stackRows, err := idx.db.Query(
+			`SELECT a.path, a.slug, a.lineage, a.idx, a.stage, a.type, a.status, a.title, a.priority
+			 FROM links l JOIN artifacts a ON a.path = l.dst
+			 WHERE l.src = ? AND l.kind = ? AND a.type = 'tech-stack'`,
+			stackFor, artifact.EdgeKindRelatedTo,
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer stackRows.Close()
+
+		var stackNodes []*GraphNode
+		for stackRows.Next() {
+			n := &GraphNode{}
+			if err := stackRows.Scan(&n.ID, &n.Slug, &n.Lineage, &n.Index, &n.Stage, &n.Type, &n.Status, &n.Title, &n.Priority); err != nil {
+				return nil, err
+			}
+			stackNodes = append(stackNodes, n)
+		}
+		if err := stackRows.Err(); err != nil {
+			return nil, err
+		}
+		if err := idx.populateLabels(stackNodes); err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, stackNodes...)
+		for _, n := range stackNodes {
+			edges = append(edges, &GraphEdge{Source: stackFor, Target: n.ID, Kind: artifact.EdgeKindRelatedTo})
+		}
+	}
+
+	return &ArchMapData{Nodes: nodes, Edges: edges}, nil
 }
 
 // Labels returns all distinct label values across the project.
@@ -926,8 +1084,8 @@ func (idx *Index) Priorities() ([]string, error) {
 
 // LineageSummary is a summary of one lineage group.
 type LineageSummary struct {
-	Lineage  string        `json:"lineage"`
-	Members  []string      `json:"members"`  // artifact paths
+	Lineage  string         `json:"lineage"`
+	Members  []string       `json:"members"`  // artifact paths
 	Statuses map[string]int `json:"statuses"` // status → count
 }
 
@@ -1741,7 +1899,7 @@ func (idx *Index) ensureReleasesSlugColumn() error {
 
 // ensureRelPathColumn adds the rel_path column to artifacts if it is missing
 // (migration from a pre-rel_path schema). Deliberately does not bump
-// schemaVersion or trigger dropAndRecreate: existing rows keep rel_path=''
+// schemaVersion or trigger dropAndRecreate: existing rows keep rel_path=”
 // until their next re-index (the startup Scan or an API write) back-fills it.
 func (idx *Index) ensureRelPathColumn() error {
 	// ADD COLUMN returns "duplicate column name" once the column already
