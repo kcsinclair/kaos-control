@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Architecture Relationship Map"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: architecture-relationship-map
 parent: lifecycle/requirements/architecture-relationship-map-2.md
 labels:
