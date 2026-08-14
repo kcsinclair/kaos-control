@@ -194,6 +194,9 @@ to neutral/generic rendering.
 - **Edge label density in 3D.** Labelled relationship edges read well in 2D; in
   3d-force-graph edge labels are harder. Is a legend-only (unlabelled edges)
   presentation acceptable in 3D, or must edge kinds remain individually labelled?
+
+> legend-only in 3D works.
+
 - **Stack ring on click vs. persistent.** FR-8 reveals stacks per selected node.
   Should there be an "expand all stacks" (bipartite) mode as well, or is
   per-selection reveal the only intended mode for v1?
@@ -201,16 +204,19 @@ to neutral/generic rendering.
 > **Resolved (2026-08-14):** per-selection reveal only for v1, matching the
 > idea's resolved "option to show related tech stack". A bipartite mode can be
 > a later enhancement if wanted.
+
 - **Scale-signal → colour mapping.** Which exact `labels` define the "scale" axis
   used for node colour (e.g. `high-scale` … small), and what is the fixed colour
   scale? Needs a definitive label→colour table (ideally shared with the
   onboarding decision-signal key).
+
 - **Default engine.** Should the view open in 2D or 3D by default? (2D is likely
   clearer for a small labelled set, but the idea asks for both.)
 
 > **Resolved (2026-08-14):** open in **2D** by default (clearer for a small
 > labelled set); the 2D/3D switch (FR-9) covers the rest. Last engine used may
 > be remembered per user as a nicety.
+
 - **Relationship extraction in v1.** For FR-3, are the arch↔arch links reliably
   parseable from the current catalog body wiki-links, or is a minimal typed-field
   seed needed before this view is trustworthy?
