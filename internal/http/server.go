@@ -258,6 +258,11 @@ func (s *Server) buildRouter() chi.Router {
 				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
 			})
 
+			// Architecture promotion + ADR primitives
+			r.Post("/architecture/promote", s.handlePromoteArchitecture)
+			r.Post("/architecture/adrs", s.handleCreateADR)
+			r.Get("/architecture/adrs/next", s.handleNextADRNumber)
+
 			// Docs panel
 			r.Get("/docs", s.handleListDocs)
 			r.Get("/docs/*", s.handleGetDoc)
