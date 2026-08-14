@@ -178,6 +178,37 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     }
   }
 
+  // Manual escape hatch for when defect generation is unavailable (config
+  // error) — writes a minimal defect artifact directly from the raw input,
+  // bypassing the generation step entirely.
+  async function createDefectManually(project: string): Promise<string | null> {
+    const raw = input.value.trim()
+    if (!raw) return null
+    error.value = null
+    errorKind.value = null
+    phase.value = 'generating'
+    try {
+      const slug = slugify(raw)
+      const title = deriveTitle(raw)
+      const frontmatter: Record<string, unknown> = {
+        title,
+        type: 'defect',
+        status: 'raw',
+        lineage: slug,
+        labels: ['defect'],
+      }
+      const res = await api.post<{ artifact: { path: string } }>(
+        `/p/${encodeURIComponent(project)}/artifacts`,
+        { stage: 'defects', slug, frontmatter, body: raw },
+      )
+      return res.artifact.path
+    } catch (e: unknown) {
+      applyError(e)
+      phase.value = 'input'
+      return null
+    }
+  }
+
   function discard(): void {
     input.value = ''
     artifactType.value = 'idea'
@@ -204,6 +235,7 @@ export const useBrainDumpStore = defineStore('brainDump', () => {
     generate,
     acceptProposal,
     createDoc,
+    createDefectManually,
     startEdit,
     applyEdit,
     discard,

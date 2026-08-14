@@ -50,6 +50,17 @@ const renderedBody = computed(() => {
   return md.render(body)
 })
 
+// Manual escape hatch: only offered for defect generation failures caused by
+// project config, so the user is never dead-ended waiting on an admin.
+const showManualEscapeHatch = computed(
+  () => store.errorKind === 'config' && props.artifactType === 'defect',
+)
+
+function dismissError() {
+  store.error = null
+  store.errorKind = null
+}
+
 // ── Keyboard handling ──────────────────────────────────────────────────────
 
 function docOpts() {
@@ -141,6 +152,14 @@ async function onCreateDoc() {
   }
 }
 
+async function onCreateDefectManually() {
+  const path = await store.createDefectManually(props.project)
+  if (path) {
+    store.reset()
+    emit('created', path)
+  }
+}
+
 function onEdit() {
   store.startEdit()
   nextTick(() => editTextareaEl.value?.focus())
@@ -210,7 +229,25 @@ watch(
             />
             <!-- Error message -->
             <div v-if="store.error" class="bdm-error" role="alert">
-              {{ store.error }}
+              <span class="bdm-error-text">{{ store.error }}</span>
+              <div class="bdm-error-actions">
+                <button
+                  v-if="showManualEscapeHatch"
+                  type="button"
+                  class="bdm-error-manual-btn"
+                  @click="onCreateDefectManually"
+                >
+                  Create defect manually
+                </button>
+                <button
+                  type="button"
+                  class="bdm-error-dismiss"
+                  aria-label="Dismiss error"
+                  @click="dismissError"
+                >
+                  <X :size="14" />
+                </button>
+              </div>
             </div>
           </div>
           <div class="bdm-footer">
@@ -410,12 +447,59 @@ watch(
 
 /* Error */
 .bdm-error {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   color: var(--color-error, #dc2626);
   background: color-mix(in srgb, var(--color-error, #dc2626) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-error, #dc2626) 30%, transparent);
+}
+
+.bdm-error-text {
+  flex: 1;
+}
+
+.bdm-error-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.bdm-error-manual-btn {
+  padding: 2px var(--space-2);
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bdm-error-manual-btn:hover {
+  background: color-mix(in srgb, var(--color-error, #dc2626) 15%, transparent);
+}
+
+.bdm-error-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 0;
+}
+
+.bdm-error-dismiss:hover {
+  opacity: 1;
 }
 
 /* Preview metadata */
