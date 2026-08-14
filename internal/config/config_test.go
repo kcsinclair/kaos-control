@@ -135,8 +135,11 @@ func TestLoadProjectCodexAgent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadProject: %v", err)
 	}
-	if len(cfg.Agents) != 1 {
-		t.Fatalf("expected 1 agent, got %d", len(cfg.Agents))
+	// ValidateAndRepair appends the missing idea-capture and docs-capture
+	// generation agents in-memory (see TestValidateAndRepair), so the
+	// configured codex-developer agent is joined by two more.
+	if len(cfg.Agents) != 3 {
+		t.Fatalf("expected 3 agents, got %d", len(cfg.Agents))
 	}
 	if got := cfg.Agents[0].Driver; got != "codex-cli" {
 		t.Errorf("driver: got %q, want %q", got, "codex-cli")
@@ -717,8 +720,12 @@ func TestValidateClaudeEnvAgent(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LoadProject: %v", err)
 		}
-		if len(cfg.Agents) != 1 {
-			t.Fatalf("expected 1 agent, got %d", len(cfg.Agents))
+		// ValidateAndRepair appends the missing idea-capture and
+		// docs-capture generation agents in-memory (see
+		// TestValidateAndRepair), so the configured claude-env agent is
+		// joined by two more.
+		if len(cfg.Agents) != 3 {
+			t.Fatalf("expected 3 agents, got %d", len(cfg.Agents))
 		}
 		ag := cfg.Agents[0]
 		if ag.Driver != "claude-env" {
