@@ -1,7 +1,7 @@
 ---
 title: 'New Project Init: Existing or New Directory — Requirements'
 type: requirement
-status: draft
+status: approved
 lineage: new-project-init-directory-options
 priority: normal
 parent: ideas/new-project-init-directory-options.md
