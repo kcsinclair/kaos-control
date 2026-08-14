@@ -182,6 +182,8 @@ automatically, and surface it where items are compared (list views) and edited
 - **Effort units** — person-months is assumed as the conventional unit; should
   the unit be labelled/configurable in the UI?
 
+> Yes, person-months is the convention, allow/encourage fractions and show person-months in the UI.
+
 - **Default values** — the idea mentions "default values or N/A … if all
   blank." This requirement treats missing components strictly as `N/A`. Are
   non-`N/A` defaults (e.g. Confidence = 100) actually desired for partially
