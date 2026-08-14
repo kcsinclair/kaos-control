@@ -1,13 +1,15 @@
 ---
 title: Catalog and project-own architecture artefacts fail to index on server startup
 type: defect
-status: draft
+status: approved
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release5
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # Catalog and project-own architecture artefacts fail to index on server startup
