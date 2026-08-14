@@ -8,11 +8,27 @@ import type { GraphPalette } from './graphConstants'
 import { LAYOUT_CONFIGS } from './layoutConfigs'
 import { useGraphStore } from '@/stores/graph'
 
+interface NodeStyleResult {
+  color: string
+  glyphs?: { icon: string; label: string }[]
+}
+
+interface EdgeStyleResult {
+  lineStyle?: 'solid' | 'dashed'
+  arrow?: boolean
+  width?: number
+  label?: string
+}
+
 const props = defineProps<{
   nodes: GraphNode[]
   edges: GraphEdge[]
   onNodeClick: (node: GraphNode) => void
   matchedNodeIds?: Set<string>
+  /** Optional per-node styling override (e.g. the architecture map's decision-signal encoding). Unset preserves today's behaviour. */
+  nodeStyle?: (node: GraphNode) => NodeStyleResult
+  /** Optional per-edge styling override (e.g. the architecture map's typed relationships). Unset preserves today's behaviour. */
+  edgeStyle?: (edge: GraphEdge) => EdgeStyleResult
 }>()
 
 const graphStore = useGraphStore()
@@ -37,21 +53,25 @@ function nodeColor(type: string, synthetic?: boolean): string {
 
 function buildElements() {
   const p = palette.value
-  const nodes = props.nodes.map((n) => ({
-    data: {
-      id: n.id,
-      label: n.title || n.slug,
-      type: n.type,
-      status: n.status,
-      // 'synthetic' stored as string so Cytoscape attribute selectors work
-      synthetic: n.synthetic ? 'true' : 'false',
-      color: nodeColor(n.type, n.synthetic),
-      priorityColor: (n.priority || n.status === 'done')
-        ? (n.status === 'done' ? '#6b7280' : (p.priorityColors[n.priority!] ?? '#6b7280'))
-        : null,
-      _raw: n,
-    },
-  }))
+  const nodes = props.nodes.map((n) => {
+    const style = props.nodeStyle?.(n)
+    const glyphSuffix = style?.glyphs?.length ? ' ' + style.glyphs.map((g) => `[${g.icon}]`).join(' ') : ''
+    return {
+      data: {
+        id: n.id,
+        label: (n.title || n.slug) + glyphSuffix,
+        type: n.type,
+        status: n.status,
+        // 'synthetic' stored as string so Cytoscape attribute selectors work
+        synthetic: n.synthetic ? 'true' : 'false',
+        color: style ? style.color : nodeColor(n.type, n.synthetic),
+        priorityColor: (n.priority || n.status === 'done')
+          ? (n.status === 'done' ? '#6b7280' : (p.priorityColors[n.priority!] ?? '#6b7280'))
+          : null,
+        _raw: n,
+      },
+    }
+  })
   const edges = props.edges.map((e, i) => ({
     data: {
       id: `e${i}`,
@@ -402,8 +422,9 @@ watch(isDark, () => {
   const p = palette.value
   // Update per-node data so data(color) and data(priorityColor) selectors resolve correctly
   cy.nodes().forEach((n: any) => {
-    n.data('color', nodeColor(n.data('type'), n.data('synthetic') === 'true'))
     const raw = n.data('_raw') as GraphNode | undefined
+    const style = raw && props.nodeStyle ? props.nodeStyle(raw) : undefined
+    n.data('color', style ? style.color : nodeColor(n.data('type'), n.data('synthetic') === 'true'))
     if (raw) {
       const pc = raw.status === 'done'
         ? '#6b7280'

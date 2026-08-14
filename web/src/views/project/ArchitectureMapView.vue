@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import { useArchitectureMap } from '@/composables/useArchitectureMap'
 import { useViewport } from '@/composables/useViewport'
 import ForceGraph3D from '@/components/map/ForceGraph3D.vue'
+import { nodeStyle } from '@/components/map/archMapStyle'
 
 // Lazy-load Cytoscape 2D so it doesn't increase the 3D chunk (mirrors MapView.vue)
 const Graph2DView = defineAsyncComponent(
@@ -68,6 +69,7 @@ watch(view, (v) => {
         v-if="view === '3d'"
         :nodes="nodes"
         :edges="edges"
+        :node-style="nodeStyle"
         @node-click="onNodeClick"
       />
       <Graph2DView
@@ -75,6 +77,7 @@ watch(view, (v) => {
         :nodes="nodes"
         :edges="edges"
         :on-node-click="onNodeClick"
+        :node-style="nodeStyle"
       />
     </template>
   </div>

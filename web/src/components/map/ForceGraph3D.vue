@@ -7,6 +7,18 @@ import * as THREE from 'three'
 import type { GraphNode, GraphEdge } from '@/types/api'
 import { useGraphTheme } from './graphConstants'
 
+interface NodeStyleResult {
+  color: string
+  glyphs?: { icon: string; label: string }[]
+}
+
+interface EdgeStyleResult {
+  lineStyle?: 'solid' | 'dashed'
+  arrow?: boolean
+  width?: number
+  label?: string
+}
+
 const props = defineProps<{
   nodes: GraphNode[]
   edges: GraphEdge[]
@@ -17,6 +29,10 @@ const props = defineProps<{
   showNodeTitles?: boolean
   /** When true, renders the lineage slug below the title on each non-release, non-label node */
   showNodeLineage?: boolean
+  /** Optional per-node styling override (e.g. the architecture map's decision-signal encoding). Unset preserves today's behaviour. */
+  nodeStyle?: (node: GraphNode) => NodeStyleResult
+  /** Optional per-edge styling override (e.g. the architecture map's typed relationships). Unset preserves today's behaviour. */
+  edgeStyle?: (edge: GraphEdge) => EdgeStyleResult
 }>()
 
 const emit = defineEmits<{
@@ -31,6 +47,7 @@ function nodeColor(n: GraphNode): string {
   if (matched && matched.size > 0 && !matched.has(n.id)) {
     return palette.value.dimBlend
   }
+  if (props.nodeStyle) return props.nodeStyle(n).color
   const p = palette.value
   if (n.type === 'release') {
     return n.synthetic ? p.nodeColors['backlog'] : p.nodeColors['release']
@@ -168,6 +185,13 @@ function buildNodeObject(n: GraphNode): THREE.Object3D {
     const geo = new THREE.TorusGeometry(r * 2.1, r * 0.2, 8, 24)
     const mat = new THREE.MeshLambertMaterial({ color: p.searchHighlight, transparent: true, opacity: 0.85 })
     group.add(new THREE.Mesh(geo, mat))
+  }
+  // Decision-signal glyphs (offline-capable/mobile) — text, not colour alone (NFR-4)
+  if (props.nodeStyle) {
+    const glyphs = props.nodeStyle(n).glyphs
+    if (glyphs?.length) {
+      group.add(textSprite(glyphs.map((g) => g.icon).join(' '), p.labelNodeText, { y: -8, fontSize: 18 }))
+    }
   }
   return group
 }
