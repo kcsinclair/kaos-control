@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Architectural Artefacts On-Disk Model"
 type: plan-frontend
-status: in-development
+status: done
 lineage: architectural-artefacts
 parent: lifecycle/requirements/architectural-artefacts-2.md
 labels:
