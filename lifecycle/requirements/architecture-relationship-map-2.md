@@ -220,3 +220,5 @@ to neutral/generic rendering.
 - **Relationship extraction in v1.** For FR-3, are the arch↔arch links reliably
   parseable from the current catalog body wiki-links, or is a minimal typed-field
   seed needed before this view is trustworthy?
+
+> They are reliably parseable
