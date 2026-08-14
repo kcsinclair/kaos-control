@@ -189,6 +189,12 @@ automatically, and surface it where items are compared (list views) and edited
   non-`N/A` defaults (e.g. Confidence = 100) actually desired for partially
   scored items?
 
+> If there is nothing assigned, use the following defaults.
+> Reach = 100
+> Impact = 0.25
+> Confidence = 25%
+> Effort = 1
+
 - **Scope of list views** — should the RICE column appear in every list that
   can contain ideas/defects (search, kanban side lists, release panels), or
   only the primary artifact list in this iteration?
