@@ -1,7 +1,7 @@
 ---
 title: 'Test plan — defect-generate template fallback, self-repair, and graceful UI'
 type: plan-test
-status: in-development
+status: done
 lineage: defect-generate-missing-template
 parent: lifecycle/defects/defect-generate-missing-template.md
 release: KC-Release5
