@@ -29,11 +29,11 @@ var Version = "dev"
 
 // Server is the HTTP server for kaos-control.
 type Server struct {
-	cfg      ServerConfig
-	router   chi.Router
-	httpSrv  *http.Server
-	queue    *queue.Dispatcher // nil when queue not configured
-	appHub   *hub.Hub          // app-level hub for queue.* broadcast; nil if unconfigured
+	cfg     ServerConfig
+	router  chi.Router
+	httpSrv *http.Server
+	queue   *queue.Dispatcher // nil when queue not configured
+	appHub  *hub.Hub          // app-level hub for queue.* broadcast; nil if unconfigured
 
 	// projects is the live map of registered projects.
 	// All reads and writes must be done under projectsMu.
@@ -62,14 +62,14 @@ type ServerConfig struct {
 	// binding Listen via net.Listen. Tests pass a pre-bound 127.0.0.1:0
 	// listener to avoid a race where the ephemeral port is grabbed by another
 	// goroutine between the test's probe-bind and the server's real bind.
-	Listener net.Listener
-	TLSCert  string
-	TLSKey   string
-	TLSOn    bool
+	Listener   net.Listener
+	TLSCert    string
+	TLSKey     string
+	TLSOn      bool
 	Frontend   fs.FS
-	Auth       *auth.Store  // nil when auth is not configured
-	AppCfg     *config.App  // may be nil; required for Ollama instance management
-	AppCfgPath string       // path to app config.yaml; required for Ollama instance management
+	Auth       *auth.Store // nil when auth is not configured
+	AppCfg     *config.App // may be nil; required for Ollama instance management
+	AppCfgPath string      // path to app config.yaml; required for Ollama instance management
 	// PublicHost is a comma-separated list of additional hostnames the server
 	// is reachable at; used to populate WebSocket OriginPatterns.
 	// Local listen addresses (localhost, 127.0.0.1) are always allowed.
@@ -153,222 +153,223 @@ func (s *Server) buildRouter() chi.Router {
 		r.Use(s.requireAuth)
 
 		r.Route("/api", func(r chi.Router) {
-		r.Get("/health", s.handleHealth)
-		r.Get("/version", s.handleVersion)
+			r.Get("/health", s.handleHealth)
+			r.Get("/version", s.handleVersion)
 
-		// Auth endpoints
-		r.Post("/auth/login", s.handleLogin)
-		r.Post("/auth/logout", s.handleLogout)
-		r.Get("/auth/me", s.handleMe)
+			// Auth endpoints
+			r.Post("/auth/login", s.handleLogin)
+			r.Post("/auth/logout", s.handleLogout)
+			r.Get("/auth/me", s.handleMe)
 
-		// Admin: user management
-		r.Post("/admin/users", s.handleCreateUser)
+			// Admin: user management
+			r.Post("/admin/users", s.handleCreateUser)
 
-		// Project registry
-		r.Get("/projects", s.handleListProjects)
-		r.Post("/projects", s.handleCreateProject)
-		r.Get("/projects/{project}", s.handleGetProject)
-		r.Put("/projects/{project}", s.handleUpdateProject)
-		r.Delete("/projects/{project}", s.handleDeleteProject)
-		r.Post("/projects/{project}/init", s.handleInitProject)
-		// check-directory must be registered before /{project} to avoid
-		// "check-directory" being matched as a project name.
-		r.Post("/projects/check-directory", s.handleCheckDirectory)
+			// Project registry
+			r.Get("/projects", s.handleListProjects)
+			r.Post("/projects", s.handleCreateProject)
+			r.Get("/projects/{project}", s.handleGetProject)
+			r.Put("/projects/{project}", s.handleUpdateProject)
+			r.Delete("/projects/{project}", s.handleDeleteProject)
+			r.Post("/projects/{project}/init", s.handleInitProject)
+			// check-directory must be registered before /{project} to avoid
+			// "check-directory" being matched as a project name.
+			r.Post("/projects/check-directory", s.handleCheckDirectory)
 
-		// App-level WebSocket (queue events, etc.)
-		r.Get("/ws", s.handleAppWebSocket)
+			// App-level WebSocket (queue events, etc.)
+			r.Get("/ws", s.handleAppWebSocket)
 
-		// Queue management (app-level, not project-scoped)
-		r.Post("/queue", s.handleEnqueue)
-		r.Get("/queue", s.handleListQueue)
-		r.Delete("/queue/{id}", s.handleCancelQueue)
-		r.Post("/queue/pause", s.handlePauseQueue)
-		r.Post("/queue/resume", s.handleResumeQueue)
+			// Queue management (app-level, not project-scoped)
+			r.Post("/queue", s.handleEnqueue)
+			r.Get("/queue", s.handleListQueue)
+			r.Delete("/queue/{id}", s.handleCancelQueue)
+			r.Post("/queue/pause", s.handlePauseQueue)
+			r.Post("/queue/resume", s.handleResumeQueue)
 
-		// Ollama instance management (app-level, not project-scoped)
-		r.Route("/ollama/instances", func(r chi.Router) {
-			r.Get("/", s.handleListOllamaInstances)
-			r.Post("/", s.handleCreateOllamaInstance)
-			r.Put("/{name}", s.handleUpdateOllamaInstance)
-			r.Delete("/{name}", s.handleDeleteOllamaInstance)
-			r.Get("/{name}/health", s.handleOllamaHealth)
-			r.Get("/{name}/models", s.handleOllamaModels)
-		})
-
-		// Per-project routes
-		r.Route("/p/{project}", func(r chi.Router) {
-			r.Use(s.projectMiddleware)
-
-			// Artifacts
-			r.Get("/artifacts", s.handleListArtifacts)
-			r.Post("/artifacts", s.handleCreateArtifact)
-			// Chi wildcards are greedy, so dispatch sub-routes manually.
-			r.Get("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
-				param := chi.URLParam(r, "*")
-				if strings.HasSuffix(param, "/history") {
-					s.handleGetArtifactHistory(w, r)
-					return
-				}
-				if strings.HasSuffix(param, "/allowed-targets") {
-					s.handleAllowedTargets(w, r)
-					return
-				}
-				if strings.HasSuffix(param, "/open-questions") {
-					s.handleGetOpenQuestions(w, r)
-					return
-				}
-				s.handleGetArtifact(w, r)
-			})
-			r.Put("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
-				s.handleUpdateArtifact(w, r)
-			})
-			r.Delete("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
-				param := chi.URLParam(r, "*")
-				// Strip any accidental trailing slash.
-				r2 := r.WithContext(r.Context())
-				_ = param
-				s.handleDeleteArtifact(w, r2)
-			})
-			r.Post("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
-				param := chi.URLParam(r, "*")
-				if strings.HasSuffix(param, "/rename") {
-					s.handleRenameArtifact(w, r)
-					return
-				}
-				if strings.HasSuffix(param, "/transition") {
-					s.handleTransitionArtifact(w, r)
-					return
-				}
-				if strings.HasSuffix(param, "/open-questions/preview") {
-					s.handlePreviewOpenQuestions(w, r)
-					return
-				}
-				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
-			})
-			r.Patch("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
-				param := chi.URLParam(r, "*")
-				if strings.HasSuffix(param, "/priority") {
-					s.handlePatchPriority(w, r)
-					return
-				}
-				if strings.HasSuffix(param, "/release") {
-					s.handlePatchRelease(w, r)
-					return
-				}
-				writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
+			// Ollama instance management (app-level, not project-scoped)
+			r.Route("/ollama/instances", func(r chi.Router) {
+				r.Get("/", s.handleListOllamaInstances)
+				r.Post("/", s.handleCreateOllamaInstance)
+				r.Put("/{name}", s.handleUpdateOllamaInstance)
+				r.Delete("/{name}", s.handleDeleteOllamaInstance)
+				r.Get("/{name}/health", s.handleOllamaHealth)
+				r.Get("/{name}/models", s.handleOllamaModels)
 			})
 
-			// Architecture promotion + ADR primitives
-			r.Post("/architecture/promote", s.handlePromoteArchitecture)
-			r.Post("/architecture/adrs", s.handleCreateADR)
-			r.Get("/architecture/adrs/next", s.handleNextADRNumber)
+			// Per-project routes
+			r.Route("/p/{project}", func(r chi.Router) {
+				r.Use(s.projectMiddleware)
 
-			// Docs panel
-			r.Get("/docs", s.handleListDocs)
-			r.Get("/docs/*", s.handleGetDoc)
-			r.Put("/docs/*", s.handlePutDoc)
+				// Artifacts
+				r.Get("/artifacts", s.handleListArtifacts)
+				r.Post("/artifacts", s.handleCreateArtifact)
+				// Chi wildcards are greedy, so dispatch sub-routes manually.
+				r.Get("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
+					param := chi.URLParam(r, "*")
+					if strings.HasSuffix(param, "/history") {
+						s.handleGetArtifactHistory(w, r)
+						return
+					}
+					if strings.HasSuffix(param, "/allowed-targets") {
+						s.handleAllowedTargets(w, r)
+						return
+					}
+					if strings.HasSuffix(param, "/open-questions") {
+						s.handleGetOpenQuestions(w, r)
+						return
+					}
+					s.handleGetArtifact(w, r)
+				})
+				r.Put("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
+					s.handleUpdateArtifact(w, r)
+				})
+				r.Delete("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
+					param := chi.URLParam(r, "*")
+					// Strip any accidental trailing slash.
+					r2 := r.WithContext(r.Context())
+					_ = param
+					s.handleDeleteArtifact(w, r2)
+				})
+				r.Post("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
+					param := chi.URLParam(r, "*")
+					if strings.HasSuffix(param, "/rename") {
+						s.handleRenameArtifact(w, r)
+						return
+					}
+					if strings.HasSuffix(param, "/transition") {
+						s.handleTransitionArtifact(w, r)
+						return
+					}
+					if strings.HasSuffix(param, "/open-questions/preview") {
+						s.handlePreviewOpenQuestions(w, r)
+						return
+					}
+					writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
+				})
+				r.Patch("/artifacts/*", func(w http.ResponseWriter, r *http.Request) {
+					param := chi.URLParam(r, "*")
+					if strings.HasSuffix(param, "/priority") {
+						s.handlePatchPriority(w, r)
+						return
+					}
+					if strings.HasSuffix(param, "/release") {
+						s.handlePatchRelease(w, r)
+						return
+					}
+					writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
+				})
 
-			// Agents
-			r.Get("/agents", s.handleListAgents)
-			r.Get("/agents/ready-counts", s.handleGetReadyCounts)
-			r.Post("/agents/{name}/run", s.handleStartAgentRun)
-			r.Get("/agents/runs", s.handleListAgentRuns)
-			r.Get("/agents/runs/{run_id}", s.handleGetAgentRun)
-			r.Get("/agents/runs/{run_id}/log", s.handleGetAgentRunLog)
-			r.Get("/agents/runs/{run_id}/result", s.handleGetAgentRunResult)
-			r.Post("/agents/runs/{run_id}/kill", s.handleKillAgentRun)
+				// Architecture promotion + ADR primitives
+				r.Post("/architecture/promote", s.handlePromoteArchitecture)
+				r.Post("/architecture/adrs", s.handleCreateADR)
+				r.Get("/architecture/adrs/next", s.handleNextADRNumber)
 
-			// Reports
-			r.Get("/reports/agent-usage", s.handleGetAgentUsageReport)
+				// Docs panel
+				r.Get("/docs", s.handleListDocs)
+				r.Get("/docs/*", s.handleGetDoc)
+				r.Put("/docs/*", s.handlePutDoc)
 
-			// Locks
-			r.Get("/locks", s.handleListLocks)
-			r.Post("/locks", s.handleAcquireLock)
-			r.Delete("/locks/{lineage}", s.handleReleaseLock)
-			r.Post("/locks/{lineage}/heartbeat", s.handleHeartbeatLock)
+				// Agents
+				r.Get("/agents", s.handleListAgents)
+				r.Get("/agents/ready-counts", s.handleGetReadyCounts)
+				r.Post("/agents/{name}/run", s.handleStartAgentRun)
+				r.Get("/agents/runs", s.handleListAgentRuns)
+				r.Get("/agents/runs/{run_id}", s.handleGetAgentRun)
+				r.Get("/agents/runs/{run_id}/log", s.handleGetAgentRunLog)
+				r.Get("/agents/runs/{run_id}/result", s.handleGetAgentRunResult)
+				r.Post("/agents/runs/{run_id}/kill", s.handleKillAgentRun)
 
-			// Conversational idea capture
-			r.Post("/ideas/converse", s.handleIdeaConverse)
-			// Single-submit idea / defect capture (preview-only, no disk write)
-			r.Post("/ideas/generate", s.handleIdeaGenerate)
-			// On-demand triage trigger for a raw idea artifact
-			r.Post("/ideas/{slug}/triage", s.handleTriageIdea)
+				// Reports
+				r.Get("/reports/agent-usage", s.handleGetAgentUsageReport)
 
-			// WebSocket
-			r.Get("/ws", s.handleWebSocket)
+				// Locks
+				r.Get("/locks", s.handleListLocks)
+				r.Post("/locks", s.handleAcquireLock)
+				r.Delete("/locks/{lineage}", s.handleReleaseLock)
+				r.Post("/locks/{lineage}/heartbeat", s.handleHeartbeatLock)
 
-			// Event feed
-			r.Get("/feed", s.handleGetFeed)
+				// Conversational idea capture
+				r.Post("/ideas/converse", s.handleIdeaConverse)
+				// Single-submit idea / defect capture (preview-only, no disk write)
+				r.Post("/ideas/generate", s.handleIdeaGenerate)
+				// On-demand triage trigger for a raw idea artifact
+				r.Post("/ideas/{slug}/triage", s.handleTriageIdea)
 
-			// Graph and discovery
-			r.Get("/graph", s.handleGraph)
-			r.Get("/labels", s.handleLabels)
-			r.Get("/lineages", s.handleLineages)
-			r.Get("/priorities", s.handlePriorities)
-			r.Get("/parse-errors", s.handleParseErrors)
+				// WebSocket
+				r.Get("/ws", s.handleWebSocket)
 
-			// Project config
-			r.Get("/config", s.handleGetConfig)
-			r.Put("/config", s.handleUpdateConfig)
-			r.Get("/config/kanban", s.handleGetKanbanConfig)
-			r.Get("/config/roadmap", s.handleGetRoadmapConfig)
-			r.Get("/config/open-questions", s.handleGetOpenQuestionsConfig)
+				// Event feed
+				r.Get("/feed", s.handleGetFeed)
 
-			// Roles and users
-			r.Get("/roles", s.handleGetRoles)
+				// Graph and discovery
+				r.Get("/graph", s.handleGraph)
+				r.Get("/architecture-map", s.handleArchitectureMap)
+				r.Get("/labels", s.handleLabels)
+				r.Get("/lineages", s.handleLineages)
+				r.Get("/priorities", s.handlePriorities)
+				r.Get("/parse-errors", s.handleParseErrors)
 
-			// Lineage status checker
-			r.Get("/status-check", s.handleStatusCheck)
-			r.Post("/status-check/advance", s.handleStatusCheckAdvance)
+				// Project config
+				r.Get("/config", s.handleGetConfig)
+				r.Put("/config", s.handleUpdateConfig)
+				r.Get("/config/kanban", s.handleGetKanbanConfig)
+				r.Get("/config/roadmap", s.handleGetRoadmapConfig)
+				r.Get("/config/open-questions", s.handleGetOpenQuestionsConfig)
 
-			// Releases
-			r.Route("/releases", func(r chi.Router) {
-				r.Get("/", s.handleListReleases)
-				r.Post("/", s.handleCreateRelease)
-				r.Post("/rehydrate", s.handleRehydrateReleases)
-				r.Get("/graph", s.handleRoadmapGraph)
-				r.Get("/{releaseID}", s.handleGetRelease)
-				r.Put("/{releaseID}", s.handleUpdateRelease)
-				r.Delete("/{releaseID}", s.handleDeleteRelease)
-				r.Get("/{releaseID}/artifacts", s.handleListReleaseArtifacts)
+				// Roles and users
+				r.Get("/roles", s.handleGetRoles)
+
+				// Lineage status checker
+				r.Get("/status-check", s.handleStatusCheck)
+				r.Post("/status-check/advance", s.handleStatusCheckAdvance)
+
+				// Releases
+				r.Route("/releases", func(r chi.Router) {
+					r.Get("/", s.handleListReleases)
+					r.Post("/", s.handleCreateRelease)
+					r.Post("/rehydrate", s.handleRehydrateReleases)
+					r.Get("/graph", s.handleRoadmapGraph)
+					r.Get("/{releaseID}", s.handleGetRelease)
+					r.Put("/{releaseID}", s.handleUpdateRelease)
+					r.Delete("/{releaseID}", s.handleDeleteRelease)
+					r.Get("/{releaseID}/artifacts", s.handleListReleaseArtifacts)
+				})
+
+				// Git context
+				r.Get("/git/status", s.handleGetGitStatus)
+
+				// Dashboard
+				r.Route("/dashboard", func(r chi.Router) {
+					r.Get("/stats", s.handleGetDashboardStats)
+					r.Get("/status-distribution", s.handleGetStatusDistribution)
+					r.Get("/stage-distribution", s.handleGetStageDistribution)
+					r.Get("/velocity", s.handleGetVelocity)
+				})
+
+				// DevOps pipelines
+				r.Get("/devops/pipelines", s.handleListPipelines)
+				r.Post("/devops/pipelines", s.handleCreatePipeline)
+				r.Get("/devops/pipelines/{slug}", s.handleGetPipeline)
+				r.Put("/devops/pipelines/{slug}", s.handleUpdatePipeline)
+				r.Post("/devops/pipelines/{slug}/run", s.handleRunPipeline)
+				r.Post("/devops/pipelines/{slug}/cancel", s.handleCancelPipeline)
+				r.Get("/devops/pipelines/{slug}/runs", s.handleListPipelineRuns)
+				r.Get("/devops/pipelines/{slug}/runs/{run_id}/log", s.handleGetPipelineRunLog)
+				r.Get("/devops/runs/{run_id}", s.handleGetRunLog)
+
+				// Scheduler
+				r.Route("/scheduler", func(r chi.Router) {
+					r.Get("/jobs", s.handleListSchedulerJobs)
+					r.Post("/jobs", s.handleCreateSchedulerJob)
+					r.Get("/jobs/{name}", s.handleGetSchedulerJob)
+					r.Put("/jobs/{name}", s.handleUpdateSchedulerJob)
+					r.Delete("/jobs/{name}", s.handleDeleteSchedulerJob)
+					r.Post("/jobs/{name}/trigger", s.handleTriggerSchedulerJob)
+					r.Post("/jobs/{name}/pause", s.handlePauseSchedulerJob)
+					r.Post("/jobs/{name}/resume", s.handleResumeSchedulerJob)
+					r.Get("/jobs/{name}/runs", s.handleListSchedulerRuns)
+					r.Get("/jobs/{name}/runs/{id}/log", s.handleGetSchedulerRunLog)
+				})
 			})
-
-			// Git context
-			r.Get("/git/status", s.handleGetGitStatus)
-
-			// Dashboard
-			r.Route("/dashboard", func(r chi.Router) {
-				r.Get("/stats", s.handleGetDashboardStats)
-				r.Get("/status-distribution", s.handleGetStatusDistribution)
-				r.Get("/stage-distribution", s.handleGetStageDistribution)
-				r.Get("/velocity", s.handleGetVelocity)
-			})
-
-			// DevOps pipelines
-			r.Get("/devops/pipelines", s.handleListPipelines)
-			r.Post("/devops/pipelines", s.handleCreatePipeline)
-			r.Get("/devops/pipelines/{slug}", s.handleGetPipeline)
-			r.Put("/devops/pipelines/{slug}", s.handleUpdatePipeline)
-			r.Post("/devops/pipelines/{slug}/run", s.handleRunPipeline)
-			r.Post("/devops/pipelines/{slug}/cancel", s.handleCancelPipeline)
-			r.Get("/devops/pipelines/{slug}/runs", s.handleListPipelineRuns)
-			r.Get("/devops/pipelines/{slug}/runs/{run_id}/log", s.handleGetPipelineRunLog)
-			r.Get("/devops/runs/{run_id}", s.handleGetRunLog)
-
-			// Scheduler
-			r.Route("/scheduler", func(r chi.Router) {
-				r.Get("/jobs", s.handleListSchedulerJobs)
-				r.Post("/jobs", s.handleCreateSchedulerJob)
-				r.Get("/jobs/{name}", s.handleGetSchedulerJob)
-				r.Put("/jobs/{name}", s.handleUpdateSchedulerJob)
-				r.Delete("/jobs/{name}", s.handleDeleteSchedulerJob)
-				r.Post("/jobs/{name}/trigger", s.handleTriggerSchedulerJob)
-				r.Post("/jobs/{name}/pause", s.handlePauseSchedulerJob)
-				r.Post("/jobs/{name}/resume", s.handleResumeSchedulerJob)
-				r.Get("/jobs/{name}/runs", s.handleListSchedulerRuns)
-				r.Get("/jobs/{name}/runs/{id}/log", s.handleGetSchedulerRunLog)
-			})
-		})
 		})
 
 		r.Get("/*", s.handleFrontend)

@@ -84,6 +84,30 @@ func (s *Server) handleGraph(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, data)
 }
 
+// handleArchitectureMap handles GET /api/p/:project/architecture-map
+//
+// Optional query parameters:
+//   - stack_for=<artifactId> — additionally include that architecture's
+//     related_to tech-stack nodes and connecting edges. Omitting it (or
+//     naming a non-architecture/unknown id) returns the architecture-only
+//     base map — never an error.
+func (s *Server) handleArchitectureMap(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	stackFor := r.URL.Query().Get("stack_for")
+	data, err := p.Idx.ArchitectureMap(stackFor)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, data)
+}
+
 // handleLabels handles GET /api/p/:project/labels
 func (s *Server) handleLabels(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
