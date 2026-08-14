@@ -1,7 +1,7 @@
 ---
 title: New agents added to config.yaml don't appear until the app is restarted
 type: defect
-status: in-development
+status: done
 lineage: agent-config-requires-restart
 created: "2026-08-11T00:00:00+10:00"
 priority: low
@@ -14,6 +14,7 @@ labels:
 assignees:
     - role: backend-developer
       who: agent
+parent: lifecycle/tests/defect-generate-missing-template-5-test.md
 ---
 
 # New agents added to config.yaml don't appear until the app is restarted

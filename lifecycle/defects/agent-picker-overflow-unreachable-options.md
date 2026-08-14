@@ -1,7 +1,7 @@
 ---
 title: Agent picker list overflows the viewport with many agents — lower options unreachable
 type: defect
-status: in-development
+status: done
 lineage: agent-picker-overflow-unreachable-options
 created: "2026-08-11T00:00:00+10:00"
 priority: medium
@@ -14,6 +14,7 @@ labels:
 assignees:
     - role: frontend-developer
       who: agent
+parent: lifecycle/tests/defect-generate-missing-template-5-test.md
 ---
 
 # Agent picker list overflows the viewport with many agents — lower options unreachable
