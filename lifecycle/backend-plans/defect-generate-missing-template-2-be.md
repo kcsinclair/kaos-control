@@ -1,7 +1,7 @@
 ---
 title: 'Backend plan — defect-generate template fallback, config self-repair, and graceful degradation'
 type: plan-backend
-status: in-development
+status: done
 lineage: defect-generate-missing-template
 parent: lifecycle/defects/defect-generate-missing-template.md
 release: KC-Release5
