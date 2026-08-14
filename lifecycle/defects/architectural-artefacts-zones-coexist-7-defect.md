@@ -1,7 +1,7 @@
 ---
 title: Catalog and project-own architecture artefacts fail to index on server startup
 type: defect
-status: approved
+status: in-development
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
 labels:
