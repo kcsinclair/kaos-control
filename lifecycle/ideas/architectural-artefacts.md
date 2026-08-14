@@ -1,7 +1,7 @@
 ---
 title: Architectural Artefacts
 type: idea
-status: approved
+status: clarifying
 lineage: architectural-artefacts
 priority: normal
 labels:
