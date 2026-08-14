@@ -1,19 +1,9 @@
 ---
-title: "New Defect → Generate" fails with 'idea-capture agent has no template "defect-generate"'
+title: '"New Defect → Generate" fails with ''idea-capture agent has no template "defect-generate"'''
 type: defect
 status: draft
 lineage: defect-generate-missing-template
-created: "2026-08-11T00:00:00+10:00"
-priority: medium
 release: KC-Release5
-labels:
-    - defect
-    - agent
-    - defects
-    - config
-assignees:
-    - role: backend-developer
-      who: agent
 ---
 
 # "New Defect → Generate" fails with 'idea-capture agent has no template "defect-generate"'
@@ -57,3 +47,7 @@ The defect-generation flow resolves an agent that actually defines
 `defect-generate` (or falls back to a built-in default template), and/or
 degrades gracefully with actionable guidance instead of a hard error. Fresh
 projects should be able to generate a defect out of the box.
+
+## Possible Solution
+
+When kaos-control starts it validates the configuration to ensure that items are not missing, if possible it updates missing configuration from the template, e.g. adds the missing defect-capture agent.
