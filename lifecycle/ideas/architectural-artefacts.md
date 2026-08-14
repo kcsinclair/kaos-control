@@ -1,7 +1,7 @@
 ---
 title: Architectural Artefacts
 type: idea
-status: planning
+status: done
 lineage: architectural-artefacts
 priority: normal
 labels:
