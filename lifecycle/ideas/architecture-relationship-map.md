@@ -85,6 +85,15 @@ move to (2) when typed relationships land.
 
 > New dedicated view, new left menu for Architecture, this will be the primary view for now.
 
+> **Amendment (2026-08-14):** the Architecture left-menu entry becomes a
+> *section* hosting three surfaces: this relationship map (browse the
+> catalog), the Architecture Wizard ([[onboarding-architecture-selection]]),
+> and — once a selection exists — the chosen-architecture overview
+> ([[architecture-overview-view]]: Q&A trail, tech stack, design elements,
+> NFRs, ADRs). The map is the section's default view **until** the project
+> has a chosen architecture; after that the overview becomes the default and
+> the map remains one click away.
+
 - 2D (Cytoscape, better for a small curated set + labelled edges) or reuse the
   3D force graph? A small, typed graph probably reads better in 2D.
 

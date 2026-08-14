@@ -120,11 +120,68 @@ slug. Worth ratifying this exception to §3.3 of the spec during requirements.
 - Is a "template" a *saved selection* (architecture + stack + standards) that's
   itself a versioned artifact, or just the act of choosing three separate
   artifacts at init? (Leaning: a lightweight saved selection artifact.)
+
+> **Resolved (2026-08-14):** the saved selection is the **promotion** of the
+> chosen architecture + tech-stack artifacts into the `lifecycle/architecture/`
+> root, plus the generated `architecture-summary.md` and ADR-0001. No separate
+> "template" artifact type is needed — see [[architectural-artefacts]] for the
+> full on-disk model.
+
 - How much scaffolding do we generate vs. reference? (repo skeleton? or just
   config + pipelines + ADRs?)
+
+> **Resolved (2026-08-14):** after the stack is chosen, the Architecture Wizard
+> **offers** to initialise the scaffolding for the components (opt-in, not
+> forced). Scaffolding = `config.yaml` roster, devops pipelines, seed
+> ADRs/standards, agent directives ([[agent-directives-generation]]), *and* the
+> starter directory skeleton for the stack. Where file/directory naming choices
+> exist, the wizard asks the user — with a **"decide for me"** option that
+> applies the stack's canonical defaults. The scaffold always includes the
+> **testing and security-scanning** components for the stack (e.g. test
+> pipeline + [[security-scan-pipeline]]-style scan); where a component needs a
+> human decision (e.g. which scanner licence, which CI), the wizard raises an
+> **idea artifact** for it instead of guessing.
+
 - Where does the embedded catalog get copied on init, and how are project-local
   edits reconciled with catalog updates in later kaos-control versions?
+
+> **Partially resolved:** copied to `lifecycle/architecture/{architectures,tech-stacks}/`
+> on init (decided in §2). Reconciliation with later catalog versions remains
+> open for the requirements stage.
+
 - Which initial templates ship as *named bundles*? The original idea listed
   Go+SQLite, PHP/Symfony/Postgres, and Python/Mongo — the stack catalog now
   includes [[php-symfony-postgres]] and [[python-mongodb]] (11 stacks total), so
   named bundles can be assembled from the catalog rather than invented.
+
+> **Resolved (2026-08-14):** no named bundles for v1 — the wizard assembles
+> architecture + compatible stack from the catalog; bundles can come later if
+> recurring combinations emerge.
+
+---
+
+## Rationalisation with the KC-Release5 set (2026-08-14)
+
+How the pieces divide, so nothing overlaps or conflicts:
+
+| Concern | Owner |
+| --- | --- |
+| Catalog + 3-layer model + selection→config scaffolding | **this idea** |
+| On-disk model after selection: promotion, `architecture-summary.md`, `decisions/` (ADRs), `standards/` | [[architectural-artefacts]] |
+| The **Architecture Wizard** (questionnaire, architecture-breaking requirements, re-run behaviour) | [[onboarding-architecture-selection]] |
+| Visual browse surface for the catalog (2D/3D map) | [[architecture-relationship-map]] |
+| Post-selection **Architecture** menu view (chosen architecture, Q&A, NFRs, ADRs) | [[architecture-overview-view]] |
+| Generating CLAUDE.md / AGENTS.md / GEMINI.md / Antigravity directives + stack-tuned agent prompts at init | [[agent-directives-generation]] |
+| Auto-generating a diagram of the *current* system from code | [[architecture-auto-diagram]] (backlog) |
+
+Two clarifications folded in from the process notes:
+
+- **§4 config seeding includes agent directives.** The `config.yaml` roster and
+  prompts seeded here must be generated *correctly for the chosen stack* —
+  right write paths, right build/test commands in each developer prompt — and
+  the same init emits the per-agent-CLI directive files. Details in
+  [[agent-directives-generation]].
+- **§5 questionnaire is framed around architecture-breaking requirements**:
+  the questions exist to surface the requirements that could break a solution
+  (offline, collaboration, scale, realtime, …), and those answers are
+  persisted into the Architecture Summary as the critical-requirements record.
