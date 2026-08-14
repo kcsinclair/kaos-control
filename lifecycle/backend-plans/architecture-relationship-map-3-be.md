@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Architecture Relationship Map"
 type: plan-backend
-status: draft
+status: approved
 lineage: architecture-relationship-map
 parent: lifecycle/requirements/architecture-relationship-map-2.md
 labels:
