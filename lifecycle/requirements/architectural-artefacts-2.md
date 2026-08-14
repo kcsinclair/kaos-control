@@ -206,14 +206,20 @@ consumers/producers of the model defined here.
   under `standards/`, a new `docs/` sub-folder, or the existing docs panel? v1 assumes the
   summary + standards cover the human-facing narrative; a dedicated diagram home is out of
   scope pending [[architecture-overview-view]].
+
+> kaos-control would keep related docs in lifecycle/docs, most people will want the end user docs in the project root directory, this is implemented now in kaos-control, generated documentation is in docs in the root.
+
 - **OQ-2** Should the summary and standards eventually get dedicated `type:` values, or is
   `type: doc` sufficient long-term? v1 uses `doc`.
+
 - **OQ-3** When a *different* architecture is chosen (re-promotion), should the previously
   promoted root copies be hard-deleted (relying on git history) or moved to an archive
   location? FR-7 currently assumes deletion via overwrite/replacement.
+
 - **OQ-4** Should agent-*proposed* ADRs land as `status: draft` awaiting human approval, or be
   written directly? Assumed `draft` pending confirmation, aligning with the normal transition
   gating.
+
 - **OQ-5** Is there a maximum/duplicate-detection rule for standards seeded from both the
   architecture *and* the tech-stack (e.g. two secrets-handling standards)? Assumed the seed set
   is de-duplicated by [[architecture-templates]] before promotion.
