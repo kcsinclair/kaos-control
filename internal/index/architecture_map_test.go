@@ -3,6 +3,8 @@
 package index
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -200,5 +202,41 @@ func TestArchitectureMap_DanglingLinkDropped(t *testing.T) {
 	}
 	if len(data.Edges) != 0 {
 		t.Errorf("expected no edges for a dangling link, got %+v", data.Edges)
+	}
+}
+
+// TestArchitectureMap_ReflectsReindexWithoutRestart verifies FR-12: a new
+// type: architecture fixture written to disk and indexed via IndexFile — the
+// same mechanism the fsnotify watcher uses on a change event — is visible in
+// the very next ArchitectureMap("") call, with no cached snapshot in the way.
+func TestArchitectureMap_ReflectsReindexWithoutRestart(t *testing.T) {
+	idx := openTestIndex(t)
+
+	data, err := idx.ArchitectureMap("")
+	if err != nil {
+		t.Fatalf("ArchitectureMap (before): %v", err)
+	}
+	if len(data.Nodes) != 0 {
+		t.Fatalf("expected 0 nodes before any fixture is written, got %d", len(data.Nodes))
+	}
+
+	relPath := "lifecycle/architecture/architectures/foo.md"
+	absPath := filepath.Join(idx.projectRoot, relPath)
+	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(absPath, []byte(archRaw("Foo")), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := idx.IndexFile(absPath); err != nil {
+		t.Fatalf("IndexFile: %v", err)
+	}
+
+	data2, err := idx.ArchitectureMap("")
+	if err != nil {
+		t.Fatalf("ArchitectureMap (after): %v", err)
+	}
+	if len(data2.Nodes) != 1 || data2.Nodes[0].ID != relPath {
+		t.Fatalf("expected the new node visible with no restart, got nodes: %+v", data2.Nodes)
 	}
 }
