@@ -1,7 +1,7 @@
 ---
 title: Design and build agents missing propose ADR on deviation directive
 type: defect
-status: approved
+status: in-development
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
 labels: [defect]
