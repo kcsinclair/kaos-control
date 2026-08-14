@@ -1,7 +1,7 @@
 ---
 title: Kanban Routing — SPA Catch-All Fix Integration Tests
 type: test
-status: approved
+status: in-qa
 lineage: kanban-view
 parent: lifecycle/defects/kanban-view-9-defect.md
 ---
