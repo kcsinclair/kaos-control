@@ -1,7 +1,7 @@
 ---
 title: Agent runner should reject/strip ScheduleWakeup — one-shot runs silently drop deferred work
 type: defect
-status: draft
+status: approved
 lineage: agent-runner-strip-schedulewakeup
 created: "2026-07-08T00:00:00+10:00"
 priority: medium
