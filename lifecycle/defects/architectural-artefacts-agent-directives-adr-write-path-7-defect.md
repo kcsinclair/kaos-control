@@ -1,13 +1,15 @@
 ---
 title: Analyst and developer agents missing allowed write path for ADR decisions
 type: defect
-status: approved
+status: in-development
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release5
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # Analyst and developer agents missing allowed write path for ADR decisions
