@@ -63,6 +63,20 @@ const router = createRouter({
           redirect: { name: 'map' },
         },
         {
+          // Architecture section landing. The relationship map is the
+          // section's default while the project has no chosen architecture
+          // (FR-1). Once [[architecture-overview-view]] lands, this should
+          // redirect to the overview instead when a chosen architecture
+          // exists — the map stays reachable at its own route either way.
+          path: 'architecture',
+          redirect: (to) => `/p/${to.params.project}/architecture/map`,
+        },
+        {
+          path: 'architecture/map',
+          name: 'architecture-map',
+          component: () => import('@/views/project/ArchitectureMapView.vue'),
+        },
+        {
           path: 'roadmap',
           name: 'roadmap',
           component: () => import('@/views/project/RoadmapView.vue'),
