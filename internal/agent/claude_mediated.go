@@ -90,6 +90,7 @@ func (d *ClaudeHooksDriver) buildArgs(run Run, settingsPath string) []string {
 		"-p", run.PromptText,
 		"--output-format", "stream-json",
 		"--verbose",
+		"--disallowedTools", scheduleWakeupTool,
 	}
 	if run.Model != "" {
 		args = append(args, "--model", run.Model)

@@ -48,6 +48,22 @@ func TestBuildArgs_DeniesScheduleWakeup(t *testing.T) {
 	}
 }
 
+// TestClaudeHooksDriver_BuildArgs_DeniesScheduleWakeup verifies that the
+// claude-mediated driver also denies ScheduleWakeup, so mediated one-shot
+// runs can't silently drop deferred work either.
+func TestClaudeHooksDriver_BuildArgs_DeniesScheduleWakeup(t *testing.T) {
+	d := &ClaudeHooksDriver{}
+	args := d.buildArgs(Run{PromptText: "hello"}, "/tmp/settings.json")
+
+	dtIdx := slices.Index(args, "--disallowedTools")
+	if dtIdx < 0 {
+		t.Fatal("--disallowedTools not found in args")
+	}
+	if dtIdx+1 >= len(args) || args[dtIdx+1] != "ScheduleWakeup" {
+		t.Fatalf("expected --disallowedTools ScheduleWakeup, got args[%d+1]=%q", dtIdx, args[dtIdx+1])
+	}
+}
+
 // TestExtractRateLimitText covers all stream-json rate-limit / overload formats.
 func TestExtractRateLimitText(t *testing.T) {
 	type tc struct {
