@@ -95,6 +95,11 @@ The "New Project" flow assumes the user is creating a fresh location for their p
 ## Open Questions
 
 - Does this requirement need a graphical directory picker, or is a typed/pasted path acceptable for v1? (Non-goals assume typed path; confirm with product-owner.)
+
+> Typed path for v1
+
 - When scaffolding into an existing directory that already has a partial `lifecycle/` tree (some but not all expected subdirectories), should the tool complete the missing pieces silently, or warn the user first?
+
 - Should the New Project form pre-fill or suggest a default parent location (e.g. last-used path or the server user's home directory)?
+
 - Is there a maximum-depth or allowlist policy on where projects may be created (e.g. must live under a configured projects root), or is any writable path permitted?
