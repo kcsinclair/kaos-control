@@ -1,7 +1,7 @@
 ---
 title: 'New Project Init: Existing or New Directory — Requirements'
 type: requirement
-status: blocked
+status: draft
 lineage: new-project-init-directory-options
 priority: normal
 parent: ideas/new-project-init-directory-options.md
@@ -92,7 +92,7 @@ The "New Project" flow assumes the user is creating a fresh location for their p
 - [ ] All target paths are resolved through the sandbox resolver; a crafted traversal path cannot escape the intended target (NFR1).
 - [ ] `~` expansion and whitespace trimming are applied before validation and reflected in the resolved path shown to the user (FR9).
 
-## Open Questions
+## Resolved Questions
 
 - Does this requirement need a graphical directory picker, or is a typed/pasted path acceptable for v1? (Non-goals assume typed path; confirm with product-owner.)
 
@@ -107,3 +107,5 @@ The "New Project" flow assumes the user is creating a fresh location for their p
 > no prefill
 
 - Is there a maximum-depth or allowlist policy on where projects may be created (e.g. must live under a configured projects root), or is any writable path permitted?
+
+> any writable path by user
