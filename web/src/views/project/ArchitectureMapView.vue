@@ -1,12 +1,14 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useArchitectureMap } from '@/composables/useArchitectureMap'
 import { useViewport } from '@/composables/useViewport'
 import ForceGraph3D from '@/components/map/ForceGraph3D.vue'
+import ArchMapLegend from '@/components/map/ArchMapLegend.vue'
 import { nodeStyle, edgeStyleForEdge } from '@/components/map/archMapStyle'
+import type { GraphNode } from '@/types/api'
 
 // Lazy-load Cytoscape 2D so it doesn't increase the 3D chunk (mirrors MapView.vue)
 const Graph2DView = defineAsyncComponent(
@@ -14,12 +16,26 @@ const Graph2DView = defineAsyncComponent(
 )
 
 const route = useRoute()
+const router = useRouter()
 const project = route.params.project as string
 
-const { nodes, edges, loading, error } = useArchitectureMap(project)
+const { nodes, edges, loading, error, selectedArchId, showStacks, reload } = useArchitectureMap(project)
 
-// Click-through to the underlying artifact lands in Milestone 6 (FR-7).
-function onNodeClick() {}
+// Click-through opens the artifact's own page (FR-7). Navigating (rather than
+// reusing ArtifactModal, which carries priority/transition/run-agent editing
+// affordances) keeps this browse surface strictly read-only (FR-10) — the map
+// itself introduces no edit/persist UI.
+function onNodeClick(node: GraphNode) {
+  router.push(`/p/${project}/artifacts/${node.id}`)
+}
+
+// The stack-reveal target is chosen independently of node click (which
+// navigates away) via the picker below — off by default (FR-8).
+const architectureNodes = computed(() => nodes.value.filter((n) => n.type === 'architecture'))
+
+function onStacksChanged() {
+  reload()
+}
 
 // Last-used engine is a per-browser nicety, not part of the FR set.
 const VIEW_STORAGE_KEY = 'kc:architecture-map:view'
@@ -56,6 +72,26 @@ watch(view, (v) => {
           aria-pressed="view === '2d'"
         >2D</button>
       </div>
+      <div class="stack-toggle">
+        <label class="stack-toggle-label">
+          <input
+            type="checkbox"
+            v-model="showStacks"
+            @change="onStacksChanged"
+          />
+          Show related stacks
+        </label>
+        <select
+          v-if="showStacks"
+          v-model="selectedArchId"
+          class="stack-select"
+          aria-label="Select an architecture to reveal its compatible stacks"
+          @change="onStacksChanged"
+        >
+          <option :value="null">Select an architecture…</option>
+          <option v-for="n in architectureNodes" :key="n.id" :value="n.id">{{ n.title || n.slug }}</option>
+        </select>
+      </div>
     </div>
 
     <div v-if="loading" class="arch-map-state" role="status" aria-live="polite">Loading architecture map…</div>
@@ -81,6 +117,15 @@ watch(view, (v) => {
         :node-style="nodeStyle"
         :edge-style="edgeStyleForEdge"
       />
+
+      <div class="arch-map-legend-wrap">
+        <ArchMapLegend :nodes="nodes" :edges="edges" />
+      </div>
+
+      <div class="arch-map-hint">
+        <template v-if="view === '3d'">Scroll to zoom · Drag to orbit · Click a node to view its artifact</template>
+        <template v-else>Scroll to zoom · Drag to pan · Click a node to view its artifact</template>
+      </div>
     </template>
   </div>
 </template>
@@ -99,7 +144,7 @@ watch(view, (v) => {
   z-index: 100;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 .view-toggle {
   display: flex;
@@ -128,6 +173,33 @@ watch(view, (v) => {
   background: rgba(255,255,255,0.08);
   color: #fff;
 }
+.stack-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: rgba(15,23,42,0.8);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+}
+.stack-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(241,245,249,0.85);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.stack-select {
+  font-size: 11px;
+  background: rgba(15,23,42,0.9);
+  color: rgba(241,245,249,0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+}
 .arch-map-state {
   position: absolute;
   inset: 0;
@@ -138,4 +210,20 @@ watch(view, (v) => {
   color: rgba(241, 245, 249, 0.5);
 }
 .arch-map-state.error { color: #fca5a5; }
+.arch-map-legend-wrap {
+  position: absolute;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  pointer-events: none;
+}
+.arch-map-hint {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: rgba(241, 245, 249, 0.3);
+  pointer-events: none;
+  white-space: nowrap;
+}
 </style>

@@ -6,7 +6,7 @@ import type { GraphEdge } from '@/types/api'
 
 export type ScaleBucket = 'low' | 'medium' | 'high' | 'neutral'
 
-const SCALE_COLOURS: Record<ScaleBucket, string> = {
+export const SCALE_COLOURS: Record<ScaleBucket, string> = {
   low: '#22c55e',      // green-500
   medium: '#eab308',   // yellow-500
   high: '#f97316',     // orange-500
