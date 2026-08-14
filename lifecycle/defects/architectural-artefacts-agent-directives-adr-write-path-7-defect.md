@@ -1,7 +1,7 @@
 ---
 title: Analyst and developer agents missing allowed write path for ADR decisions
 type: defect
-status: draft
+status: approved
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
 labels: [defect]
