@@ -1,7 +1,7 @@
 ---
 title: Architectural Artefacts — On-Disk Model
 type: requirement
-status: blocked
+status: draft
 lineage: architectural-artefacts
 parent: lifecycle/ideas/architectural-artefacts.md
 labels:
@@ -200,7 +200,7 @@ consumers/producers of the model defined here.
 - [ ] Promotion and ADR-0001 authoring are idempotent and leave no orphaned/duplicate files on
       re-run. *(NFR-3)*
 
-## Open Questions
+## Resolved Questions
 
 - **OQ-1** Where in the model does a *doc/diagram for humans* (mentioned in the idea) live —
   under `standards/`, a new `docs/` sub-folder, or the existing docs panel? v1 assumes the
@@ -229,3 +229,5 @@ consumers/producers of the model defined here.
 - **OQ-5** Is there a maximum/duplicate-detection rule for standards seeded from both the
   architecture *and* the tech-stack (e.g. two secrets-handling standards)? Assumed the seed set
   is de-duplicated by [[architecture-templates]] before promotion.
+
+> yes, there should be one standard for things.
