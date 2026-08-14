@@ -170,15 +170,21 @@ automatically, and surface it where items are compared (list views) and edited
 - **Impact scale enforcement** — should Impact be a free number, or constrained
   to the conventional RICE tiers (0.25 / 0.5 / 1 / 2 / 3) via a dropdown? This
   requirement currently allows any non-negative number.
+
+> Use the conventional RICE tiers.
+
 - **Confidence units** — is 0–100 (percentage) the right representation, or
   should Confidence be a 0–1 fraction? Chosen 0–100 for editing ergonomics;
   needs product-owner confirmation.
+
 - **Effort units** — person-months is assumed as the conventional unit; should
   the unit be labelled/configurable in the UI?
+
 - **Default values** — the idea mentions "default values or N/A … if all
   blank." This requirement treats missing components strictly as `N/A`. Are
   non-`N/A` defaults (e.g. Confidence = 100) actually desired for partially
   scored items?
+
 - **Scope of list views** — should the RICE column appear in every list that
   can contain ideas/defects (search, kanban side lists, release panels), or
   only the primary artifact list in this iteration?

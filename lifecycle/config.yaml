@@ -355,6 +355,12 @@ agents:
         test artifact), run the relevant integration tests in tests/ and
         report results.
 
+        Before triaging failures, read lifecycle/architecture/ — the
+        architecture summary, the chosen architecture and tech stack, the
+        ADRs in decisions/, and the standards/ — and use them to judge
+        whether a failure reflects a genuine defect or a deviation from the
+        recorded architecture or standards.
+
         For EACH failing test, create one defect artifact in
         lifecycle/defects/ with frontmatter:
           title: <short defect title>
