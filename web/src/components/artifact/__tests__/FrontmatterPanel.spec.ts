@@ -122,3 +122,48 @@ describe('FrontmatterPanel', () => {
     expect(wrapper.emitted('releaseChanged')![0]).toEqual(['v2.0'])
   })
 })
+
+// Frontend plan: lifecycle/frontend-plans/architectural-artefacts-4-fe.md — Milestone 2
+//
+// Files under lifecycle/architecture/ carry no lineage/-N index (FR-19/FR-20) — the panel
+// must not show a "missing lineage" placeholder for them, and a parent: pointing at a
+// catalog entry must resolve as a normal link rather than a broken-link state.
+describe('FrontmatterPanel — architecture-zone artefacts', () => {
+  it('hides the Lineage row for a promoted architecture artefact with empty lineage', () => {
+    const artifact = makeArtifact({ type: 'architecture', lineage: '' })
+    artifact.path = 'lifecycle/architecture/microservices.md'
+    artifact.lineage = ''
+
+    const wrapper = shallowMount(FrontmatterPanel, { props: { artifact } })
+    const dts = wrapper.findAll('dt').map((dt) => dt.text())
+    expect(dts).not.toContain('Lineage')
+  })
+
+  it('still shows the Lineage row for a regular (non-architecture) artefact', () => {
+    const wrapper = shallowMount(FrontmatterPanel, { props: { artifact: makeArtifact() } })
+    const dts = wrapper.findAll('dt').map((dt) => dt.text())
+    expect(dts).toContain('Lineage')
+  })
+
+  it('renders a parent edge to a catalog entry as a resolvable RouterLink', () => {
+    const artifact = makeArtifact({ type: 'architecture', lineage: '', parent: 'lifecycle/architecture/architectures/microservices.md' })
+    artifact.path = 'lifecycle/architecture/microservices.md'
+
+    const wrapper = shallowMount(FrontmatterPanel, {
+      props: {
+        artifact,
+        project: 'testproject',
+        edges: [{
+          source: 'lifecycle/architecture/microservices.md',
+          target: 'lifecycle/architecture/architectures/microservices.md',
+          kind: 'parent',
+        }],
+      },
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
+
+    const link = wrapper.find('.rel-path-link')
+    expect(link.exists()).toBe(true)
+    expect(link.text()).toBe('lifecycle/architecture/architectures/microservices.md')
+  })
+})

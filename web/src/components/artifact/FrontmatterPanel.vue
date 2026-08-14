@@ -6,6 +6,7 @@ import { RouterLink } from 'vue-router'
 import type { ArtifactDetail, GraphEdge } from '@/types/api'
 import { edgeLabel } from '@/components/map/graphConstants'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
+import { isArchitecturePath } from '@/utils/architecturePath'
 import ArtifactRunHistory from './ArtifactRunHistory.vue'
 import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 import StatusDropdown from './StatusDropdown.vue'
@@ -35,6 +36,11 @@ const outbound = computed(() =>
 )
 
 const selectedRunId = ref<string | null>(null)
+
+// Files under lifecycle/architecture/ are standing reference artefacts with no
+// lineage/-N index (FR-19/FR-20) — the Lineage row would otherwise show a
+// permanent "missing value" placeholder for every one of them.
+const isArchZone = computed(() => isArchitecturePath(props.artifact.path))
 
 function fmt(v: string | undefined): string {
   if (!v) return '—'
@@ -104,7 +110,7 @@ function fmt(v: string | undefined): string {
         <dt>Stage</dt>
         <dd>{{ fmt(artifact.stage) }}</dd>
       </div>
-      <div class="fm-row">
+      <div class="fm-row" v-if="!isArchZone">
         <dt>Lineage</dt>
         <dd>{{ fmt(artifact.lineage) }}</dd>
       </div>
