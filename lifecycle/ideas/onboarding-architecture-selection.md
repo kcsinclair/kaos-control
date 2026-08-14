@@ -1,7 +1,7 @@
 ---
 title: Architecture Wizard — Guided Architecture & Stack Selection
 type: idea
-status: blocked
+status: draft
 lineage: onboarding-architecture-selection
 priority: normal
 parent: lifecycle/ideas/architecture-templates.md
@@ -134,6 +134,8 @@ Start wizard (any time; from New Project, or the Architecture menu)
 > (`kaos-control init` guided prompts) goes on the roadmap, to be built later
 > if needed — v1 scope is web UI only.
 
-## Open questions
+## Resolved Questions
 
 - How many questions is too many? (Target: ≤ 8, skippable.)
+
+> Up to 10 is OK.
