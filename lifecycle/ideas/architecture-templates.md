@@ -1,5 +1,5 @@
 ---
-title: Architecture Templates for Project Bootstrapping
+title: Architecture Catalog Shipping & Scaffolding Engine
 type: idea
 status: draft
 lineage: architecture-templates
@@ -13,7 +13,34 @@ release: KC-Release5
 parent: lifecycle/ideas/kaos-control-devops-cli.md
 ---
 
-# Architecture Templates for Project Bootstrapping
+# Architecture Catalog Shipping & Scaffolding Engine
+
+*(Retitled 2026-08-14 — was "Architecture Templates for Project Bootstrapping".
+The "named template bundles" framing was resolved away during rationalisation;
+see the resolved questions below.)*
+
+> **Status note (2026-08-14) — what remains to build.** The catalog itself
+> (curated `architecture` and `tech-stack` files under
+> `lifecycle/architecture/`) is **already seeded**, and the compatibility
+> edges exist as `related_to:` data. The remaining development in this idea is
+> the machinery:
+>
+> 1. **Catalog shipping** — embed `lifecycle/architecture/` in the
+>    kaos-control binary and copy it into new projects at init (§2).
+> 2. **The scaffolding engine** — invoked when the Architecture Wizard's
+>    "initialise scaffolding?" offer is accepted: stack-appropriate
+>    `config.yaml` roster and write paths, devops pipelines including the
+>    testing and security-scan components, seed standards/ADRs, and the
+>    optional repo skeleton, with naming prompts and "decide for me" (§4).
+> 3. **`KnownTypes` registration** for `architecture` and `tech-stack` (§1) —
+>    to be built early, alongside [[architectural-artefacts]] (which adds
+>    `adr`).
+>
+> Division of labour: the wizard ([[onboarding-architecture-selection]]) is
+> the front-of-house UX; this idea is the back-of-house engine it calls.
+> [[agent-directives-generation]] is the directive-file slice of the same
+> scaffolding step, broken out on its own. [[architectural-artefacts]] defines
+> the disk layout everything lands in.
 
 Provide a library of curated architecture templates that define the underlying tech stack and high-level architecture decisions for common project patterns. Templates remove the burden of foundational decision-making from individual contributors, ensuring teams start with proven, consistent foundations.
 
