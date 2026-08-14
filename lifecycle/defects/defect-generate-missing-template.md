@@ -1,7 +1,7 @@
 ---
 title: '"New Defect → Generate" fails with ''idea-capture agent has no template "defect-generate"'''
 type: defect
-status: planning
+status: done
 lineage: defect-generate-missing-template
 release: KC-Release5
 ---
