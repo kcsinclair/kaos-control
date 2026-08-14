@@ -1,7 +1,7 @@
 ---
 title: 'Frontend plan — graceful defect-generation errors and config-health guidance'
 type: plan-frontend
-status: approved
+status: in-development
 lineage: defect-generate-missing-template
 parent: lifecycle/defects/defect-generate-missing-template.md
 release: KC-Release5
