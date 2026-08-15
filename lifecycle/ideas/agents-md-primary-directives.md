@@ -112,6 +112,8 @@ requirement's job.
 - **Existing hand-maintained `AGENTS.md`:** if a project already has one, does
   migration merge, defer, or diff-and-confirm?
 
+> If there is already an AGENTS.md, the migration should stop and ask the user what they want to do.
+
 ## Related
 
 - [agent-directives-generation-2](../requirements/agent-directives-generation-2.md)
