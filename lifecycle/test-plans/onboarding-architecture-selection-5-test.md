@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Architecture Wizard (Guided Selection)"
 type: plan-test
-status: approved
+status: in-development
 lineage: onboarding-architecture-selection
 parent: lifecycle/requirements/onboarding-architecture-selection-2.md
 labels:
