@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Stack-Tuned Directive Files & Agent Prompts at Init"
 type: plan-test
-status: in-development
+status: done
 lineage: agent-directives-generation
 parent: lifecycle/requirements/agent-directives-generation-2.md
 labels:
