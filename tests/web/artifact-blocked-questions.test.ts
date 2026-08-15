@@ -366,3 +366,34 @@ describe('ArtifactEditorView — blocked-questions banner visibility', () => {
     ).toBe(false)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Milestone 4 of requirements-analyst-suppress-empty-open-questions-5-test.md
+// A correctly-authored artifact with no "## Open Questions" heading at all
+// (the new common case once the analyst prompt omits the section) must
+// render with no empty placeholder heading and no console error.
+// ---------------------------------------------------------------------------
+
+describe('ArtifactEditorView — artifact with no Open Questions section at all', () => {
+  it('renders with no empty Open Questions heading and no console error', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const draft = makeDraftArtifact() // body: 'Regular body.', no OQ heading
+    const { wrapper } = await mountEditor(draft)
+
+    const banner = wrapper.find('.blocked-questions-banner')
+    expect(
+      banner.exists(),
+      'Expected .blocked-questions-banner to be absent when there is no Open Questions section',
+    ).toBe(false)
+
+    expect(
+      wrapper.text(),
+      'Expected no leftover "Open Questions" heading text in the rendered output',
+    ).not.toContain('Open Questions')
+
+    expect(errorSpy, 'Expected no console.error calls while rendering').not.toHaveBeenCalled()
+
+    errorSpy.mockRestore()
+  })
+})

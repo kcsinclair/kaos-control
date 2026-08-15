@@ -1,9 +1,12 @@
 ---
 title: 'Test Plan: Suppress Empty Open Questions Section'
 type: plan-test
-status: in-development
+status: blocked
 lineage: requirements-analyst-suppress-empty-open-questions
 parent: lifecycle/requirements/requirements-analyst-suppress-empty-open-questions-2.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 ## Overview
@@ -101,3 +104,32 @@ green (per [[requirements-analyst-suppress-empty-open-questions]] frontend plan
 - [ ] A `test` artifact is written to `lifecycle/tests/` (frontmatter `type: test`,
       `status: draft`, same `lineage`, `parent` pointing to this test plan)
       summarising the scenarios above and pointing to the specific test files.
+
+## Open Questions
+
+Milestones 3 and 4 are implemented and green — see the companion `test`
+artifact `lifecycle/tests/requirements-analyst-suppress-empty-open-questions-6-test.md`
+for the test files and scenarios. Milestones 1 and 2 are blocked:
+
+- Milestones 1 and 2 assign Go unit tests to
+  `internal/config/config_test.go` and `internal/artifact/artifact_test.go`.
+  Neither path is under `tests/` or `lifecycle/tests/` — they're outside the
+  test-developer role's `allowed_write_paths` in `lifecycle/config.yaml`
+  (`tests`, `web/src`, `lifecycle/tests`, `lifecycle/test-plans`,
+  `lifecycle/architecture/decisions`). This is the same category of
+  role/write-scope mismatch the backend plan
+  (`requirements-analyst-suppress-empty-open-questions-3-be.md`) hit for its
+  own Milestone 1 (`lifecycle/config.yaml` outside `backend-developer`'s
+  scope), and that plan is still `status: blocked` on it, unresolved.
+- Even setting scope aside, Milestone 1's assertions would currently fail:
+  `lifecycle/config.yaml`'s `requirements-analyst` prompt still lists
+  `Open Questions` unconditionally under "Body sections", with no "omit when
+  empty" instruction — the backend Milestone 1 edit has not landed. Milestone
+  2's forbidden-placeholder table would also currently fail for a bare `-`
+  bullet: `internal/artifact/artifact.go`'s `isOpenQuestionSentinel` still
+  returns `true` (real question) for it rather than treating it as a
+  sentinel — the exact gap the backend plan's own Milestone 2 flagged.
+- Should `internal/config`/`internal/artifact` unit tests for this lineage be
+  added by `backend-developer` once the backend plan's blocker resolves, or
+  should `test-developer`'s `allowed_write_paths` be extended to include
+  `internal`? This does not block Milestones 3/4, already delivered.
