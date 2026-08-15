@@ -18,6 +18,26 @@ export interface ProjectSummary {
   path: string
   owner: string
   initialised: boolean
+  directivesMigrationAvailable?: boolean
+}
+
+/** One AGENTS.md/CLAUDE.md/GEMINI.md write attempt (mirrors internal/directives.FileWrite). */
+export interface DirectiveFileWrite {
+  path: string
+  created: boolean
+  changed: boolean
+  skipped: boolean
+  /** Set when an existing file lost its managed-region markers and the whole-file
+   *  replacement was withheld pending force — a human confirms before it's applied. */
+  diff?: string
+}
+
+/** Report from POST .../migrate-directives or .../directives/refresh (mirrors
+ *  internal/directives.GenerateResult). */
+export interface GenerateResult {
+  files: DirectiveFileWrite[]
+  disabledAgents?: string[]
+  skipped?: string[]
 }
 
 export type ProjectDetail = ProjectSummary

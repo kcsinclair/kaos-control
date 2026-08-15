@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import * as projectsApi from '@/api/projects'
 import { getConfig } from '@/api/config'
 import type {
@@ -18,6 +18,9 @@ export const useProjectStore = defineStore('project', () => {
   const current = ref<ProjectSummary | null>(null)
   const loading = ref(false)
   const initRequired = ref(false)
+  const directivesMigrationAvailable = computed(
+    () => current.value?.directivesMigrationAvailable ?? false,
+  )
 
   // Mutation state (create / update / delete / init)
   const mutating = ref(false)
@@ -113,11 +116,22 @@ export const useProjectStore = defineStore('project', () => {
     return projectsApi.checkDirectory(payload)
   }
 
+  // Re-fetch the project list and re-point `current` at the refreshed entry —
+  // used after migrate/refresh-directives so directivesMigrationAvailable
+  // (and the banner it drives) picks up the new state.
+  async function refreshCurrent(): Promise<void> {
+    const name = current.value?.name
+    if (!name) return
+    await fetchProjects()
+    setCurrent(name)
+  }
+
   return {
     projects,
     current,
     loading,
     initRequired,
+    directivesMigrationAvailable,
     mutating,
     error,
     fetchProjects,
@@ -128,5 +142,6 @@ export const useProjectStore = defineStore('project', () => {
     remove,
     init,
     checkDirectory,
+    refreshCurrent,
   }
 })
