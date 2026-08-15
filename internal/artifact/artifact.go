@@ -83,26 +83,30 @@ type Artifact struct {
 
 // Frontmatter holds the structured YAML header fields.
 type Frontmatter struct {
-	Title         string     `yaml:"title"               json:"title"`
-	Type          string     `yaml:"type"                json:"type"`
-	Status        string     `yaml:"status"              json:"status"`
-	Lineage       string     `yaml:"lineage"             json:"lineage"`
-	Created       string     `yaml:"created,omitempty"   json:"created,omitempty"`
-	Priority      string     `yaml:"priority,omitempty"  json:"priority,omitempty"`
-	Parent        string     `yaml:"parent,omitempty"    json:"parent,omitempty"`
-	Labels        []string   `yaml:"labels,omitempty"    json:"labels,omitempty"`
-	DependsOn     []string   `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
-	Blocks        []string   `yaml:"blocks,omitempty"    json:"blocks,omitempty"`
-	Related       []string   `yaml:"related_to,omitempty" json:"related_to,omitempty"`
-	Members       []string   `yaml:"members,omitempty"   json:"members,omitempty"`
-	EvolvesInto   []string   `yaml:"evolves_into,omitempty"   json:"evolves_into,omitempty"`
-	AlternativeTo []string   `yaml:"alternative_to,omitempty" json:"alternative_to,omitempty"`
-	ComposedWith  []string   `yaml:"composed_with,omitempty"  json:"composed_with,omitempty"`
-	Release       string     `yaml:"release,omitempty"      json:"release,omitempty"`
-	Sprint        string     `yaml:"sprint,omitempty"       json:"sprint,omitempty"`
-	Assignees     []Assignee `yaml:"assignees,omitempty"    json:"assignees,omitempty"`
-	Summary       string     `yaml:"summary,omitempty"      json:"summary,omitempty"`
-	Description   string     `yaml:"description,omitempty"  json:"description,omitempty"`
+	Title          string     `yaml:"title"               json:"title"`
+	Type           string     `yaml:"type"                json:"type"`
+	Status         string     `yaml:"status"              json:"status"`
+	Lineage        string     `yaml:"lineage"             json:"lineage"`
+	Created        string     `yaml:"created,omitempty"   json:"created,omitempty"`
+	Priority       string     `yaml:"priority,omitempty"  json:"priority,omitempty"`
+	Parent         string     `yaml:"parent,omitempty"    json:"parent,omitempty"`
+	Labels         []string   `yaml:"labels,omitempty"    json:"labels,omitempty"`
+	DependsOn      []string   `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+	Blocks         []string   `yaml:"blocks,omitempty"    json:"blocks,omitempty"`
+	Related        []string   `yaml:"related_to,omitempty" json:"related_to,omitempty"`
+	Members        []string   `yaml:"members,omitempty"   json:"members,omitempty"`
+	EvolvesInto    []string   `yaml:"evolves_into,omitempty"   json:"evolves_into,omitempty"`
+	AlternativeTo  []string   `yaml:"alternative_to,omitempty" json:"alternative_to,omitempty"`
+	ComposedWith   []string   `yaml:"composed_with,omitempty"  json:"composed_with,omitempty"`
+	Release        string     `yaml:"release,omitempty"      json:"release,omitempty"`
+	Sprint         string     `yaml:"sprint,omitempty"       json:"sprint,omitempty"`
+	Assignees      []Assignee `yaml:"assignees,omitempty"    json:"assignees,omitempty"`
+	Summary        string     `yaml:"summary,omitempty"      json:"summary,omitempty"`
+	Description    string     `yaml:"description,omitempty"  json:"description,omitempty"`
+	RiceReach      *float64   `yaml:"rice_reach,omitempty"      json:"rice_reach,omitempty"`
+	RiceImpact     *float64   `yaml:"rice_impact,omitempty"     json:"rice_impact,omitempty"`
+	RiceConfidence *float64   `yaml:"rice_confidence,omitempty" json:"rice_confidence,omitempty"`
+	RiceEffort     *float64   `yaml:"rice_effort,omitempty"     json:"rice_effort,omitempty"`
 }
 
 // Assignee is a role/who binding from the assignees field.
