@@ -235,8 +235,6 @@ re-runnable on demand.
   per FR-13) or defer Antigravity to a follow-up while keeping the wrapper
   extension point?
 
-> Anti
-
 - **OQ-2** How does generation know **which CLIs a project uses** — from the
   distinct `driver:` values across configured agents in `lifecycle/config.yaml`, an
   explicit `directives:` list, or a wizard prompt? This drives the default set in
