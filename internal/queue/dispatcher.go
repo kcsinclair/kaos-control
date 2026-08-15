@@ -97,10 +97,10 @@ type ProjectLookup func(name string) (ProjectAccess, bool)
 
 // Dispatcher is the single-goroutine queue worker.
 type Dispatcher struct {
-	store    *Store
-	lookup   ProjectLookup
-	appHub   *hub.Hub // app-level hub for queue.* events
-	cfg      Config
+	store  *Store
+	lookup ProjectLookup
+	appHub *hub.Hub // app-level hub for queue.* events
+	cfg    Config
 
 	mu          sync.Mutex
 	pausedUntil time.Time // zero = not rate-limit-paused
@@ -306,7 +306,7 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 		_ = d.store.MarkTerminal(job.ID, StateCompleted, "")
 		d.broadcastJobEvent("queue.finished", job, "completed")
 	case "rate_limit":
-		d.handleRateLimit(job, result.rawText, result.rlKind)
+		d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
 	case "auth_error":
 		d.handleAuthError(job)
 	case "cancelled":
@@ -328,6 +328,10 @@ type runResult struct {
 	// uses this to pick FallbackPause vs OverloadPause when the rawText
 	// doesn't carry an explicit reset time.
 	rlKind string
+	// ResetsAtUnix is the precise Unix-UTC reset time from the most recent
+	// rate_limit_event observed during the run (FR7), when > 0. When 0,
+	// handleRateLimit falls back to parsing rawText with ParseResetTime.
+	ResetsAtUnix int64
 }
 
 // watchRunEvents listens on evCh for agent.finished / agent.failed /
@@ -364,10 +368,11 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 			var evt struct {
 				Type    string `json:"type"`
 				Payload struct {
-					Status  string `json:"status"`
-					RunID   string `json:"run_id"`
-					RawText string `json:"raw_text"` // for rate_limit stream events (M4)
-					Kind    string `json:"kind"`     // "rate_limit" | "overloaded" (M4 follow-up)
+					Status       string `json:"status"`
+					RunID        string `json:"run_id"`
+					RawText      string `json:"raw_text"` // for rate_limit stream events (M4)
+					Kind         string `json:"kind"`     // "rate_limit" | "overloaded" (M4 follow-up)
+					ResetsAtUnix int64  `json:"resets_at_unix"`
 				} `json:"payload"`
 			}
 			if err := json.Unmarshal(data, &evt); err != nil {
@@ -402,7 +407,12 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 				return
 			case "queue.rate_limit": // M4: emitted by agent stream watcher
 				select {
-				case done <- runResult{kind: "rate_limit", rawText: evt.Payload.RawText, rlKind: evt.Payload.Kind}:
+				case done <- runResult{
+					kind:         "rate_limit",
+					rawText:      evt.Payload.RawText,
+					rlKind:       evt.Payload.Kind,
+					ResetsAtUnix: evt.Payload.ResetsAtUnix,
+				}:
 				default:
 				}
 				return
@@ -419,22 +429,30 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 
 // handleRateLimit processes a rate-limit / overloaded failure: marks the job
 // failed, re-enqueues at the head (unless max-attempts exceeded), and pauses
-// the queue. The kind argument picks the appropriate fallback when rawText
-// has no parseable reset time — overloads (HTTP 529) get OverloadPause
-// (default 5 min) since they typically clear within minutes; rate limits
-// and quotas get FallbackPause (default 30 min) since those usually align
-// with hourly / daily reset cycles.
-func (d *Dispatcher) handleRateLimit(job *Job, rawText, kind string) {
+// the queue. When resetsAtUnix is > 0 (FR7 — a precise reset observed via a
+// prior rate_limit_event), it is used directly as the reset time without
+// calling ParseResetTime. Otherwise the kind argument picks the appropriate
+// fallback when rawText has no parseable reset time — overloads (HTTP 529)
+// get OverloadPause (default 5 min) since they typically clear within
+// minutes; rate limits and quotas get FallbackPause (default 30 min) since
+// those usually align with hourly / daily reset cycles.
+func (d *Dispatcher) handleRateLimit(job *Job, rawText, kind string, resetsAtUnix int64) {
 	now := d.cfg.clock()
-	resetTime, ok := ParseResetTime(rawText, now)
-	if !ok {
-		pause := d.cfg.fallbackPause()
-		if kind == "overloaded" {
-			pause = d.cfg.overloadPause()
+	var resetTime time.Time
+	if resetsAtUnix > 0 {
+		resetTime = time.Unix(resetsAtUnix, 0)
+	} else {
+		var ok bool
+		resetTime, ok = ParseResetTime(rawText, now)
+		if !ok {
+			pause := d.cfg.fallbackPause()
+			if kind == "overloaded" {
+				pause = d.cfg.overloadPause()
+			}
+			slog.Warn("queue: rate-limit text not parsed; using fallback pause",
+				"job_id", job.ID, "raw_text", rawText, "kind", kind, "pause", pause)
+			resetTime = now.Add(pause)
 		}
-		slog.Warn("queue: rate-limit text not parsed; using fallback pause",
-			"job_id", job.ID, "raw_text", rawText, "kind", kind, "pause", pause)
-		resetTime = now.Add(pause)
 	}
 	pausedUntil := resetTime.Add(d.cfg.resumeGrace())
 
