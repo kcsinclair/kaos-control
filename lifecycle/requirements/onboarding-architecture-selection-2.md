@@ -1,7 +1,7 @@
 ---
 title: Architecture Wizard — Guided Architecture & Stack Selection
 type: requirement
-status: draft
+status: approved
 lineage: onboarding-architecture-selection
 parent: lifecycle/ideas/onboarding-architecture-selection.md
 labels:
