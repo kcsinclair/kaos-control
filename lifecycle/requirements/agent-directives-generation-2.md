@@ -1,7 +1,7 @@
 ---
 title: Agent Directives Generation — Stack-Tuned Directive Files & Agent Prompts at Init
 type: requirement
-status: blocked
+status: draft
 lineage: agent-directives-generation
 parent: lifecycle/ideas/agent-directives-generation.md
 labels:
@@ -268,9 +268,12 @@ re-runnable on demand.
 - [ ] Generation runs offline in under 1 second and leaves no orphaned/duplicate
       files. *(NFR-1, NFR-3, NFR-4)*
 
-## Open Questions
+## Resolved Questions
 
-- **OQ-7** *(new)* Does a **plain `gemini-cli`** target (not Antigravity)
+Plans authored: [[agent-directives-generation-3-be]], [[agent-directives-generation-4-fe]],
+[[agent-directives-generation-5-test]]. All questions below are resolved — kept for the record.
+
+- **OQ-7** *(resolved)* Does a **plain `gemini-cli`** target (not Antigravity)
   auto-load `AGENTS.md`, or read only `GEMINI.md`? Decides whether `GEMINI.md`
   can be a pointer/import or must be a full generated copy of `AGENTS.md`.
 
