@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — RICE Scoring Column, Inline & Detail Editing"
 type: plan-frontend
-status: in-development
+status: done
 lineage: rice-scoring
 parent: lifecycle/requirements/rice-scoring-2.md
 ---
