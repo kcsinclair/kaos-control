@@ -13,6 +13,8 @@ import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 import StatusDropdown from './StatusDropdown.vue'
 import PriorityDropdown from './PriorityDropdown.vue'
 import ReleaseDropdown from './ReleaseDropdown.vue'
+import RiceEditor from './RiceEditor.vue'
+import { formatRice, riceScore, type RiceComponents } from '@/lib/rice'
 
 const props = defineProps<{
   artifact: ArtifactDetail
@@ -44,8 +46,11 @@ const emit = defineEmits<{
   transitioned: [newStatus: string]
   priorityChanged: [newPriority: string]
   releaseChanged: [newRelease: string | null]
+  riceChanged: [components: RiceComponents]
   error: [message: string]
 }>()
+
+const isRiceType = computed(() => props.artifact.type === 'idea' || props.artifact.type === 'defect')
 
 const inbound = computed(() =>
   (props.edges ?? []).filter((e) => e.target === props.artifact.path)
@@ -124,6 +129,22 @@ function fmt(v: string | undefined): string {
           <span v-else class="release-badge-static" :class="{ 'release-badge-static--none': !artifact.frontmatter?.release }">
             {{ artifact.frontmatter?.release ?? 'None' }}
           </span>
+        </dd>
+      </div>
+      <div class="fm-row" v-if="isRiceType">
+        <dt>RICE</dt>
+        <dd>
+          <RiceEditor
+            v-if="project && targetPath"
+            :project="project"
+            :path="targetPath"
+            :type="artifact.type"
+            :frontmatter="artifact.frontmatter"
+            :readonly="readonly"
+            @changed="emit('riceChanged', $event)"
+            @error="emit('error', $event)"
+          />
+          <span v-else class="rice-badge-static">{{ formatRice(riceScore(artifact.frontmatter)) }}</span>
         </dd>
       </div>
       <div class="fm-row">
@@ -350,6 +371,19 @@ function fmt(v: string | undefined): string {
 .release-badge-static--none {
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+/* Static RICE badge shown when project/targetPath are absent */
+.rice-badge-static {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--color-border);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  background: var(--color-surface-raised, rgba(0, 0, 0, 0.04));
+  color: var(--color-text);
 }
 
 /* Static priority badge shown when project/targetPath are absent */

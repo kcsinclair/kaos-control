@@ -411,6 +411,7 @@ onMounted(async () => {
         @transitioned="(s) => { if (artifact) artifact = { ...artifact, status: s }; store.invalidate(artifactPath) }"
         @priority-changed="store.invalidate(artifactPath)"
         @release-changed="store.invalidate(artifactPath)"
+        @rice-changed="store.invalidate(artifactPath)"
         @error="(msg) => ui.error(msg)"
       />
     </div>
