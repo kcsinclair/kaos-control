@@ -14,6 +14,7 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import InitRequiredBanner from '@/components/project/InitRequiredBanner.vue'
 import ConfigHealthBanner from '@/components/project/ConfigHealthBanner.vue'
+import DirectiveMigrationBanner from '@/components/project/DirectiveMigrationBanner.vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -106,6 +107,10 @@ onUnmounted(() => {
         />
         <template v-else>
           <ConfigHealthBanner :project="getProject()" />
+          <DirectiveMigrationBanner
+            v-if="projectStore.directivesMigrationAvailable"
+            :project="getProject()"
+          />
           <RouterView />
         </template>
       </main>
