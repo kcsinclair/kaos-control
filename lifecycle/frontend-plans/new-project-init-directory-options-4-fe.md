@@ -1,7 +1,7 @@
 ---
 title: "New Project Init: Existing or New Directory — Frontend Plan"
 type: plan-frontend
-status: in-development
+status: done
 lineage: new-project-init-directory-options
 parent: lifecycle/requirements/new-project-init-directory-options-2.md
 ---
