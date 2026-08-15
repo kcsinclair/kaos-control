@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Directive Migration Offer & Refresh Affordance"
 type: plan-frontend
-status: draft
+status: approved
 lineage: agent-directives-generation
 parent: lifecycle/requirements/agent-directives-generation-2.md
 labels:
