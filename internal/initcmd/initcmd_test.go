@@ -42,12 +42,12 @@ func TestConfigTemplateLoadsCleanly(t *testing.T) {
 		t.Fatalf("config.LoadProject returned error: %v", err)
 	}
 
-	// Assert agent count. Default template ships ten agents:
+	// Assert agent count. Default template ships eleven agents:
 	// requirements-analyst, planning-analyst, backend-developer,
 	// frontend-developer, test-developer, qa, tech-writer, test-runner,
-	// idea-capture, docs-capture.
-	if got := len(proj.Agents); got != 10 {
-		t.Errorf("expected 10 agents, got %d", got)
+	// idea-capture, idea-triage, docs-capture.
+	if got := len(proj.Agents); got != 11 {
+		t.Errorf("expected 11 agents, got %d", got)
 	}
 
 	// Assert role count. Default template ships ten roles:
@@ -57,18 +57,20 @@ func TestConfigTemplateLoadsCleanly(t *testing.T) {
 		t.Errorf("expected 10 roles, got %d", got)
 	}
 
-	// Assert required_plans.ticket contains all three plan types.
-	ticketPlans, ok := proj.RequiredPlans["ticket"]
+	// Assert required_plans.requirement contains all three plan types. This
+	// key must match the artifact `type:` value looked up by
+	// internal/http/transition.go (p.Config().RequiredPlans[row.Type]).
+	requirementPlans, ok := proj.RequiredPlans["requirement"]
 	if !ok {
-		t.Fatal("required_plans[\"ticket\"] is missing from rendered config")
+		t.Fatal("required_plans[\"requirement\"] is missing from rendered config")
 	}
 	wantPlans := []string{"plan-backend", "plan-frontend", "plan-test"}
-	if len(ticketPlans) != len(wantPlans) {
-		t.Errorf("required_plans.ticket: want %v, got %v", wantPlans, ticketPlans)
+	if len(requirementPlans) != len(wantPlans) {
+		t.Errorf("required_plans.requirement: want %v, got %v", wantPlans, requirementPlans)
 	} else {
 		for i, want := range wantPlans {
-			if ticketPlans[i] != want {
-				t.Errorf("required_plans.ticket[%d]: want %q, got %q", i, want, ticketPlans[i])
+			if requirementPlans[i] != want {
+				t.Errorf("required_plans.requirement[%d]: want %q, got %q", i, want, requirementPlans[i])
 			}
 		}
 	}
