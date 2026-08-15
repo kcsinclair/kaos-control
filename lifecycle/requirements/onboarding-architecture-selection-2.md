@@ -240,6 +240,8 @@ authoring defined in [[architectural-artefacts]].
   or discard)? NFR-1 currently implies atomic-until-confirm with no saved
   in-progress state.
 
+> Yes, it should support partial completion and resume.
+
 - **OQ-4** Where do the questionnaire's question set and its question→label
   mapping live — hard-coded in the SPA, in the per-project `lifecycle/config.yaml`,
   or derived from the catalog labels themselves — given catalogs may add new
