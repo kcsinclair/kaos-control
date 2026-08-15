@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
-	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-chi/chi/v5"
+	gogit "github.com/go-git/go-git/v5"
 	"github.com/kaos-control/kaos-control/internal/config"
 	kgit "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/initcmd"
@@ -165,7 +165,7 @@ func (s *Server) handleInitProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := map[string]any{
-		"created":       created,
+		"created":         created,
 		"git_initialised": gitInitialised,
 	}
 	if gitCommands != nil {
@@ -174,34 +174,119 @@ func (s *Server) handleInitProject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// checkDirectoryRequest is the mode-aware body for POST /projects/check-directory.
+// Existing mode uses Path; new mode uses Parent + Name.
+type checkDirectoryRequest struct {
+	Mode   string `json:"mode"`
+	Path   string `json:"path,omitempty"`
+	Parent string `json:"parent,omitempty"`
+	Name   string `json:"name,omitempty"`
+}
+
+// checkDirectoryResult is the mode-aware response for POST /projects/check-directory.
+// Existing mode populates Exists/IsDir/Writable/Initialised; new mode populates
+// ParentExists/ParentWritable/NameValid/TargetExists. ResolvedPath is always
+// populated (FR9) and Reason is set when NameValid is false.
+type checkDirectoryResult struct {
+	// Existing-mode fields.
+	Exists      bool `json:"exists"`
+	IsDir       bool `json:"isDir"`
+	Writable    bool `json:"writable"`
+	Initialised bool `json:"initialised"`
+
+	// New-mode fields.
+	ParentExists   bool `json:"parentExists"`
+	ParentWritable bool `json:"parentWritable"`
+	NameValid      bool `json:"nameValid"`
+	TargetExists   bool `json:"targetExists"`
+
+	ResolvedPath string `json:"resolvedPath"`
+	Reason       string `json:"reason,omitempty"`
+}
+
 // handleCheckDirectory validates a filesystem path before form submission.
-// Does not require the project to be registered.
+// Does not require the project to be registered. Serves both the "existing"
+// and "new" directory modes (FR2/FR3); the resolved path is always returned
+// so the UI can show exactly what will be written (FR9).
 func (s *Server) handleCheckDirectory(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Path string `json:"path"`
-	}
+	var body checkDirectoryRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("invalid_body", "invalid JSON: "+err.Error()))
 		return
 	}
 
-	if err := config.ValidatePathFormat(body.Path); err != nil {
+	switch body.Mode {
+	case "", "existing":
+		s.checkExistingDirectory(w, body.Path)
+	case "new":
+		s.checkNewDirectory(w, body.Parent, body.Name)
+	default:
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_mode", `mode must be "existing" or "new"`))
+	}
+}
+
+// checkExistingDirectory implements the "existing" mode of handleCheckDirectory.
+func (s *Server) checkExistingDirectory(w http.ResponseWriter, path string) {
+	normalized := config.NormalizePath(path)
+
+	if err := config.ValidatePathFormat(normalized); err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
 		return
 	}
 
-	info, statErr := os.Stat(body.Path)
-	exists := statErr == nil && info.IsDir()
-	writable := false
-	if exists {
-		writable = isWritable(body.Path)
+	info, statErr := os.Stat(normalized)
+	exists := statErr == nil
+	isDir := exists && info.IsDir()
+	writable := isDir && isWritable(normalized)
+
+	writeJSON(w, http.StatusOK, checkDirectoryResult{
+		Exists:       exists,
+		IsDir:        isDir,
+		Writable:     writable,
+		Initialised:  isDir && config.IsInitialised(normalized),
+		ResolvedPath: normalized,
+	})
+}
+
+// checkNewDirectory implements the "new" mode of handleCheckDirectory.
+func (s *Server) checkNewDirectory(w http.ResponseWriter, parent, name string) {
+	normalizedParent := config.NormalizePath(parent)
+
+	if err := config.ValidatePathFormat(normalizedParent); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
-		"exists":      exists,
-		"writable":    writable,
-		"initialised": config.IsInitialised(body.Path),
-	})
+	parentInfo, statErr := os.Stat(normalizedParent)
+	parentExists := statErr == nil && parentInfo.IsDir()
+	parentWritable := parentExists && isWritable(normalizedParent)
+
+	result := checkDirectoryResult{
+		ParentExists:   parentExists,
+		ParentWritable: parentWritable,
+		ResolvedPath:   normalizedParent,
+	}
+
+	target, err := config.ResolveNewTarget(parent, name)
+	if err != nil {
+		result.Reason = err.Error()
+		writeJSON(w, http.StatusOK, result)
+		return
+	}
+	// Re-assert the config-dir guard on the resolved target (NFR1).
+	if err := config.ValidatePathFormat(target); err != nil {
+		result.Reason = err.Error()
+		writeJSON(w, http.StatusOK, result)
+		return
+	}
+
+	result.NameValid = true
+	result.ResolvedPath = target
+	if _, err := os.Stat(target); err == nil {
+		result.TargetExists = true
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 // isWritable reports whether the directory at path is writable by the current process.
