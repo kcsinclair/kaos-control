@@ -44,8 +44,7 @@ Relational databases like **PostgreSQL** for ACID compliance, embedded **SQLite*
 
 ## Stack profile
 
-Machine-readable profile consumed by
-[[agent-directives-generation]] to tune `AGENTS.md` (repo layout) and the
+Machine-readable profile consumed by kaos-control to tune `AGENTS.md` (repo layout) and the
 `config.yaml` developer-agent prompts (write paths + build/test commands).
 `write_paths` are the **stack source roots only** — the generator adds the
 constant lifecycle paths (`lifecycle/<stage>-plans`, `architecture/decisions`).

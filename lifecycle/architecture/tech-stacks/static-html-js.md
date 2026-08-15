@@ -48,7 +48,7 @@ Because there's no framework to lean on, lean on checks instead: **html-validate
 
 ## Stack profile
 
-See [[agent-directives-generation]]. A static site has **no backend role**; the
+kaos-control reads this profile to configure the coding agents for this stack (repo layout, per-role write paths, and build/lint/test/run commands); it also doubles as a plain-language primer on how the stack is laid out and run. A static site has **no backend role**; the
 frontend role owns the whole site. `write_paths` are stack source roots only.
 
 ```yaml

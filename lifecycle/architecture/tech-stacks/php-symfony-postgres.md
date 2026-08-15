@@ -42,7 +42,7 @@ Server-rendered **Twig** templates for classic web apps, and/or **REST APIs** (v
 
 ## Stack profile
 
-See [[agent-directives-generation]]. `write_paths` are stack source roots only;
+kaos-control reads this profile to configure the coding agents for this stack (repo layout, per-role write paths, and build/lint/test/run commands); it also doubles as a plain-language primer on how the stack is laid out and run. `write_paths` are stack source roots only;
 the generator adds the constant lifecycle paths.
 
 ```yaml

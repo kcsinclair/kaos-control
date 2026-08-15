@@ -47,7 +47,7 @@ Keep it honest without heavy scaffolding: **`php -l`** lint, **PHP_CodeSniffer**
 
 ## Stack profile
 
-See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+kaos-control reads this profile to configure the coding agents for this stack (repo layout, per-role write paths, and build/lint/test/run commands); it also doubles as a plain-language primer on how the stack is laid out and run. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
 
 ```yaml
 stack_profile:
