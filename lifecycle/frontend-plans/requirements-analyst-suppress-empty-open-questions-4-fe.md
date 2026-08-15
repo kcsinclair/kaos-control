@@ -1,7 +1,7 @@
 ---
 title: 'Frontend Plan: Suppress Empty Open Questions Section (No-Regression)'
 type: plan-frontend
-status: in-development
+status: done
 lineage: requirements-analyst-suppress-empty-open-questions
 parent: lifecycle/requirements/requirements-analyst-suppress-empty-open-questions-2.md
 ---
