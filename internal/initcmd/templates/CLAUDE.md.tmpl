@@ -12,6 +12,7 @@ This project is primarily written in **{{.Language}}**.
 <project-root>/
 ├── lifecycle/              Artifact store (ideas → requirements → plans → releases)
 │   ├── config.yaml         Per-project configuration (roles, agents, stages)
+│   ├── architecture/       Chosen architecture/stack, ADRs (decisions/), standards
 │   ├── ideas/
 │   ├── requirements/
 │   ├── backend-plans/
@@ -24,6 +25,18 @@ This project is primarily written in **{{.Language}}**.
 │   └── docs/
 └── tests/                  Integration test code
 ```
+
+## Architecture Artifacts
+
+Once the Architecture Wizard has run, `lifecycle/architecture/` holds this
+project's chosen architecture and tech-stack artifacts, `decisions/` (ADRs,
+`type: adr`), and `standards/` (non-functional baselines agents follow).
+
+**Before any substantive design, planning, or implementation work, read
+`lifecycle/architecture/`** and conform to it. If a change genuinely
+requires deviating from or extending the recorded architecture, do not
+deviate silently: propose a new ADR in `lifecycle/architecture/decisions/`
+capturing the decision, its context, and its consequences.
 
 ## Lineage Filename Convention
 
@@ -41,14 +54,15 @@ lifecycle/test-plans/login-5-test.md
 - The index is monotonic **per lineage, across all stages** — never reused.
 - Rejected-and-replanned artifacts get the **next** index; superseded files stay in place.
 - Every non-originating artifact has `parent:` in its YAML frontmatter pointing to the previous file.
+- **Exception:** artifacts under `lifecycle/architecture/` (chosen architecture/stack, ADRs, standards) use clean slug filenames with **no** lineage index — they are standing reference artifacts, not steps in an idea→release lineage.
 
 ## Frontmatter Requirements
 
 Required fields on every artifact: `title`, `type`, `status`, `lineage`.
 
-**Type vocabulary:** `idea`, `ticket`, `epic`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`, `defect`.
+**Type vocabulary:** `idea`, `requirement`, `plan-backend`, `plan-frontend`, `plan-test`, `test`, `prototype`, `defect`, `doc`, `release`, `architecture`, `tech-stack`, `adr`.
 
-**Status vocabulary:** `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`.
+**Status vocabulary:** `raw`, `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`, `blocked`.
 
 Example:
 
