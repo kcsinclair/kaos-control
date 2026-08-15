@@ -171,6 +171,7 @@ func (s *Server) buildRouter() chi.Router {
 			r.Put("/projects/{project}", s.handleUpdateProject)
 			r.Delete("/projects/{project}", s.handleDeleteProject)
 			r.Post("/projects/{project}/init", s.handleInitProject)
+			r.Post("/projects/{project}/migrate-directives", s.handleMigrateDirectives)
 			// check-directory must be registered before /{project} to avoid
 			// "check-directory" being matched as a project name.
 			r.Post("/projects/check-directory", s.handleCheckDirectory)
@@ -276,6 +277,9 @@ func (s *Server) buildRouter() chi.Router {
 				r.Post("/architecture/wizard/commit", s.handleCommitArchitectureWizard)
 				r.Get("/architecture/wizard/scaffold", s.handleGetWizardScaffold)
 				r.Post("/architecture/wizard/scaffold", s.handleRunWizardScaffold)
+
+				// Directive generation (AGENTS.md/CLAUDE.md/GEMINI.md + agent prompts)
+				r.Post("/directives/refresh", s.handleRefreshDirectives)
 
 				// Docs panel
 				r.Get("/docs", s.handleListDocs)

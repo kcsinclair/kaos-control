@@ -25,13 +25,13 @@ type GenerateResult struct {
 	// project-root-relative Path. Generate has no project/index handle of
 	// its own — a caller that does have one should re-index each
 	// Created/Changed file afterward so the graph reflects it (FR-15).
-	Files []FileWrite
+	Files []FileWrite `json:"files"`
 	// DisabledAgents lists standard agent names disabled because their
 	// stack role is required: false (from PatchAgentConfig).
-	DisabledAgents []string
+	DisabledAgents []string `json:"disabledAgents,omitempty"`
 	// Skipped names files intentionally not written this run (GEMINI.md
 	// with no gemini driver configured — FR-12).
-	Skipped []string
+	Skipped []string `json:"skipped,omitempty"`
 }
 
 // GenerateOptions configures Generate.

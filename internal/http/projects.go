@@ -4,7 +4,9 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -13,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/kaos-control/kaos-control/internal/config"
+	"github.com/kaos-control/kaos-control/internal/directives"
 	kgit "github.com/kaos-control/kaos-control/internal/git"
 	"github.com/kaos-control/kaos-control/internal/initcmd"
 	"github.com/kaos-control/kaos-control/internal/project"
@@ -25,15 +28,25 @@ type projectSummary struct {
 	Description string `json:"description"`
 	Owner       string `json:"owner"`
 	Initialised bool   `json:"initialised"`
+	// DirectivesMigrationAvailable is true when the project is still on the
+	// legacy single-CLAUDE.md layout and could be upgraded to the
+	// AGENTS.md-primary directive set (see directives.NeedsMigration) — the
+	// frontend uses this to surface a migration-offer banner.
+	DirectivesMigrationAvailable bool `json:"directivesMigrationAvailable"`
 }
 
 func entryToSummary(e *config.ProjectEntry) projectSummary {
+	migrationAvailable, err := directives.NeedsMigration(e.Path)
+	if err != nil {
+		slog.Warn("checking directives migration availability", "project", e.Name, "err", err)
+	}
 	return projectSummary{
-		Name:        e.Name,
-		Path:        e.Path,
-		Description: e.Description,
-		Owner:       e.Owner,
-		Initialised: config.IsInitialised(e.Path),
+		Name:                         e.Name,
+		Path:                         e.Path,
+		Description:                  e.Description,
+		Owner:                        e.Owner,
+		Initialised:                  config.IsInitialised(e.Path),
+		DirectivesMigrationAvailable: migrationAvailable,
 	}
 }
 
@@ -172,6 +185,79 @@ func (s *Server) handleInitProject(w http.ResponseWriter, r *http.Request) {
 		resp["git_commands"] = gitCommands
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// handleMigrateDirectives handles POST /api/projects/{project}/migrate-directives:
+// upgrades a project from the legacy single-CLAUDE.md layout to the
+// AGENTS.md-primary directive set (directives.Migrate). Role-gated to
+// product-owner (project-admin), mirroring handleInitProject's scope.
+func (s *Server) handleMigrateDirectives(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "project")
+	p, ok := s.getProject(name)
+	if !ok {
+		writeJSON(w, http.StatusNotFound, apiError("project_not_found", "project not found: "+name))
+		return
+	}
+	if !requireRole(w, r, p, RolesAdminOnly...) {
+		return
+	}
+
+	var body struct {
+		Force bool `json:"force"`
+	}
+	if r.Body != nil {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
+			writeJSON(w, http.StatusBadRequest, apiError("invalid_body", "invalid JSON: "+err.Error()))
+			return
+		}
+	}
+
+	res, err := directives.Migrate(p.Entry.Path, directives.MigrateOptions{Force: body.Force})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("migrate_failed", err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, res)
+}
+
+// handleRefreshDirectives handles POST /api/p/{project}/directives/refresh:
+// regenerates AGENTS.md/CLAUDE.md/GEMINI.md and re-patches the six standard
+// agents from the project's promoted stack (directives.Generate). Role-gated
+// to product-owner (project-admin). Reloads the project's live config
+// afterward so a config.yaml patch (new allowed_write_paths, disabled
+// agents) takes effect without a server restart.
+func (s *Server) handleRefreshDirectives(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	if !requireRole(w, r, p, RolesAdminOnly...) {
+		return
+	}
+
+	var body struct {
+		Force bool `json:"force"`
+	}
+	if r.Body != nil {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
+			writeJSON(w, http.StatusBadRequest, apiError("invalid_body", "invalid JSON: "+err.Error()))
+			return
+		}
+	}
+
+	res, err := directives.Generate(p.Entry.Path, directives.GenerateOptions{Force: body.Force})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("refresh_failed", err.Error()))
+		return
+	}
+
+	if err := p.ReloadConfig(); err != nil {
+		slog.Warn("directives refresh: failed to reload project config", "project", p.Entry.Name, "err", err)
+	}
+
+	writeJSON(w, http.StatusOK, res)
 }
 
 // checkDirectoryRequest is the mode-aware body for POST /projects/check-directory.

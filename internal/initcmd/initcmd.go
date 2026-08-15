@@ -13,6 +13,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/architecture"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
+	"github.com/kaos-control/kaos-control/internal/directives"
 	"golang.org/x/term"
 )
 
@@ -134,6 +135,7 @@ func Run(args []string) error {
 		ownerEmail         string
 		ownerName          string
 		ownerPasswordStdin bool
+		refreshDirectives  bool
 	)
 
 	fs.BoolVar(&force, "force", false, "overwrite all existing seed files")
@@ -146,6 +148,7 @@ func Run(args []string) error {
 	fs.StringVar(&ownerEmail, "owner-email", "", "email of the initial owner user (creates account if absent)")
 	fs.StringVar(&ownerName, "owner-name", "", "display name for the owner user (defaults to email)")
 	fs.BoolVar(&ownerPasswordStdin, "owner-password-stdin", false, "read owner password from stdin instead of prompting")
+	fs.BoolVar(&refreshDirectives, "refresh-directives", false, "regenerate AGENTS.md/CLAUDE.md/GEMINI.md and re-patch the standard agents from the promoted stack, without touching the rest of the scaffold")
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -164,6 +167,15 @@ func Run(args []string) error {
 	absPath, err := filepath.Abs(targetPath)
 	if err != nil {
 		return fmt.Errorf("resolving path %q: %w", targetPath, err)
+	}
+
+	if refreshDirectives {
+		res, err := directives.Generate(absPath, directives.GenerateOptions{Force: force})
+		if err != nil {
+			return err
+		}
+		printDirectivesReport(absPath, res)
+		return nil
 	}
 
 	// --force implies all granular force flags.
@@ -225,6 +237,30 @@ func Run(args []string) error {
 	}
 
 	return nil
+}
+
+// printDirectivesReport prints the same created/updated/skipped summary
+// style as the rest of `init`'s output, for `-refresh-directives` (FR-14).
+func printDirectivesReport(root string, res directives.GenerateResult) {
+	fmt.Printf("Refreshed directives for %s\n", root)
+	for _, f := range res.Files {
+		switch {
+		case f.Diff != "":
+			fmt.Printf("  pending  %s (user-edited; use -force to overwrite)\n", f.Path)
+		case f.Created:
+			fmt.Printf("  created  %s\n", f.Path)
+		case f.Changed:
+			fmt.Printf("  updated  %s\n", f.Path)
+		case f.Skipped:
+			fmt.Printf("  skipped  %s (already up to date)\n", f.Path)
+		}
+	}
+	for _, s := range res.Skipped {
+		fmt.Printf("  skipped  %s (no gemini driver configured)\n", s)
+	}
+	for _, a := range res.DisabledAgents {
+		fmt.Printf("  disabled agent %q (not required for this stack)\n", a)
+	}
 }
 
 // createOwnerUser opens the auth database (using the default app config path),

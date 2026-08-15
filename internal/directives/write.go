@@ -12,15 +12,15 @@ import (
 // FileWrite reports the outcome of writing (or attempting to write) one
 // generated file.
 type FileWrite struct {
-	Path    string
-	Created bool
-	Changed bool
-	Skipped bool
+	Path    string `json:"path"`
+	Created bool   `json:"created"`
+	Changed bool   `json:"changed"`
+	Skipped bool   `json:"skipped"`
 	// Diff is set when an existing file has no managed-region markers (they
 	// were removed, or the file predates markers entirely — the migration
 	// case) and the whole-file replacement was withheld pending Force, so a
 	// human can confirm before it's applied.
-	Diff string
+	Diff string `json:"diff,omitempty"`
 }
 
 // hasMarkers reports whether b contains both managed-region markers, in order.
