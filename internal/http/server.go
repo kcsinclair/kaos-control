@@ -255,6 +255,10 @@ func (s *Server) buildRouter() chi.Router {
 						s.handlePatchRelease(w, r)
 						return
 					}
+					if strings.HasSuffix(param, "/rice") {
+						s.handlePatchRice(w, r)
+						return
+					}
 					writeJSON(w, http.StatusNotFound, apiError("not_found", "unknown sub-route"))
 				})
 

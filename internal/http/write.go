@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -636,6 +637,134 @@ func (s *Server) handlePatchRelease(w http.ResponseWriter, r *http.Request) {
 	} else {
 		a.FM.Release = *req.Release
 	}
+
+	content, err := buildMarkdown(a.FM, a.Body)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("marshal_error", err.Error()))
+		return
+	}
+
+	if err := os.WriteFile(absPath, []byte(content), 0o644); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	if err := p.Idx.IndexFile(absPath); err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("index_error", err.Error()))
+		return
+	}
+
+	p.Hub.Broadcast(hub.Event{
+		Type:    "artifact.indexed",
+		Payload: map[string]string{"path": relPath, "action": "updated"},
+	})
+
+	row, _ := p.Idx.Get(relPath)
+	writeJSON(w, http.StatusOK, map[string]any{"artifact": row})
+}
+
+// handlePatchRice handles PATCH /api/p/:project/artifacts/*path/rice
+// It updates the four RICE component fields in the artifact's YAML
+// frontmatter. Each key is optional: absent leaves the existing value
+// unchanged, JSON null clears it, and a number sets it.
+func (s *Server) handlePatchRice(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	if !requireRole(w, r, p, RolesPriorityEditors...) {
+		return
+	}
+	user := userFromCtx(r.Context())
+
+	rawParam := chi.URLParam(r, "*")
+	relPath := strings.TrimSuffix(rawParam, "/rice")
+
+	var body map[string]json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
+		return
+	}
+
+	absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+		return
+	}
+
+	raw, err := os.ReadFile(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeJSON(w, http.StatusNotFound, apiError("not_found", "artifact not found"))
+		} else {
+			writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		}
+		return
+	}
+
+	info, err := os.Stat(absPath)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	a := artifact.Parse(raw, relPath, info.ModTime())
+
+	// Lineage lock check: if another user holds the lock, reject with 423 Locked.
+	if p.Locks != nil && a.FM.Lineage != "" {
+		if lockRow, lerr := p.Locks.Get(a.FM.Lineage); lerr == nil && lockRow != nil && lockRow.Holder != user.Email {
+			writeJSON(w, http.StatusLocked, map[string]any{
+				"error": map[string]any{
+					"code":    "locked",
+					"message": "artifact lineage is locked by another user",
+				},
+				"lock": lockRow,
+			})
+			return
+		}
+	}
+
+	fm := a.FM
+	fields := []struct {
+		key string
+		dst **float64
+	}{
+		{"rice_reach", &fm.RiceReach},
+		{"rice_impact", &fm.RiceImpact},
+		{"rice_confidence", &fm.RiceConfidence},
+		{"rice_effort", &fm.RiceEffort},
+	}
+	for _, f := range fields {
+		v, present := body[f.key]
+		if !present {
+			continue
+		}
+		var val *float64
+		if err := json.Unmarshal(v, &val); err != nil {
+			writeJSON(w, http.StatusBadRequest, apiError("bad_request", f.key+": must be a number or null"))
+			return
+		}
+		*f.dst = val
+	}
+
+	if err := artifact.ValidateRice(fm); err != nil {
+		var verr *artifact.RiceValidationError
+		if errors.As(err, &verr) {
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
+				"error": map[string]any{
+					"code":    "invalid_rice",
+					"message": verr.Error(),
+					"field":   verr.Field,
+				},
+			})
+			return
+		}
+		writeJSON(w, http.StatusUnprocessableEntity, apiError("invalid_rice", err.Error()))
+		return
+	}
+	a.FM = fm
 
 	content, err := buildMarkdown(a.FM, a.Body)
 	if err != nil {
