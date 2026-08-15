@@ -1,7 +1,7 @@
 ---
 title: Design and build agents missing propose ADR on deviation directive
 type: defect
-status: blocked
+status: done
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
 labels:
@@ -64,7 +64,7 @@ Only `planning-analyst` contains the propose-ADR directive. The remaining five a
 --- FAIL: TestAgentDirectives_ProposeADROnDeviation (0.00s)
 ```
 
-## Open Questions
+## Resolved Questions (answered in Resolution above)
 
 Raised by backend-developer, 2026-08-15. Read this defect as a backend implementation plan and traced what
 `TestAgentDirectives_ProposeADROnDeviation` (`tests/integration/architecture_directives_test.go:111-124`)

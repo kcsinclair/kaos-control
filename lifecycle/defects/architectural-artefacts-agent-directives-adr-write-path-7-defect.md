@@ -1,7 +1,7 @@
 ---
 title: Analyst and developer agents missing allowed write path for ADR decisions
 type: defect
-status: blocked
+status: done
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
 labels:
@@ -65,7 +65,7 @@ Only `planning-analyst` has `lifecycle/architecture/decisions` configured in its
 --- FAIL: TestAgentDirectives_ADRAuthoringWritePath (0.00s)
 ```
 
-## Open Questions
+## Resolved Questions (answered in Resolution above)
 
 I was dispatched as the `backend-developer` agent with write scope limited to
 `internal/**` and `cmd/**` (plus explicitly blocking this artifact). I could
