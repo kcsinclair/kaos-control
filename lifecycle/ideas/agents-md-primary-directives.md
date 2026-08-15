@@ -97,14 +97,18 @@ Those stay coupled to the Architecture Wizard + per-stack profiles. This idea
 gives the file *structure and migration* now; the *content tuning* remains the
 requirement's job.
 
-## Open questions
+## Open Questions
 
 - **Plain `gemini-cli` (non-Antigravity):** does it auto-load `AGENTS.md`, or
   only `GEMINI.md`? Decides whether `GEMINI.md` can be dropped entirely or must
   be a pointer/copy for that target.
+
+> Yes, gemini-cli will follow the directive.  So lets include GEMINI.md with the @AGENTS.md directive.  Handles gemini and antigravity.
+
 - **`AGENTS.md` regeneration granularity:** whole-file diff, or managed-region
   markers so stack-aware regeneration (part B) updates only the generated block
   while preserving user prose? (Ties to OQ-3.)
+
 - **Existing hand-maintained `AGENTS.md`:** if a project already has one, does
   migration merge, defer, or diff-and-confirm?
 
