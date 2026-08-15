@@ -1,11 +1,8 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useProjectStore } from '@/stores/project'
-import { ApiError } from '@/api/client'
 import { migrateDirectives } from '@/api/directives'
-import type { GenerateResult, DirectiveFileWrite } from '@/types/api'
+import { useDirectiveApply } from '@/composables/useDirectiveApply'
 
 const props = defineProps<{ project: string }>()
 const emit = defineEmits<{
@@ -13,37 +10,10 @@ const emit = defineEmits<{
   migrated: []
 }>()
 
-const projectStore = useProjectStore()
-
-type Phase = 'confirm' | 'diff' | 'result'
-
-const phase = ref<Phase>('confirm')
-const migrating = ref(false)
-const error = ref('')
-const result = ref<GenerateResult | null>(null)
-const pendingDiff = ref<DirectiveFileWrite | null>(null)
-
-async function migrate(force: boolean) {
-  migrating.value = true
-  error.value = ''
-  try {
-    const res = await migrateDirectives(props.project, { force })
-    const diffFile = !force ? res.files.find((f) => f.diff) : undefined
-    if (diffFile) {
-      pendingDiff.value = diffFile
-      phase.value = 'diff'
-      return
-    }
-    result.value = res
-    phase.value = 'result'
-    await projectStore.refreshCurrent()
-  } catch (err) {
-    error.value =
-      err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Migration failed.'
-  } finally {
-    migrating.value = false
-  }
-}
+const { phase, loading: migrating, error, result, pendingDiff, apply } = useDirectiveApply(
+  props.project,
+  migrateDirectives,
+)
 
 function handleDone() {
   emit('migrated')
@@ -66,7 +36,7 @@ function handleDone() {
         </div>
 
         <!-- Confirm phase -->
-        <template v-if="phase === 'confirm'">
+        <template v-if="phase === 'idle'">
           <div class="modal-body">
             <p class="intro">This will make the following changes at the project root:</p>
             <ul class="change-list">
@@ -78,7 +48,7 @@ function handleDone() {
           </div>
           <div class="modal-footer">
             <button class="btn-secondary" :disabled="migrating" @click="emit('close')">Cancel</button>
-            <button class="btn-primary" :disabled="migrating" @click="migrate(false)">
+            <button class="btn-primary" :disabled="migrating" @click="apply(false)">
               <span v-if="migrating" class="spinner" aria-hidden="true"></span>
               <span v-else>Migrate now</span>
             </button>
@@ -97,7 +67,7 @@ function handleDone() {
           </div>
           <div class="modal-footer">
             <button class="btn-secondary" :disabled="migrating" @click="emit('close')">Cancel</button>
-            <button class="btn-primary btn-primary--danger" :disabled="migrating" @click="migrate(true)">
+            <button class="btn-primary btn-primary--danger" :disabled="migrating" @click="apply(true)">
               <span v-if="migrating" class="spinner" aria-hidden="true"></span>
               <span v-else>Overwrite</span>
             </button>

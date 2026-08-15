@@ -11,6 +11,7 @@ import CreateProjectModal from '@/components/project/CreateProjectModal.vue'
 import EditProjectModal from '@/components/project/EditProjectModal.vue'
 import DeleteProjectModal from '@/components/project/DeleteProjectModal.vue'
 import InitProjectModal from '@/components/project/InitProjectModal.vue'
+import DirectiveRefreshPanel from '@/components/project/DirectiveRefreshPanel.vue'
 import type { ProjectSummary } from '@/types/api'
 
 const router = useRouter()
@@ -21,6 +22,7 @@ const showCreate = ref(false)
 const editTarget = ref<ProjectSummary | null>(null)
 const deleteTarget = ref<ProjectSummary | null>(null)
 const initTarget = ref<ProjectSummary | null>(null)
+const refreshTarget = ref<ProjectSummary | null>(null)
 
 onMounted(async () => {
   try {
@@ -59,6 +61,10 @@ async function onDeleted() {
 
 function onInitialised() {
   initTarget.value = null
+}
+
+function onDirectivesRefreshed() {
+  refreshTarget.value = null
 }
 </script>
 
@@ -118,6 +124,11 @@ function onInitialised() {
                       class="btn-action btn-action--init"
                       @click="initTarget = p"
                     >Initialise</button>
+                    <button
+                      v-if="p.initialised"
+                      class="btn-action"
+                      @click="refreshTarget = p"
+                    >Refresh directives</button>
                     <button class="btn-action btn-action--danger" @click="deleteTarget = p">Delete</button>
                   </div>
                 </td>
@@ -155,6 +166,26 @@ function onInitialised() {
       @initialised="onInitialised"
       @close="initTarget = null"
     />
+
+    <Teleport v-if="refreshTarget" to="body">
+      <div
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="`Refresh Directives — ${refreshTarget.name}`"
+        @keydown.escape="refreshTarget = null"
+      >
+        <div class="modal-panel refresh-modal-panel">
+          <div class="modal-header">
+            <h3 class="modal-title">Refresh Directives — {{ refreshTarget.name }}</h3>
+            <button class="btn-icon" aria-label="Close" @click="refreshTarget = null">✕</button>
+          </div>
+          <div class="modal-body">
+            <DirectiveRefreshPanel :project="refreshTarget.name" @done="onDirectivesRefreshed" />
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -303,5 +334,57 @@ function onInitialised() {
   .col-desc, .col-owner { display: none; }
   .projects-table th.col-desc,
   .projects-table th.col-owner { display: none; }
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: var(--space-6);
+}
+.modal-panel {
+  position: relative;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.modal-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+.btn-icon:hover { background: var(--color-surface); color: var(--color-text); }
+.modal-body {
+  padding: var(--space-5) var(--space-6);
+  overflow-y: auto;
+  max-height: 65vh;
 }
 </style>
