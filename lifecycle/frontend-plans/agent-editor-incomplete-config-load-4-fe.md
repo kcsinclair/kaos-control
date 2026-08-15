@@ -1,7 +1,7 @@
 ---
 title: 'Frontend: Agent Editor Loads Every Field and Merges on Save'
 type: plan-frontend
-status: approved
+status: in-development
 lineage: agent-editor-incomplete-config-load
 parent: lifecycle/requirements/agent-editor-incomplete-config-load-2.md
 release: KC-Release5
