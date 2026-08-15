@@ -284,11 +284,14 @@ re-runnable on demand.
 > Lets manage the six standard agents.
 
 - **OQ-5** *(decided)* The profile lives as an embedded **`stack_profile:` YAML
-  block at the end of each `tech-stack` markdown** — `repo_layout` plus, per
-  developer role, `write_paths` (stack source roots) and `build`/`test`
-  commands. The generator reads the **promoted** stack's profile; it merges the
-  constant lifecycle paths (`lifecycle/<stage>-plans`, `architecture/decisions`)
-  onto each role's `write_paths`. Schema seeded on go-vue, php-symfony-postgres,
+  block at the end of each `tech-stack` markdown**: a top-level `run` (dev/start
+  command), `repo_layout`, and per developer role `write_paths` (stack source
+  roots), `build`, `lint`, and `test`. A standard role that does not apply to the
+  stack is stated explicitly as `<role>: {required: false}` with a note (partly
+  resolves OQ-4 — the generator disables that agent for the stack). The
+  generator reads the **promoted** stack's profile and merges the constant
+  lifecycle paths (`lifecycle/<stage>-plans`, `architecture/decisions`) onto each
+  role's `write_paths`. Schema seeded on go-vue, php-symfony-postgres,
   static-html-js; remaining stacks to follow.
 
 - **OQ-6** *(decided)* **Snapshot at promotion, refresh on demand**

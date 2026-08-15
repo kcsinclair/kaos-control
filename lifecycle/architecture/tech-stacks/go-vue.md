@@ -52,6 +52,7 @@ constant lifecycle paths (`lifecycle/<stage>-plans`, `architecture/decisions`).
 
 ```yaml
 stack_profile:
+  run: go run ./cmd/<app>            # dev server; build the SPA first (cd web && pnpm build)
   repo_layout:
     - {path: internal/, note: Go packages — backend logic}
     - {path: cmd/,      note: binary entry points}
@@ -62,11 +63,13 @@ stack_profile:
     backend-developer:
       write_paths: [internal, cmd]
       build: go build ./...
-      test: go vet ./... && go test ./... -short
+      lint: go vet ./...
+      test: go test ./... -short
     frontend-developer:
       write_paths: [web/src]
       build: cd web && pnpm build
-      test: cd web && pnpm exec vue-tsc --noEmit
+      lint: cd web && pnpm exec vue-tsc --noEmit
+      test: cd web && pnpm test
     test-developer:
       write_paths: [tests, web/src]
       test: go test -tags integration ./tests/...

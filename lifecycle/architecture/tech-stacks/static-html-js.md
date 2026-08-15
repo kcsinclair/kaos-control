@@ -53,15 +53,19 @@ frontend role owns the whole site. `write_paths` are stack source roots only.
 
 ```yaml
 stack_profile:
+  run: npx serve htdocs              # or: python3 -m http.server -d htdocs
   repo_layout:
     - {path: htdocs/,         note: hand-authored static site (this IS the deploy output)}
     - {path: website-assets/, note: images, CSS, JS}
     - {path: tests/,          note: Playwright + axe accessibility tests}
   roles:
+    backend-developer:
+      required: false           # static site — no server-side code
     frontend-developer:
       write_paths: [htdocs, website-assets]
       build: ""                 # none — htdocs/ is the deployable output
-      test: pnpm test           # playwright + axe + html-validate
+      lint: npx html-validate htdocs
+      test: pnpm test           # playwright + axe
     test-developer:
       write_paths: [tests]
       test: pnpm test

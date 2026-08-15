@@ -47,6 +47,7 @@ the generator adds the constant lifecycle paths.
 
 ```yaml
 stack_profile:
+  run: symfony serve                 # or: php -S localhost:8000 -t public/
   repo_layout:
     - {path: src/,        note: Symfony app code (Controllers, Entities, Services)}
     - {path: templates/,  note: Twig templates}
@@ -57,11 +58,13 @@ stack_profile:
     backend-developer:
       write_paths: [src, config, migrations]
       build: composer install --no-interaction
+      lint: vendor/bin/phpstan analyse src
       test: php bin/phpunit
     frontend-developer:
       write_paths: [templates, assets, public]
       build: php bin/console asset-map:compile
-      test: php bin/console lint:twig templates
+      lint: php bin/console lint:twig templates
+      test: php bin/phpunit
     test-developer:
       write_paths: [tests]
       test: php bin/phpunit
