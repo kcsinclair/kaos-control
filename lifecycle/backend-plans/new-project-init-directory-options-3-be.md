@@ -1,7 +1,7 @@
 ---
 title: "New Project Init: Existing or New Directory — Backend Plan"
 type: plan-backend
-status: approved
+status: in-development
 lineage: new-project-init-directory-options
 parent: lifecycle/requirements/new-project-init-directory-options-2.md
 ---
