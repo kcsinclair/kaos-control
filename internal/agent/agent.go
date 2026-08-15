@@ -1655,6 +1655,73 @@ func looksLikeQuotaExhausted(text string) bool {
 	return quotaExhaustedRE.MatchString(text)
 }
 
+// RateLimitInfo is the normalised, defensively-parsed content of a
+// mid-stream Claude Code `rate_limit_event`. See extractRateLimitInfo.
+type RateLimitInfo struct {
+	Bucket                string // "five_hour" | "weekly" | "unknown"
+	Status                string // "allowed" | "warning" | "rejected" | "unknown"
+	ResetsAtUnix          int64  // Unix UTC seconds; 0 if absent
+	OverageAvailable      bool   // best-effort: isUsingOverage OR overageStatus != "rejected"
+	OverageDisabledReason string // free-form, may be empty
+}
+
+func normalizeRateLimitBucket(v string) string {
+	switch v {
+	case "five_hour", "weekly":
+		return v
+	default:
+		return "unknown"
+	}
+}
+
+func normalizeRateLimitStatus(v string) string {
+	switch v {
+	case "allowed", "warning", "rejected":
+		return v
+	default:
+		return "unknown"
+	}
+}
+
+// extractRateLimitInfo inspects a decoded agent.progress event payload and,
+// when it carries a mid-stream `rate_limit_event`, returns its normalised
+// RateLimitInfo and true. Returns ok=false for any event whose inner
+// event.type != "rate_limit_event" or that lacks a rate_limit_info object.
+// Parsing is defensive (NFR4): unrecognised rateLimitType/status values map
+// to "unknown" and missing numeric fields default to 0; malformed shapes
+// never panic.
+func extractRateLimitInfo(payload map[string]any) (RateLimitInfo, bool) {
+	ev, _ := payload["event"].(map[string]any)
+	if ev == nil {
+		return RateLimitInfo{}, false
+	}
+	if evType, _ := ev["type"].(string); evType != "rate_limit_event" {
+		return RateLimitInfo{}, false
+	}
+	rli, _ := ev["rate_limit_info"].(map[string]any)
+	if rli == nil {
+		return RateLimitInfo{}, false
+	}
+
+	var resetsAt int64
+	if v, ok := rli["resetsAt"].(float64); ok {
+		resetsAt = int64(v)
+	}
+	isUsingOverage, _ := rli["isUsingOverage"].(bool)
+	overageStatus, _ := rli["overageStatus"].(string)
+	overageDisabledReason, _ := rli["overageDisabledReason"].(string)
+	bucket, _ := rli["rateLimitType"].(string)
+	status, _ := rli["status"].(string)
+
+	return RateLimitInfo{
+		Bucket:                normalizeRateLimitBucket(bucket),
+		Status:                normalizeRateLimitStatus(status),
+		ResetsAtUnix:          resetsAt,
+		OverageAvailable:      isUsingOverage || overageStatus != "rejected",
+		OverageDisabledReason: overageDisabledReason,
+	}, true
+}
+
 // authErrorThreshold is the number of api_retry/401 events that must be seen
 // before the supervisor kills the run and signals re-enqueue. A threshold of 2
 // avoids reacting to a single transient blip while still killing far earlier
