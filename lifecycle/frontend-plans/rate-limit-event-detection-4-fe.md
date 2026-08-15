@@ -1,7 +1,7 @@
 ---
 title: Frontend Plan — Consume agent.quota_status (wire-level, no badge)
 type: plan-frontend
-status: approved
+status: in-development
 lineage: rate-limit-event-detection
 parent: lifecycle/requirements/rate-limit-event-detection-2.md
 created: "2026-08-15T00:00:00+10:00"
