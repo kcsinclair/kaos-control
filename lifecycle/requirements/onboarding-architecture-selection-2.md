@@ -224,19 +224,25 @@ authoring defined in [[architectural-artefacts]].
   architecture and stack artefacts. Is that edge data guaranteed present and
   bidirectionally queryable at wizard time, or does the wizard need a fallback
   when a chosen architecture has no `related_to` stacks recorded?
+
+> Yes, the related_to will be in place.
+
 - **OQ-2** For hard-constraint filtering (FR-8), what happens when constraints
   filter the candidate set to **zero** architectures (e.g. an over-constrained
   answer combination)? Options: relax the weakest constraint automatically and
   say so, or surface "no exact match — here is the closest" with the constraints
   that were dropped.
+
 - **OQ-3** Should the wizard support **partial completion / resume** — a user
   abandoning midway and returning later — or is each run atomic (start → confirm
   or discard)? NFR-1 currently implies atomic-until-confirm with no saved
   in-progress state.
+
 - **OQ-4** Where do the questionnaire's question set and its question→label
   mapping live — hard-coded in the SPA, in the per-project `lifecycle/config.yaml`,
   or derived from the catalog labels themselves — given catalogs may add new
   signals over time?
+
 - **OQ-5** Is there an API/permission model consideration — which role(s) may run
   the wizard and thereby promote architecture + author ADR-0001 — or is that
   covered by existing mutation auth ([[auth-role-checks-mutations]])?
