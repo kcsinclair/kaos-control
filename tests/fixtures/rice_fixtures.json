@@ -1,0 +1,185 @@
+{
+  "_comment": "Shared RICE score parity fixtures (rice-scoring requirement §22). Consumed by the Go integration test tests/integration/rice_parity_test.go against internal/artifact.RiceScore, and intended to be consumed identically by a TS test (web/src/lib/__tests__/rice.spec.ts) against web/src/lib/rice.ts riceScore(). Both implementations apply the same formula in the same operation order — (reach * impact * (confidence / 100)) / effort — so expected_score values are exact IEEE754 float64 results, not rounded.",
+  "cases": [
+    {
+      "name": "all_valid_standard",
+      "rice_reach": 1000,
+      "rice_impact": 2,
+      "rice_confidence": 80,
+      "rice_effort": 4,
+      "expect_na": false,
+      "expected_score": 400.0
+    },
+    {
+      "name": "all_valid_fractional",
+      "rice_reach": 50,
+      "rice_impact": 0.25,
+      "rice_confidence": 25,
+      "rice_effort": 1,
+      "expect_na": false,
+      "expected_score": 3.125
+    },
+    {
+      "name": "impact_tier_confidence_low",
+      "rice_reach": 200,
+      "rice_impact": 0.5,
+      "rice_confidence": 10,
+      "rice_effort": 3,
+      "expect_na": false,
+      "expected_score": 3.3333333333333335
+    },
+    {
+      "name": "large_values",
+      "rice_reach": 1000000,
+      "rice_impact": 3,
+      "rice_confidence": 100,
+      "rice_effort": 0.5,
+      "expect_na": false,
+      "expected_score": 6000000.0
+    },
+    {
+      "name": "confidence_zero_is_zero_not_na",
+      "rice_reach": 100,
+      "rice_impact": 1,
+      "rice_confidence": 0,
+      "rice_effort": 1,
+      "expect_na": false,
+      "expected_score": 0.0
+    },
+    {
+      "name": "confidence_hundred_boundary",
+      "rice_reach": 100,
+      "rice_impact": 1,
+      "rice_confidence": 100,
+      "rice_effort": 1,
+      "expect_na": false,
+      "expected_score": 100.0
+    },
+    {
+      "name": "reach_zero_is_zero_not_na",
+      "rice_reach": 0,
+      "rice_impact": 1,
+      "rice_confidence": 50,
+      "rice_effort": 1,
+      "expect_na": false,
+      "expected_score": 0.0
+    },
+    {
+      "name": "impact_zero_is_zero_not_na",
+      "rice_reach": 100,
+      "rice_impact": 0,
+      "rice_confidence": 50,
+      "rice_effort": 1,
+      "expect_na": false,
+      "expected_score": 0.0
+    },
+    {
+      "name": "all_zero_except_effort",
+      "rice_reach": 0,
+      "rice_impact": 0,
+      "rice_confidence": 0,
+      "rice_effort": 1,
+      "expect_na": false,
+      "expected_score": 0.0
+    },
+    {
+      "name": "missing_reach",
+      "rice_reach": null,
+      "rice_impact": 1,
+      "rice_confidence": 50,
+      "rice_effort": 1,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "missing_impact",
+      "rice_reach": 100,
+      "rice_impact": null,
+      "rice_confidence": 50,
+      "rice_effort": 1,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "missing_confidence",
+      "rice_reach": 100,
+      "rice_impact": 1,
+      "rice_confidence": null,
+      "rice_effort": 1,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "missing_effort",
+      "rice_reach": 100,
+      "rice_impact": 1,
+      "rice_confidence": 50,
+      "rice_effort": null,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "all_unset",
+      "rice_reach": null,
+      "rice_impact": null,
+      "rice_confidence": null,
+      "rice_effort": null,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "effort_zero_invalid",
+      "rice_reach": 100,
+      "rice_impact": 1,
+      "rice_confidence": 50,
+      "rice_effort": 0,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "effort_negative_invalid",
+      "rice_reach": 100,
+      "rice_impact": 1,
+      "rice_confidence": 50,
+      "rice_effort": -2,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "reach_negative_invalid",
+      "rice_reach": -1,
+      "rice_impact": 1,
+      "rice_confidence": 50,
+      "rice_effort": 1,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "impact_negative_invalid",
+      "rice_reach": 100,
+      "rice_impact": -1,
+      "rice_confidence": 50,
+      "rice_effort": 1,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "confidence_below_zero_invalid",
+      "rice_reach": 100,
+      "rice_impact": 1,
+      "rice_confidence": -0.1,
+      "rice_effort": 1,
+      "expect_na": true,
+      "expected_score": null
+    },
+    {
+      "name": "confidence_above_hundred_invalid",
+      "rice_reach": 100,
+      "rice_impact": 1,
+      "rice_confidence": 100.1,
+      "rice_effort": 1,
+      "expect_na": true,
+      "expected_score": null
+    }
+  ]
+}
