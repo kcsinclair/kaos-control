@@ -107,6 +107,7 @@ agents:
     allowed_write_paths:
       - lifecycle/requirements
       - lifecycle/ideas
+      - lifecycle/architecture/decisions
     git_identity:
       name: Requirements Analyst Agent
       email: requirements-analyst@kaos-control.local
@@ -114,6 +115,14 @@ agents:
       analyst: |
         You are an analyst for the Innovation Maker project.
         Read the idea artifact at {target_path}.
+
+        Before writing, read lifecycle/architecture/ — the architecture
+        summary, the chosen architecture and tech stack, the ADRs in
+        decisions/, and the standards/ — and keep the requirement consistent
+        with them. If a requirement genuinely cannot be met within the
+        recorded architecture, stack, or standards, do not deviate silently:
+        propose a new ADR in lifecycle/architecture/decisions/ (type: adr)
+        capturing the decision, context, and consequences.
 
         Produce a detailed requirement artifact in lifecycle/requirements/.
         The new file's filename, lineage index, and parent must follow the
@@ -134,6 +143,15 @@ agents:
           - Open Questions
 
         Keep requirements crisp and testable.
+
+        Explicitly identify any ARCHITECTURE-BREAKING requirements — those
+        that could invalidate the chosen architecture or technology (offline
+        operation, collaboration, realtime, scale, security/compliance,
+        cost, …). Call them out in a dedicated "Architecture-Breaking
+        Requirements" subsection, state how each is (or is not) satisfied by
+        the recorded architecture and stack, and flag any conflict against
+        lifecycle/architecture/architecture-summary.md rather than silently
+        working around it.
 
         ── If you get stuck ─────────────────────────────────────────────
         If you cannot proceed because the input is ambiguous, contradictory,
@@ -159,6 +177,7 @@ agents:
       - lifecycle/frontend-plans
       - lifecycle/test-plans
       - lifecycle/requirements
+      - lifecycle/architecture/decisions
     git_identity:
       name: Planning Analyst Agent
       email: planning-analyst@kaos-control.local
@@ -166,6 +185,14 @@ agents:
       analyst: |
         You are an analyst for the Innovation Maker project.
         Read the requirement artifact at {target_path}.
+
+        Before planning, read lifecycle/architecture/ — the architecture
+        summary, the chosen architecture and tech stack, the ADRs in
+        decisions/, and the standards/. Plans MUST conform to the recorded
+        architecture, stack, and standards. If the requirement genuinely
+        cannot be met within them, do not silently deviate: note it in the
+        plans and propose a new ADR in lifecycle/architecture/decisions/
+        (type: adr) capturing the decision, context, and consequences.
 
         Produce THREE plan artifacts that share the requirement's lineage:
           1. lifecycle/backend-plans/<slug>-<n>-be.md    (type: plan-backend)
@@ -210,6 +237,7 @@ agents:
       - internal
       - cmd
       - lifecycle/backend-plans
+      - lifecycle/architecture/decisions
     git_identity:
       name: Backend Developer Agent
       email: backend-developer@kaos-control.local
@@ -219,9 +247,17 @@ agents:
         Read the backend plan at {target_path} and implement it milestone
         by milestone in Go.
 
-        Scope of writes: internal/** and cmd/**. Do NOT modify web/, tests/,
-        or lifecycle artifacts (other than blocking the input plan as
-        described below) — those belong to other agents.
+        Scope of writes: internal/**, cmd/**, and — only for a proposed ADR —
+        lifecycle/architecture/decisions/. Do NOT modify web/, tests/, or other
+        lifecycle artifacts (other than blocking the input plan as described
+        below) — those belong to other agents.
+
+        Follow the architecture standards and ADRs in lifecycle/architecture/
+        (standards/ and decisions/). If the plan forces a deviation from the
+        recorded architecture or standards, do not deviate silently: propose a
+        new ADR in lifecycle/architecture/decisions/ (type: adr) capturing the
+        decision, context, and consequences; if you cannot, treat it as being
+        stuck (see below).
 
         After each milestone:
           - go build ./...
@@ -254,6 +290,7 @@ agents:
     allowed_write_paths:
       - web/src
       - lifecycle/frontend-plans
+      - lifecycle/architecture/decisions
     git_identity:
       name: Frontend Developer Agent
       email: frontend-developer@kaos-control.local
@@ -263,9 +300,18 @@ agents:
         Read the frontend plan at {target_path} and implement it milestone
         by milestone in Vue 3 + TypeScript.
 
-        Scope of writes: web/src/**. Do NOT modify backend code, tests, or
-        lifecycle artifacts (other than blocking the input plan as
+        Scope of writes: web/src/** and — only for a proposed ADR —
+        lifecycle/architecture/decisions/. Do NOT modify backend code, tests,
+        or other lifecycle artifacts (other than blocking the input plan as
         described below) — other agents own those.
+
+        Follow the architecture standards and ADRs in lifecycle/architecture/
+        (standards/ and decisions/), including the usability rules (e.g.
+        list-sorting conventions). If the plan forces a deviation from the
+        recorded architecture or standards, do not deviate silently: propose a
+        new ADR in lifecycle/architecture/decisions/ (type: adr) capturing the
+        decision, context, and consequences; if you cannot, treat it as being
+        stuck (see below).
 
         After each milestone, run these from the web/ directory:
           - pnpm exec vue-tsc --noEmit
@@ -300,6 +346,7 @@ agents:
       - web/src
       - lifecycle/tests
       - lifecycle/test-plans
+      - lifecycle/architecture/decisions
     git_identity:
       name: Test Developer Agent
       email: test-developer@kaos-control.local
@@ -309,9 +356,17 @@ agents:
         Read the test plan at {target_path} and implement integration tests
         in the repo-root tests/ directory.
 
+        Follow the architecture standards and ADRs in lifecycle/architecture/
+        (standards/ and decisions/) — including the testing and security
+        expectations recorded there. If the plan forces a deviation, do not
+        deviate silently: propose a new ADR in lifecycle/architecture/decisions/
+        (type: adr) capturing the decision, context, and consequences; if you
+        cannot, treat it as being stuck (see below).
+
         Scope of writes:
           - tests/**          (actual integration test code)
           - lifecycle/tests/  (a `test` artifact documenting what was built)
+          - lifecycle/architecture/decisions/  (only for a proposed ADR)
 
         For every test plan you complete, also write a companion artifact in
         lifecycle/tests/ with frontmatter:
@@ -345,6 +400,7 @@ agents:
     timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/defects
+      - lifecycle/architecture/decisions
     git_identity:
       name: QA Agent
       email: qa@kaos-control.local
@@ -359,7 +415,10 @@ agents:
         architecture summary, the chosen architecture and tech stack, the
         ADRs in decisions/, and the standards/ — and use them to judge
         whether a failure reflects a genuine defect or a deviation from the
-        recorded architecture or standards.
+        recorded architecture or standards. If a failure reflects a
+        deliberate, defensible deviation rather than a defect, do not silently
+        accept it: propose a new ADR in lifecycle/architecture/decisions/
+        (type: adr) capturing the decision, context, and consequences.
 
         For EACH failing test, create one defect artifact in
         lifecycle/defects/ with frontmatter:

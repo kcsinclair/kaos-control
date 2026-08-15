@@ -111,6 +111,7 @@ agents:
     allowed_write_paths:
       - lifecycle/requirements
       - lifecycle/ideas
+      - lifecycle/architecture/decisions
     git_identity:
       name: Requirements Analyst Agent
       email: requirements-analyst@kaos-control.local
@@ -130,6 +131,11 @@ agents:
         Body sections (## headings): Problem, Goals / Non-goals,
         Detailed Requirements, Acceptance Criteria, Open Questions.
 
+        Read lifecycle/architecture/ (summary, chosen architecture/stack, ADRs
+        in decisions/, standards/) and stay consistent with it; if you must
+        deviate, propose a new ADR in lifecycle/architecture/decisions/
+        (type: adr) rather than deviating silently.
+
   - name: planning-analyst
     role:
       - analyst
@@ -142,6 +148,7 @@ agents:
       - lifecycle/frontend-plans
       - lifecycle/test-plans
       - lifecycle/requirements
+      - lifecycle/architecture/decisions
     git_identity:
       name: Planning Analyst Agent
       email: planning-analyst@kaos-control.local
@@ -157,6 +164,12 @@ agents:
         Structure each plan as ordered milestones with description, files to
         change, and explicit acceptance criteria.
 
+        Read lifecycle/architecture/ (summary, chosen architecture/stack, ADRs
+        in decisions/, standards/); plans must conform to it. If a requirement
+        cannot be met within it, propose a new ADR in
+        lifecycle/architecture/decisions/ (type: adr) rather than deviating
+        silently.
+
   - name: backend-developer
     role:
       - backend-developer
@@ -171,6 +184,7 @@ agents:
       - internal
       - cmd
       - lifecycle/backend-plans
+      - lifecycle/architecture/decisions
     git_identity:
       name: Backend Developer Agent
       email: backend-developer@kaos-control.local
@@ -181,6 +195,11 @@ agents:
         milestone. After each milestone run the build and vet tools; both must
         pass before the milestone is considered complete. Commit each milestone
         separately with a message referencing the plan's milestone heading.
+
+        Follow lifecycle/architecture/ (standards/ and ADRs in decisions/). If
+        the plan forces a deviation, propose a new ADR in
+        lifecycle/architecture/decisions/ (type: adr) rather than deviating
+        silently.
 
   - name: frontend-developer
     role:
@@ -195,6 +214,7 @@ agents:
     allowed_write_paths:
       - web/src
       - lifecycle/frontend-plans
+      - lifecycle/architecture/decisions
     git_identity:
       name: Frontend Developer Agent
       email: frontend-developer@kaos-control.local
@@ -205,6 +225,11 @@ agents:
         milestone. After each milestone run the type-checker and build; both must
         pass before the milestone is considered complete. Commit each milestone
         separately with a message referencing the plan's milestone heading.
+
+        Follow lifecycle/architecture/ (standards/ and ADRs in decisions/). If
+        the plan forces a deviation, propose a new ADR in
+        lifecycle/architecture/decisions/ (type: adr) rather than deviating
+        silently.
 
   - name: test-developer
     role:
@@ -221,6 +246,7 @@ agents:
       - tests
       - lifecycle/tests
       - lifecycle/test-plans
+      - lifecycle/architecture/decisions
     git_identity:
       name: Test Developer Agent
       email: test-developer@kaos-control.local
@@ -231,6 +257,11 @@ agents:
         the tests/ directory. Also write a companion artifact in lifecycle/tests/
         documenting what was built.
 
+        Follow lifecycle/architecture/ (standards/ and ADRs in decisions/). If
+        the plan forces a deviation, propose a new ADR in
+        lifecycle/architecture/decisions/ (type: adr) rather than deviating
+        silently.
+
   - name: qa
     role:
       - qa
@@ -240,6 +271,7 @@ agents:
     timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/defects
+      - lifecycle/architecture/decisions
     git_identity:
       name: QA Agent
       email: qa@kaos-control.local
@@ -262,6 +294,11 @@ agents:
 
         Body sections: Reproduction Steps, Expected Behaviour, Actual Behaviour,
         Logs / Output.
+
+        Read lifecycle/architecture/ (standards/ and ADRs in decisions/) to
+        judge whether a failure is a genuine defect or a defensible deviation;
+        if the latter, propose a new ADR in lifecycle/architecture/decisions/
+        (type: adr) rather than silently accepting it.
 
   - name: tech-writer
     role:
