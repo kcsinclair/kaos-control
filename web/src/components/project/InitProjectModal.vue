@@ -2,6 +2,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
 import { ApiError } from '@/api/client'
@@ -16,6 +17,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const router = useRouter()
 const projectStore = useProjectStore()
 const ui = useUiStore()
 
@@ -57,6 +59,13 @@ async function copyCommands() {
 }
 
 function handleDone() {
+  emit('initialised')
+}
+
+// FR-1 second entry point: offer the wizard right after init completes too,
+// non-blocking — the user can still just click Done.
+function setUpArchitecture() {
+  void router.push(`/p/${encodeURIComponent(props.project.name)}/architecture/wizard`)
   emit('initialised')
 }
 </script>
@@ -148,7 +157,8 @@ function handleDone() {
           </div>
 
           <div class="modal-footer">
-            <button class="btn-primary" @click="handleDone">Done</button>
+            <button class="btn-secondary" @click="handleDone">Done</button>
+            <button class="btn-primary" @click="setUpArchitecture">Set up architecture now</button>
           </div>
         </template>
       </div>

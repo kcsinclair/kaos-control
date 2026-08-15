@@ -2,6 +2,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
 import { ApiError } from '@/api/client'
@@ -12,8 +13,14 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const router = useRouter()
 const projectStore = useProjectStore()
 const ui = useUiStore()
+
+// Post-create hand-off (FR-1's second entry point): once the project exists,
+// offer a non-blocking route into the Architecture Wizard instead of closing
+// immediately.
+const createdProjectName = ref<string | null>(null)
 
 type Mode = 'existing' | 'new'
 
@@ -181,7 +188,7 @@ async function handleSubmit() {
     if (result.partialCompletion) {
       ui.info('The existing directory had a partial lifecycle/ tree — the missing pieces were completed.')
     }
-    emit('created')
+    createdProjectName.value = form.name
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.status === 409) {
@@ -222,6 +229,15 @@ async function handleSubmit() {
   }
 }
 
+function dismissCreated(): void {
+  emit('created')
+}
+
+function setUpArchitecture(): void {
+  if (!createdProjectName.value) return
+  void router.push(`/p/${encodeURIComponent(createdProjectName.value)}/architecture/wizard`)
+  emit('created')
+}
 </script>
 
 <template>
@@ -231,15 +247,39 @@ async function handleSubmit() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-project-title"
-      @keydown.escape="emit('close')"
+      @keydown.escape="createdProjectName ? dismissCreated() : emit('close')"
     >
       <div class="modal-panel">
         <div class="modal-header">
-          <h2 id="create-project-title" class="modal-title">New Project</h2>
-          <button class="modal-close" aria-label="Close" @click="emit('close')">✕</button>
+          <h2 id="create-project-title" class="modal-title">
+            {{ createdProjectName ? 'Project Created' : 'New Project' }}
+          </h2>
+          <button
+            class="modal-close"
+            aria-label="Close"
+            @click="createdProjectName ? dismissCreated() : emit('close')"
+          >✕</button>
         </div>
 
-        <form class="modal-body" @submit.prevent="handleSubmit">
+        <!-- Post-create hand-off (FR-1 second entry point): non-blocking offer
+             to launch the Architecture Wizard now, or skip. -->
+        <template v-if="createdProjectName">
+          <div class="modal-body">
+            <p class="intro">
+              Project <strong class="project-name">{{ createdProjectName }}</strong> was created.
+              You can set up its architecture now with the guided wizard, or skip and do it later
+              from the Architecture section.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-secondary" @click="dismissCreated">Skip</button>
+            <button type="button" class="btn-primary" @click="setUpArchitecture">
+              Set up architecture now
+            </button>
+          </div>
+        </template>
+
+        <form v-else class="modal-body" @submit.prevent="handleSubmit">
           <!-- Mode -->
           <div class="field">
             <span id="cp-mode-label" class="field-label">Directory</span>
@@ -490,6 +530,16 @@ async function handleSubmit() {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+.intro {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+.project-name {
+  font-family: monospace;
+  font-weight: 700;
 }
 .field {
   display: flex;

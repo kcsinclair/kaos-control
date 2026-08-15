@@ -31,6 +31,7 @@ import {
   ListChecks,
   BarChart3,
   BookOpen,
+  Wand2,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
@@ -98,6 +99,7 @@ const navSections = computed((): NavSection[] => {
   const p = projectName()
   const roles = authStore.rolesForProject(p)
   const hasDevOpsAccess = roles.includes('product-owner') || roles.includes('devops')
+  const hasProductOwnerAccess = roles.includes('product-owner')
 
   // System group: DevOps is role-gated, so it's inserted conditionally before
   // Parse Errors (which stays last as the health/diagnostics entry).
@@ -110,6 +112,24 @@ const navSections = computed((): NavSection[] => {
   }
   system.push({ label: 'Parse Errors', to: `/p/${p}/parse-errors`, icon: AlertTriangle })
 
+  // Architecture Wizard is product-owner-gated (matches DevOps' gating
+  // pattern above), and launchable any time, not only at project creation
+  // (FR-1) — hence its own nav entry alongside the relationship map.
+  const content: NavItem[] = [
+    { label: 'List',          to: `/p/${p}/artifacts`,       icon: List },
+    { label: 'Board',         to: `/p/${p}/artifacts/board`, icon: Columns3 },
+    { label: 'Map',           to: `/p/${p}/map`,             icon: Network },
+    { label: 'Roadmap',       to: `/p/${p}/roadmap`,         icon: CalendarRange },
+    { label: 'Architecture',  to: `/p/${p}/architecture`,    icon: Boxes },
+  ]
+  if (hasProductOwnerAccess) {
+    content.push({ label: 'Architecture Wizard', to: `/p/${p}/architecture/wizard`, icon: Wand2 })
+  }
+  content.push(
+    { label: 'Testing',       to: `/p/${p}/testing`,         icon: FlaskConical, badgeCount: () => testingStore.approvedCount },
+    { label: 'Documentation', to: `/p/${p}/docs`,            icon: BookOpen },
+  )
+
   return [
     {
       title: 'Activity',
@@ -121,15 +141,7 @@ const navSections = computed((): NavSection[] => {
     },
     {
       title: 'Content',
-      items: [
-        { label: 'List',          to: `/p/${p}/artifacts`,       icon: List },
-        { label: 'Board',         to: `/p/${p}/artifacts/board`, icon: Columns3 },
-        { label: 'Map',           to: `/p/${p}/map`,             icon: Network },
-        { label: 'Roadmap',       to: `/p/${p}/roadmap`,         icon: CalendarRange },
-        { label: 'Architecture',  to: `/p/${p}/architecture`,    icon: Boxes },
-        { label: 'Testing',       to: `/p/${p}/testing`,         icon: FlaskConical, badgeCount: () => testingStore.approvedCount },
-        { label: 'Documentation', to: `/p/${p}/docs`,            icon: BookOpen },
-      ],
+      items: content,
     },
     {
       title: 'Automation',

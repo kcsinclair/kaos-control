@@ -77,6 +77,12 @@ const router = createRouter({
           component: () => import('@/views/project/ArchitectureMapView.vue'),
         },
         {
+          path: 'architecture/wizard',
+          name: 'architecture-wizard',
+          component: () => import('@/views/project/ArchitectureWizardView.vue'),
+          meta: { roles: ['product-owner'] },
+        },
+        {
           path: 'roadmap',
           name: 'roadmap',
           component: () => import('@/views/project/RoadmapView.vue'),
