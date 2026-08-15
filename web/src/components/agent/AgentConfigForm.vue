@@ -48,9 +48,9 @@ const ollamaEndpoint = ref<'chat' | 'generate'>(
   (props.initial?.ollama_endpoint ?? 'chat') as 'chat' | 'generate',
 )
 const allowedWritePathsRaw = ref((props.initial?.allowed_write_paths ?? []).join('\n'))
-const timeoutMinutes = ref(0)
-const gitIdentityName = ref('')
-const gitIdentityEmail = ref('')
+const timeoutMinutes = ref(props.initial?.timeout_minutes ?? 0)
+const gitIdentityName = ref(props.initial?.git_identity?.name ?? '')
+const gitIdentityEmail = ref(props.initial?.git_identity?.email ?? '')
 const promptTemplatesRaw = ref('')
 const errors = ref<Record<string, string>>({})
 
