@@ -15,9 +15,15 @@ const emit = defineEmits<{
 const projectStore = useProjectStore()
 const ui = useUiStore()
 
+type Mode = 'existing' | 'new'
+
+const mode = ref<Mode>('existing')
+
 const form = reactive({
   name: '',
   path: '',
+  parent: '',
+  dirName: '',
   description: '',
   owner: '',
 })
@@ -25,6 +31,8 @@ const form = reactive({
 const errors = reactive({
   name: '',
   path: '',
+  parent: '',
+  dirName: '',
   general: '',
 })
 
@@ -58,6 +66,16 @@ function validatePath(): boolean {
   }
   errors.path = ''
   return true
+}
+
+function setMode(next: Mode): void {
+  if (mode.value === next) return
+  mode.value = next
+  errors.path = ''
+  errors.parent = ''
+  errors.dirName = ''
+  errors.general = ''
+  dirResult.value = null
 }
 
 async function handleCheckDirectory() {
@@ -126,6 +144,31 @@ async function handleSubmit() {
         </div>
 
         <form class="modal-body" @submit.prevent="handleSubmit">
+          <!-- Mode -->
+          <div class="field">
+            <span class="field-label">Directory</span>
+            <div class="mode-toggle" role="radiogroup" aria-label="Directory mode">
+              <button
+                type="button"
+                class="mode-option"
+                :class="{ 'mode-option--active': mode === 'existing' }"
+                :disabled="submitting"
+                @click="setMode('existing')"
+              >
+                Use existing directory
+              </button>
+              <button
+                type="button"
+                class="mode-option"
+                :class="{ 'mode-option--active': mode === 'new' }"
+                :disabled="submitting"
+                @click="setMode('new')"
+              >
+                Create new directory
+              </button>
+            </div>
+          </div>
+
           <!-- Name -->
           <div class="field">
             <label class="field-label" for="cp-name">Name <span class="required">*</span></label>
@@ -144,8 +187,8 @@ async function handleSubmit() {
             <span class="field-hint">Lowercase alphanumeric and hyphens, 3–80 characters.</span>
           </div>
 
-          <!-- Path -->
-          <div class="field">
+          <!-- Path (existing-directory mode) -->
+          <div v-if="mode === 'existing'" class="field">
             <label class="field-label" for="cp-path">Path <span class="required">*</span></label>
             <div class="path-row">
               <input
@@ -184,6 +227,38 @@ async function handleSubmit() {
                 ℹ Already initialised
               </span>
             </div>
+          </div>
+
+          <!-- Parent + directory name (new-directory mode) -->
+          <div v-if="mode === 'new'" class="field">
+            <label class="field-label" for="cp-parent">Parent directory <span class="required">*</span></label>
+            <input
+              id="cp-parent"
+              v-model="form.parent"
+              class="field-input"
+              :class="{ 'field-input--error': errors.parent }"
+              type="text"
+              placeholder="/home/user/projects"
+              autocomplete="off"
+              :disabled="submitting"
+              @input="dirResult = null"
+            />
+            <span v-if="errors.parent" class="field-error">{{ errors.parent }}</span>
+          </div>
+          <div v-if="mode === 'new'" class="field">
+            <label class="field-label" for="cp-dirname">Directory name <span class="required">*</span></label>
+            <input
+              id="cp-dirname"
+              v-model="form.dirName"
+              class="field-input"
+              :class="{ 'field-input--error': errors.dirName }"
+              type="text"
+              placeholder="my-project"
+              autocomplete="off"
+              :disabled="submitting"
+              @input="dirResult = null"
+            />
+            <span v-if="errors.dirName" class="field-error">{{ errors.dirName }}</span>
           </div>
 
           <!-- Description -->
@@ -291,6 +366,29 @@ async function handleSubmit() {
   font-weight: 500;
   color: var(--color-text);
 }
+.mode-toggle {
+  display: flex;
+  gap: var(--space-2);
+}
+.mode-option {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-align: center;
+}
+.mode-option:disabled { opacity: 0.6; cursor: not-allowed; }
+.mode-option:not(:disabled):hover { background: var(--color-border); }
+.mode-option--active {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+}
+.mode-option--active:not(:disabled):hover { background: var(--color-accent); opacity: 0.9; }
 .required {
   color: #dc2626;
   margin-left: 2px;
