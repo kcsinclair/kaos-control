@@ -76,6 +76,105 @@ func TestParse_CreatedFieldAbsent(t *testing.T) {
 	}
 }
 
+// ── RICE frontmatter fields ───────────────────────────────────────────────────
+
+// TestParse_RiceFieldsAbsent verifies a file with no RICE fields parses
+// without ParseErrs and decodes all four RICE pointers to nil, not 0.
+func TestParse_RiceFieldsAbsent(t *testing.T) {
+	raw := []byte("---\ntitle: Test\ntype: idea\nstatus: draft\nlineage: test\n---\n\nBody text.\n")
+	a := artifact.Parse(raw, "lifecycle/ideas/test.md", time.Now())
+
+	if len(a.ParseErrs) > 0 {
+		t.Errorf("unexpected parse errors: %v", a.ParseErrs)
+	}
+	if a.FM.RiceReach != nil || a.FM.RiceImpact != nil || a.FM.RiceConfidence != nil || a.FM.RiceEffort != nil {
+		t.Errorf("expected all RICE fields nil, got reach=%v impact=%v confidence=%v effort=%v",
+			a.FM.RiceReach, a.FM.RiceImpact, a.FM.RiceConfidence, a.FM.RiceEffort)
+	}
+}
+
+// TestParse_RiceFieldsPartialSubset verifies a file with a subset of the four
+// RICE fields parses without ParseErrs; set fields decode to non-nil, absent
+// fields decode to nil.
+func TestParse_RiceFieldsPartialSubset(t *testing.T) {
+	raw := []byte("---\ntitle: Test\ntype: idea\nstatus: draft\nlineage: test\nrice_reach: 100\nrice_effort: 2\n---\n\nBody text.\n")
+	a := artifact.Parse(raw, "lifecycle/ideas/test.md", time.Now())
+
+	if len(a.ParseErrs) > 0 {
+		t.Errorf("unexpected parse errors: %v", a.ParseErrs)
+	}
+	if a.FM.RiceReach == nil || *a.FM.RiceReach != 100 {
+		t.Errorf("RiceReach: want 100, got %v", a.FM.RiceReach)
+	}
+	if a.FM.RiceEffort == nil || *a.FM.RiceEffort != 2 {
+		t.Errorf("RiceEffort: want 2, got %v", a.FM.RiceEffort)
+	}
+	if a.FM.RiceImpact != nil {
+		t.Errorf("RiceImpact: want nil, got %v", a.FM.RiceImpact)
+	}
+	if a.FM.RiceConfidence != nil {
+		t.Errorf("RiceConfidence: want nil, got %v", a.FM.RiceConfidence)
+	}
+}
+
+// TestParse_RiceFieldZeroIsNotNil verifies a RICE field present with value 0
+// decodes to a non-nil pointer to 0, distinct from an absent field.
+func TestParse_RiceFieldZeroIsNotNil(t *testing.T) {
+	raw := []byte("---\ntitle: Test\ntype: idea\nstatus: draft\nlineage: test\nrice_reach: 0\nrice_impact: 1\nrice_confidence: 50\nrice_effort: 1\n---\n\nBody text.\n")
+	a := artifact.Parse(raw, "lifecycle/ideas/test.md", time.Now())
+
+	if a.FM.RiceReach == nil {
+		t.Fatal("RiceReach: want non-nil pointer to 0, got nil")
+	}
+	if *a.FM.RiceReach != 0 {
+		t.Errorf("RiceReach: want 0, got %v", *a.FM.RiceReach)
+	}
+}
+
+// TestFrontmatter_RiceYAMLRoundTrip verifies that yaml.Marshal (the mechanism
+// buildMarkdown relies on) omits nil RICE fields and emits set fields with
+// their numeric value.
+func TestFrontmatter_RiceYAMLRoundTrip(t *testing.T) {
+	fm := artifact.Frontmatter{
+		Title: "Test", Type: "idea", Status: "draft", Lineage: "test",
+		RiceReach:  f64(50),
+		RiceEffort: f64(0), // a real zero, must still be emitted
+		// RiceImpact and RiceConfidence left nil.
+	}
+	out, err := yaml.Marshal(fm)
+	if err != nil {
+		t.Fatalf("yaml.Marshal: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, "rice_reach: 50") {
+		t.Errorf("expected rice_reach: 50 in output, got:\n%s", s)
+	}
+	if !strings.Contains(s, "rice_effort: 0") {
+		t.Errorf("expected rice_effort: 0 in output (real zero must round-trip), got:\n%s", s)
+	}
+	if strings.Contains(s, "rice_impact") {
+		t.Errorf("expected rice_impact absent (nil), got:\n%s", s)
+	}
+	if strings.Contains(s, "rice_confidence") {
+		t.Errorf("expected rice_confidence absent (nil), got:\n%s", s)
+	}
+
+	// Round-trip: unmarshal back and confirm the nil/set distinction survives.
+	var fm2 artifact.Frontmatter
+	if err := yaml.Unmarshal(out, &fm2); err != nil {
+		t.Fatalf("yaml.Unmarshal: %v", err)
+	}
+	if fm2.RiceReach == nil || *fm2.RiceReach != 50 {
+		t.Errorf("round-tripped RiceReach: want 50, got %v", fm2.RiceReach)
+	}
+	if fm2.RiceEffort == nil || *fm2.RiceEffort != 0 {
+		t.Errorf("round-tripped RiceEffort: want 0, got %v", fm2.RiceEffort)
+	}
+	if fm2.RiceImpact != nil {
+		t.Errorf("round-tripped RiceImpact: want nil, got %v", fm2.RiceImpact)
+	}
+}
+
 // ── HasOpenQuestions unit tests ───────────────────────────────────────────────
 
 // TestHasOpenQuestions_HeadingWithBulletList verifies that a "## Open
