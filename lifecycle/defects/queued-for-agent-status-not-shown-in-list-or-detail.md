@@ -1,7 +1,7 @@
 ---
 title: Queued-for-Agent status not shown in artefact list or detail view
 type: defect
-status: in-development
+status: done
 lineage: queued-for-agent-status-not-shown-in-list-or-detail
 created: "2026-08-15T09:28:41+10:00"
 priority: normal
@@ -17,6 +17,7 @@ release: KC-Release5
 assignees:
     - role: frontend-developer
       who: agent
+parent: lifecycle/tests/new-project-init-directory-options-6-test.md
 ---
 
 # Queued-for-Agent status not shown in artefact list or detail view

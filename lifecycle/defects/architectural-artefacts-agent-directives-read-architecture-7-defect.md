@@ -1,13 +1,15 @@
 ---
 title: QA agent prompt template missing read lifecycle/architecture directive
 type: defect
-status: in-development
+status: done
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release5
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # QA agent prompt template missing read lifecycle/architecture directive

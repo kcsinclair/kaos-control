@@ -1,7 +1,7 @@
 ---
 title: Pipeline card latest-run summary badge not visible after run completion
 type: defect
-status: in-development
+status: done
 lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-8-test.md
 labels:

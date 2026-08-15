@@ -10,9 +10,11 @@ labels:
     - agent
     - reliability
     - status
+release: KC-Release5
 assignees:
     - role: backend-developer
       who: agent
+parent: lifecycle/tests/new-project-init-directory-options-6-test.md
 ---
 
 # Agent run shows status "failed" despite a successful result

@@ -1,7 +1,7 @@
 ---
 title: Agent runner should reject/strip ScheduleWakeup — one-shot runs silently drop deferred work
 type: defect
-status: in-development
+status: done
 lineage: agent-runner-strip-schedulewakeup
 created: "2026-07-08T00:00:00+10:00"
 priority: medium
@@ -13,6 +13,7 @@ release: KC-Release5
 assignees:
     - role: backend-developer
       who: agent
+parent: lifecycle/tests/new-project-init-directory-options-6-test.md
 ---
 
 # Agent runner should reject/strip `ScheduleWakeup` — one-shot runs silently drop deferred work

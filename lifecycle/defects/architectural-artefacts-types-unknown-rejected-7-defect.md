@@ -1,13 +1,15 @@
 ---
 title: Unknown type in architecture artefact not detected during startup scan
 type: defect
-status: in-development
+status: done
 lineage: architectural-artefacts
 parent: lifecycle/tests/architectural-artefacts-6-test.md
-labels: [defect]
+labels:
+    - defect
+release: KC-Release5
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # Unknown type in architecture artefact not detected during startup scan
