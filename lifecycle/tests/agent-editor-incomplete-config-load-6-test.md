@@ -1,7 +1,7 @@
 ---
 title: "Tests — Agent Editor Config Load and Round-Trip Preservation"
 type: test
-status: in-qa
+status: approved
 lineage: agent-editor-incomplete-config-load
 parent: lifecycle/test-plans/agent-editor-incomplete-config-load-5-test.md
 ---

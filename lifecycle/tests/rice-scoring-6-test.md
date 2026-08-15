@@ -1,7 +1,7 @@
 ---
 title: "Test Suite — RICE Scoring Integration Tests"
 type: test
-status: in-qa
+status: approved
 lineage: rice-scoring
 parent: lifecycle/test-plans/rice-scoring-5-test.md
 ---
