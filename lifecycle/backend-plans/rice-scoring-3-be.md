@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — RICE Scoring for Ideas and Defects"
 type: plan-backend
-status: draft
+status: approved
 lineage: rice-scoring
 parent: lifecycle/requirements/rice-scoring-2.md
 ---
