@@ -242,10 +242,12 @@ async function handleSubmit() {
         <form class="modal-body" @submit.prevent="handleSubmit">
           <!-- Mode -->
           <div class="field">
-            <span class="field-label">Directory</span>
-            <div class="mode-toggle" role="radiogroup" aria-label="Directory mode">
+            <span id="cp-mode-label" class="field-label">Directory</span>
+            <div class="mode-toggle" role="radiogroup" aria-labelledby="cp-mode-label">
               <button
                 type="button"
+                role="radio"
+                :aria-checked="mode === 'existing'"
                 class="mode-option"
                 :class="{ 'mode-option--active': mode === 'existing' }"
                 :disabled="submitting"
@@ -255,6 +257,8 @@ async function handleSubmit() {
               </button>
               <button
                 type="button"
+                role="radio"
+                :aria-checked="mode === 'new'"
                 class="mode-option"
                 :class="{ 'mode-option--active': mode === 'new' }"
                 :disabled="submitting"
