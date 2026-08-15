@@ -17,6 +17,27 @@ assignees:
 
 # Agent Directives Generation — Stack-Tuned Directive Files & Agent Prompts at Init
 
+## Direction update (2026-08-15): AGENTS.md-primary
+
+Adopt **`AGENTS.md` as the single canonical directive file**, with `CLAUDE.md`
+reduced to a one-line `@AGENTS.md` import and `GEMINI.md` dropped for
+Antigravity (which auto-discovers and loads both `AGENTS.md` and `GEMINI.md`) —
+instead of rendering N full copies from a shared model. This **supersedes** the
+"same body in every file" mechanism (FR-1/FR-3) with one real file + imports,
+and it dissolves several open questions: **OQ-1** (no separate Antigravity
+file), **OQ-3** (diff-vs-user-edit shrinks to the single `AGENTS.md`), and much
+of **OQ-2**. That file-structure + migration half is now split out as a
+standalone, wizard-independent idea:
+[[agents-md-primary-directives]] (includes a `kaos-control migrate-directives`
+command and init emitting the set).
+
+What **remains** the substance of this requirement is the **stack-aware
+content** — FR-2/FR-5 (directive body tuned to the chosen stack) and
+FR-6/FR-7/FR-8 (the `lifecycle/config.yaml` agent prompt templates: stack-
+correct write paths, build/test commands, architecture-awareness clauses),
+plus its data dependency OQ-5 — all still gated on the Architecture Wizard and
+per-stack profiles. This requirement should be re-scoped to that content half.
+
 ## Problem
 
 Today `kaos-control init` emits a single, generic `CLAUDE.md`
