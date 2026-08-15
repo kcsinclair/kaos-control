@@ -816,6 +816,20 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 						},
 					})
 				}
+				// Mode-1 observability (FR3/FR4): broadcast agent.quota_status on
+				// every mid-stream rate_limit_event, but only when its debounce
+				// tuple differs from the last broadcast for this run. The cache is
+				// updated on every parse, even when the broadcast is suppressed, so
+				// the M4 Mode-2 lookup below always sees the latest signal.
+				if info, isQuota := extractRateLimitInfo(payload); isQuota {
+					if prev, hadPrev := m.getRunQuota(run.RunID); !hadPrev || prev != info {
+						m.hub.Broadcast(hub.Event{
+							Type:    "agent.quota_status",
+							Payload: quotaStatusPayload(run.RunID, info),
+						})
+					}
+					m.setRunQuota(run.RunID, info)
+				}
 				// Auth-error fast-fail: kill the run after authErrorThreshold
 				// consecutive api_retry/401 events and signal the dispatcher to
 				// re-enqueue without pausing. The guard prevents double-kill on
@@ -1743,6 +1757,23 @@ func extractRateLimitInfo(payload map[string]any) (RateLimitInfo, bool) {
 		OverageAvailable:      isUsingOverage || overageStatus != "rejected",
 		OverageDisabledReason: overageDisabledReason,
 	}, true
+}
+
+// quotaStatusPayload builds the agent.quota_status broadcast payload (FR3)
+// for a parsed RateLimitInfo. resets_at is rendered RFC3339-UTC and omitted
+// when ResetsAtUnix is 0 (NFR2 — never localised).
+func quotaStatusPayload(runID string, info RateLimitInfo) map[string]any {
+	payload := map[string]any{
+		"run_id":                  runID,
+		"bucket":                  info.Bucket,
+		"status":                  info.Status,
+		"overage_available":       info.OverageAvailable,
+		"overage_disabled_reason": info.OverageDisabledReason,
+	}
+	if info.ResetsAtUnix != 0 {
+		payload["resets_at"] = time.Unix(info.ResetsAtUnix, 0).UTC().Format(time.RFC3339)
+	}
+	return payload
 }
 
 // authErrorThreshold is the number of api_retry/401 events that must be seen
