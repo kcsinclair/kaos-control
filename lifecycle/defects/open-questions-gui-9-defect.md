@@ -1,7 +1,7 @@
 ---
 title: "Missing integration test file open_questions_routing_test.go"
 type: defect
-status: approved
+status: in-development
 lineage: open-questions-gui
 parent: lifecycle/tests/open-questions-gui-5-test.md
 labels: [defect]
