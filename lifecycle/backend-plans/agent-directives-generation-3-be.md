@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Stack-Tuned Directive Files & Agent Prompts at Init"
 type: plan-backend
-status: draft
+status: approved
 lineage: agent-directives-generation
 parent: lifecycle/requirements/agent-directives-generation-2.md
 labels:
