@@ -1,7 +1,7 @@
 ---
 title: "New Project Init: Existing or New Directory — Test Coverage"
 type: test
-status: draft
+status: approved
 lineage: new-project-init-directory-options
 parent: lifecycle/test-plans/new-project-init-directory-options-5-test.md
 ---
