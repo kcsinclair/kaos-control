@@ -7,6 +7,7 @@ import { getConfig } from '@/api/config'
 import type {
   ProjectSummary,
   CreateProjectPayload,
+  CreateProjectResult,
   UpdateProjectPayload,
   CheckDirectoryRequest,
   CheckDirectoryResult,
@@ -46,7 +47,7 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
-  async function create(payload: CreateProjectPayload): Promise<ProjectSummary> {
+  async function create(payload: CreateProjectPayload): Promise<CreateProjectResult> {
     mutating.value = true
     error.value = null
     try {

@@ -24,9 +24,22 @@ export type ProjectDetail = ProjectSummary
 
 export interface CreateProjectPayload {
   name: string
-  path: string
+  mode: 'existing' | 'new'
   description?: string
   owner?: string
+  /** Existing-mode target path. */
+  path?: string
+  /** New-mode parent directory. */
+  parent?: string
+  /** New-mode target directory name (distinct from the project name). */
+  dirName?: string
+}
+
+export interface CreateProjectResult extends ProjectSummary {
+  resolvedPath: string
+  created?: string[]
+  alreadyInitialised: boolean
+  partialCompletion: boolean
 }
 
 export interface UpdateProjectPayload {

@@ -4,6 +4,7 @@ import { api } from './client'
 import type {
   ProjectSummary,
   CreateProjectPayload,
+  CreateProjectResult,
   UpdateProjectPayload,
   CheckDirectoryRequest,
   CheckDirectoryResult,
@@ -19,7 +20,7 @@ export function getProject(name: string) {
 }
 
 export function createProject(payload: CreateProjectPayload) {
-  return api.post<ProjectSummary>('/projects', payload)
+  return api.post<CreateProjectResult>('/projects', payload)
 }
 
 export function updateProject(name: string, payload: UpdateProjectPayload) {

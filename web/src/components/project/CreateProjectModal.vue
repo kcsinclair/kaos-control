@@ -5,7 +5,7 @@ import { ref, reactive } from 'vue'
 import { useProjectStore } from '@/stores/project'
 import { useUiStore } from '@/stores/ui'
 import { ApiError } from '@/api/client'
-import type { CheckDirectoryResult } from '@/types/api'
+import type { CheckDirectoryResult, CreateProjectPayload } from '@/types/api'
 
 const emit = defineEmits<{
   created: []
@@ -142,26 +142,74 @@ async function handleCheckDirectory() {
 async function handleSubmit() {
   errors.general = ''
   const nameOk = validateName()
-  const pathOk = validatePath()
-  if (!nameOk || !pathOk) return
+  const targetOk = mode.value === 'existing' ? validatePath() : validateParent() && validateDirName()
+  if (!nameOk || !targetOk) return
 
   submitting.value = true
   try {
-    await projectStore.create({
-      name: form.name,
-      path: form.path,
-      description: form.description || undefined,
-      owner: form.owner || undefined,
-    })
-    ui.success(`Project "${form.name}" created.`)
+    const payload: CreateProjectPayload =
+      mode.value === 'existing'
+        ? {
+            name: form.name,
+            mode: 'existing',
+            path: form.path,
+            description: form.description || undefined,
+            owner: form.owner || undefined,
+          }
+        : {
+            name: form.name,
+            mode: 'new',
+            parent: form.parent,
+            dirName: form.dirName,
+            description: form.description || undefined,
+            owner: form.owner || undefined,
+          }
+
+    const result = await projectStore.create(payload)
+
+    if (result.alreadyInitialised) {
+      const message = `${result.resolvedPath} is already an initialised kaos-control project.`
+      if (mode.value === 'existing') {
+        errors.path = message
+      } else {
+        errors.dirName = message
+      }
+      return
+    }
+
+    ui.success(`Project "${form.name}" created at ${result.resolvedPath}.`)
+    if (result.partialCompletion) {
+      ui.info('The existing directory had a partial lifecycle/ tree — the missing pieces were completed.')
+    }
     emit('created')
   } catch (err) {
     if (err instanceof ApiError) {
       if (err.status === 409) {
         errors.name = `A project named "${form.name}" already exists.`
       } else if (err.code === 'invalid_name') {
-        errors.name = err.message
+        // The project-name check happens before target resolution on the
+        // backend, so in "new" mode a surviving invalid_name error is about
+        // the directory name, not the (already client-validated) project name.
+        if (mode.value === 'new') {
+          errors.dirName = err.message
+        } else {
+          errors.name = err.message
+        }
+      } else if (err.code === 'target_exists') {
+        errors.dirName = err.message
+      } else if (err.code === 'parent_missing' || err.code === 'parent_not_writable') {
+        errors.parent = err.message
       } else if (err.code === 'invalid_path') {
+        if (mode.value === 'existing') {
+          errors.path = err.message
+        } else {
+          errors.parent = err.message
+        }
+      } else if (
+        err.code === 'path_missing' ||
+        err.code === 'not_a_directory' ||
+        err.code === 'not_writable'
+      ) {
         errors.path = err.message
       } else {
         errors.general = err.message
