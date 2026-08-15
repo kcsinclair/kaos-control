@@ -281,6 +281,8 @@ re-runnable on demand.
   that target the same roles? What happens to an agent whose role no longer maps to
   a source root in the chosen stack?
 
+> Lets manage the six standard agents.
+
 - **OQ-5** Where does the **stack → (repo layout, build/test commands, write paths)**
   profile data live so this generator can consume it — embedded per-stack profiles
   shipped with the catalog ([[architecture-templates]]), or fields on the promoted
