@@ -233,6 +233,8 @@ authoring defined in [[architectural-artefacts]].
   say so, or surface "no exact match — here is the closest" with the constraints
   that were dropped.
 
+> “no exact match — here is the closest” with the constraints that were dropped
+
 - **OQ-3** Should the wizard support **partial completion / resume** — a user
   abandoning midway and returning later — or is each run atomic (start → confirm
   or discard)? NFR-1 currently implies atomic-until-confirm with no saved
