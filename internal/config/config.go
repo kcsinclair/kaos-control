@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kaos-control/kaos-control/internal/config/defaults"
+	"github.com/kaos-control/kaos-control/internal/sandbox"
 	"gopkg.in/yaml.v3"
 )
 
@@ -367,6 +368,61 @@ func ValidatePath(path string) (string, error) {
 		}
 	}
 	return resolved, nil
+}
+
+// NormalizePath trims leading/trailing whitespace from raw and expands a
+// leading "~" or "~/" to the server user's home directory (FR9). A path with
+// no "~" prefix is only trimmed; if the home directory cannot be determined
+// the "~" prefix is left as-is.
+func NormalizePath(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return trimmed
+	}
+	if trimmed == "~" {
+		return home
+	}
+	if strings.HasPrefix(trimmed, "~/") {
+		return filepath.Join(home, trimmed[2:])
+	}
+	return trimmed
+}
+
+// ValidateDirName rejects an empty directory name or one containing a path
+// separator ("/", "\") or a ".." traversal segment (FR4). Each failure
+// category returns a distinctly worded error.
+func ValidateDirName(name string) error {
+	if name == "" {
+		return fmt.Errorf("directory name must not be empty")
+	}
+	for _, seg := range strings.FieldsFunc(name, func(r rune) bool { return r == '/' || r == '\\' }) {
+		if seg == ".." {
+			return fmt.Errorf(`directory name must not contain a path traversal segment ("..")`)
+		}
+	}
+	if strings.Contains(name, "/") {
+		return fmt.Errorf("directory name must not contain a forward slash")
+	}
+	if strings.Contains(name, "\\") {
+		return fmt.Errorf("directory name must not contain a backslash")
+	}
+	return nil
+}
+
+// ResolveNewTarget normalises parent (FR9), validates name (FR4), and joins
+// them via sandbox.Resolve so a crafted name cannot escape parent (NFR1). It
+// returns the resolved absolute target path.
+func ResolveNewTarget(parent, name string) (string, error) {
+	if err := ValidateDirName(name); err != nil {
+		return "", err
+	}
+	normalizedParent := NormalizePath(parent)
+	target, err := sandbox.Resolve(normalizedParent, name)
+	if err != nil {
+		return "", err
+	}
+	return target, nil
 }
 
 // DeleteProjectEntry removes a project registration file.

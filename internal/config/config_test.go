@@ -978,6 +978,155 @@ func TestLinuxUserDuplicate_Error(t *testing.T) {
 	}
 }
 
+// TestNormalizePath verifies FR9 trimming and "~" expansion.
+func TestNormalizePath(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skipf("os.UserHomeDir unavailable: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{
+			name: "whitespace-padded tilde path expands and trims",
+			raw:  "  ~/foo  ",
+			want: filepath.Join(home, "foo"),
+		},
+		{
+			name: "bare tilde expands to home",
+			raw:  "  ~  ",
+			want: home,
+		},
+		{
+			name: "non-tilde path is only trimmed",
+			raw:  "  /var/tmp/project  ",
+			want: "/var/tmp/project",
+		},
+		{
+			name: "path without leading/trailing whitespace is unchanged",
+			raw:  "/already/clean",
+			want: "/already/clean",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := NormalizePath(tc.raw)
+			if got != tc.want {
+				t.Errorf("NormalizePath(%q) = %q, want %q", tc.raw, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestValidateDirName verifies FR4 directory-name validation.
+func TestValidateDirName(t *testing.T) {
+	tests := []struct {
+		name    string
+		dirName string
+		wantErr bool
+	}{
+		{name: "valid simple name", dirName: "my-project", wantErr: false},
+		{name: "empty name rejected", dirName: "", wantErr: true},
+		{name: "forward slash rejected", dirName: "a/b", wantErr: true},
+		{name: "backslash rejected", dirName: `a\b`, wantErr: true},
+		{name: "dot-dot rejected", dirName: "..", wantErr: true},
+		{name: "embedded traversal segment rejected", dirName: "a/../b", wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateDirName(tc.dirName)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("ValidateDirName(%q) error = %v, wantErr %v", tc.dirName, err, tc.wantErr)
+			}
+		})
+	}
+
+	// Each failure category (empty / forward-slash / backslash / traversal
+	// segment) has a distinctly worded error; ".." and "a/../b" both fall in
+	// the traversal-segment category and share that wording.
+	category := map[string]string{
+		"":       "empty",
+		"a/b":    "slash",
+		`a\b`:    "backslash",
+		"..":     "traversal",
+		"a/../b": "traversal",
+	}
+	msgByCategory := make(map[string]string)
+	for dirName, cat := range category {
+		err := ValidateDirName(dirName)
+		if err == nil {
+			t.Fatalf("ValidateDirName(%q): expected error, got nil", dirName)
+		}
+		msg := err.Error()
+		if prior, ok := msgByCategory[cat]; ok && prior != msg {
+			t.Errorf("ValidateDirName(%q): category %q previously produced %q, now %q", dirName, cat, prior, msg)
+		}
+		msgByCategory[cat] = msg
+	}
+	if len(msgByCategory) != 4 {
+		t.Fatalf("expected 4 distinct error categories, got %d: %v", len(msgByCategory), msgByCategory)
+	}
+	seen := make(map[string]bool)
+	for cat, msg := range msgByCategory {
+		if seen[msg] {
+			t.Errorf("category %q shares its error message with another category: %q", cat, msg)
+		}
+		seen[msg] = true
+	}
+}
+
+// TestResolveNewTarget verifies FR3/FR4/NFR1 target resolution.
+func TestResolveNewTarget(t *testing.T) {
+	t.Run("valid name resolves to an absolute joined path", func(t *testing.T) {
+		parent := t.TempDir()
+		resolvedParent, err := filepath.EvalSymlinks(parent)
+		if err != nil {
+			resolvedParent = parent
+		}
+
+		got, err := ResolveNewTarget(parent, "newproj")
+		if err != nil {
+			t.Fatalf("ResolveNewTarget: unexpected error: %v", err)
+		}
+		want := filepath.Join(resolvedParent, "newproj")
+		if got != want {
+			t.Errorf("ResolveNewTarget(%q, %q) = %q, want %q", parent, "newproj", got, want)
+		}
+		if !filepath.IsAbs(got) {
+			t.Errorf("ResolveNewTarget(%q, %q) = %q, want an absolute path", parent, "newproj", got)
+		}
+	})
+
+	t.Run("traversal name is rejected", func(t *testing.T) {
+		parent := t.TempDir()
+		if _, err := ResolveNewTarget(parent, "../escape"); err == nil {
+			t.Error("ResolveNewTarget with a traversal name: expected error, got nil")
+		}
+	})
+
+	t.Run("whitespace-padded parent is normalised before joining", func(t *testing.T) {
+		parent := t.TempDir()
+		resolvedParent, err := filepath.EvalSymlinks(parent)
+		if err != nil {
+			resolvedParent = parent
+		}
+
+		got, err := ResolveNewTarget("  "+parent+"  ", "newproj")
+		if err != nil {
+			t.Fatalf("ResolveNewTarget: unexpected error: %v", err)
+		}
+		want := filepath.Join(resolvedParent, "newproj")
+		if got != want {
+			t.Errorf("ResolveNewTarget(padded parent, %q) = %q, want %q", "newproj", got, want)
+		}
+	})
+}
+
 // writeMinimalProjectConfig writes a lifecycle/config.yaml with a minimal valid
 // base configuration plus an optional extra YAML snippet (e.g. an ignore: line),
 // and returns the temp project root directory.
