@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — RICE Scoring for Ideas and Defects"
 type: plan-test
-status: draft
+status: approved
 lineage: rice-scoring
 parent: lifecycle/requirements/rice-scoring-2.md
 ---
