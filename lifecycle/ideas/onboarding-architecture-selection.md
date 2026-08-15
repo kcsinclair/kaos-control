@@ -39,6 +39,13 @@ modular monolith and event-driven microservices. Two paths, same destination:
 
 ## The questionnaire — hunting architecture-breaking requirements
 
+> **Decided (2026-08-15):** the questions are **data in `lifecycle/config.yaml`**
+> under `architecture_wizard.questions` (each with `id`, `prompt`, `kind`
+> hard/soft/language, and per-option signal `labels`), **not** hard-coded. The
+> system ships a standard set (also seeded into new projects by the init
+> template) that projects may edit over time. The table below is the shipped
+> default.
+
 The wizard's questions are not a style quiz: their job is to **flesh out the
 high-level requirements and surface the *architecture-breaking* ones** — the
 requirements that could break a solution, either the architecture shape or

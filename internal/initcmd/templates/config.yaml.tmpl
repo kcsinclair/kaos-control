@@ -100,6 +100,126 @@ kanban:
     - labels
     - age
 
+# Architecture Wizard questions. Shipped standard set; edit to suit. Each
+# question maps its answers to decision-signal labels on the architecture
+# catalog (kind: hard = filters architectures; soft = scores; language = ranks
+# stacks). See lifecycle/ideas/onboarding-architecture-selection.md.
+architecture_wizard:
+  default_architecture: modular-monolith
+  questions:
+    - id: offline
+      prompt: "Does this need to work fully offline, with no network connection required?"
+      kind: hard
+      options:
+        - value: yes
+          label: Yes
+          labels:
+            - offline-capable
+          hard: true
+        - value: no
+          label: No
+    - id: collaborative
+      prompt: "Will multiple people view or edit shared data at the same time?"
+      kind: soft
+      options:
+        - value: yes
+          label: Yes
+          labels:
+            - collaborative
+        - value: no
+          label: No
+    - id: realtime
+      prompt: "Does it need realtime updates or streaming data?"
+      kind: soft
+      options:
+        - value: yes
+          label: Yes
+          labels:
+            - realtime
+        - value: no
+          label: No
+    - id: scale
+      prompt: "Do you expect high scale (many users or requests) from the start?"
+      kind: soft
+      options:
+        - value: yes
+          label: Yes
+          labels:
+            - high-scale
+        - value: no
+          label: No
+    - id: mobile
+      prompt: "Is this primarily a phone or tablet app?"
+      kind: hard
+      options:
+        - value: yes
+          label: Yes
+          labels:
+            - mobile
+          hard: true
+        - value: no
+          label: No
+    - id: ai-ml
+      prompt: "Is AI/ML central to what the product does?"
+      kind: soft
+      options:
+        - value: yes
+          label: Yes
+          labels:
+            - ai-ml
+        - value: no
+          label: No
+    - id: ops-tolerance
+      prompt: "How much operational complexity can your team take on?"
+      kind: soft
+      options:
+        - value: low
+          label: "Low — keep it simple"
+          labels:
+            - low-complexity
+        - value: medium
+          label: Medium
+          labels:
+            - medium-complexity
+        - value: high
+          label: "High — we have a platform team"
+          labels:
+            - high-complexity
+    - id: cost
+      prompt: "Is minimising cost at launch a priority?"
+      kind: soft
+      options:
+        - value: yes
+          label: Yes
+          labels:
+            - low-cost-start
+        - value: no
+          label: No
+    - id: language
+      prompt: "What's your team's strongest language?"
+      kind: language
+      options:
+        - value: go
+          label: Go
+          labels:
+            - go
+        - value: ts
+          label: TypeScript
+          labels:
+            - typescript
+        - value: python
+          label: Python
+          labels:
+            - python
+        - value: java
+          label: Java
+          labels:
+            - java
+        - value: php
+          label: PHP
+          labels:
+            - php
+
 agents:
   - name: requirements-analyst
     role:

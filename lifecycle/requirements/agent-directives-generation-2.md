@@ -17,26 +17,41 @@ assignees:
 
 # Agent Directives Generation — Stack-Tuned Directive Files & Agent Prompts at Init
 
-## Direction update (2026-08-15): AGENTS.md-primary
+## Decided (2026-08-15): AGENTS.md-primary + automated migration
 
-Adopt **`AGENTS.md` as the single canonical directive file**, with `CLAUDE.md`
-reduced to a one-line `@AGENTS.md` import and `GEMINI.md` dropped for
-Antigravity (which auto-discovers and loads both `AGENTS.md` and `GEMINI.md`) —
-instead of rendering N full copies from a shared model. This **supersedes** the
-"same body in every file" mechanism (FR-1/FR-3) with one real file + imports,
-and it dissolves several open questions: **OQ-1** (no separate Antigravity
-file), **OQ-3** (diff-vs-user-edit shrinks to the single `AGENTS.md`), and much
-of **OQ-2**. That file-structure + migration half is now split out as a
-standalone, wizard-independent idea:
-[[agents-md-primary-directives]] (includes a `kaos-control migrate-directives`
-command and init emitting the set).
+**Directive file set (supersedes FR-1, FR-3, and their acceptance criteria):**
 
-What **remains** the substance of this requirement is the **stack-aware
-content** — FR-2/FR-5 (directive body tuned to the chosen stack) and
-FR-6/FR-7/FR-8 (the `lifecycle/config.yaml` agent prompt templates: stack-
-correct write paths, build/test commands, architecture-awareness clauses),
-plus its data dependency OQ-5 — all still gated on the Architecture Wizard and
-per-stack profiles. This requirement should be re-scoped to that content half.
+| File | Role |
+|---|---|
+| `AGENTS.md` | The single **canonical** directive file. Codex reads it natively; Antigravity auto-discovers and loads both `AGENTS.md` and `GEMINI.md`. |
+| `CLAUDE.md` | A one-line `@AGENTS.md` **import** (Claude Code loads the included content). |
+| `GEMINI.md` | Present for the Gemini target (Antigravity already auto-loads `AGENTS.md`; a plain `gemini-cli` target uses this file — pointer vs. full copy is OQ-7). |
+
+Only `AGENTS.md` holds real content, so the "same body in N files / no drift"
+machinery (FR-1) and the multi-file diff/overwrite complexity (FR-11, OQ-3)
+collapse to a single managed file.
+
+**Automated first-run migration (new — FR-16):** the first time kaos-control
+runs against a project after receiving this upgrade and detects the legacy
+single-`CLAUDE.md` layout, it MUST:
+
+1. Notify the user that directive handling is now multi-CLI (AGENTS.md
+   canonical + CLAUDE.md/GEMINI.md), and
+2. **Offer to migrate automatically** — rename `CLAUDE.md` → `AGENTS.md`,
+   rewrite `CLAUDE.md` as `@AGENTS.md`, and add `GEMINI.md` — and
+3. If the user declines, take no action and tell them the migration is
+   available on demand via **`kaos-control migrate-directives`** (CLI).
+
+Migration is idempotent (a project already in the new layout is a no-op) and,
+if `AGENTS.md` already exists and was user-edited, shows a diff before
+overwriting rather than clobbering it.
+
+The **stack-aware content** half remains the substance of this requirement —
+FR-2/FR-5 (directive body tuned to the chosen stack) and FR-6/FR-7/FR-8 (the
+`lifecycle/config.yaml` agent prompt templates: stack-correct write paths,
+build/test commands, architecture-awareness clauses), plus OQ-5 — still gated
+on the Architecture Wizard and per-stack profiles. Structural + migration work
+is captured standalone in [[agents-md-primary-directives]].
 
 ## Problem
 
@@ -123,18 +138,11 @@ re-runnable on demand.
 
 ### Functional — directive files
 
-- **FR-3** Generation emits the following directive files at the project root,
-  each at the location its CLI expects:
-
-  | File | CLI / driver | Location |
-  |---|---|---|
-  | `CLAUDE.md` | Claude Code | project root |
-  | `AGENTS.md` | Codex | project root |
-  | `GEMINI.md` | Gemini | project root |
-  | *(Antigravity directive file)* | Antigravity | its documented location *(see OQ-1)* |
-
-  The set is **extensible**: adding a new driver adds a wrapper + target location
-  without changing the shared body.
+- **FR-3** *(revised — see "Decided" above)* Generation emits, at the project
+  root: **`AGENTS.md`** (canonical content), **`CLAUDE.md`** (a `@AGENTS.md`
+  import), and **`GEMINI.md`**. Antigravity auto-loads `AGENTS.md`; Codex reads
+  it natively. The set is extensible: a new driver adds a file that imports or
+  copies `AGENTS.md` without changing the canonical content.
 - **FR-4** Each directive file contains, at minimum: (a) the repository layout for
   the chosen stack; (b) the artifact/lineage filename convention (slug, monotonic
   per-lineage index, suffix rules, architecture exception); (c) frontmatter
@@ -186,6 +194,17 @@ re-runnable on demand.
 - **FR-13** Where generation needs a naming or location choice (e.g. an ambiguous
   Antigravity path), it **prompts the user and offers a "decide for me" default**,
   consistent with the wizard convention.
+
+### Functional — first-run migration
+
+- **FR-16** On first run after this upgrade, if the project has the legacy
+  single-`CLAUDE.md` layout (a root `CLAUDE.md`, no `AGENTS.md`), kaos-control
+  **notifies the user** about the new multi-CLI directive model and **offers to
+  migrate automatically** (rename `CLAUDE.md` → `AGENTS.md`; rewrite `CLAUDE.md`
+  as `@AGENTS.md`; add `GEMINI.md`). Declining is non-destructive; the same
+  migration is then available on demand via **`kaos-control migrate-directives`**.
+  Migration is idempotent and shows a diff before overwriting a user-edited
+  `AGENTS.md`.
 
 ### Functional — integration
 
@@ -251,20 +270,16 @@ re-runnable on demand.
 
 ## Open Questions
 
-- **OQ-1** What is the exact **filename and location of the Antigravity directive
-  file**? If it is not yet stable, does v1 emit a best-effort default (prompting
-  per FR-13) or defer Antigravity to a follow-up while keeping the wrapper
-  extension point?
+**Resolved by the "Decided" section above:** OQ-1 (no separate Antigravity file
+— it auto-loads `AGENTS.md`); OQ-2 (the standard set is always
+`AGENTS.md` + `CLAUDE.md` + `GEMINI.md`); OQ-3 (only `AGENTS.md` holds content,
+so it is a single-file diff).
 
-- **OQ-2** How does generation know **which CLIs a project uses** — from the
-  distinct `driver:` values across configured agents in `lifecycle/config.yaml`, an
-  explicit `directives:` list, or a wizard prompt? This drives the default set in
-  FR-12.
+### Outstanding
 
-- **OQ-3** What mechanism distinguishes **generated content from user edits** for
-  the diff-before-overwrite guarantee (FR-11): whole-file diff against the last
-  generated version, or **managed-region markers** that let a regeneration update
-  only the generated block while preserving surrounding user prose?
+- **OQ-7** *(new)* Does a **plain `gemini-cli`** target (not Antigravity)
+  auto-load `AGENTS.md`, or read only `GEMINI.md`? Decides whether `GEMINI.md`
+  can be a pointer/import or must be a full generated copy of `AGENTS.md`.
 
 - **OQ-4** For the config edits (FR-6–FR-9): does generation only ever touch the
   **six standard agents**, or should it also update user-added developer agents
