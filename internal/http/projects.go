@@ -398,14 +398,38 @@ func (s *Server) handleUpdateProject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, projectToSummary(p))
 }
 
-// handleCreateProject registers a new project and persists it to the registry.
+// createProjectRequest is the mode-aware body for POST /projects. Existing
+// mode uses Path; new mode uses Parent + DirName (the target directory name,
+// distinct from the project Name).
+type createProjectRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Owner       string `json:"owner"`
+	Mode        string `json:"mode"`
+	Path        string `json:"path,omitempty"`
+	Parent      string `json:"parent,omitempty"`
+	DirName     string `json:"dirName,omitempty"`
+}
+
+// createProjectResult is the response for POST /projects: the registered
+// project summary plus onboarding metadata the frontend needs to render
+// FR7/FR8/resolved-partial-tree feedback.
+type createProjectResult struct {
+	projectSummary
+	ResolvedPath       string   `json:"resolvedPath"`
+	Created            []string `json:"created,omitempty"`
+	AlreadyInitialised bool     `json:"alreadyInitialised"`
+	PartialCompletion  bool     `json:"partialCompletion"`
+}
+
+// handleCreateProject registers a new project and persists it to the
+// registry. Mode-aware (FR1): "existing" scaffolds into a user-chosen
+// pre-existing directory (FR2, FR5); "new" creates the target directory
+// itself, then scaffolds it (FR3, FR6). Both modes converge on the same
+// scaffold-and-register path so a project created either way is
+// indistinguishable at rest from a CLI-`init` project (NFR3).
 func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Name        string `json:"name"`
-		Path        string `json:"path"`
-		Description string `json:"description"`
-		Owner       string `json:"owner"`
-	}
+	var body createProjectRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("invalid_body", "invalid JSON: "+err.Error()))
 		return
@@ -421,35 +445,179 @@ func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if body.Path == "" {
-		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", "path must not be empty"))
-		return
-	}
-	resolved, err := config.ValidatePath(body.Path)
-	if err != nil {
-		writeJSON(w, http.StatusBadRequest, apiError("invalid_path", err.Error()))
+	// The session user's email becomes lifecycle/config.yaml's owner (as for
+	// handleInitProject) — required now that this path always scaffolds.
+	user := userFromCtx(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "create requires an authenticated session"))
 		return
 	}
 
+	mode := body.Mode
+	if mode == "" {
+		mode = "existing"
+	}
+
+	var target string
+	switch mode {
+	case "existing":
+		t, apiErr := resolveExistingTarget(body.Path)
+		if apiErr != nil {
+			writeJSON(w, http.StatusBadRequest, apiErr)
+			return
+		}
+		target = t
+	case "new":
+		t, apiErr := resolveNewTargetForCreate(body.Parent, body.DirName)
+		if apiErr != nil {
+			writeJSON(w, http.StatusBadRequest, apiErr)
+			return
+		}
+		target = t
+	default:
+		writeJSON(w, http.StatusBadRequest, apiError("invalid_mode", `mode must be "existing" or "new"`))
+		return
+	}
+
+	// Reject an already-initialised target rather than re-scaffolding (FR4/NFR2).
+	if config.IsInitialised(target) {
+		writeJSON(w, http.StatusOK, createProjectResult{
+			ResolvedPath:       target,
+			AlreadyInitialised: true,
+		})
+		return
+	}
+
+	createdDir := false
+	if mode == "new" {
+		// Create only the target itself, not missing parents (FR6).
+		if err := os.Mkdir(target, 0o755); err != nil {
+			writeJSON(w, http.StatusInternalServerError, apiError("mkdir_failed", "creating target directory: "+err.Error()))
+			return
+		}
+		createdDir = true
+	}
+	rollbackDir := func() {
+		if createdDir {
+			_ = os.RemoveAll(target)
+		}
+	}
+
+	res, err := initcmd.ScaffoldProject(initcmd.ScaffoldOptions{
+		ProjectRoot: target,
+		ProjectName: body.Name,
+		OwnerEmail:  user.Email,
+		// Force left zero — idempotent, so FR5 (non-destructive) holds for free.
+	})
+	if err != nil {
+		rollbackDir()
+		writeJSON(w, http.StatusInternalServerError, apiError("scaffold_failed", err.Error()))
+		return
+	}
+
+	var created []string
+	dirsCreated := 0
+	for _, d := range res.Dirs {
+		if d.Created {
+			created = append(created, d.Path)
+			dirsCreated++
+		}
+	}
+	for _, f := range res.Files {
+		if f.Created {
+			created = append(created, f.Path)
+		}
+	}
+	// A partial pre-existing lifecycle/ tree is one where some (not all)
+	// stage directories already existed and the rest were just filled in.
+	partialCompletion := mode == "existing" && dirsCreated > 0 && dirsCreated < len(res.Dirs)
+
 	entry := &config.ProjectEntry{
 		Name:        body.Name,
-		Path:        resolved,
+		Path:        target,
 		Description: body.Description,
 		Owner:       body.Owner,
 	}
 
 	if err := config.SaveProjectEntry(s.projectsDir, entry); err != nil {
+		rollbackDir()
 		writeJSON(w, http.StatusInternalServerError, apiError("save_failed", "saving project entry: "+err.Error()))
 		return
 	}
 
 	if err := s.RegisterProject(entry); err != nil {
-		// Roll back: remove the saved YAML file since registration failed.
+		// Roll back: remove the saved YAML file, and the directory we created (FR8).
 		_ = config.DeleteProjectEntry(s.projectsDir, entry.Name)
+		rollbackDir()
 		writeJSON(w, http.StatusInternalServerError, apiError("register_failed", "registering project: "+err.Error()))
 		return
 	}
 
 	p, _ := s.getProject(entry.Name)
-	writeJSON(w, http.StatusCreated, projectToSummary(p))
+	writeJSON(w, http.StatusCreated, createProjectResult{
+		projectSummary:     projectToSummary(p),
+		ResolvedPath:       target,
+		Created:            created,
+		AlreadyInitialised: false,
+		PartialCompletion:  partialCompletion,
+	})
+}
+
+// resolveExistingTarget validates an "existing" mode path (FR4) and returns
+// the normalised, existence/writability-checked target, or a distinct error
+// map identifying the failure (FR8).
+func resolveExistingTarget(path string) (string, map[string]any) {
+	if path == "" {
+		return "", apiError("path_missing", "path must not be empty")
+	}
+	normalized := config.NormalizePath(path)
+	if err := config.ValidatePathFormat(normalized); err != nil {
+		return "", apiError("invalid_path", err.Error())
+	}
+	info, statErr := os.Stat(normalized)
+	if statErr != nil {
+		return "", apiError("path_missing", "path does not exist: "+normalized)
+	}
+	if !info.IsDir() {
+		return "", apiError("not_a_directory", "path is not a directory: "+normalized)
+	}
+	if !isWritable(normalized) {
+		return "", apiError("not_writable", "path is not writable: "+normalized)
+	}
+	return normalized, nil
+}
+
+// resolveNewTargetForCreate validates a "new" mode parent + directory name
+// (FR3/FR4) and returns the resolved target, or a distinct error map
+// identifying the failure (FR8). The target is routed through
+// config.ResolveNewTarget so a crafted name cannot escape parent (NFR1); the
+// config-dir guard is re-asserted on the resolved target.
+func resolveNewTargetForCreate(parent, dirName string) (string, map[string]any) {
+	if parent == "" {
+		return "", apiError("parent_missing", "parent must not be empty")
+	}
+	normalizedParent := config.NormalizePath(parent)
+	if err := config.ValidatePathFormat(normalizedParent); err != nil {
+		return "", apiError("invalid_path", err.Error())
+	}
+	parentInfo, statErr := os.Stat(normalizedParent)
+	if statErr != nil || !parentInfo.IsDir() {
+		return "", apiError("parent_missing", "parent does not exist: "+normalizedParent)
+	}
+	if !isWritable(normalizedParent) {
+		return "", apiError("parent_not_writable", "parent is not writable: "+normalizedParent)
+	}
+
+	target, err := config.ResolveNewTarget(parent, dirName)
+	if err != nil {
+		return "", apiError("invalid_name", err.Error())
+	}
+	// Re-assert the config-dir guard on the resolved target (NFR1).
+	if err := config.ValidatePathFormat(target); err != nil {
+		return "", apiError("invalid_name", err.Error())
+	}
+	if _, err := os.Stat(target); err == nil {
+		return "", apiError("target_exists", "target already exists: "+target)
+	}
+	return target, nil
 }
