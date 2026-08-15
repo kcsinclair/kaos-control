@@ -39,7 +39,9 @@ type Transitioner interface {
 // heading detector became case-insensitive (fix f0d5d17e) — already-indexed,
 // unchanged files are otherwise skipped by the mtime/SHA guards, so the fix
 // would never reach them (e.g. a draft with "## Open questions" stays unblocked).
-const schemaVersion = 6
+// Bumped to 7 to back-fill the new rice_score column for every existing
+// artifact — the mtime/SHA guards would otherwise skip unchanged files.
+const schemaVersion = 7
 
 // Index wraps the SQLite database for one project.
 type Index struct {
@@ -596,14 +598,19 @@ func (idx *Index) Upsert(a *artifact.Artifact) error {
 		createdUnix = a.CreatedAt.Unix()
 	}
 
+	var riceScore any
+	if score, ok := artifact.RiceScore(a.FM); ok {
+		riceScore = score
+	}
+
 	_, err = tx.Exec(`
 		INSERT OR REPLACE INTO artifacts
-			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime, created, has_open_questions, rel_path)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			(path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json, body_sha256, mtime, created, has_open_questions, rel_path, rice_score)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.Path, a.Slug, a.FM.Lineage, a.Index, a.Stage,
 		a.FM.Type, a.FM.Status, a.FM.Title, a.FM.Priority,
 		string(fmJSON), a.SHA256[:], a.Mtime.Unix(), createdUnix,
-		artifact.HasOpenQuestions(a.Body), a.RelPath,
+		artifact.HasOpenQuestions(a.Body), a.RelPath, riceScore,
 	)
 	if err != nil {
 		return fmt.Errorf("upserting artifact: %w", err)
@@ -666,7 +673,7 @@ type Filter struct {
 	// The special value "__unassigned__" matches artifacts with a null or empty release field.
 	Release string
 	// Sort specifies the desired sort order as "<column>:<direction>".
-	// Supported columns: created, mtime, title, status, type, lineage.
+	// Supported columns: created, mtime, title, status, type, lineage, rice.
 	// Direction must be "asc" or "desc". Invalid values fall back to the default order.
 	Sort      string
 	Limit     int
@@ -709,6 +716,7 @@ type ArtifactRow struct {
 	Created           time.Time            `json:"created"`
 	AgentRunCount     int                  `json:"agent_run_count"`
 	ActiveAgentStatus string               `json:"active_agent_status,omitempty"`
+	RiceScore         *float64             `json:"rice_score,omitempty"`
 }
 
 // List returns a filtered, paginated list of artifacts and the total matching count.
@@ -723,7 +731,7 @@ func (idx *Index) List(f Filter) ([]*ArtifactRow, int, error) {
 		return nil, 0, err
 	}
 
-	const sel = `SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created, rel_path
+	const sel = `SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created, rel_path, rice_score
 		 FROM artifacts`
 	orderBy := buildOrderBy(f)
 	var rows *sql.Rows
@@ -762,7 +770,7 @@ func (idx *Index) Count(f Filter) (int, error) {
 // Get returns a single artifact by project-relative path, or nil if not found.
 func (idx *Index) Get(relPath string) (*ArtifactRow, error) {
 	rows, err := idx.db.Query(
-		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created, rel_path
+		`SELECT path, slug, lineage, idx, stage, type, status, title, frontmatter_json, mtime, created, rel_path, rice_score
 		 FROM artifacts WHERE path = ?`, relPath,
 	)
 	if err != nil {
@@ -1956,7 +1964,8 @@ CREATE TABLE artifacts (
     mtime               INTEGER NOT NULL,
     created             INTEGER NOT NULL DEFAULT 0,
     has_open_questions  INTEGER NOT NULL DEFAULT 0,
-    rel_path            TEXT NOT NULL DEFAULT ''
+    rel_path            TEXT NOT NULL DEFAULT '',
+    rice_score          REAL
 );
 CREATE INDEX idx_artifacts_lineage  ON artifacts(lineage);
 CREATE INDEX idx_artifacts_stage    ON artifacts(stage);
@@ -1965,6 +1974,7 @@ CREATE INDEX idx_artifacts_slug     ON artifacts(slug);
 CREATE INDEX idx_artifacts_type     ON artifacts(type);
 CREATE INDEX idx_artifacts_priority ON artifacts(priority);
 CREATE INDEX idx_artifacts_has_open_questions ON artifacts(has_open_questions);
+CREATE INDEX idx_artifacts_rice_score ON artifacts(rice_score);
 
 CREATE TABLE links (
     src    TEXT NOT NULL,
@@ -2031,6 +2041,7 @@ func buildOrderBy(f Filter) string {
 		"status":  "status",
 		"type":    "type",
 		"lineage": "lineage",
+		"rice":    "rice_score",
 	}
 	const defaultOrder = " ORDER BY lineage, idx, path"
 	if f.Sort == "" {
@@ -2047,6 +2058,12 @@ func buildOrderBy(f Filter) string {
 	}
 	if dir != "asc" && dir != "desc" {
 		return defaultOrder
+	}
+	if col == "rice" {
+		// Pin NULL (unscored) rows last regardless of direction: order first by
+		// whether rice_score is NULL (false/0 sorts before true/1), then by the
+		// score itself in the requested direction.
+		return " ORDER BY (rice_score IS NULL), rice_score " + strings.ToUpper(dir)
 	}
 	return " ORDER BY " + mapped + " " + strings.ToUpper(dir)
 }
@@ -2535,9 +2552,10 @@ func scanRows(rows *sql.Rows) ([]*ArtifactRow, int, error) {
 		var fmJSON string
 		var mtimeUnix int64
 		var createdUnix int64
+		var riceScore sql.NullFloat64
 		if err := rows.Scan(
 			&r.Path, &r.Slug, &r.Lineage, &r.Index, &r.Stage,
-			&r.Type, &r.Status, &r.Title, &fmJSON, &mtimeUnix, &createdUnix, &r.RelPath,
+			&r.Type, &r.Status, &r.Title, &fmJSON, &mtimeUnix, &createdUnix, &r.RelPath, &riceScore,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -2547,6 +2565,9 @@ func scanRows(rows *sql.Rows) ([]*ArtifactRow, int, error) {
 		}
 		_ = json.Unmarshal([]byte(fmJSON), &r.FM)
 		r.Assignees = r.FM.Assignees
+		if riceScore.Valid {
+			r.RiceScore = &riceScore.Float64
+		}
 		out = append(out, &r)
 	}
 	return out, len(out), rows.Err()
