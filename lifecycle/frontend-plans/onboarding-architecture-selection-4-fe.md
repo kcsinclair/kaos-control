@@ -1,7 +1,7 @@
 ---
-title: "Frontend Plan — Architecture Wizard (Guided Selection)"
+title: Frontend Plan — Architecture Wizard (Guided Selection)
 type: plan-frontend
-status: in-development
+status: blocked
 lineage: onboarding-architecture-selection
 parent: lifecycle/requirements/onboarding-architecture-selection-2.md
 labels:
@@ -11,6 +11,9 @@ labels:
     - wizard
     - ux
 release: KC-Release5
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Frontend Plan — Architecture Wizard (Guided Selection)
@@ -263,3 +266,51 @@ backend reports scaffolding is available (backend M7); otherwise a "coming soon 
 2. Manual: launch from sidebar (as product-owner) and from post-create modal; run Guided to a
    recommendation, override to Browse, pick a stack, confirm, and observe promoted files + summary
    + ADR links; re-launch to see the prior-run gate; abandon mid-Guided and re-open to resume.
+
+## Progress
+
+- **Milestone 1 — API client + wizard Pinia store**: done (`web/src/api/architecture.ts`,
+  `web/src/types/api.ts`, `web/src/stores/architectureWizard.ts` + unit tests).
+- **Milestone 2 — Wizard shell, routing, and entry points**: done
+  (`ArchitectureWizardView.vue`, `WizardStepper.vue`, `PriorRunGate.vue`, the
+  `architecture/wizard` route, the sidebar entry, and the post-create/post-init
+  "Set up architecture now" hand-offs).
+- **Milestone 3 onward**: blocked — see Open Questions below.
+
+## Open Questions
+
+- **OQ-6 (blocking).** `BrowseCatalogStep.vue` (Milestone 3, FR-5) needs, for **every** catalog
+  architecture, its `title`/`summary`/`labels`/`related_to`/**`pros`/`cons`** up front, before any
+  architecture is chosen — that's what the cards and comparison table render. No backend endpoint
+  returns this today:
+  - `GET /api/p/{project}/architecture/wizard/recommend` requires `answers` and returns at most 3
+    scored `Recommendation`s, never the full catalog.
+  - `GET /api/p/{project}/architecture/wizard/stacks` requires an already-chosen `architecture`
+    slug — unusable before a pick exists, and it's stacks, not architectures.
+  - `GET /api/p/{project}/artifacts?type=architecture` returns index rows with frontmatter
+    (`labels`, `related_to`, `summary`) but **no `pros`/`cons`** — those fields don't exist on
+    `artifact.Frontmatter` at all.
+  - `pros`/`cons` are stored only as `## Pros` / `## Cons` markdown sections in each catalog file's
+    **body**, parsed today exclusively by the backend's internal `architecture.LoadCatalog()` /
+    `parseProsCons()` (used by `Recommend`/`RankStacks`, never exposed over HTTP). The only way to
+    reach that text from the frontend today is `GET /architecture/artifacts/{path}` — the raw
+    markdown body — one artifact at a time, which would mean an N+1 fetch plus re-implementing
+    `## Pros`/`## Cons` section parsing in TypeScript, duplicating backend logic the plan's own
+    "Scope boundary" section reserves for the backend ("All scoring, promotion, summary/ADR
+    authoring... is the backend's").
+  - This plan's cross-reference [[onboarding-architecture-selection-3-be]] (the backend plan) never
+    mentions a catalog-listing/Browse endpoint — it wasn't scoped there either.
+  - **What's needed to unblock**: a new backend read endpoint (e.g.
+    `GET /api/p/{project}/architecture/wizard/catalog` → `{ architectures: CatalogItem[], tech_stacks:
+    CatalogItem[] }`, reusing the existing `architecture.LoadCatalog()` + `CatalogItem` JSON shape)
+    so Browse can render cards/comparison without picking an architecture first. This is backend
+    work outside this plan's write scope (`web/src/**` only) — routing it to
+    [[onboarding-architecture-selection-3-be]] (or a follow-up backend milestone) is the
+    product-owner's call.
+  - Milestones 3 (Browse path), and by extension 5's "override with any other candidate" expander
+    (which falls back to Browse) and 6/7, cannot be implemented and tested against their stated
+    acceptance criteria until this is resolved. Milestone 3's `PathChoiceStep.vue` and
+    `StackChoiceStep.vue` have no such dependency and could proceed once this question is answered
+    and the endpoint (or an approved alternative) exists — implementation stopped rather than
+    guessing at a workaround (e.g. N+1 client-side markdown scraping) that would silently deviate
+    from the plan's own scope boundary.
