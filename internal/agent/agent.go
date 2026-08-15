@@ -807,13 +807,20 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 		if e.Type == "agent.progress" {
 			if payload, ok := e.Payload.(map[string]any); ok {
 				if rawText, kind, isRL := extractRateLimitText(payload); isRL {
+					rlPayload := map[string]any{
+						"run_id":   run.RunID,
+						"raw_text": rawText,
+						"kind":     string(kind),
+					}
+					// FR6/Mode-2: prefer the precise typed reset from the most
+					// recent rate_limit_event over the dispatcher's regex parse
+					// of rawText, when one has been observed for this run.
+					if cached, hadCache := m.getRunQuota(run.RunID); hadCache && cached.ResetsAtUnix > 0 {
+						rlPayload["resets_at_unix"] = cached.ResetsAtUnix
+					}
 					m.hub.Broadcast(hub.Event{
-						Type: "queue.rate_limit",
-						Payload: map[string]any{
-							"run_id":   run.RunID,
-							"raw_text": rawText,
-							"kind":     string(kind),
-						},
+						Type:    "queue.rate_limit",
+						Payload: rlPayload,
 					})
 				}
 				// Mode-1 observability (FR3/FR4): broadcast agent.quota_status on
