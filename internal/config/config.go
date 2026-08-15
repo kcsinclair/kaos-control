@@ -653,9 +653,100 @@ type Project struct {
 	Roadmap       RoadmapConfig       `yaml:"roadmap,omitempty" json:"roadmap,omitempty"`
 	OpenQuestions OpenQuestionsConfig `yaml:"open_questions,omitempty" json:"open_questions,omitempty"`
 
+	ArchitectureWizard ArchitectureWizardConfig `yaml:"architecture_wizard,omitempty" json:"architecture_wizard,omitempty"`
+
 	// RepairNotes records the generation-template self-repairs applied by
 	// ValidateAndRepair when this config was loaded. Not persisted to disk.
 	RepairNotes []RepairNote `yaml:"-" json:"-"`
+}
+
+// architectureWizardMaxQuestions caps the guided questionnaire (FR-7).
+const architectureWizardMaxQuestions = 10
+
+// ArchitectureWizardConfig models the Architecture Wizard's guided
+// questionnaire (OQ-4): its question set, the fallback architecture used
+// when signals are weak or ambiguous (FR-11), and whether the wizard is
+// enabled for this project at all.
+type ArchitectureWizardConfig struct {
+	Questions           []WizardQuestion `yaml:"questions,omitempty" json:"questions,omitempty"`
+	DefaultArchitecture string           `yaml:"default_architecture,omitempty" json:"default_architecture,omitempty"`
+	// Enabled defaults to true (wizard available) when unset.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+}
+
+// WizardQuestion is one guided-questionnaire question. Kind classifies how
+// its contributed labels are used by the recommendation engine: "hard"
+// constraints filter the candidate set, "soft" signals score it, and
+// "language" answers are used only to rank compatible tech stacks.
+type WizardQuestion struct {
+	ID      string         `yaml:"id" json:"id"`
+	Prompt  string         `yaml:"prompt" json:"prompt"`
+	Kind    string         `yaml:"kind" json:"kind"` // hard | soft | language
+	Options []WizardOption `yaml:"options,omitempty" json:"options,omitempty"`
+}
+
+// WizardOption is one selectable answer to a WizardQuestion. Labels are the
+// catalog decision-signal labels this answer contributes (FR-7, FR-8); Hard
+// overrides the question's Kind for this specific answer, letting a mostly
+// soft-signal question still carry one hard-constraint answer.
+type WizardOption struct {
+	Value  string   `yaml:"value" json:"value"`
+	Label  string   `yaml:"label" json:"label"`
+	Labels []string `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Hard   bool     `yaml:"hard,omitempty" json:"hard,omitempty"`
+}
+
+// defaultArchitectureWizard is the built-in question set shipped by
+// kaos-control and used to self-repair a missing/empty architecture_wizard
+// section (mirrors requiredGenerationCapabilities' repair path). It maps
+// directly onto the decision-signal labels carried by the shipped catalog
+// (lifecycle/architecture/architectures/*.md, tech-stacks/*.md).
+func defaultArchitectureWizard() ArchitectureWizardConfig {
+	yesNo := func(id, prompt, kind, yesLabel string, hard bool) WizardQuestion {
+		return WizardQuestion{
+			ID:     id,
+			Prompt: prompt,
+			Kind:   kind,
+			Options: []WizardOption{
+				{Value: "yes", Label: "Yes", Labels: []string{yesLabel}, Hard: hard},
+				{Value: "no", Label: "No"},
+			},
+		}
+	}
+	return ArchitectureWizardConfig{
+		DefaultArchitecture: "modular-monolith",
+		Questions: []WizardQuestion{
+			yesNo("offline", "Does this need to work fully offline, with no network connection required?", "hard", "offline-capable", true),
+			yesNo("collaborative", "Will multiple people view or edit shared data at the same time?", "soft", "collaborative", false),
+			yesNo("realtime", "Does it need realtime updates or streaming data?", "soft", "realtime", false),
+			yesNo("scale", "Do you expect high scale (many users or requests) from the start?", "soft", "high-scale", false),
+			yesNo("mobile", "Is this primarily a phone or tablet app?", "hard", "mobile", true),
+			yesNo("ai-ml", "Is AI/ML central to what the product does?", "soft", "ai-ml", false),
+			{
+				ID:     "ops-tolerance",
+				Prompt: "How much operational complexity can your team take on?",
+				Kind:   "soft",
+				Options: []WizardOption{
+					{Value: "low", Label: "Low — keep it simple", Labels: []string{"low-complexity"}},
+					{Value: "medium", Label: "Medium", Labels: []string{"medium-complexity"}},
+					{Value: "high", Label: "High — we have a platform team", Labels: []string{"high-complexity"}},
+				},
+			},
+			yesNo("cost", "Is minimising cost at launch a priority?", "soft", "low-cost-start", false),
+			{
+				ID:     "language",
+				Prompt: "What's your team's strongest language?",
+				Kind:   "language",
+				Options: []WizardOption{
+					{Value: "go", Label: "Go", Labels: []string{"go"}},
+					{Value: "ts", Label: "TypeScript", Labels: []string{"typescript"}},
+					{Value: "python", Label: "Python", Labels: []string{"python"}},
+					{Value: "java", Label: "Java", Labels: []string{"java"}},
+					{Value: "php", Label: "PHP", Labels: []string{"php"}},
+				},
+			},
+		},
+	}
 }
 
 // RepairNote describes one in-memory self-repair applied by
@@ -728,7 +819,45 @@ func (c *Project) ValidateAndRepair() []RepairNote {
 		}
 	}
 
+	notes = append(notes, c.repairArchitectureWizard()...)
+
 	c.RepairNotes = notes
+	return notes
+}
+
+// repairArchitectureWizard fills a missing/empty architecture_wizard section
+// from defaultArchitectureWizard() and validates the on-disk one: questions
+// beyond the FR-7 cap are trimmed, and questions with an unrecognised kind
+// are dropped. Each repair records a RepairNote.
+func (c *Project) repairArchitectureWizard() []RepairNote {
+	var notes []RepairNote
+
+	if len(c.ArchitectureWizard.Questions) == 0 {
+		c.ArchitectureWizard = defaultArchitectureWizard()
+		notes = append(notes, RepairNote{Agent: "architecture_wizard", TemplateKey: "questions", Reason: "architecture_wizard section missing or empty, filled from built-in defaults"})
+		return notes
+	}
+
+	if c.ArchitectureWizard.DefaultArchitecture == "" {
+		c.ArchitectureWizard.DefaultArchitecture = defaultArchitectureWizard().DefaultArchitecture
+		notes = append(notes, RepairNote{Agent: "architecture_wizard", TemplateKey: "default_architecture", Reason: "default_architecture missing, filled from built-in default"})
+	}
+
+	valid := make([]WizardQuestion, 0, len(c.ArchitectureWizard.Questions))
+	for _, q := range c.ArchitectureWizard.Questions {
+		switch q.Kind {
+		case "hard", "soft", "language":
+			valid = append(valid, q)
+		default:
+			notes = append(notes, RepairNote{Agent: "architecture_wizard", TemplateKey: q.ID, Reason: fmt.Sprintf("question has invalid kind %q, skipped", q.Kind)})
+		}
+	}
+	if len(valid) > architectureWizardMaxQuestions {
+		notes = append(notes, RepairNote{Agent: "architecture_wizard", TemplateKey: "questions", Reason: fmt.Sprintf("question set trimmed from %d to the %d-question cap", len(valid), architectureWizardMaxQuestions)})
+		valid = valid[:architectureWizardMaxQuestions]
+	}
+	c.ArchitectureWizard.Questions = valid
+
 	return notes
 }
 

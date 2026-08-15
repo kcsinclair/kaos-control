@@ -5,7 +5,9 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -328,6 +330,124 @@ func TestOpenQuestionsConfig(t *testing.T) {
 			t.Errorf("EffectiveFormat() = %q, want %q (unknown value must fall back)", got, "blockquote")
 		}
 	})
+}
+
+// TestArchitectureWizardConfig_MissingSectionRepairsToDefault verifies that a
+// project config with no architecture_wizard section is repaired in-memory to
+// defaultArchitectureWizard(), mirroring the generation-template repair path
+// (OQ-4).
+func TestArchitectureWizardConfig_MissingSectionRepairsToDefault(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, "")
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	want := defaultArchitectureWizard()
+	if !reflect.DeepEqual(cfg.ArchitectureWizard, want) {
+		t.Errorf("ArchitectureWizard = %+v, want built-in default %+v", cfg.ArchitectureWizard, want)
+	}
+
+	found := false
+	for _, n := range cfg.RepairNotes {
+		if n.Agent == "architecture_wizard" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected a RepairNote for architecture_wizard, got %+v", cfg.RepairNotes)
+	}
+}
+
+// TestArchitectureWizardConfig_TooManyQuestionsTrimmed verifies that an
+// on-disk question set beyond the FR-7 cap (10) is trimmed with a RepairNote.
+func TestArchitectureWizardConfig_TooManyQuestionsTrimmed(t *testing.T) {
+	var sb strings.Builder
+	sb.WriteString("architecture_wizard:\n  default_architecture: modular-monolith\n  questions:\n")
+	for i := 1; i <= 11; i++ {
+		n := strconv.Itoa(i)
+		sb.WriteString("    - id: q" + n + "\n      prompt: \"Question " + n + "?\"\n      kind: soft\n")
+	}
+
+	dir := writeMinimalProjectConfig(t, sb.String())
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	if len(cfg.ArchitectureWizard.Questions) != architectureWizardMaxQuestions {
+		t.Errorf("len(Questions) = %d, want %d", len(cfg.ArchitectureWizard.Questions), architectureWizardMaxQuestions)
+	}
+
+	found := false
+	for _, n := range cfg.RepairNotes {
+		if n.Agent == "architecture_wizard" && n.TemplateKey == "questions" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected a trim RepairNote, got %+v", cfg.RepairNotes)
+	}
+}
+
+// TestArchitectureWizardConfig_InvalidKindSkipped verifies that a question
+// with an unrecognised kind is dropped (with a RepairNote) rather than
+// accepted.
+func TestArchitectureWizardConfig_InvalidKindSkipped(t *testing.T) {
+	yamlSnippet := "architecture_wizard:\n" +
+		"  default_architecture: modular-monolith\n" +
+		"  questions:\n" +
+		"    - id: good\n      prompt: \"Good?\"\n      kind: soft\n" +
+		"    - id: bad\n      prompt: \"Bad?\"\n      kind: mysterious\n"
+
+	dir := writeMinimalProjectConfig(t, yamlSnippet)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	if len(cfg.ArchitectureWizard.Questions) != 1 || cfg.ArchitectureWizard.Questions[0].ID != "good" {
+		t.Errorf("Questions = %+v, want only the %q question to survive", cfg.ArchitectureWizard.Questions, "good")
+	}
+
+	found := false
+	for _, n := range cfg.RepairNotes {
+		if n.Agent == "architecture_wizard" && n.TemplateKey == "bad" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected a RepairNote for the invalid-kind question, got %+v", cfg.RepairNotes)
+	}
+}
+
+// TestArchitectureWizardConfig_ShippedConfigRoundTrips verifies that this
+// repo's own lifecycle/config.yaml carries an architecture_wizard section
+// byte-identical (in parsed form) to defaultArchitectureWizard(), so loading
+// it applies zero architecture_wizard repairs.
+func TestArchitectureWizardConfig_ShippedConfigRoundTrips(t *testing.T) {
+	cfg, err := LoadProject(repoRoot(t))
+	if err != nil {
+		t.Fatalf("LoadProject(repoRoot): %v", err)
+	}
+	want := defaultArchitectureWizard()
+	if !reflect.DeepEqual(cfg.ArchitectureWizard, want) {
+		t.Errorf("shipped architecture_wizard does not match defaultArchitectureWizard():\ngot:  %+v\nwant: %+v", cfg.ArchitectureWizard, want)
+	}
+	for _, n := range cfg.RepairNotes {
+		if n.Agent == "architecture_wizard" {
+			t.Errorf("unexpected architecture_wizard repair on the shipped config: %+v", n)
+		}
+	}
+}
+
+// repoRoot locates the project root (two directories above internal/config)
+// from this test file's own source path, so tests can load the real,
+// checked-in lifecycle/config.yaml.
+func repoRoot(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	return filepath.Join(filepath.Dir(file), "..", "..")
 }
 
 // containsString is a helper used by TestRoadmapConfig.
