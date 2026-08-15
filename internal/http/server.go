@@ -267,6 +267,13 @@ func (s *Server) buildRouter() chi.Router {
 				r.Post("/architecture/adrs", s.handleCreateADR)
 				r.Get("/architecture/adrs/next", s.handleNextADRNumber)
 
+				// Architecture Wizard (guided/browse selection)
+				r.Get("/architecture/wizard", s.handleGetArchitectureWizard)
+				r.Post("/architecture/wizard/recommend", s.handleRecommendArchitecture)
+				r.Get("/architecture/wizard/stacks", s.handleListWizardStacks)
+				r.Put("/architecture/wizard/state", s.handlePutWizardState)
+				r.Delete("/architecture/wizard/state", s.handleDeleteWizardState)
+
 				// Docs panel
 				r.Get("/docs", s.handleListDocs)
 				r.Get("/docs/*", s.handleGetDoc)
