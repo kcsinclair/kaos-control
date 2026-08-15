@@ -1,9 +1,12 @@
 ---
 title: 'Backend Plan: Suppress Empty Open Questions Section'
 type: plan-backend
-status: in-development
+status: blocked
 lineage: requirements-analyst-suppress-empty-open-questions
 parent: lifecycle/requirements/requirements-analyst-suppress-empty-open-questions-2.md
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 ## Overview
@@ -108,3 +111,39 @@ assignee. This milestone is verification-only — no code change.
 - [ ] A requirement with a genuine question is still auto-blocked and gains a
       `role: product-owner, who: agent` assignee (escalation path preserved).
 - [ ] Existing autoblock/awaiting-answers tests in `internal/index/` remain green.
+
+## Open Questions
+
+- **Milestone 1 targets a file outside the backend-developer's write scope.**
+  Milestone 1's "Files to change" is entirely `lifecycle/config.yaml` (the
+  `requirements-analyst` and `planning-analyst` `prompt_templates.analyst`
+  strings). The backend-developer agent's `allowed_write_paths` in
+  `lifecycle/config.yaml` itself is `internal`, `cmd`, `lifecycle/backend-plans`,
+  `lifecycle/architecture/decisions` — it does not include the config file, and
+  no other configured role (`requirements-analyst`, `planning-analyst`,
+  `frontend-developer`, `test-developer`, `qa`) lists it either. This isn't a Go
+  code change at all, so it doesn't fit the backend-developer role regardless of
+  path permissions. Who should make this edit — should the config change be
+  made directly by a human/product-owner outside the agent pipeline, or should
+  a role's `allowed_write_paths` be extended to cover `lifecycle/config.yaml`?
+  Milestones 2 and 3 cannot be meaningfully verified as "no regression" against
+  the new prompt behaviour until Milestone 1 actually lands, so the whole plan
+  is blocked on this rather than just skipping Milestone 1.
+
+- **Milestone 2's own gap-check surfaces a real bug, not a hypothetical.** I
+  instrumented `artifact.HasOpenQuestions` directly (temporary test, reverted)
+  against a body containing a bare `-` bullet under `## Open Questions` and it
+  returns `true` (treated as a genuine open question), not `false`. The plan's
+  Milestone 2 description assumes list-marker stripping already handles this
+  ("a bare `-` bullet is handled by list-marker stripping") but that's
+  incorrect: `isOpenQuestionSentinel` strips the leading `-` and any
+  surrounding punctuation down to `""`, and `""` is not a key in
+  `openQuestionSentinels`, so the line falls through to "real question."  Since
+  Milestone 1's prompt explicitly forbids agents from emitting a bare `-`
+  bullet as a placeholder, and Milestone 2's acceptance criteria requires every
+  forbidden placeholder to be a recognised sentinel, this is exactly the kind
+  of gap Milestone 2 says to fix with "a minimal addition to
+  `openQuestionSentinels`" — e.g. treating the post-strip empty string as a
+  sentinel. Confirm this is the intended fix (add `"": true` to the map, or
+  equivalent explicit empty-string handling in `isOpenQuestionSentinel`) so it
+  can be implemented once Milestone 1 unblocks the rest of the plan.
