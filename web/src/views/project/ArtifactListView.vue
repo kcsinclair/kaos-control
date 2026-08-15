@@ -17,9 +17,10 @@ import TextFilter from '@/components/TextFilter.vue'
 import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug, ShieldCheck, BookOpen, Bot, FileText } from 'lucide-vue-next'
-import type { WsEvent } from '@/types/api'
+import type { ArtifactRow, WsEvent } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
+import { formatRice, riceScore } from '@/lib/rice'
 
 const route = useRoute()
 const router = useRouter()
@@ -79,6 +80,13 @@ const { sortColumn, sortDirection, sortedRows, toggleSort, resetSort } = useSort
     release: {
       type: 'string',
       getValue: (row) => (row as { frontmatter?: { release?: string } }).frontmatter?.release ?? '',
+    },
+    rice: {
+      type: 'number',
+      getValue: (row) => {
+        const r = row as unknown as ArtifactRow
+        return r.rice_score ?? riceScore(r.frontmatter) ?? null
+      },
     },
   },
 )
@@ -355,6 +363,7 @@ onMounted(async () => {
             <SortHeader label="Status" column="status" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Priority" column="priority" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Release" column="release" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
+            <SortHeader label="RICE" column="rice" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Type" column="type" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Runs" column="agent_run_count" title="Agent Run Count" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
             <SortHeader label="Created" column="created" :sort-column="sortColumn" :sort-direction="sortDirection" :sortable="true" @toggle="onToggleSort" />
@@ -400,6 +409,7 @@ onMounted(async () => {
               <span v-else class="muted">—</span>
             </td>
             <td class="cell-release muted">{{ row.frontmatter?.release || '—' }}</td>
+            <td class="cell-rice muted">{{ formatRice(row.rice_score ?? riceScore(row.frontmatter)) }}</td>
             <td class="muted">{{ row.type }}</td>
             <td class="cell-runs">{{ row.agent_run_count }}</td>
             <td class="muted cell-date">
@@ -703,6 +713,11 @@ onMounted(async () => {
   50%       { opacity: 0.55; }
 }
 .cell-release  { white-space: nowrap; min-width: 80px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.cell-rice {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 56px;
+}
 .cell-runs {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -717,9 +732,9 @@ onMounted(async () => {
   .cell-priority,
   .cell-release { display: none; }
 }
-/* Runs column hidden on narrow viewports */
+/* Runs column (8th) hidden on narrow viewports */
 @media (max-width: 767px) {
-  .artifact-table thead tr th:nth-child(7),
+  .artifact-table thead tr th:nth-child(8),
   .cell-runs { display: none; }
 }
 .btn-check-status {
