@@ -182,12 +182,20 @@ export interface AgentSummary {
   active_status?: string
   source_types?: string[]
   allowed_write_paths?: string[]
+  timeout_minutes?: number
+  git_identity?: { name?: string; email?: string }
+  prompt_templates?: Record<string, string>
+  done_on_success?: boolean
+  endpoint?: string
+  shell_command?: string
   ollama_instance?: string
   ollama_endpoint?: string
   observe_only?: boolean
   bash_allowlist?: string[]
   bash_denylist?: string[]
   on_denial?: string
+  // auth_token is intentionally never present in this payload — it is a
+  // secret and the server excludes it from GET /agents responses.
 }
 
 export interface DenialRecord {
