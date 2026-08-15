@@ -74,40 +74,55 @@ function closeAgentForm() {
   editAgent.value = null
 }
 
+// Fields the editor form manages. Every other key on an existing entry
+// (active_status, source_types, done_on_success, permission fields,
+// endpoint, shell_command, base_url, auth_token, …) must survive a save
+// untouched — see FR-3/FR-5 of the requirement.
 async function handleAgentFormSubmit(data: AgentFormData) {
+  const wasEdit = !!editAgent.value
   try {
     const res = await configApi.getConfig(project)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cfg = configApi.parseConfigYaml(res.raw) as any
     const agents: unknown[] = Array.isArray(cfg.agents) ? cfg.agents : []
+    const idx = agents.findIndex((a) => (a as Record<string, unknown>).name === data.name)
 
-    // Build agent entry object
+    // Start from a copy of the existing on-disk entry (or empty, for create)
+    // and merge only the fields the form manages onto it.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const entry: Record<string, any> = {
-      name: data.name,
-      role: data.roles,
-      driver: data.driver,
-      model: data.model || undefined,
-      timeout_minutes: data.timeout_minutes,
-    }
+    const entry: Record<string, any> = idx >= 0 ? { ...(agents[idx] as Record<string, unknown>) } : {}
+
+    entry.name = data.name
+    entry.role = data.roles
+    entry.driver = data.driver
+
+    if (data.model) entry.model = data.model
+    else delete entry.model
+
+    entry.timeout_minutes = data.timeout_minutes
+
     if (data.driver === 'ollama') {
-      entry.ollama_instance = data.ollama_instance || undefined
-      entry.ollama_endpoint = data.ollama_endpoint !== 'chat' ? data.ollama_endpoint : undefined
+      if (data.ollama_instance) entry.ollama_instance = data.ollama_instance
+      else delete entry.ollama_instance
+      if (data.ollama_endpoint !== 'chat') entry.ollama_endpoint = data.ollama_endpoint
+      else delete entry.ollama_endpoint
     }
-    if (data.allowed_write_paths.length) {
-      entry.allowed_write_paths = data.allowed_write_paths
-    }
+
+    if (data.allowed_write_paths.length) entry.allowed_write_paths = data.allowed_write_paths
+    else delete entry.allowed_write_paths
+
     if (data.git_identity_name || data.git_identity_email) {
       entry.git_identity = {
         name: data.git_identity_name || undefined,
         email: data.git_identity_email || undefined,
       }
-    }
-    if (Object.keys(data.prompt_templates).length) {
-      entry.prompt_templates = data.prompt_templates
+    } else {
+      delete entry.git_identity
     }
 
-    const idx = agents.findIndex((a) => (a as Record<string, unknown>).name === data.name)
+    if (Object.keys(data.prompt_templates).length) entry.prompt_templates = data.prompt_templates
+    else delete entry.prompt_templates
+
     if (idx >= 0) {
       agents[idx] = entry
     } else {
@@ -118,7 +133,7 @@ async function handleAgentFormSubmit(data: AgentFormData) {
     await configApi.updateConfig(project, configApi.dumpConfigYaml(cfg))
     await store.fetchAgents(project)
     closeAgentForm()
-    ui.success(editAgent.value ? 'Agent updated.' : 'Agent created.')
+    ui.success(wasEdit ? 'Agent updated.' : 'Agent created.')
   } catch (e: unknown) {
     ui.error(e instanceof Error ? e.message : 'Failed to save agent')
   }
