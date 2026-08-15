@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Suppress Empty Open Questions Section'
 type: plan-test
-status: draft
+status: approved
 lineage: requirements-analyst-suppress-empty-open-questions
 parent: lifecycle/requirements/requirements-analyst-suppress-empty-open-questions-2.md
 ---
