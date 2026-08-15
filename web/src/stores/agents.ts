@@ -3,7 +3,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as agentsApi from '@/api/agents'
-import type { AgentRunRow, AgentSummary, RunResult, PermissionDecision } from '@/types/api'
+import type { AgentRunRow, AgentSummary, RunResult, PermissionDecision, QuotaStatusPayload } from '@/types/api'
 
 // formatEvent renders a parsed stream event as a single line of text suitable
 // for the live progress panel.
@@ -110,6 +110,9 @@ export const useAgentsStore = defineStore('agents', () => {
   /** Permission decisions received via agent.permission WS events, keyed by run_id. */
   const permissionEvents = ref(new Map<string, PermissionDecision[]>())
 
+  /** Latest quota status received via agent.quota_status WS events, keyed by run_id. */
+  const quotaByRun = ref(new Map<string, QuotaStatusPayload>())
+
   const activeRuns = computed(() => runs.value.filter((r) => r.status === 'running'))
 
   /** Running-run count per agent name, derived from activeRuns. */
@@ -198,6 +201,8 @@ export const useAgentsStore = defineStore('agents', () => {
       const lines = progressLines.value.get(runId)!
       lines.push(formatPermissionEvent(ev))
       if (lines.length > 200) lines.splice(0, lines.length - 200)
+    } else if (type === 'agent.quota_status') {
+      quotaByRun.value.set(runId, payload as unknown as QuotaStatusPayload)
     } else if (type === 'agent.finished' || type === 'agent.failed') {
       const idx = runs.value.findIndex((r) => r.run_id === runId)
       const newStatus = (payload.status as string) ?? (type === 'agent.finished' ? 'done' : 'failed')
@@ -218,6 +223,9 @@ export const useAgentsStore = defineStore('agents', () => {
       if (wsResult) {
         runResults.value.set(runId, wsResult)
       }
+      // The backend's per-run quota cache is cleared on run completion (FR5/AC6);
+      // mirror that lifecycle here so a future badge never reads stale quota state.
+      quotaByRun.value.delete(runId)
     }
 
     // Refresh per-artifact run list when a relevant event arrives.
@@ -244,12 +252,17 @@ export const useAgentsStore = defineStore('agents', () => {
     return runResults.value.get(runId) ?? null
   }
 
+  function quotaForRun(runId: string): QuotaStatusPayload | null {
+    return quotaByRun.value.get(runId) ?? null
+  }
+
   return {
     runs,
     agents,
     loading,
     progressLines,
     permissionEvents,
+    quotaByRun,
     activeRuns,
     runningCountByAgent,
     readyCounts,
@@ -263,6 +276,7 @@ export const useAgentsStore = defineStore('agents', () => {
     killRun,
     fetchRunsByTargetPath,
     getRunResult,
+    quotaForRun,
     onWsEvent,
   }
 })
