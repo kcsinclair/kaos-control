@@ -51,7 +51,30 @@ const allowedWritePathsRaw = ref((props.initial?.allowed_write_paths ?? []).join
 const timeoutMinutes = ref(props.initial?.timeout_minutes ?? 0)
 const gitIdentityName = ref(props.initial?.git_identity?.name ?? '')
 const gitIdentityEmail = ref(props.initial?.git_identity?.email ?? '')
-const promptTemplatesRaw = ref('')
+
+// Prompt templates: one labelled textarea per role, so multi-role template
+// maps (e.g. idea-capture's 3 templates) round-trip losslessly instead of
+// collapsing through a single delimited textarea.
+const promptTemplates = ref<Record<string, string>>({ ...(props.initial?.prompt_templates ?? {}) })
+const promptTemplateRoles = ref<string[]>(Object.keys(promptTemplates.value))
+const newTemplateRole = ref('')
+const templateRolesAvailableToAdd = computed(() =>
+  props.availableRoles.filter((r) => !promptTemplateRoles.value.includes(r)),
+)
+
+function addTemplateRole() {
+  const role = newTemplateRole.value
+  if (!role || promptTemplateRoles.value.includes(role)) return
+  promptTemplateRoles.value.push(role)
+  promptTemplates.value[role] = ''
+  newTemplateRole.value = ''
+}
+
+function removeTemplateRole(role: string) {
+  promptTemplateRoles.value = promptTemplateRoles.value.filter((r) => r !== role)
+  delete promptTemplates.value[role]
+}
+
 const errors = ref<Record<string, string>>({})
 
 // ── Ollama model list ───────────────────────────────────────────────────────
@@ -130,32 +153,16 @@ function handleSubmit() {
     timeout_minutes: timeoutMinutes.value,
     git_identity_name: gitIdentityName.value.trim(),
     git_identity_email: gitIdentityEmail.value.trim(),
-    prompt_templates: parsePromptTemplates(),
+    prompt_templates: collectPromptTemplates(),
   })
 }
 
-function parsePromptTemplates(): Record<string, string> {
-  // Simple format: lines starting with "role:" introduce a template block.
+function collectPromptTemplates(): Record<string, string> {
   const result: Record<string, string> = {}
-  if (!promptTemplatesRaw.value.trim()) return result
-  try {
-    // Expect: role-name: | followed by indented text
-    const lines = promptTemplatesRaw.value.split('\n')
-    let currentRole = ''
-    const currentLines: string[] = []
-    for (const line of lines) {
-      const match = line.match(/^([a-z0-9-]+):\s*\|?\s*$/)
-      if (match) {
-        if (currentRole) result[currentRole] = currentLines.join('\n').trimEnd()
-        currentRole = match[1]
-        currentLines.length = 0
-      } else if (currentRole) {
-        currentLines.push(line.replace(/^  /, ''))
-      }
-    }
-    if (currentRole) result[currentRole] = currentLines.join('\n').trimEnd()
-  } catch {
-    // ignore parse errors
+  for (const role of promptTemplateRoles.value) {
+    const body = promptTemplates.value[role] ?? ''
+    if (body.trim() === '') continue
+    result[role] = body
   }
   return result
 }
@@ -409,20 +416,37 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
       </div>
     </div>
 
-    <!-- Prompt templates (simple text editor) -->
+    <!-- Prompt templates (one textarea per role) -->
     <div class="acf-field">
-      <label class="acf-label" for="acf-prompts">
+      <div class="acf-label">
         Prompt Templates
-        <span class="acf-optional">(role-name: | followed by indented text)</span>
-      </label>
-      <textarea
-        id="acf-prompts"
-        v-model="promptTemplatesRaw"
-        class="acf-textarea acf-textarea--tall"
-        rows="8"
-        placeholder="frontend-developer: |&#10;  You are a frontend developer…"
-        spellcheck="false"
-      />
+        <span class="acf-optional">(per role; clearing a body removes that template)</span>
+      </div>
+
+      <div v-for="role in promptTemplateRoles" :key="role" class="acf-field acf-prompt-entry">
+        <div class="acf-prompt-entry-header">
+          <span class="acf-prompt-role-name">{{ role }}</span>
+          <button
+            type="button"
+            class="acf-prompt-remove"
+            @click="removeTemplateRole(role)"
+          >Remove</button>
+        </div>
+        <textarea
+          v-model="promptTemplates[role]"
+          class="acf-textarea acf-textarea--tall"
+          rows="8"
+          spellcheck="false"
+        />
+      </div>
+
+      <div v-if="templateRolesAvailableToAdd.length" class="acf-select-row">
+        <select v-model="newTemplateRole" class="acf-select">
+          <option value="">— add template for role —</option>
+          <option v-for="r in templateRolesAvailableToAdd" :key="r" :value="r">{{ r }}</option>
+        </select>
+        <button type="button" class="btn-refresh" :disabled="!newTemplateRole" @click="addTemplateRole">+ Add</button>
+      </div>
     </div>
 
     <!-- Actions -->
@@ -502,6 +526,30 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
 }
 .acf-textarea:focus { border-color: var(--color-accent); }
 .acf-textarea--tall { min-height: 160px; }
+.acf-prompt-entry {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.acf-prompt-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.acf-prompt-role-name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-family: monospace;
+}
+.acf-prompt-remove {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.acf-prompt-remove:hover { color: var(--color-error); }
 .acf-error {
   font-size: 12px;
   color: var(--color-error);
