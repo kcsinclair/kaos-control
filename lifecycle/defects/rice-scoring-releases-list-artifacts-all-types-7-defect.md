@@ -1,7 +1,7 @@
 ---
 title: Release artifacts list query fails with Scan destination argument mismatch in TestReleases_ListArtifactsReturnsAllTypes
 type: defect
-status: in-development
+status: done
 lineage: rice-scoring
 parent: lifecycle/tests/rice-scoring-6-test.md
 labels: [defect]

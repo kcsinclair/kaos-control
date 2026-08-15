@@ -1,8 +1,8 @@
 ---
 title: KC-Release4
 type: release
-status: active
+status: shipped
 start_date: "2026-06-15"
-end_date: "2026-07-11"
-updated_at: "2026-07-07T07:31:02Z"
+end_date: "2026-07-14"
+updated_at: "2026-08-11T06:48:25Z"
 ---

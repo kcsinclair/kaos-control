@@ -37,6 +37,7 @@ kaos-control/
 │   └── dist/                built assets, embedded into Go binary
 ├── lifecycle/               this project's own artifacts
 │   ├── config.yaml          per-project config (roles, agents, gates)
+│   ├── architecture/        architecture catalog + this project's architecture (see below)
 │   ├── ideas/               originating idea docs
 │   ├── requirements/        detailed specs
 │   ├── backend-plans/       per-feature backend implementation plans
@@ -100,12 +101,21 @@ lifecycle/test-plans/login-5-test.md
 - Index is monotonic **per lineage, across stages** — never reused.
 - Rejected-and-replanned artifacts get the **next** index; superseded files stay in place and in git history.
 - Every non-originating artifact has `parent:` in its YAML frontmatter pointing to the previous file.
+- **Exception**: artifacts under `lifecycle/architecture/` (catalog entries, promoted choices, ADRs, standards) use clean slug filenames with **no** lineage index — they are standing reference artifacts, not steps in an idea→release lineage.
 
 Full rule: §3.3 and §4.4 of the spec.
 
+## Architecture artifacts (KC-Release5)
+
+`lifecycle/architecture/` holds both the **catalog** (curated candidate `architectures/` and `tech-stacks/`, shipped with kaos-control) and, once the **Architecture Wizard** has run, the **project's own architecture**: the chosen architecture and tech-stack artifacts promoted to the directory root, `architecture-summary.md` (the critical / architecture-breaking requirements and how they map to the chosen architecture and stack, plus the wizard Q&A rationale), `decisions/` (ADRs, `type: adr`, `adr-0001-<slug>.md` onward), and `standards/` (non-functional baselines, secrets handling, usability rules the agents follow).
+
+**Before any substantive design, planning, or implementation work, read `lifecycle/architecture/`** — the summary, the promoted architecture and stack, the ADRs, and the standards. Conform to them. If a change genuinely requires deviating from or extending the recorded architecture, do not deviate silently: propose a new ADR in `lifecycle/architecture/decisions/` capturing the decision, its context, and its consequences. When fleshing out requirements, explicitly identify **architecture-breaking requirements** — those that could invalidate the chosen architecture or technology — and flag them against the Architecture Summary.
+
+Design and converged scope for this area: [[architectural-artefacts]], [[architecture-templates]], [[onboarding-architecture-selection]] (the wizard), [[architecture-relationship-map]], [[architecture-overview-view]], [[agent-directives-generation]].
+
 ## Frontmatter requirements
 
-Required fields on every artifact: `title`, `type`, `status`, `lineage`. Type vocabulary (§4.2 of spec): `idea`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`, `defect`. Status vocabulary: `raw` (unprocessed quick-capture input), `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`, `blocked`. The canonical list lives in `KnownStatuses` at [internal/artifact/artifact.go](internal/artifact/artifact.go) — verify there if in doubt.
+Required fields on every artifact: `title`, `type`, `status`, `lineage`. Type vocabulary (§4.2 of spec): `idea`, `plan-backend`, `plan-frontend`, `plan-dev`, `plan-test`, `test`, `prototype`, `release`, `sprint`, `defect` — plus the KC-Release5 architecture types `architecture`, `tech-stack`, and `adr`. Status vocabulary: `raw` (unprocessed quick-capture input), `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`, `blocked`. The canonical list lives in `KnownStatuses` at [internal/artifact/artifact.go](internal/artifact/artifact.go) — verify there if in doubt.
 
 ## Indexing behaviour
 
