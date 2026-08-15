@@ -1,16 +1,17 @@
 ---
 title: Project initialisation templates do not include recent agent and CLAUDE.md changes
 type: defect
-status: approved
+status: in-development
 lineage: project-init-templates-stale-agents-claude
 created: "2026-08-15T10:05:51+10:00"
-priority: normal
+priority: high
 labels:
     - defect
     - onboarding
     - agents
     - config
     - lifecycle
+release: KC-Release5
 ---
 
 # Project initialisation templates do not include recent agent and CLAUDE.md changes
