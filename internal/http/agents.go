@@ -23,17 +23,36 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"agents": []any{}})
 		return
 	}
+	// agentSummary mirrors every field of config.AgentConfig except secrets.
+	// The only intentionally-omitted field is AuthToken (yaml: auth_token) —
+	// it must never be added here. Any other field added to AgentConfig is a
+	// visible decision: add it below or note why it's excluded.
+	type agentGitIdentity struct {
+		Name  string `json:"name,omitempty"`
+		Email string `json:"email,omitempty"`
+	}
 	type agentSummary struct {
-		Name               string   `json:"name"`
-		Roles              []string `json:"roles"`
-		Driver             string   `json:"driver"`
-		Model              string   `json:"model,omitempty"`
-		ActiveStatus       string   `json:"active_status,omitempty"`
-		AllowedPaths       []string `json:"allowed_write_paths,omitempty"`
-		OllamaInstanceName string   `json:"ollama_instance,omitempty"`
-		OllamaEndpoint     string   `json:"ollama_endpoint,omitempty"`
-		BaseURL            string   `json:"base_url,omitempty"` // claude-env: endpoint base URL (non-secret)
-		ReadyCount         int      `json:"ready_count"`
+		Name               string            `json:"name"`
+		Roles              []string          `json:"roles"`
+		Driver             string            `json:"driver"`
+		Model              string            `json:"model,omitempty"`
+		Endpoint           string            `json:"endpoint,omitempty"`
+		ActiveStatus       string            `json:"active_status,omitempty"`
+		AllowedPaths       []string          `json:"allowed_write_paths,omitempty"`
+		TimeoutMinutes     int               `json:"timeout_minutes"` // 0 = unlimited, always emitted
+		GitIdentity        *agentGitIdentity `json:"git_identity,omitempty"`
+		PromptTemplates    map[string]string `json:"prompt_templates,omitempty"`
+		DoneOnSuccess      bool              `json:"done_on_success,omitempty"`
+		SourceTypes        []string          `json:"source_types,omitempty"`
+		OllamaInstanceName string            `json:"ollama_instance,omitempty"`
+		OllamaEndpoint     string            `json:"ollama_endpoint,omitempty"`
+		BashAllowlist      []string          `json:"bash_allowlist,omitempty"`
+		BashDenylist       []string          `json:"bash_denylist,omitempty"`
+		OnDenial           string            `json:"on_denial,omitempty"`
+		ObserveOnly        bool              `json:"observe_only,omitempty"`
+		ShellCommand       string            `json:"shell_command,omitempty"`
+		BaseURL            string            `json:"base_url,omitempty"` // claude-env: endpoint base URL (non-secret)
+		ReadyCount         int               `json:"ready_count"`
 	}
 	var out []agentSummary
 	for _, ag := range p.Agents.Agents() {
@@ -42,15 +61,30 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 			return
 		}
+		var gitIdentity *agentGitIdentity
+		if ag.GitIdentity.Name != "" || ag.GitIdentity.Email != "" {
+			gitIdentity = &agentGitIdentity{Name: ag.GitIdentity.Name, Email: ag.GitIdentity.Email}
+		}
 		out = append(out, agentSummary{
 			Name:               ag.Name,
 			Roles:              ag.Roles,
 			Driver:             ag.Driver,
 			Model:              ag.Model,
+			Endpoint:           ag.Endpoint,
 			ActiveStatus:       ag.ActiveStatus,
 			AllowedPaths:       ag.AllowedPaths,
+			TimeoutMinutes:     ag.TimeoutMinutes,
+			GitIdentity:        gitIdentity,
+			PromptTemplates:    ag.PromptTemplates,
+			DoneOnSuccess:      ag.DoneOnSuccess,
+			SourceTypes:        ag.SourceTypes,
 			OllamaInstanceName: ag.OllamaInstanceName,
 			OllamaEndpoint:     ag.OllamaEndpoint,
+			BashAllowlist:      ag.BashAllowlist,
+			BashDenylist:       ag.BashDenylist,
+			OnDenial:           ag.OnDenial,
+			ObserveOnly:        ag.ObserveOnly,
+			ShellCommand:       ag.ShellCommand,
 			BaseURL:            ag.BaseURL,
 			ReadyCount:         rc,
 		})
