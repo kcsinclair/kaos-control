@@ -1,7 +1,7 @@
 ---
 title: Project initialisation does not include architecture artefacts
 type: defect
-status: approved
+status: in-development
 lineage: project-init-missing-architecture-artefacts
 created: "2026-08-15T13:28:13+10:00"
 priority: normal
