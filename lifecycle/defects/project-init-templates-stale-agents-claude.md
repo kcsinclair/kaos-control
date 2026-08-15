@@ -1,7 +1,7 @@
 ---
 title: Project initialisation templates do not include recent agent and CLAUDE.md changes
 type: defect
-status: in-development
+status: done
 lineage: project-init-templates-stale-agents-claude
 created: "2026-08-15T10:05:51+10:00"
 priority: high
@@ -12,6 +12,7 @@ labels:
     - config
     - lifecycle
 release: KC-Release5
+parent: lifecycle/tests/agent-editor-incomplete-config-load-6-test.md
 ---
 
 # Project initialisation templates do not include recent agent and CLAUDE.md changes
