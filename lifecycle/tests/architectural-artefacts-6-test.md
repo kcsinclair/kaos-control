@@ -1,7 +1,7 @@
 ---
 title: "Integration Tests — Architectural Artefacts On-Disk Model"
 type: test
-status: in-qa
+status: approved
 lineage: architectural-artefacts
 parent: lifecycle/test-plans/architectural-artefacts-5-test.md
 ---

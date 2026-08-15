@@ -1,7 +1,7 @@
 ---
 title: "New Project Init: Existing or New Directory — Test Plan"
 type: plan-test
-status: in-development
+status: done
 lineage: new-project-init-directory-options
 parent: lifecycle/requirements/new-project-init-directory-options-2.md
 ---
