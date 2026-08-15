@@ -1,7 +1,7 @@
 ---
 title: Project initialisation templates do not include recent agent and CLAUDE.md changes
 type: defect
-status: draft
+status: approved
 lineage: project-init-templates-stale-agents-claude
 created: "2026-08-15T10:05:51+10:00"
 priority: normal
