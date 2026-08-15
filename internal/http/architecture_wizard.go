@@ -480,3 +480,68 @@ func listStandards(projectRoot string) []string {
 	sort.Strings(out)
 	return out
 }
+
+// scaffoldNotAvailableMessage is returned whenever no Scaffolder is
+// registered — i.e. always, until [[architecture-templates]] §4 /
+// [[agent-directives-generation]] land. The core wizard flow (M6) never
+// depends on this seam (FR-17/FR-18).
+const scaffoldNotAvailableMessage = "scaffolding is not yet available — see lifecycle/requirements/agent-directives-generation.md"
+
+// handleGetWizardScaffold handles GET /api/p/{project}/architecture/wizard/scaffold
+func (s *Server) handleGetWizardScaffold(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	if userFromCtx(r.Context()) == nil {
+		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
+		return
+	}
+
+	scaffolder := architecture.ActiveScaffolder()
+	if scaffolder == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"available": false, "message": scaffoldNotAvailableMessage})
+		return
+	}
+
+	archSlug := r.URL.Query().Get("architecture")
+	stackSlug := r.URL.Query().Get("tech_stack")
+	steps, ok := scaffolder.Available(archSlug, stackSlug)
+	writeJSON(w, http.StatusOK, map[string]any{"available": ok, "steps": steps})
+}
+
+// handleRunWizardScaffold handles POST /api/p/{project}/architecture/wizard/scaffold
+func (s *Server) handleRunWizardScaffold(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	if !requireRole(w, r, p, RoleProductOwner) {
+		return
+	}
+
+	var req struct {
+		ArchitectureSlug string                        `json:"architecture"`
+		TechStackSlug    string                        `json:"tech_stack"`
+		Choices          []architecture.ScaffoldChoice `json:"choices"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
+		return
+	}
+
+	scaffolder := architecture.ActiveScaffolder()
+	if scaffolder == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"available": false, "message": scaffoldNotAvailableMessage})
+		return
+	}
+
+	result, err := scaffolder.Run(p.Entry.Path, req.ArchitectureSlug, req.TechStackSlug, req.Choices)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("scaffold_error", err.Error()))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"available": true, "result": result})
+}
