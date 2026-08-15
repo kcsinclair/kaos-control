@@ -1,7 +1,7 @@
 ---
 title: Detect Claude Code rate_limit_event for Precise Quota Signalling
 type: requirement
-status: blocked
+status: draft
 lineage: rate-limit-event-detection
 created: "2026-06-12T00:00:00+10:00"
 priority: medium
@@ -220,7 +220,7 @@ overage will rescue the run when the bucket empties.
 - **An app-global hub.** Aggregating quota across projects, if ever wanted, is a
   frontend concern over the existing per-project events.
 
-## Open questions
+## Resolved questions
 
 None blocking. The proactive-pause question is intentionally deferred (see Out
 of scope); the smallest viable slice is FR1–FR5 (Mode 1) shipped before the
