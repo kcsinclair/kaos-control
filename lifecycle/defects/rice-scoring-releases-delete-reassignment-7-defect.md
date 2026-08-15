@@ -1,7 +1,7 @@
 ---
 title: Release delete reassignment verification fails with Scan destination argument mismatch in TestReleaseDelete_WithReassignment
 type: defect
-status: approved
+status: in-development
 lineage: rice-scoring
 parent: lifecycle/tests/rice-scoring-6-test.md
 labels: [defect]
