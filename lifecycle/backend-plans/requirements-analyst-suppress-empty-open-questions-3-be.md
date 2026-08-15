@@ -1,7 +1,7 @@
 ---
 title: 'Backend Plan: Suppress Empty Open Questions Section'
 type: plan-backend
-status: draft
+status: approved
 lineage: requirements-analyst-suppress-empty-open-questions
 parent: lifecycle/requirements/requirements-analyst-suppress-empty-open-questions-2.md
 ---
