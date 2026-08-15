@@ -4,16 +4,22 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/kaos-control/kaos-control/internal/architecture"
 	"github.com/kaos-control/kaos-control/internal/artifact"
+	"github.com/kaos-control/kaos-control/internal/config"
+	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/project"
+	"github.com/kaos-control/kaos-control/internal/sandbox"
 )
 
 // projectRuntimeDir returns the per-project runtime state directory (the
@@ -241,4 +247,236 @@ func (s *Server) handleDeleteWizardState(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"cleared": true})
+}
+
+// handleCommitArchitectureWizard handles POST /api/p/{project}/architecture/wizard/commit
+// — the single write entry point (FR-13, FR-14, FR-16, NFR-1, NFR-2). It is
+// gated to product-owner (OQ-5): everything up to and including validating
+// the requested architecture/tech-stack against the catalog happens before
+// any write, so a rejected or invalid request leaves the project unchanged.
+func (s *Server) handleCommitArchitectureWizard(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	if !requireRole(w, r, p, RoleProductOwner) {
+		return
+	}
+
+	var req struct {
+		ArchitecturePath     string                     `json:"architecture_path"`
+		TechStackPath        string                     `json:"tech_stack_path"`
+		Answers              []architecture.Answer      `json:"answers"`
+		BreakingRequirements []architecture.BreakingReq `json:"breaking_requirements"`
+		QA                   []architecture.QAPair      `json:"qa"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
+		return
+	}
+	if req.ArchitecturePath == "" || req.TechStackPath == "" {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "architecture_path and tech_stack_path are required"))
+		return
+	}
+
+	arches, stacks, err := architecture.LoadCatalog(p.Entry.Path)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+	archItem, ok := findCatalogItem(arches, req.ArchitecturePath)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "unknown architecture: "+req.ArchitecturePath))
+		return
+	}
+	stackItem, ok := findCatalogItem(stacks, req.TechStackPath)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "unknown tech stack: "+req.TechStackPath))
+		return
+	}
+
+	prior, err := detectPriorRun(p.Entry.Path)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+	isFirstRun := prior.ADRPath == ""
+
+	promoteReq := architecture.PromotionRequest{
+		ArchitectureCatalogPath: req.ArchitecturePath,
+		TechStackCatalogPath:    req.TechStackPath,
+	}
+	changed, err := architecture.SelectionChanged(p.Entry.Path, promoteReq)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	result, err := architecture.Promote(p.Entry.Path, promoteReq)
+	if err != nil {
+		if errors.Is(err, sandbox.ErrPathTraversal) || errors.Is(err, sandbox.ErrAbsolutePath) || errors.Is(err, os.ErrNotExist) {
+			writeJSON(w, http.StatusBadRequest, apiError("bad_request", err.Error()))
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	rejected := rejectedAlternatives(arches, p.Config().ArchitectureWizard, req.Answers, archItem.Slug)
+	qaTrail := renderQATrail(req.QA)
+
+	var adrPath, supersededPath string
+	switch {
+	case isFirstRun:
+		adrPath, err = architecture.WriteADR0001(p.Entry.Path, archItem.Title, stackItem.Title, qaTrail, rejected)
+	case changed:
+		body := qaTrail
+		if len(rejected) > 0 {
+			body += "\n\n## Rejected alternatives\n\n"
+			for _, r := range rejected {
+				body += "- " + r + "\n"
+			}
+		}
+		if prior.ADRPath != "" {
+			body += "\n\nSupersedes: [" + filepath.Base(prior.ADRPath) + "](" + filepath.Base(prior.ADRPath) + ")\n"
+		}
+		adrPath, err = architecture.CreateADR(p.Entry.Path, architecture.ADRRequest{
+			Slug:   "readopt-" + archItem.Slug,
+			Title:  fmt.Sprintf("Re-adopt %s with %s", archItem.Title, stackItem.Title),
+			Status: "approved",
+			Body:   body,
+		})
+		if err == nil && prior.ADRPath != "" {
+			supersededPath = prior.ADRPath
+			err = architecture.Supersede(p.Entry.Path, prior.ADRPath, adrPath)
+		}
+	default:
+		// Same selection, not first run: idempotent re-author of ADR-0001, no new ADR (NFR-2).
+		adrPath, err = architecture.WriteADR0001(p.Entry.Path, archItem.Title, stackItem.Title, qaTrail, rejected)
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	summaryPath, err := architecture.WriteSummary(p.Entry.Path, architecture.SummaryInput{
+		Architecture:         result.PromotedArchitecture,
+		TechStack:            result.PromotedTechStack,
+		BreakingRequirements: req.BreakingRequirements,
+		QA:                   req.QA,
+		ADRPaths:             []string{adrPath},
+		StandardPaths:        listStandards(p.Entry.Path),
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	// Synchronous re-index of everything this commit touched (NFR-2), mirroring
+	// the existing promote handler.
+	reindexPath(p, result.PromotedArchitecture)
+	reindexPath(p, result.PromotedTechStack)
+	for _, archivedPath := range result.Archived {
+		reindexPath(p, archivedPath)
+	}
+	reindexPath(p, adrPath)
+	if supersededPath != "" {
+		reindexPath(p, supersededPath)
+	}
+	reindexPath(p, summaryPath)
+
+	if user := userFromCtx(r.Context()); user != nil {
+		_ = architecture.ClearWizardState(s.projectRuntimeDir(p), user.Email)
+	}
+
+	p.Hub.Broadcast(hub.Event{
+		Type: "artifact.indexed",
+		Payload: map[string]any{
+			"action":                "architecture_wizard_commit",
+			"promoted_architecture": result.PromotedArchitecture,
+			"promoted_tech_stack":   result.PromotedTechStack,
+			"archived":              result.Archived,
+			"adr_path":              adrPath,
+			"superseded_adr_path":   supersededPath,
+			"summary_path":          summaryPath,
+		},
+	})
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"promoted_architecture": result.PromotedArchitecture,
+		"promoted_tech_stack":   result.PromotedTechStack,
+		"archived":              result.Archived,
+		"adr_path":              adrPath,
+		"superseded_adr_path":   supersededPath,
+		"summary_path":          summaryPath,
+	})
+}
+
+// findCatalogItem finds the catalog entry whose repo-relative path matches
+// catalogRelPath (relative to lifecycle/architecture/, e.g.
+// "architectures/modular-monolith.md").
+func findCatalogItem(items []architecture.CatalogItem, catalogRelPath string) (architecture.CatalogItem, bool) {
+	want := path.Join("lifecycle/architecture", catalogRelPath)
+	for _, it := range items {
+		if it.Path == want {
+			return it, true
+		}
+	}
+	return architecture.CatalogItem{}, false
+}
+
+// rejectedAlternatives re-runs Recommend over the submitted answers and
+// returns the titles of every candidate other than the chosen architecture
+// (FR-14's "ranked alternatives that were rejected"). A Recommend error is
+// swallowed — the rejected-alternatives list is supplementary context for
+// the ADR body, never a reason to fail the commit.
+func rejectedAlternatives(arches []architecture.CatalogItem, wizardCfg config.ArchitectureWizardConfig, answers []architecture.Answer, chosenSlug string) []string {
+	recs, _, err := architecture.Recommend(arches, wizardCfg, answers)
+	if err != nil {
+		return nil
+	}
+	var rejected []string
+	for _, rec := range recs {
+		if rec.Item.Slug != chosenSlug {
+			rejected = append(rejected, rec.Item.Title)
+		}
+	}
+	return rejected
+}
+
+// renderQATrail renders the wizard's Q&A trail as a markdown section for
+// embedding in an ADR body and architecture-summary.md (FR-15).
+func renderQATrail(qa []architecture.QAPair) string {
+	if len(qa) == 0 {
+		return "## Selection Q&A\n\nNo questions were answered.\n"
+	}
+	var sb strings.Builder
+	sb.WriteString("## Selection Q&A\n\n")
+	for _, pair := range qa {
+		sb.WriteString("- **Q:** " + pair.Question + "\n")
+		sb.WriteString("  **A:** " + pair.Answer + "\n")
+	}
+	return sb.String()
+}
+
+// listStandards returns the repo-relative paths of any seeded standards
+// under lifecycle/architecture/standards/ — empty until
+// [[architecture-templates]]'s standards seed set is built (a recorded
+// cross-lineage dependency, not a blocker for this milestone).
+func listStandards(projectRoot string) []string {
+	dir := filepath.Join(projectRoot, "lifecycle", "architecture", "standards")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		out = append(out, path.Join("lifecycle/architecture/standards", e.Name()))
+	}
+	sort.Strings(out)
+	return out
 }

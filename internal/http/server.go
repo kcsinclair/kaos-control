@@ -273,6 +273,7 @@ func (s *Server) buildRouter() chi.Router {
 				r.Get("/architecture/wizard/stacks", s.handleListWizardStacks)
 				r.Put("/architecture/wizard/state", s.handlePutWizardState)
 				r.Delete("/architecture/wizard/state", s.handleDeleteWizardState)
+				r.Post("/architecture/wizard/commit", s.handleCommitArchitectureWizard)
 
 				// Docs panel
 				r.Get("/docs", s.handleListDocs)
