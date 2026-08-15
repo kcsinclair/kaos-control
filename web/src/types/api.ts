@@ -121,6 +121,10 @@ export interface ArtifactFrontmatter {
   sprint?: string
   assignees?: ArtifactAssignee[]
   created?: string
+  rice_reach?: number
+  rice_impact?: number
+  rice_confidence?: number
+  rice_effort?: number
 }
 
 export interface ArtifactRow {
@@ -138,6 +142,7 @@ export interface ArtifactRow {
   created: string
   agent_run_count: number
   active_agent_status?: 'running' | 'queued'
+  rice_score?: number
 }
 
 export interface ArtifactDetail extends ArtifactRow {

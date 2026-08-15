@@ -2,6 +2,7 @@
 
 import { api } from './client'
 import type { ArtifactRow, ArtifactDetail, ArtifactFilter, ArtifactFrontmatter, LineageSummary, OpenQuestionsResponse } from '@/types/api'
+import type { RiceComponents } from '@/lib/rice'
 
 function filterParams(f: ArtifactFilter): string {
   const p = new URLSearchParams()
@@ -96,6 +97,13 @@ export function patchPriority(project: string, path: string, priority: string | 
   return api.patch<{ artifact: ArtifactRow }>(
     `/p/${encodeURIComponent(project)}/artifacts/${path}/priority`,
     { priority },
+  )
+}
+
+export function patchRice(project: string, path: string, components: RiceComponents) {
+  return api.patch<{ artifact: ArtifactRow }>(
+    `/p/${encodeURIComponent(project)}/artifacts/${path}/rice`,
+    components,
   )
 }
 
