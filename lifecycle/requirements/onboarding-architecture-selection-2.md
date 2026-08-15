@@ -247,6 +247,8 @@ authoring defined in [[architectural-artefacts]].
   or derived from the catalog labels themselves — given catalogs may add new
   signals over time?
 
+> in the lifecyce/config.yaml
+
 - **OQ-5** Is there an API/permission model consideration — which role(s) may run
   the wizard and thereby promote architecture + author ADR-0001 — or is that
   covered by existing mutation auth ([[auth-role-checks-mutations]])?
