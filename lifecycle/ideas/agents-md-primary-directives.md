@@ -1,7 +1,7 @@
 ---
 title: AGENTS.md-primary directive files + a simple migration option
 type: idea
-status: blocked
+status: draft
 lineage: agents-md-primary-directives
 priority: medium
 labels:
@@ -97,7 +97,7 @@ Those stay coupled to the Architecture Wizard + per-stack profiles. This idea
 gives the file *structure and migration* now; the *content tuning* remains the
 requirement's job.
 
-## Open Questions
+## Resolved Questions
 
 - **Plain `gemini-cli` (non-Antigravity):** does it auto-load `AGENTS.md`, or
   only `GEMINI.md`? Decides whether `GEMINI.md` can be dropped entirely or must
