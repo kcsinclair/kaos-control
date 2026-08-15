@@ -1,7 +1,7 @@
 ---
 title: Backend Plan — Detect rate_limit_event for Precise Quota Signalling
 type: plan-backend
-status: approved
+status: in-development
 lineage: rate-limit-event-detection
 parent: lifecycle/requirements/rate-limit-event-detection-2.md
 created: "2026-08-15T00:00:00+10:00"
