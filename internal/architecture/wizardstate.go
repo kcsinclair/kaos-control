@@ -15,12 +15,12 @@ import (
 // provisional selection, and the current step. It is scratch state — never
 // written under lifecycle/architecture/ (NFR-1) and never indexed.
 type WizardState struct {
-	Path               string // "browse" | "guided"
-	Answers            []Answer
-	ChosenArchitecture string
-	ChosenTechStack    string
-	Step               string
-	UpdatedUnix        int64
+	Path               string   `json:"path"` // "browse" | "guided"
+	Answers            []Answer `json:"answers"`
+	ChosenArchitecture string   `json:"chosen_architecture,omitempty"`
+	ChosenTechStack    string   `json:"chosen_tech_stack,omitempty"`
+	Step               string   `json:"step"`
+	UpdatedUnix        int64    `json:"updated_unix"`
 }
 
 // wizardStateUserIDRe restricts the characters SaveWizardState/LoadWizardState

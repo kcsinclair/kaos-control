@@ -17,15 +17,15 @@ import (
 // CatalogItem is one architecture or tech-stack catalog entry, as read from
 // lifecycle/architecture/architectures/*.md or tech-stacks/*.md.
 type CatalogItem struct {
-	Path      string // repo-relative, e.g. "lifecycle/architecture/architectures/modular-monolith.md"
-	Slug      string // filename stem, e.g. "modular-monolith"
-	Title     string
-	Summary   string
-	Type      string // "architecture" | "tech-stack"
-	Labels    []string
-	RelatedTo []string
-	Pros      []string
-	Cons      []string
+	Path      string   `json:"path"` // repo-relative, e.g. "lifecycle/architecture/architectures/modular-monolith.md"
+	Slug      string   `json:"slug"` // filename stem, e.g. "modular-monolith"
+	Title     string   `json:"title"`
+	Summary   string   `json:"summary"`
+	Type      string   `json:"type"` // "architecture" | "tech-stack"
+	Labels    []string `json:"labels"`
+	RelatedTo []string `json:"related_to"`
+	Pros      []string `json:"pros,omitempty"`
+	Cons      []string `json:"cons,omitempty"`
 }
 
 // LoadCatalog reads every architecture and tech-stack catalog artefact under

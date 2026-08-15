@@ -12,15 +12,15 @@ import (
 // option the user picked (or a free-form value for questions with no fixed
 // options).
 type Answer struct {
-	QuestionID string
-	Value      string
+	QuestionID string `json:"question_id"`
+	Value      string `json:"value"`
 }
 
 // Recommendation is one scored architecture candidate.
 type Recommendation struct {
-	Item  CatalogItem
-	Score int
-	Why   []string
+	Item  CatalogItem `json:"item"`
+	Score int         `json:"score"`
+	Why   []string    `json:"why"`
 }
 
 // maxRecommendations caps the number of candidates Recommend returns (FR-9).
