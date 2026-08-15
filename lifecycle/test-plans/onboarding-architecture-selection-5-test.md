@@ -1,7 +1,7 @@
 ---
-title: "Test Plan — Architecture Wizard (Guided Selection)"
+title: Test Plan — Architecture Wizard (Guided Selection)
 type: plan-test
-status: in-development
+status: blocked
 lineage: onboarding-architecture-selection
 parent: lifecycle/requirements/onboarding-architecture-selection-2.md
 labels:
@@ -10,6 +10,9 @@ labels:
     - onboarding
     - wizard
 release: KC-Release5
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Test Plan — Architecture Wizard (Guided Selection)
@@ -234,3 +237,55 @@ covers.
 2. `make test-integration` green (Milestones 4–6, 8).
 3. `pnpm test` green (Milestone 7).
 4. `make lint` clean.
+
+## Implementation status
+
+Milestones 1–6 are done:
+
+- **1–3 (unit)** were written by backend-developer alongside
+  [onboarding-architecture-selection-3-be](../backend-plans/onboarding-architecture-selection-3-be.md)
+  (`internal/architecture/*_test.go`) — already in place, not duplicated by
+  test-developer.
+- **4–6 (integration)** are newly implemented in
+  `tests/integration/architecture_wizard_read_test.go`,
+  `architecture_wizard_commit_test.go`, `architecture_wizard_scaffold_test.go`
+  — all green. See
+  [lifecycle/tests/onboarding-architecture-selection-test.md](../tests/onboarding-architecture-selection-test.md)
+  for the full scenario → AC mapping.
+
+Milestones 7 and 8 are blocked — see Open Questions below.
+
+## Open Questions
+
+- **OQ-7 (blocking, Milestone 7).** `PathChoiceStep.vue`, `BrowseCatalogStep.vue`,
+  `GuidedQuestionStep.vue`, `RecommendationStep.vue`, `StackChoiceStep.vue`, and
+  `ConfirmStep.vue` do not exist in `web/src/components/architecture/` —
+  `ArchitectureWizardView.vue`'s step body is still the Milestone 2 shell
+  placeholder ("This step isn't implemented yet"). This is downstream of the
+  frontend plan's own blocker:
+  [onboarding-architecture-selection-4-fe](../frontend-plans/onboarding-architecture-selection-4-fe.md)
+  is `status: blocked` on **OQ-6** (no backend endpoint returns the full
+  catalog with `pros`/`cons` up front, which `BrowseCatalogStep` needs), and
+  implementation stopped before any of Milestone 3 onward was built — including
+  `PathChoiceStep`/`StackChoiceStep`, which that plan's own analysis notes
+  don't actually depend on OQ-6. There is nothing to write component tests
+  against yet. Unblocking this milestone requires the frontend plan's OQ-6 to
+  be resolved and its Milestones 3–7 implemented first — a product-owner call,
+  not a test-developer one.
+  - A narrower, already-testable sub-item was found while investigating this:
+    the AC "Sidebar/route wizard entry is gated to product-owner" is only
+    half-true today. `AppSidebar.vue` does conditionally hide the nav entry
+    (`hasProductOwnerAccess`), but the `architecture/wizard` route's
+    `meta: { roles: ['product-owner'] }` is not enforced anywhere —
+    `router.beforeEach` only checks `requiresAuth`, and
+    `ArchitectureWizardView.vue` has no client-side role/access-denied check
+    (unlike `DevOpsView.vue`, which self-guards on the equivalent
+    `meta: { roles: [...] }`). Whether this route-level gate should be
+    implemented to match the `DevOpsView` pattern is itself a product-owner/
+    frontend-developer call, separate from OQ-6.
+- **OQ-8 (blocking, Milestone 8).** Both the Guided and Browse E2E happy paths
+  are specified as full-stack, UI-driven flows through the wizard's steps.
+  Neither can be written until OQ-7 is resolved (there is no step UI to drive).
+  The backend-only sequence (recommend → stacks → commit) this milestone would
+  otherwise exercise is already covered end-to-end at the HTTP level by the
+  Milestone 4/5 integration tests.

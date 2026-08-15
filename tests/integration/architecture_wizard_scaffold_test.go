@@ -1,0 +1,92 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+//go:build integration
+
+package integration
+
+// Test plan: lifecycle/test-plans/onboarding-architecture-selection-5-test.md
+// — Milestone 6 (FR-17, FR-18): the opt-in scaffolding hand-off seam degrades
+// gracefully while no Scaffolder is registered (the state of this codebase
+// today — see internal/architecture/scaffold.go), and the core wizard commit
+// flow never depends on it.
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// TestWizardScaffoldGet_NoScaffolderRegistered_ReturnsUnavailable covers
+// FR-17: with no Scaffolder wired in, GET .../wizard/scaffold reports
+// available:false with an explanatory message rather than erroring.
+func TestWizardScaffoldGet_NoScaffolderRegistered_ReturnsUnavailable(t *testing.T) {
+	env := newTestEnv(t, wizardCatalogSeeds())
+
+	resp := env.doRequest("GET",
+		"/api/p/testproject/architecture/wizard/scaffold?architecture=modular-monolith&tech_stack=go-vue", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	if available, _ := data["available"].(bool); available {
+		t.Errorf("expected available=false with no Scaffolder registered, got %v", data)
+	}
+	msg, _ := data["message"].(string)
+	if !strings.Contains(msg, "not yet available") {
+		t.Errorf("expected an explanatory 'not yet available' message, got %q", msg)
+	}
+}
+
+// TestWizardScaffoldPost_NoScaffolderRegistered_GracefulNoWrites covers
+// FR-17: POST .../wizard/scaffold with no Scaffolder registered returns the
+// same graceful not-available response and writes nothing under the project.
+func TestWizardScaffoldPost_NoScaffolderRegistered_GracefulNoWrites(t *testing.T) {
+	env := newTestEnv(t, wizardCatalogSeeds())
+	before := countArchitectureTreeFiles(t, filepath.Join(env.projectRoot, "lifecycle", "architecture"))
+
+	resp := env.doRequest("POST", "/api/p/testproject/architecture/wizard/scaffold", map[string]any{
+		"architecture": "modular-monolith",
+		"tech_stack":   "go-vue",
+		"choices":      []map[string]any{},
+	})
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	if available, _ := data["available"].(bool); available {
+		t.Errorf("expected available=false with no Scaffolder registered, got %v", data)
+	}
+
+	after := countArchitectureTreeFiles(t, filepath.Join(env.projectRoot, "lifecycle", "architecture"))
+	if after != before {
+		t.Errorf("POST /wizard/scaffold wrote files under lifecycle/architecture/ with no Scaffolder registered: %d before, %d after", before, after)
+	}
+}
+
+// TestWizardCommit_WithoutScaffolding_YieldsCompleteProject covers FR-17/
+// FR-18: a wizard committed without ever touching the scaffold endpoints
+// still produces the complete, valid outcome — promoted files, summary, and
+// ADR-0001, with nothing scaffold-related expected or present.
+func TestWizardCommit_WithoutScaffolding_YieldsCompleteProject(t *testing.T) {
+	env := newTestEnv(t, wizardCatalogSeeds())
+
+	resp := env.doRequest("POST", "/api/p/testproject/architecture/wizard/commit",
+		wizardCommitReq("architectures/modular-monolith.md", "tech-stacks/go-vue.md", nil, nil, nil))
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	for _, key := range []string{"promoted_architecture", "promoted_tech_stack", "adr_path", "summary_path"} {
+		if got, _ := data[key].(string); got == "" {
+			t.Errorf("expected %s to be populated on commit, got empty", key)
+		}
+	}
+
+	for _, want := range []string{
+		"lifecycle/architecture/modular-monolith.md",
+		"lifecycle/architecture/go-vue.md",
+		"lifecycle/architecture/architecture-summary.md",
+	} {
+		if _, err := os.Stat(filepath.Join(env.projectRoot, filepath.FromSlash(want))); err != nil {
+			t.Errorf("expected %q to exist after commit: %v", want, err)
+		}
+	}
+}
