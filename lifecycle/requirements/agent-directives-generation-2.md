@@ -270,16 +270,11 @@ re-runnable on demand.
 
 ## Open Questions
 
-**Resolved by the "Decided" section above:** OQ-1 (no separate Antigravity file
-— it auto-loads `AGENTS.md`); OQ-2 (the standard set is always
-`AGENTS.md` + `CLAUDE.md` + `GEMINI.md`); OQ-3 (only `AGENTS.md` holds content,
-so it is a single-file diff).
-
-### Outstanding
-
 - **OQ-7** *(new)* Does a **plain `gemini-cli`** target (not Antigravity)
   auto-load `AGENTS.md`, or read only `GEMINI.md`? Decides whether `GEMINI.md`
   can be a pointer/import or must be a full generated copy of `AGENTS.md`.
+
+> gemini-cli does not auto-load AGENTS.md. It will use the @AGENTS.md directive in GEMINI.md
 
 - **OQ-4** For the config edits (FR-6–FR-9): does generation only ever touch the
   **six standard agents**, or should it also update user-added developer agents
