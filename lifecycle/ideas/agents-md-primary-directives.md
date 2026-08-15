@@ -1,7 +1,7 @@
 ---
 title: AGENTS.md-primary directive files + a simple migration option
 type: idea
-status: draft
+status: approved
 lineage: agents-md-primary-directives
 priority: medium
 labels:
