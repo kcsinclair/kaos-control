@@ -1,7 +1,7 @@
 ---
 title: Architecture Wizard — Guided Architecture & Stack Selection
 type: requirement
-status: blocked
+status: draft
 lineage: onboarding-architecture-selection
 parent: lifecycle/ideas/onboarding-architecture-selection.md
 labels:
@@ -218,7 +218,7 @@ authoring defined in [[architectural-artefacts]].
 - [ ] Persistence is idempotent and leaves no orphaned/duplicate files on re-run;
       all produced artefacts are re-indexed by the existing paths. *(NFR-2, NFR-3)*
 
-## Open Questions
+## Resolved Questions
 
 - **OQ-1** The catalog compatibility edges are `related_to` links between
   architecture and stack artefacts. Is that edge data guaranteed present and
@@ -252,3 +252,5 @@ authoring defined in [[architectural-artefacts]].
 - **OQ-5** Is there an API/permission model consideration — which role(s) may run
   the wizard and thereby promote architecture + author ADR-0001 — or is that
   covered by existing mutation auth ([[auth-role-checks-mutations]])?
+
+> product owner will be running the wizard.
