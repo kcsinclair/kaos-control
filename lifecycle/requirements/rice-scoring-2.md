@@ -1,7 +1,7 @@
 ---
 title: RICE Scoring for Ideas and Defects
 type: requirement
-status: planning
+status: done
 lineage: rice-scoring
 priority: high
 parent: lifecycle/ideas/rice-scoring.md
