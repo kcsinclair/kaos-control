@@ -1,7 +1,7 @@
 ---
 title: 'Backend: Agent-Read API Returns the Full Non-Secret AgentConfig'
 type: plan-backend
-status: in-development
+status: done
 lineage: agent-editor-incomplete-config-load
 parent: lifecycle/requirements/agent-editor-incomplete-config-load-2.md
 release: KC-Release5
