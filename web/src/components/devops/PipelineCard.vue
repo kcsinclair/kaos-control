@@ -99,11 +99,8 @@ async function handleCancel() {
     </div>
     <div class="card-meta">
       <span class="step-count">{{ props.pipeline.steps.length }} step{{ props.pipeline.steps.length !== 1 ? 's' : '' }}</span>
-      <span v-if="activeRun?.overallStatus === 'passed'" class="run-status run-status--passed">Passed</span>
-      <span v-else-if="activeRun?.overallStatus === 'failed'" class="run-status run-status--failed">Failed</span>
-      <span v-else-if="activeRun?.overallStatus === 'cancelled'" class="run-status run-status--cancelled">Cancelled</span>
-      <span v-else-if="isActive" class="run-status run-status--running">Running</span>
-      <!-- Latest historical run badge when no active run is displayed -->
+      <span v-if="isActive" class="run-status run-status--running">Running</span>
+      <!-- Latest historical run badge; supersedes the static terminal-status badge once a run has completed -->
       <span
         v-else-if="latestRun"
         class="latest-run-badge"
@@ -230,18 +227,6 @@ async function handleCancel() {
 .run-status--running {
   background: var(--badge-approved-bg);
   color: var(--badge-approved-text);
-}
-.run-status--passed {
-  background: var(--badge-done-bg);
-  color: var(--badge-done-text);
-}
-.run-status--failed {
-  background: var(--badge-blocked-bg);
-  color: var(--badge-blocked-text);
-}
-.run-status--cancelled {
-  background: var(--color-border);
-  color: var(--color-text-muted);
 }
 .latest-run-badge {
   display: inline-flex;
