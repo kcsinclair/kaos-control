@@ -41,3 +41,27 @@ PostgreSQL (via SQLAlchemy) for relational data, plus vector databases (pgvector
 - [Event-Driven / Streaming](../architectures/event-driven-streaming.md) — analytics/ML stream consumers.
 - [Edge / Distributed Hybrid](../architectures/edge-hybrid.md) — cloud-side aggregation & inference.
 - [Serverless / FaaS](../architectures/serverless-faas.md) — Python functions for data workloads.
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: uvicorn app.main:app --reload
+  repo_layout:
+    - {path: app/,         note: FastAPI application (routers, models, services)}
+    - {path: app/main.py,  note: ASGI entrypoint}
+    - {path: tests/,       note: pytest tests}
+  roles:
+    backend-developer:
+      write_paths: [app]
+      build: pip install -r requirements.txt
+      lint: ruff check app
+      test: pytest
+    frontend-developer:
+      required: false          # FastAPI is a backend/API — add a frontend stack if you need a UI
+    test-developer:
+      write_paths: [tests]
+      test: pytest
+```

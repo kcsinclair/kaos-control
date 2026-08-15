@@ -45,3 +45,29 @@ A single **`hugo`** binary builds everything (no Node toolchain required). Pair 
 ## When to reach for something else
 - A handful of pages with no content model → hand-authored [Static HTML / CSS / JS](static-html-js.md) is simpler still.
 - Needs request-time server logic, auth, or writes → a full stack like [Go + Vue](go-vue.md) or [Simple PHP](php-simple.md).
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: hugo server -D
+  repo_layout:
+    - {path: content/,  note: Markdown content}
+    - {path: layouts/,  note: template overrides}
+    - {path: themes/,   note: theme(s)}
+    - {path: static/,   note: static assets}
+    - {path: hugo.toml, note: site config}
+  roles:
+    backend-developer:
+      required: false          # static site generator — no server-side code
+    frontend-developer:
+      write_paths: [content, layouts, static, data, i18n]
+      build: hugo --minify
+      lint: hugo --printPathWarnings   # build-time template/path checks
+      test: hugo --renderToMemory      # smoke: the site builds without error
+    test-developer:
+      write_paths: [tests]
+      test: ""                         # add link-check / Playwright as needed
+```

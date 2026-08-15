@@ -60,3 +60,29 @@ Database-per-service (PostgreSQL, Redis, or domain-appropriate stores); no share
 - [Mobile-Native](../architectures/mobile-native.md) — efficient, low-battery mobile-to-backend transport.
 
 > Note: browsers can't speak gRPC directly — pair with a gRPC-web proxy or a REST/GraphQL edge (e.g. a [Go + Vue](go-vue.md) gateway) for public/browser traffic.
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: go run ./cmd/<service>
+  repo_layout:
+    - {path: cmd/,      note: one main package per service}
+    - {path: internal/, note: service implementations + shared libs}
+    - {path: proto/,    note: protobuf definitions}
+    - {path: gen/,      note: generated gRPC/protobuf code}
+    - {path: tests/,    note: integration tests}
+  roles:
+    backend-developer:
+      write_paths: [cmd, internal, proto]
+      build: go build ./...
+      lint: go vet ./...
+      test: go test ./... -short
+    frontend-developer:
+      required: false          # service backbone — no UI
+    test-developer:
+      write_paths: [tests]
+      test: go test -tags integration ./tests/...
+```

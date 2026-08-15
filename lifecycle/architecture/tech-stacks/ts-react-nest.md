@@ -40,3 +40,31 @@ Any — commonly PostgreSQL or MySQL via an ORM (Prisma, TypeORM), MongoDB for d
 - [Single-Service Cloud SaaS](../architectures/single-service-saas.md) — fast iteration, huge ecosystem.
 - [Cloud-Native Microservices](../architectures/cloud-native-microservices.md) — per-service Nest backends.
 - [Serverless / FaaS](../architectures/serverless-faas.md) — first-class Node function support.
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: pnpm dev                          # runs the api + web apps (or each app's dev script)
+  repo_layout:
+    - {path: apps/api/,  note: NestJS backend}
+    - {path: apps/web/,  note: React frontend}
+    - {path: packages/,  note: shared TypeScript packages}
+    - {path: tests/,     note: e2e / integration tests}
+  roles:
+    backend-developer:
+      write_paths: [apps/api, packages]
+      build: pnpm --filter api build
+      lint: pnpm --filter api lint
+      test: pnpm --filter api test
+    frontend-developer:
+      write_paths: [apps/web, packages]
+      build: pnpm --filter web build
+      lint: pnpm --filter web lint
+      test: pnpm --filter web test
+    test-developer:
+      write_paths: [tests]
+      test: pnpm test:e2e
+```

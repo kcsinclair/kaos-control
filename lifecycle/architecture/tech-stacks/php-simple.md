@@ -44,3 +44,27 @@ Keep it honest without heavy scaffolding: **`php -l`** lint, **PHP_CodeSniffer**
 ## When to reach for something else
 - Purely content/read-only, no server logic → a [Static Website](../architectures/static-site.md) ([Hugo](hugo.md) or [hand-authored](static-html-js.md)) is cheaper and safer.
 - Real domain complexity, teams, long-lived app → [PHP + Symfony / PostgreSQL](php-symfony-postgres.md) adds the structure and safety rails.
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: php -S localhost:8000 -t public/   # or -t . if pages live at the root
+  repo_layout:
+    - {path: public/, note: web root (entry PHP pages, assets)}
+    - {path: src/,    note: shared PHP (helpers, DB access via PDO)}
+    - {path: tests/,  note: PHPUnit tests}
+  roles:
+    backend-developer:
+      write_paths: [public, src]
+      build: composer install --no-interaction   # if using composer; else n/a
+      lint: php -l public/index.php               # syntax lint; add phpcs if configured
+      test: vendor/bin/phpunit
+    frontend-developer:
+      required: false          # server-rendered PHP — markup lives with the pages (backend role)
+    test-developer:
+      write_paths: [tests]
+      test: vendor/bin/phpunit
+```

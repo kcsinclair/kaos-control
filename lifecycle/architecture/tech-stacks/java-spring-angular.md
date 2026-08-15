@@ -40,3 +40,31 @@ Enterprise RDBMS (Oracle, SQL Server, PostgreSQL) via JPA/Hibernate; strong tran
 - [Single-Service Cloud SaaS](../architectures/single-service-saas.md) — regulated multi-tenant products.
 - [Cloud-Native Microservices](../architectures/cloud-native-microservices.md) — Spring Cloud service ecosystem.
 - [Event-Driven / Streaming](../architectures/event-driven-streaming.md) — mature Kafka/JMS integration.
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: ./mvnw spring-boot:run            # backend; run Angular with: cd frontend && npm start
+  repo_layout:
+    - {path: src/main/java/,      note: Spring Boot application code}
+    - {path: src/main/resources/, note: config, templates, static}
+    - {path: frontend/,           note: Angular app}
+    - {path: src/test/java/,      note: JUnit tests}
+  roles:
+    backend-developer:
+      write_paths: [src/main/java, src/main/resources]
+      build: ./mvnw compile
+      lint: ./mvnw spotless:check
+      test: ./mvnw test
+    frontend-developer:
+      write_paths: [frontend/src]
+      build: cd frontend && npm run build
+      lint: cd frontend && npm run lint
+      test: cd frontend && npm test
+    test-developer:
+      write_paths: [src/test/java]
+      test: ./mvnw verify
+```

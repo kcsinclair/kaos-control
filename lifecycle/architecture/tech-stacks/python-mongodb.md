@@ -41,3 +41,26 @@ Choose MongoDB when documents are naturally nested and the schema is still movin
 - [Modular Monolith](../architectures/modular-monolith.md) — quick to stand up with a flexible store.
 - [Single-Service Cloud SaaS](../architectures/single-service-saas.md) — document-per-tenant models scale simply.
 - [Serverless / FaaS](../architectures/serverless-faas.md) — stateless functions over a managed document store (Atlas).
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: uvicorn app.main:app --reload     # or your app's entrypoint
+  repo_layout:
+    - {path: app/,   note: application code (routers/handlers, models, repositories)}
+    - {path: tests/, note: pytest tests}
+  roles:
+    backend-developer:
+      write_paths: [app]
+      build: pip install -r requirements.txt
+      lint: ruff check app
+      test: pytest
+    frontend-developer:
+      required: false          # document-data backend — add a frontend stack if you need a UI
+    test-developer:
+      write_paths: [tests]
+      test: pytest
+```

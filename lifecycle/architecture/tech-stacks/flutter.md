@@ -35,3 +35,27 @@ Unparalleled **60/120 FPS** UI performance and highly consistent visuals across 
 - [Mobile-Native](../architectures/mobile-native.md) — one codebase for iOS + Android.
 - [Standalone Desktop](../architectures/standalone-desktop.md) — high-FPS desktop UI.
 - [Edge / Distributed Hybrid](../architectures/edge-hybrid.md) — UI on edge/handheld devices.
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: flutter run
+  repo_layout:
+    - {path: lib/,               note: Dart application code (widgets, state, services)}
+    - {path: test/,              note: Dart unit/widget tests}
+    - {path: integration_test/,  note: integration tests}
+  roles:
+    backend-developer:
+      required: false          # single Dart codebase — no separate backend
+    frontend-developer:
+      write_paths: [lib]
+      build: flutter build apk        # or ios / web / <target>
+      lint: flutter analyze
+      test: flutter test
+    test-developer:
+      write_paths: [test, integration_test]
+      test: flutter test integration_test
+```

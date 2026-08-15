@@ -291,8 +291,7 @@ re-runnable on demand.
   resolves OQ-4 — the generator disables that agent for the stack). The
   generator reads the **promoted** stack's profile and merges the constant
   lifecycle paths (`lifecycle/<stage>-plans`, `architecture/decisions`) onto each
-  role's `write_paths`. Schema seeded on go-vue, php-symfony-postgres,
-  static-html-js; remaining stacks to follow.
+  role's `write_paths`. Present on **all 14 shipped tech-stacks**.
 
 - **OQ-6** *(decided)* **Snapshot at promotion, refresh on demand**
   (`kaos-control init --refresh-directives` / re-run wizard) — directives are

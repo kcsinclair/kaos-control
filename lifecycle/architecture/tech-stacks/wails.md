@@ -32,3 +32,31 @@ Excellent resource efficiency and very low overhead compared to Electron, **with
 
 ## Suits these architectures
 - [Standalone Desktop](../architectures/standalone-desktop.md) — efficient local apps; natural fit for Go teams (and a Go+Vue web app can share frontend code).
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: wails dev
+  repo_layout:
+    - {path: main.go,       note: Wails app entrypoint (root)}
+    - {path: app.go,        note: bound Go methods exposed to the frontend (root)}
+    - {path: internal/,     note: backend Go packages}
+    - {path: frontend/src/, note: web frontend source}
+  roles:
+    backend-developer:
+      write_paths: [internal]          # plus the root main.go / app.go
+      build: go build ./...
+      lint: go vet ./...
+      test: go test ./...
+    frontend-developer:
+      write_paths: [frontend/src]
+      build: cd frontend && pnpm build
+      lint: cd frontend && pnpm lint
+      test: cd frontend && pnpm test
+    test-developer:
+      write_paths: [tests]
+      test: go test ./...
+```

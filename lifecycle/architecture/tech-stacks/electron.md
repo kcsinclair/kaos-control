@@ -32,3 +32,28 @@ The widest range of ready-made components and the smoothest web-developer on-ram
 
 ## Suits these architectures
 - [Standalone Desktop](../architectures/standalone-desktop.md) — when ecosystem breadth and web-dev velocity outweigh footprint.
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only; the generator adds the constant lifecycle paths. Roles that do not apply are marked `required: false`.
+
+```yaml
+stack_profile:
+  run: npm start                         # electron .
+  repo_layout:
+    - {path: src/main/,     note: Electron main process (Node)}
+    - {path: src/renderer/, note: renderer UI (HTML/CSS/TS)}
+    - {path: src/preload/,  note: preload scripts (context bridge)}
+    - {path: tests/,        note: unit + Playwright tests}
+  roles:
+    backend-developer:
+      required: false          # desktop app — main + renderer are owned by the frontend role
+    frontend-developer:
+      write_paths: [src]
+      build: npm run build
+      lint: npm run lint
+      test: npm test
+    test-developer:
+      write_paths: [tests]
+      test: npm test
+```
