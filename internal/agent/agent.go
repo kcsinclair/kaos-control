@@ -405,6 +405,11 @@ type Manager struct {
 	runPolicies map[string]*PolicyConfig // runID → policy config
 	deniedCalls map[string][]DenialRecord
 
+	// runQuota caches the most recent parsed rate_limit_info per run_id. It
+	// backs both the agent.quota_status debounce comparison and the Mode-2
+	// queue.rate_limit resets_at_unix lookup. Guarded by mu.
+	runQuota map[string]RateLimitInfo
+
 	// PauseQueue is an optional callback invoked when a run completes with
 	// denied tool calls (FR16). Typically set to queueDispatcher.Pause().
 	// nil means queue pausing is not configured.
@@ -461,6 +466,7 @@ func New(
 		runSecrets:         make(map[string]string),
 		runPolicies:        make(map[string]*PolicyConfig),
 		deniedCalls:        make(map[string][]DenialRecord),
+		runQuota:           make(map[string]RateLimitInfo),
 		idx:                idx,
 		git:                git,
 		hub:                h,
@@ -1361,15 +1367,32 @@ func (m *Manager) DeniedCalls(runID string) []DenialRecord {
 	return out
 }
 
-// cleanupRunState removes all per-run secret/policy/denial state for runID.
-// Called by supervise() after the run completes.
+// cleanupRunState removes all per-run secret/policy/denial/quota state for
+// runID. Called by supervise() after the run completes.
 func (m *Manager) cleanupRunState(runID string) {
 	m.mu.Lock()
 	delete(m.runSecrets, runID)
 	delete(m.runPolicies, runID)
+	delete(m.runQuota, runID)
 	// deniedCalls is retained until after supervise reads it; caller is
 	// responsible for deleting it once the data has been persisted.
 	m.mu.Unlock()
+}
+
+// setRunQuota stores the most recent parsed rate_limit_info for runID.
+func (m *Manager) setRunQuota(runID string, info RateLimitInfo) {
+	m.mu.Lock()
+	m.runQuota[runID] = info
+	m.mu.Unlock()
+}
+
+// getRunQuota returns the most recent parsed rate_limit_info for runID, if
+// any has been observed.
+func (m *Manager) getRunQuota(runID string) (RateLimitInfo, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	info, ok := m.runQuota[runID]
+	return info, ok
 }
 
 // clearDeniedCalls removes denial state after it has been consumed.
