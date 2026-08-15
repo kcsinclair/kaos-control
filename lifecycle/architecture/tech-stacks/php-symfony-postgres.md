@@ -39,3 +39,30 @@ Server-rendered **Twig** templates for classic web apps, and/or **REST APIs** (v
 - [Modular Monolith](../architectures/modular-monolith.md) — Symfony bundles map cleanly onto bounded modules.
 - [Single-Service Cloud SaaS](../architectures/single-service-saas.md) — productive multi-tenant web products; runs on cheap, ubiquitous hosting.
 - [Local Web Application](../architectures/local-web.md) — a central LAN business app with a relational source of truth.
+
+## Stack profile
+
+See [[agent-directives-generation]]. `write_paths` are stack source roots only;
+the generator adds the constant lifecycle paths.
+
+```yaml
+stack_profile:
+  repo_layout:
+    - {path: src/,        note: Symfony app code (Controllers, Entities, Services)}
+    - {path: templates/,  note: Twig templates}
+    - {path: public/,     note: web root (front controller, built assets)}
+    - {path: migrations/, note: Doctrine migrations}
+    - {path: tests/,      note: PHPUnit tests}
+  roles:
+    backend-developer:
+      write_paths: [src, config, migrations]
+      build: composer install --no-interaction
+      test: php bin/phpunit
+    frontend-developer:
+      write_paths: [templates, assets, public]
+      build: php bin/console asset-map:compile
+      test: php bin/console lint:twig templates
+    test-developer:
+      write_paths: [tests]
+      test: php bin/phpunit
+```

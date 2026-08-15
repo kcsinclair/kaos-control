@@ -283,13 +283,16 @@ re-runnable on demand.
 
 > Lets manage the six standard agents.
 
-- **OQ-5** Where does the **stack → (repo layout, build/test commands, write paths)**
-  profile data live so this generator can consume it — embedded per-stack profiles
-  shipped with the catalog ([[architecture-templates]]), or fields on the promoted
-  `tech-stack` artefact ([[architectural-artefacts]])? This is a hard dependency for
-  FR-2/FR-5/FR-6/FR-7.
+- **OQ-5** *(decided)* The profile lives as an embedded **`stack_profile:` YAML
+  block at the end of each `tech-stack` markdown** — `repo_layout` plus, per
+  developer role, `write_paths` (stack source roots) and `build`/`test`
+  commands. The generator reads the **promoted** stack's profile; it merges the
+  constant lifecycle paths (`lifecycle/<stage>-plans`, `architecture/decisions`)
+  onto each role's `write_paths`. Schema seeded on go-vue, php-symfony-postgres,
+  static-html-js; remaining stacks to follow.
 
-- **OQ-6** Should the shared directive body be **rendered fresh from the current
-  spec/architecture on every run**, or snapshot at promotion time? A live render
-  keeps directives current as the architecture evolves; a snapshot keeps them
-  stable until an explicit refresh.
+- **OQ-6** *(decided)* **Snapshot at promotion, refresh on demand**
+  (`kaos-control init --refresh-directives` / re-run wizard) — directives are
+  generated once when the stack is picked and frozen until an explicit refresh;
+  never live-rendered on every run. Pairs with managed-region markers so a
+  refresh updates only the generated block, preserving user prose.

@@ -45,3 +45,24 @@ Because there's no framework to lean on, lean on checks instead: **html-validate
 ## When to reach for something else
 - Content-heavy site with many pages / a blog → [Hugo](hugo.md) generates and templates it for you.
 - Needs request-time server logic, auth, or writes → a full stack like [Go + Vue](go-vue.md) or [Simple PHP](php-simple.md).
+
+## Stack profile
+
+See [[agent-directives-generation]]. A static site has **no backend role**; the
+frontend role owns the whole site. `write_paths` are stack source roots only.
+
+```yaml
+stack_profile:
+  repo_layout:
+    - {path: htdocs/,         note: hand-authored static site (this IS the deploy output)}
+    - {path: website-assets/, note: images, CSS, JS}
+    - {path: tests/,          note: Playwright + axe accessibility tests}
+  roles:
+    frontend-developer:
+      write_paths: [htdocs, website-assets]
+      build: ""                 # none — htdocs/ is the deployable output
+      test: pnpm test           # playwright + axe + html-validate
+    test-developer:
+      write_paths: [tests]
+      test: pnpm test
+```

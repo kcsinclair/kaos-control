@@ -41,3 +41,33 @@ Relational databases like **PostgreSQL** for ACID compliance, embedded **SQLite*
 - [Single-Service Cloud SaaS](../architectures/single-service-saas.md) — cheap to run per instance.
 - [Edge / Distributed Hybrid](../architectures/edge-hybrid.md) — small efficient edge agent.
 - [Serverless / FaaS](../architectures/serverless-faas.md) — tiny cold-start on Lambda.
+
+## Stack profile
+
+Machine-readable profile consumed by
+[[agent-directives-generation]] to tune `AGENTS.md` (repo layout) and the
+`config.yaml` developer-agent prompts (write paths + build/test commands).
+`write_paths` are the **stack source roots only** — the generator adds the
+constant lifecycle paths (`lifecycle/<stage>-plans`, `architecture/decisions`).
+
+```yaml
+stack_profile:
+  repo_layout:
+    - {path: internal/, note: Go packages — backend logic}
+    - {path: cmd/,      note: binary entry points}
+    - {path: web/src/,  note: Vue 3 + TypeScript SPA source}
+    - {path: web/dist/, note: built SPA, embedded into the binary}
+    - {path: tests/,    note: integration + e2e tests}
+  roles:
+    backend-developer:
+      write_paths: [internal, cmd]
+      build: go build ./...
+      test: go vet ./... && go test ./... -short
+    frontend-developer:
+      write_paths: [web/src]
+      build: cd web && pnpm build
+      test: cd web && pnpm exec vue-tsc --noEmit
+    test-developer:
+      write_paths: [tests, web/src]
+      test: go test -tags integration ./tests/...
+```
