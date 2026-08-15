@@ -234,23 +234,30 @@ re-runnable on demand.
   file**? If it is not yet stable, does v1 emit a best-effort default (prompting
   per FR-13) or defer Antigravity to a follow-up while keeping the wrapper
   extension point?
+
+> Anti
+
 - **OQ-2** How does generation know **which CLIs a project uses** — from the
   distinct `driver:` values across configured agents in `lifecycle/config.yaml`, an
   explicit `directives:` list, or a wizard prompt? This drives the default set in
   FR-12.
+
 - **OQ-3** What mechanism distinguishes **generated content from user edits** for
   the diff-before-overwrite guarantee (FR-11): whole-file diff against the last
   generated version, or **managed-region markers** that let a regeneration update
   only the generated block while preserving surrounding user prose?
+
 - **OQ-4** For the config edits (FR-6–FR-9): does generation only ever touch the
   **six standard agents**, or should it also update user-added developer agents
   that target the same roles? What happens to an agent whose role no longer maps to
   a source root in the chosen stack?
+
 - **OQ-5** Where does the **stack → (repo layout, build/test commands, write paths)**
   profile data live so this generator can consume it — embedded per-stack profiles
   shipped with the catalog ([[architecture-templates]]), or fields on the promoted
   `tech-stack` artefact ([[architectural-artefacts]])? This is a hard dependency for
   FR-2/FR-5/FR-6/FR-7.
+
 - **OQ-6** Should the shared directive body be **rendered fresh from the current
   spec/architecture on every run**, or snapshot at promotion time? A live render
   keeps directives current as the architecture evolves; a snapshot keeps them
