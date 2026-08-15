@@ -76,6 +76,34 @@ func TestConfigTemplateLoadsCleanly(t *testing.T) {
 	}
 }
 
+// TestScaffoldProject_SeedsArchitectureCatalog verifies that ScaffoldProject
+// wires in architecture.EnsureArchitectureScaffold: a freshly initialised
+// project gets lifecycle/architecture/{architectures,tech-stacks} seeded
+// with the shipped catalog and empty, tracked decisions/ and standards/.
+func TestScaffoldProject_SeedsArchitectureCatalog(t *testing.T) {
+	dir := t.TempDir()
+
+	res, err := ScaffoldProject(ScaffoldOptions{ProjectRoot: dir})
+	if err != nil {
+		t.Fatalf("ScaffoldProject: %v", err)
+	}
+	if len(res.Architecture) == 0 {
+		t.Fatal("expected ScaffoldResult.Architecture to report seeded files, got none")
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "lifecycle/architecture/README.md")); err != nil {
+		t.Errorf("expected lifecycle/architecture/README.md to be seeded: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "lifecycle/architecture/architectures/local-web.md")); err != nil {
+		t.Errorf("expected a seeded architecture catalog entry: %v", err)
+	}
+	for _, empty := range []string{"decisions", "standards"} {
+		if _, err := os.Stat(filepath.Join(dir, "lifecycle/architecture", empty, ".gitkeep")); err != nil {
+			t.Errorf("expected tracked empty %s/: %v", empty, err)
+		}
+	}
+}
+
 // TestCLAUDEMdTemplateLanguageConditional verifies that the CLAUDE.md template
 // includes the language section when Language is set and omits it when blank.
 func TestCLAUDEMdTemplateLanguageConditional(t *testing.T) {

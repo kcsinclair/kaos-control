@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kaos-control/kaos-control/internal/agent"
+	"github.com/kaos-control/kaos-control/internal/architecture"
 	"github.com/kaos-control/kaos-control/internal/config"
 	"github.com/kaos-control/kaos-control/internal/devops"
 	kgit "github.com/kaos-control/kaos-control/internal/git"
@@ -87,6 +88,12 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	cfg, err := config.LoadProject(entry.Path)
 	if err != nil {
 		return nil, fmt.Errorf("project %q: loading config: %w", entry.Name, err)
+	}
+
+	// Retrofit lifecycle/architecture/ for existing projects that predate it
+	// (or whose tree is missing/incomplete): idempotent, skip-if-exists.
+	if _, err := architecture.EnsureArchitectureScaffold(entry.Path); err != nil {
+		slog.Warn("project: failed to reconcile architecture scaffold", "name", entry.Name, "err", err)
 	}
 
 	// Open git first so the index can use it for created-date backfill during scan.

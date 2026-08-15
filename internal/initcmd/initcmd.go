@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kaos-control/kaos-control/internal/architecture"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
 	"golang.org/x/term"
@@ -61,8 +62,9 @@ type ScaffoldOptions struct {
 // ScaffoldResult is the outcome of a ScaffoldProject call, partitioned into
 // directories and seed files so callers can render or filter independently.
 type ScaffoldResult struct {
-	Dirs  []Result // from scaffoldDirs (lifecycle/* plus tests/, devops/)
-	Files []Result // from writeSeedFiles (config.yaml, CLAUDE.md, etc.)
+	Dirs         []Result // from scaffoldDirs (lifecycle/* plus tests/, devops/)
+	Files        []Result // from writeSeedFiles (config.yaml, CLAUDE.md, etc.)
+	Architecture []Result // from architecture.EnsureArchitectureScaffold (lifecycle/architecture/*)
 }
 
 // ScaffoldProject creates the standard kaos-control project layout at
@@ -105,7 +107,16 @@ func ScaffoldProject(opts ScaffoldOptions) (ScaffoldResult, error) {
 		return ScaffoldResult{Dirs: dirs}, fmt.Errorf("writing seed files: %w", err)
 	}
 
-	return ScaffoldResult{Dirs: dirs, Files: files}, nil
+	archResults, err := architecture.EnsureArchitectureScaffold(abs)
+	if err != nil {
+		return ScaffoldResult{Dirs: dirs, Files: files}, fmt.Errorf("scaffolding architecture catalog: %w", err)
+	}
+	arch := make([]Result, len(archResults))
+	for i, r := range archResults {
+		arch[i] = Result{Path: r.Path, Created: r.Created}
+	}
+
+	return ScaffoldResult{Dirs: dirs, Files: files, Architecture: arch}, nil
 }
 
 // Run is the entrypoint for the `kaos-control init` subcommand.
@@ -202,6 +213,11 @@ func Run(args []string) error {
 			fmt.Printf("  created  %s\n", r.Path)
 		} else {
 			fmt.Printf("  skipped  %s (already exists)\n", r.Path)
+		}
+	}
+	for _, r := range res.Architecture {
+		if r.Created {
+			fmt.Printf("  created  %s\n", r.Path)
 		}
 	}
 	if ownerEmail != "" {
