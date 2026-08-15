@@ -41,10 +41,28 @@ export interface UserBinding {
   linux_user?: string
 }
 
+export interface CheckDirectoryRequest {
+  mode: 'existing' | 'new'
+  path?: string
+  parent?: string
+  name?: string
+}
+
 export interface CheckDirectoryResult {
+  // Existing-mode fields.
   exists: boolean
+  isDir: boolean
   writable: boolean
   initialised: boolean
+
+  // New-mode fields.
+  parentExists: boolean
+  parentWritable: boolean
+  nameValid: boolean
+  targetExists: boolean
+
+  resolvedPath: string
+  reason?: string
 }
 
 export interface InitProjectResult {

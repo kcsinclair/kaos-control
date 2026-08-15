@@ -68,6 +68,34 @@ function validatePath(): boolean {
   return true
 }
 
+function validateParent(): boolean {
+  if (!form.parent) {
+    errors.parent = 'Parent directory is required.'
+    return false
+  }
+  if (!form.parent.startsWith('/')) {
+    errors.parent = 'Parent must be an absolute path starting with /.'
+    return false
+  }
+  errors.parent = ''
+  return true
+}
+
+const DIR_NAME_INVALID_RE = /[/\\]|(^|[/\\])\.\.($|[/\\])/
+
+function validateDirName(): boolean {
+  if (!form.dirName) {
+    errors.dirName = 'Directory name is required.'
+    return false
+  }
+  if (DIR_NAME_INVALID_RE.test(form.dirName) || form.dirName === '..') {
+    errors.dirName = 'Directory name must not contain "/", "\\", or "..".'
+    return false
+  }
+  errors.dirName = ''
+  return true
+}
+
 function setMode(next: Mode): void {
   if (mode.value === next) return
   mode.value = next
@@ -79,13 +107,33 @@ function setMode(next: Mode): void {
 }
 
 async function handleCheckDirectory() {
-  if (!validatePath()) return
+  if (mode.value === 'existing') {
+    if (!validatePath()) return
+    checkingDir.value = true
+    dirResult.value = null
+    try {
+      dirResult.value = await projectStore.checkDirectory({ mode: 'existing', path: form.path })
+    } catch (err) {
+      errors.path = err instanceof Error ? err.message : 'Check failed'
+    } finally {
+      checkingDir.value = false
+    }
+    return
+  }
+
+  const parentOk = validateParent()
+  const dirNameOk = validateDirName()
+  if (!parentOk || !dirNameOk) return
   checkingDir.value = true
   dirResult.value = null
   try {
-    dirResult.value = await projectStore.checkDirectory(form.path)
+    dirResult.value = await projectStore.checkDirectory({
+      mode: 'new',
+      parent: form.parent,
+      name: form.dirName,
+    })
   } catch (err) {
-    errors.path = err instanceof Error ? err.message : 'Check failed'
+    errors.parent = err instanceof Error ? err.message : 'Check failed'
   } finally {
     checkingDir.value = false
   }
@@ -227,6 +275,9 @@ async function handleSubmit() {
                 ℹ Already initialised
               </span>
             </div>
+            <div v-if="dirResult" class="resolved-path">
+              Resolved path: <code>{{ dirResult.resolvedPath }}</code>
+            </div>
           </div>
 
           <!-- Parent + directory name (new-directory mode) -->
@@ -241,24 +292,56 @@ async function handleSubmit() {
               placeholder="/home/user/projects"
               autocomplete="off"
               :disabled="submitting"
+              @blur="validateParent"
               @input="dirResult = null"
             />
             <span v-if="errors.parent" class="field-error">{{ errors.parent }}</span>
           </div>
           <div v-if="mode === 'new'" class="field">
             <label class="field-label" for="cp-dirname">Directory name <span class="required">*</span></label>
-            <input
-              id="cp-dirname"
-              v-model="form.dirName"
-              class="field-input"
-              :class="{ 'field-input--error': errors.dirName }"
-              type="text"
-              placeholder="my-project"
-              autocomplete="off"
-              :disabled="submitting"
-              @input="dirResult = null"
-            />
+            <div class="path-row">
+              <input
+                id="cp-dirname"
+                v-model="form.dirName"
+                class="field-input path-input"
+                :class="{ 'field-input--error': errors.dirName }"
+                type="text"
+                placeholder="my-project"
+                autocomplete="off"
+                :disabled="submitting"
+                @blur="validateDirName"
+                @input="dirResult = null"
+              />
+              <button
+                type="button"
+                class="btn-check"
+                :disabled="submitting || checkingDir"
+                @click="handleCheckDirectory"
+              >
+                <span v-if="checkingDir" class="spinner" aria-hidden="true"></span>
+                <span v-else>Check</span>
+              </button>
+            </div>
             <span v-if="errors.dirName" class="field-error">{{ errors.dirName }}</span>
+
+            <!-- Directory check result -->
+            <div v-if="dirResult" class="dir-result">
+              <span class="dir-check" :class="dirResult.parentExists ? 'ok' : 'fail'">
+                {{ dirResult.parentExists ? '✓' : '✗' }} Parent exists
+              </span>
+              <span v-if="dirResult.parentExists" class="dir-check" :class="dirResult.parentWritable ? 'ok' : 'fail'">
+                {{ dirResult.parentWritable ? '✓' : '✗' }} Parent writable
+              </span>
+              <span class="dir-check" :class="dirResult.nameValid ? 'ok' : 'fail'">
+                {{ dirResult.nameValid ? '✓' : '✗' }} Name valid
+              </span>
+              <span v-if="dirResult.nameValid" class="dir-check" :class="!dirResult.targetExists ? 'ok' : 'fail'">
+                {{ !dirResult.targetExists ? '✓' : '✗' }} Target available
+              </span>
+            </div>
+            <div v-if="dirResult" class="resolved-path">
+              Resolved path: <code>{{ dirResult.resolvedPath }}</code>
+            </div>
           </div>
 
           <!-- Description -->
@@ -456,6 +539,14 @@ async function handleSubmit() {
 .dir-check.ok { color: #059669; }
 .dir-check.fail { color: #dc2626; }
 .dir-check.info { color: #2563eb; }
+.resolved-path {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.resolved-path code {
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text);
+}
 .general-error {
   padding: var(--space-3);
   background: #fee2e2;

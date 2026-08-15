@@ -82,7 +82,7 @@ async function handleCheckDirectory() {
   checkingDir.value = true
   dirResult.value = null
   try {
-    dirResult.value = await projectStore.checkDirectory(form.path)
+    dirResult.value = await projectStore.checkDirectory({ mode: 'existing', path: form.path })
   } catch (err) {
     errors.path = err instanceof Error ? err.message : 'Check failed'
   } finally {

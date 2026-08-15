@@ -5,6 +5,7 @@ import type {
   ProjectSummary,
   CreateProjectPayload,
   UpdateProjectPayload,
+  CheckDirectoryRequest,
   CheckDirectoryResult,
   InitProjectResult,
 } from '@/types/api'
@@ -33,6 +34,6 @@ export function initProject(name: string) {
   return api.post<InitProjectResult>(`/projects/${encodeURIComponent(name)}/init`)
 }
 
-export function checkDirectory(path: string) {
-  return api.post<CheckDirectoryResult>('/projects/check-directory', { path })
+export function checkDirectory(payload: CheckDirectoryRequest) {
+  return api.post<CheckDirectoryResult>('/projects/check-directory', payload)
 }

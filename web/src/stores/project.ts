@@ -8,6 +8,7 @@ import type {
   ProjectSummary,
   CreateProjectPayload,
   UpdateProjectPayload,
+  CheckDirectoryRequest,
   CheckDirectoryResult,
 } from '@/types/api'
 
@@ -107,8 +108,8 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
-  async function checkDirectory(path: string): Promise<CheckDirectoryResult> {
-    return projectsApi.checkDirectory(path)
+  async function checkDirectory(payload: CheckDirectoryRequest): Promise<CheckDirectoryResult> {
+    return projectsApi.checkDirectory(payload)
   }
 
   return {
