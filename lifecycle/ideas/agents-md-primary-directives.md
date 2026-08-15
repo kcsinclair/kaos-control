@@ -109,6 +109,8 @@ requirement's job.
   markers so stack-aware regeneration (part B) updates only the generated block
   while preserving user prose? (Ties to OQ-3.)
 
+> Lets go with "managed-region markers so stack-aware regeneration"
+
 - **Existing hand-maintained `AGENTS.md`:** if a project already has one, does
   migration merge, defer, or diff-and-confirm?
 
