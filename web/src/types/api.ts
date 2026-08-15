@@ -548,3 +548,140 @@ export interface AgentUsageFilter {
   bucket?: 'hour' | 'day' | 'week'
   tz?: string
 }
+
+// Architecture Wizard — mirrors internal/architecture and internal/config
+// (config.WizardQuestion / config.WizardOption, architecture.CatalogItem,
+// architecture.Answer, architecture.Recommendation, architecture.WizardState,
+// architecture.ScaffoldStep/ScaffoldChoice/ScaffoldResult). See
+// lifecycle/frontend-plans/onboarding-architecture-selection-4-fe.md Milestone 1.
+
+export interface WizardOption {
+  value: string
+  label: string
+  labels?: string[]
+  hard?: boolean
+}
+
+export interface WizardQuestion {
+  id: string
+  prompt: string
+  kind: 'hard' | 'soft' | 'language'
+  options?: WizardOption[]
+}
+
+export interface CatalogItem {
+  path: string
+  slug: string
+  title: string
+  summary: string
+  type: 'architecture' | 'tech-stack'
+  labels: string[]
+  related_to: string[]
+  pros?: string[]
+  cons?: string[]
+}
+
+export interface WizardAnswer {
+  question_id: string
+  value: string
+}
+
+export interface WizardRecommendation {
+  item: CatalogItem
+  score: number
+  why: string[]
+}
+
+export interface WizardPriorRun {
+  detected: boolean
+  architecture?: string
+  tech_stack?: string
+  adr_path?: string
+  summary_path?: string
+}
+
+export interface WizardState {
+  path: 'browse' | 'guided'
+  answers: WizardAnswer[]
+  chosen_architecture?: string
+  chosen_tech_stack?: string
+  step: string
+  updated_unix: number
+}
+
+export interface WizardStartResponse {
+  questions: WizardQuestion[]
+  default_architecture: string
+  prior_run: WizardPriorRun
+  resumable_state: WizardState | null
+}
+
+export interface WizardRecommendResponse {
+  recommendations: WizardRecommendation[]
+  dropped_constraints: string[]
+}
+
+// BreakingReq/QAPair mirror internal/architecture/summary.go, which has no
+// json tags — Go's default encoding uses the exported field name verbatim.
+export interface WizardBreakingReq {
+  Label: string
+  Requirement: string
+  Mapping: string
+}
+
+export interface WizardQAPair {
+  Question: string
+  Answer: string
+}
+
+export interface WizardCommitRequest {
+  architecture_path: string
+  tech_stack_path: string
+  answers: WizardAnswer[]
+  breaking_requirements: WizardBreakingReq[]
+  qa: WizardQAPair[]
+}
+
+export interface WizardCommitResult {
+  promoted_architecture: string
+  promoted_tech_stack: string
+  archived: string[]
+  adr_path: string
+  superseded_adr_path: string
+  summary_path: string
+}
+
+export interface ScaffoldNameField {
+  key: string
+  label: string
+  default_value: string
+}
+
+export interface ScaffoldStep {
+  key: string
+  title: string
+  description: string
+  name_fields?: ScaffoldNameField[]
+}
+
+export interface ScaffoldChoice {
+  step_key: string
+  values?: Record<string, string>
+  use_defaults: boolean
+}
+
+export interface ScaffoldResult {
+  applied: string[]
+  skipped: string[]
+}
+
+export interface WizardScaffoldAvailability {
+  available: boolean
+  steps?: ScaffoldStep[]
+  message?: string
+}
+
+export interface WizardScaffoldRunResult {
+  available: boolean
+  result?: ScaffoldResult
+}
