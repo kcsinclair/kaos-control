@@ -427,6 +427,18 @@ export type WsEventType =
   | 'queue.cancelled'
   | 'queue.paused'
   | 'queue.resumed'
+  | 'agent.quota_status'
+
+/** Payload for the `agent.quota_status` WS event (mirrors the backend wire shape verbatim). */
+export interface QuotaStatusPayload {
+  run_id: string
+  bucket: 'five_hour' | 'weekly' | 'unknown'
+  status: 'allowed' | 'warning' | 'rejected' | 'unknown'
+  /** RFC3339 UTC; omitted when unknown. */
+  resets_at?: string
+  overage_available: boolean
+  overage_disabled_reason?: string
+}
 
 export interface ScheduleSpec {
   type: 'cron' | 'interval' | 'once'
