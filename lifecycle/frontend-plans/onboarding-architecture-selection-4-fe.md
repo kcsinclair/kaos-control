@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Architecture Wizard (Guided Selection)"
 type: plan-frontend
-status: draft
+status: approved
 lineage: onboarding-architecture-selection
 parent: lifecycle/requirements/onboarding-architecture-selection-2.md
 labels:
