@@ -1,0 +1,112 @@
+# AGENTS.md — {{.ProjectName}}
+
+Guidance for AI coding agents (Claude Code, Gemini CLI, and other
+AGENTS.md-compatible tools) working in this repository. `CLAUDE.md` and
+`GEMINI.md` in this repository are pointers to this file — edit here.
+{{if .Language}}
+## Primary Language
+
+This project is primarily written in **{{.Language}}**.
+{{end}}
+## Repository Layout
+
+```
+<project-root>/
+{{- range .RepoLayout}}
+├── {{.Path}}{{if .Note}}    {{.Note}}{{end}}
+{{- end}}
+```
+
+## Architecture Artifacts
+
+{{if .ArchitecturePointer -}}
+This project's chosen architecture is **{{.StackTitle}}**. `lifecycle/architecture/`
+holds the promoted architecture and tech-stack artifacts, `decisions/` (ADRs,
+`type: adr`), and `standards/` (non-functional baselines agents follow).
+{{- else -}}
+Once the Architecture Wizard has run, `lifecycle/architecture/` will hold
+this project's chosen architecture and tech-stack artifacts, `decisions/`
+(ADRs, `type: adr`), and `standards/` (non-functional baselines agents
+follow). Until then, this section is a placeholder — run the wizard, or
+`kaos-control init --refresh-directives` after promoting a stack, to
+regenerate it with stack-specific detail.
+{{- end}}
+
+**Before any substantive design, planning, or implementation work, read
+`lifecycle/architecture/`** and conform to it. If a change genuinely
+requires deviating from or extending the recorded architecture, do not
+deviate silently: propose a new ADR in `lifecycle/architecture/decisions/`
+capturing the decision, its context, and its consequences.
+
+## Lineage Filename Convention
+
+Artifacts for a single idea share a **slug** and carry a **monotonic index** across stages:
+
+```
+lifecycle/ideas/login.md             (originating idea — no index suffix)
+lifecycle/requirements/login-2.md
+lifecycle/backend-plans/login-3-be.md
+lifecycle/frontend-plans/login-4-fe.md
+lifecycle/test-plans/login-5-test.md
+```
+
+- The first file in a lineage has **no index suffix**. Subsequent indices start at `-2`.
+- The index is monotonic **per lineage, across all stages** — never reused.
+- Rejected-and-replanned artifacts get the **next** index; superseded files stay in place.
+- Every non-originating artifact has `parent:` in its YAML frontmatter pointing to the previous file.
+- **Exception:** artifacts under `lifecycle/architecture/` (chosen architecture/stack, ADRs, standards) use clean slug filenames with **no** lineage index — they are standing reference artifacts, not steps in an idea→release lineage.
+
+## Frontmatter Requirements
+
+Required fields on every artifact: `title`, `type`, `status`, `lineage`.
+
+**Type vocabulary:** `idea`, `requirement`, `plan-backend`, `plan-frontend`, `plan-test`, `test`, `prototype`, `defect`, `doc`, `release`, `architecture`, `tech-stack`, `adr`.
+
+**Status vocabulary:** `raw`, `draft`, `clarifying`, `planning`, `in-development`, `in-qa`, `approved`, `rejected`, `abandoned`, `done`, `blocked`.
+
+Example:
+
+```yaml
+---
+title: User Login
+type: idea
+status: draft
+lineage: login
+---
+```
+
+## Commit Conventions
+
+- Commits should be small and focused. Don't amend published commits; create new ones.
+- When a plan drove a change, reference the plan's milestone heading in the commit message.
+- Do not skip pre-commit hooks or signing.
+
+## Agent Roles
+
+Roles split by lifecycle phase:
+
+- **Think:** `analyst` — reads ideas → writes requirements; reads requirements → writes plans.
+- **Make:** `backend-developer`, `frontend-developer`, `test-developer` — implement plans in code.
+- **Verify:** `qa` — runs tests, raises defects in `lifecycle/defects/`.
+- **Cross-cutting:** `product-owner`, `reviewer`.
+
+Six agents are pre-configured in `lifecycle/config.yaml`:
+`requirements-analyst`, `planning-analyst`, `backend-developer`, `frontend-developer`,
+`test-developer`, `qa`. Edit their `prompt_templates` to add project-specific context.
+
+{{if .Stack.Roles -}}
+## Stack-Tuned Commands
+
+Per-role write paths and build/lint/test commands for this project's stack
+(`config.yaml`'s `allowed_write_paths` and prompt templates are kept in sync
+with these):
+
+| Role | Write paths | Build | Lint | Test |
+| --- | --- | --- | --- | --- |
+{{- range $role, $rp := .Stack.Roles}}
+| `{{$role}}` | {{if not $rp.IsRequired}}_disabled for this stack_{{else}}{{join $rp.WritePaths}}{{end}} | {{$rp.Build}} | {{$rp.Lint}} | {{$rp.Test}} |
+{{- end}}
+{{if .Stack.Run}}
+Run the dev server: `{{.Stack.Run}}`
+{{- end}}
+{{- end}}
