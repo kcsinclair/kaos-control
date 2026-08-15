@@ -20,7 +20,8 @@ import { MessageSquarePlus, Bug, ShieldCheck, BookOpen, Bot, FileText } from 'lu
 import type { ArtifactRow, WsEvent } from '@/types/api'
 import { TERMINAL_STATUSES } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
-import { formatRice, riceScore } from '@/lib/rice'
+import { formatRice, riceScore, type RiceComponents } from '@/lib/rice'
+import RiceEditor from '@/components/artifact/RiceEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -198,6 +199,17 @@ function onToggleSort(col: string) {
 
 function openArtifact(path: string) {
   router.push(`/p/${project}/artifacts/${path}`)
+}
+
+function onRiceChanged(row: ArtifactRow, components: RiceComponents) {
+  row.frontmatter = {
+    ...row.frontmatter,
+    rice_reach: components.rice_reach ?? undefined,
+    rice_impact: components.rice_impact ?? undefined,
+    rice_confidence: components.rice_confidence ?? undefined,
+    rice_effort: components.rice_effort ?? undefined,
+  }
+  row.rice_score = riceScore(row.frontmatter) ?? undefined
 }
 
 // Re-fetch when an artifact is indexed via WebSocket
@@ -409,7 +421,18 @@ onMounted(async () => {
               <span v-else class="muted">—</span>
             </td>
             <td class="cell-release muted">{{ row.frontmatter?.release || '—' }}</td>
-            <td class="cell-rice muted">{{ formatRice(row.rice_score ?? riceScore(row.frontmatter)) }}</td>
+            <td class="cell-rice" @click.stop>
+              <RiceEditor
+                v-if="row.type === 'idea' || row.type === 'defect'"
+                :project="project"
+                :path="row.path"
+                :type="row.type"
+                :frontmatter="row.frontmatter"
+                @changed="(c) => onRiceChanged(row, c)"
+                @error="(msg) => ui.error(msg)"
+              />
+              <span v-else class="muted">{{ formatRice(riceScore(row.frontmatter)) }}</span>
+            </td>
             <td class="muted">{{ row.type }}</td>
             <td class="cell-runs">{{ row.agent_run_count }}</td>
             <td class="muted cell-date">
