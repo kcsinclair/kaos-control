@@ -1104,8 +1104,33 @@ func TestResolveNewTarget(t *testing.T) {
 
 	t.Run("traversal name is rejected", func(t *testing.T) {
 		parent := t.TempDir()
-		if _, err := ResolveNewTarget(parent, "../escape"); err == nil {
-			t.Error("ResolveNewTarget with a traversal name: expected error, got nil")
+		if got, err := ResolveNewTarget(parent, "../escape"); err == nil {
+			t.Errorf("ResolveNewTarget with a traversal name: expected error, got nil (target %q)", got)
+		}
+	})
+
+	// NFR1 regression: a name crafted to escape the parent is rejected and
+	// never joined onto the filesystem, whether relative (../../etc) or
+	// absolute (/etc/passwd).
+	t.Run("deep traversal name is rejected and never joined", func(t *testing.T) {
+		parent := t.TempDir()
+		got, err := ResolveNewTarget(parent, "../../etc")
+		if err == nil {
+			t.Errorf("ResolveNewTarget with a deep traversal name: expected error, got nil (target %q)", got)
+		}
+		if got != "" {
+			t.Errorf("ResolveNewTarget with a deep traversal name: expected empty target on error, got %q", got)
+		}
+	})
+
+	t.Run("absolute name is rejected and never joined", func(t *testing.T) {
+		parent := t.TempDir()
+		got, err := ResolveNewTarget(parent, "/etc/passwd")
+		if err == nil {
+			t.Errorf("ResolveNewTarget with an absolute name: expected error, got nil (target %q)", got)
+		}
+		if got != "" {
+			t.Errorf("ResolveNewTarget with an absolute name: expected empty target on error, got %q", got)
 		}
 	})
 
