@@ -112,11 +112,6 @@ banner, refresh panel, `useDirectiveApply` composable).
 
 ## Open Questions
 
-Two places where the test plan's literal wording and the shipped, already-unit-tested backend
-diverge. Neither blocked writing the rest of this suite — both are narrow, and I have a verified,
-unambiguous answer for what the code *actually* does in each case; what's open is whether that's
-the *intended* behaviour, which is a product/requirements call, not a testing one.
-
 1. **Milestone 3 — "edit content inside the markers... refresh without force → response carries a
    diff."** As shipped, `internal/directives/write.go`'s `writeFile` never diff-gates edits made
    *inside* an intact managed-region marker pair — it always overwrites that region on refresh,
