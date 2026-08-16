@@ -1,7 +1,7 @@
 ---
 title: Agent Directives Generation — Integration Tests
 type: test
-status: blocked
+status: done
 lineage: agent-directives-generation
 parent: lifecycle/test-plans/agent-directives-generation-5-test.md
 assignees:
@@ -110,32 +110,17 @@ Run with: `go test ./tests/integration/... ./tests/... -tags integration -run Te
 Not duplicated here — owned by [[agent-directives-generation-4-fe]]'s vitest suite (migration
 banner, refresh panel, `useDirectiveApply` composable).
 
-## Open Questions
+## Resolved Questions
 
-1. **Milestone 3 — "edit content inside the markers... refresh without force → response carries a
-   diff."** As shipped, `internal/directives/write.go`'s `writeFile` never diff-gates edits made
-   *inside* an intact managed-region marker pair — it always overwrites that region on refresh,
-   regardless of `force`. This is deliberate and already locked in by
-   `internal/directives/write_test.go`'s `TestWriteFile_SurgicalRefresh_NoForceNeeded`, and matches
-   the resolved OQ-6 in
-   [lifecycle/requirements/agent-directives-generation-2.md](lifecycle/requirements/agent-directives-generation-2.md)
-   ("a refresh updates only the generated block"). Diff-gating (FR-11) applies only when the marker
-   pair itself is missing. `TestDirectivesManagedRegion_EditsInsideMarkers_AlwaysRefreshedNoForceNeeded`
-   tests the verified actual (and OQ-6-consistent) behaviour. No action needed unless product-owner
-   wants FR-11/the test plan's wording tightened to match OQ-6 explicitly.
+Both confirmed against the code; shipped behaviour is correct — the requirement/test-plan wording
+was revised to match (as FR-1/FR-3 were for the AGENTS.md-primary decision). No code changes.
 
-2. **Milestone 6 — "All written files are retrievable via the artifacts index (re-index fired —
-   FR-15)."** AGENTS.md/CLAUDE.md/GEMINI.md are written at the **project root** (per the
-   AGENTS.md-primary "Decided" revision). `internal/index/index.go`'s `Scan` restricts artifacts to
-   `lifecycle/**/*.md` ("Only `.md` files inside `lifecycle/` are artifacts"), and
-   `internal/watcher/watcher.go`'s `Watcher` only recurses `lifecycle/` and `docs/` — never the
-   project root. `internal/directives/generate.go` documents that `Generate`/`Migrate` hold no
-   index handle of their own, and neither `handleRefreshDirectives` nor `handleMigrateDirectives`
-   (`internal/http/projects.go`) calls a re-index entry point for these files — only
-   `p.ReloadConfig()` for the `lifecycle/config.yaml` patch. So there is currently **no code path**
-   that makes these three files retrievable via `GET .../artifacts`.
-   `TestDirectivesMigrate_WrittenFilesNotInArtifactsIndex` documents this as the verified current
-   behaviour rather than silently assuming FR-15 holds or silently dropping the check. **Needs a
-   product-owner decision:** should the index/watcher scope extend to cover project-root directive
-   files (a backend change), or should FR-15 be revised to exclude them — the same way FR-1/FR-3
-   were explicitly marked revised for the AGENTS.md-primary decision?
+1. **M3 — edits inside intact markers.** `writeFile` regenerates the managed region in place on
+   every refresh (no diff-gate) — correct per OQ-6. Diff-gating applies only when the markers are
+   absent. FR-11 and the test-plan M3 wording updated accordingly.
+
+2. **M6 — FR-15 indexing.** The root directive files (`AGENTS.md`/`CLAUDE.md`/`GEMINI.md`) are not
+   lifecycle artefacts and are intentionally outside the artefact index/watcher (`lifecycle/**/*.md`
+   only) — exactly as `CLAUDE.md` has always been. FR-15 revised to say so; only the
+   `lifecycle/config.yaml` patch is picked up (via `ReloadConfig`).
+   `TestDirectivesMigrate_WrittenFilesNotInArtifactsIndex` guards this as intended behaviour.

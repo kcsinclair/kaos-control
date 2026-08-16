@@ -183,11 +183,13 @@ re-runnable on demand.
   `kaos-control init --refresh-directives` regenerates every managed file/section
   from the current selection; a second run with the same selection produces no
   net change.
-- **FR-11** Before overwriting any file that has been **edited since it was last
-  generated**, the process shows a **diff** and requires confirmation; it never
-  silently overwrites user edits. Files that do not yet exist are created without a
-  diff prompt. *(The mechanism for distinguishing generated vs user-edited content
-  — full-file diff vs managed-region markers — is OQ-3.)*
+- **FR-11** User prose is never silently overwritten. Content **inside** an intact
+  managed-region marker pair is generated content and is refreshed in place on every
+  run (that is the point of the region — OQ-6); prose **outside** the markers is
+  always preserved. The diff-and-confirm gate protects the whole file only when the
+  managed markers are **absent** (a legacy or hand-authored file), and when a
+  migration would overwrite a differing pre-existing `AGENTS.md`. Files that do not
+  yet exist are created without a diff prompt.
 - **FR-12** A project may **skip** directive files for CLIs it does not use;
   selection defaults to the standard set and is driven by which drivers the project
   has configured *(see OQ-2)*. Skipping a file is not an error and is reported.
@@ -212,9 +214,13 @@ re-runnable on demand.
   off from the Architecture Wizard ([[onboarding-architecture-selection]] FR-17)
   **and** standalone via `kaos-control init --refresh-directives` on an existing
   project, producing identical output for the same selection.
-- **FR-15** Files written/updated by generation are plain markdown / YAML picked up
-  by the existing indexing paths (startup scan, fsnotify watch, API writes) with no
-  special-casing.
+- **FR-15** *(revised)* The `lifecycle/config.yaml` agent-prompt patch is picked up
+  by the existing config-reload/index paths with no special-casing. The root
+  directive files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`) are **not** lifecycle
+  artefacts and are intentionally **outside** the artefact index — exactly as
+  `CLAUDE.md` has always been (the index covers `lifecycle/**/*.md` only; the watcher
+  covers `lifecycle/` + `docs/`). They must not appear in `GET …/artifacts` or the
+  graph.
 
 ### Non-functional
 
@@ -253,9 +259,9 @@ re-runnable on demand.
       leaves roles, stages, users, and non-standard agents unchanged. *(FR-9)*
 - [ ] Re-running generation with the same selection produces no net change
       (idempotent). *(FR-10, NFR-2)*
-- [ ] Generation shows a diff and requires confirmation before overwriting a
-      directive file that was edited after it was last generated; it never silently
-      overwrites user edits. *(FR-11)*
+- [ ] A refresh updates the content inside the managed markers and preserves prose
+      outside them; the diff-and-confirm gate fires only when the markers are absent
+      (or a migration would overwrite a differing pre-existing `AGENTS.md`). *(FR-11)*
 - [ ] A project with no Gemini driver configured skips `GEMINI.md`, defaults to the
       standard set otherwise, and reports what was skipped. *(FR-12)*
 - [ ] A naming/location choice (e.g. the Antigravity path) prompts the user and
@@ -263,8 +269,9 @@ re-runnable on demand.
 - [ ] Generation runs both as the wizard's opt-in scaffolding step and standalone
       via `kaos-control init --refresh-directives`, with identical output for the
       same selection. *(FR-14)* — see [[onboarding-architecture-selection]], [[cli-init-scaffold]]
-- [ ] All generated files are re-indexed by the existing paths with no
-      special-casing. *(FR-15)*
+- [ ] The `lifecycle/config.yaml` patch is picked up by the existing config-reload
+      path; the root directive files (`AGENTS.md`/`CLAUDE.md`/`GEMINI.md`) are **not**
+      in the artefact index or graph, as intended. *(FR-15)*
 - [ ] Generation runs offline in under 1 second and leaves no orphaned/duplicate
       files. *(NFR-1, NFR-3, NFR-4)*
 

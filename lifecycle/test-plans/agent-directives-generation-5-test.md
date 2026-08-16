@@ -90,14 +90,14 @@ Prove refresh replaces only the generated region and never silently clobbers use
 - **New** `tests/directives_managed_region_test.go`:
   - After generation, append user prose **outside** the markers in `AGENTS.md`; re-run refresh →
     the generated region updates, the user prose survives verbatim.
-  - Edit content **inside** the markers to simulate a user-edited generated block; refresh without
-    force → response carries a `diff` and the file is unchanged; refresh with `force` → applied.
+  - Edit content **inside** the markers; refresh (no force) → the region is regenerated in place,
+    no diff prompt — inside the markers is generated content by design (OQ-6).
   - A file with the markers deleted → refresh returns a whole-file diff and requires force.
 
 ### Acceptance criteria
 
-- User prose outside the region is always preserved; overwrites of edited generated content require
-  explicit force; a create (absent file) never prompts (FR-11).
+- Prose outside the region is always preserved; content inside the markers is refreshed in place;
+  the diff gate fires only when the markers are absent; a create (absent file) never prompts (FR-11).
 
 ---
 
