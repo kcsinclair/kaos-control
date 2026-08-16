@@ -214,6 +214,15 @@ re-runnable on demand.
   off from the Architecture Wizard ([[onboarding-architecture-selection]] FR-17)
   **and** standalone via `kaos-control init --refresh-directives` on an existing
   project, producing identical output for the same selection.
+- **FR-17** *(new)* Generation and migration **do not leave the files they write
+  untracked**. Because the root directive files live outside the index/watcher
+  (FR-15), and git never auto-tracks new files, a migrate/refresh run must, when the
+  project is a git repo, **surface the exact `git add …`/`git commit …` commands**
+  for the files it wrote (mirroring how `init` hands back git commands on an
+  already-initialised repo), and the UI must present them. Files withheld pending a
+  force-confirm (FR-11) are excluded until actually written. *(Auto-committing on the
+  user's behalf is deliberately not done — migration runs on an existing repo with
+  possibly-staged user work.)*
 - **FR-15** *(revised)* The `lifecycle/config.yaml` agent-prompt patch is picked up
   by the existing config-reload/index paths with no special-casing. The root
   directive files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`) are **not** lifecycle
@@ -272,6 +281,9 @@ re-runnable on demand.
 - [ ] The `lifecycle/config.yaml` patch is picked up by the existing config-reload
       path; the root directive files (`AGENTS.md`/`CLAUDE.md`/`GEMINI.md`) are **not**
       in the artefact index or graph, as intended. *(FR-15)*
+- [ ] After a migrate/refresh on a git repo, the response carries the `git add`/`git
+      commit` commands for the files written, and the UI presents them; a not-yet-written
+      (force-pending) file is excluded. *(FR-17)*
 - [ ] Generation runs offline in under 1 second and leaves no orphaned/duplicate
       files. *(NFR-1, NFR-3, NFR-4)*
 

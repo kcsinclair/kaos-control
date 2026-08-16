@@ -172,6 +172,31 @@ func TestDirectivesMigrate_ReadOnlyUser_Returns403(t *testing.T) {
 	requireStatus(t, resp, 403)
 }
 
+// TestDirectivesMigrate_LegacyLayout_ReturnsGitCommands verifies FR-17: because
+// the root directive files are outside the index/watcher (FR-15) and generation
+// never touches git, migrate surfaces the git add/commit the user must run so the
+// newly-written AGENTS.md/CLAUDE.md/GEMINI.md are tracked rather than left
+// untracked. (The test env inits a git repo, so IsRepo is true.)
+func TestDirectivesMigrate_LegacyLayout_ReturnsGitCommands(t *testing.T) {
+	env := newTestEnvWithCfgYAML(t, legacyDirectivesSeeds(), directivesCfgYAML)
+
+	data := migrateDirectives(t, env, false)
+	cmds, _ := data["gitCommands"].([]any)
+	if len(cmds) != 2 {
+		t.Fatalf("expected 2 git commands (add + commit), got %d: %v", len(cmds), data["gitCommands"])
+	}
+	add, _ := cmds[0].(string)
+	commit, _ := cmds[1].(string)
+	for _, want := range []string{"git ", " add", "AGENTS.md", "CLAUDE.md", "GEMINI.md"} {
+		if !strings.Contains(add, want) {
+			t.Errorf("add command %q missing %q", add, want)
+		}
+	}
+	if !strings.Contains(commit, "commit") {
+		t.Errorf("second command is not a commit: %q", commit)
+	}
+}
+
 // TestDirectivesMigrate_WrittenFilesNotInArtifactsIndex documents the FR-15
 // gap explained in this file's header comment.
 func TestDirectivesMigrate_WrittenFilesNotInArtifactsIndex(t *testing.T) {

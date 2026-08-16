@@ -217,8 +217,37 @@ func (s *Server) handleMigrateDirectives(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusInternalServerError, apiError("migrate_failed", err.Error()))
 		return
 	}
+	res.GitCommands = directiveGitCommands(p.Entry.Path, res.Files)
 
 	writeJSON(w, http.StatusOK, res)
+}
+
+// directiveGitCommands returns the git add/commit the user should run to track
+// the root directive files a migrate/refresh run wrote. Directive files
+// (AGENTS.md/CLAUDE.md/GEMINI.md) live at the project root, outside the index
+// and the fsnotify watch, and generation never touches git itself — so without
+// this the files are written to disk but left untracked. Mirrors the
+// already-initialised-repo branch of handleInitProject. Returns nil when the
+// project is not a git repo or nothing was actually written (FR-17).
+func directiveGitCommands(projectPath string, files []directives.FileWrite) []string {
+	if !kgit.IsRepo(projectPath) {
+		return nil
+	}
+	var addArgs string
+	for _, f := range files {
+		// Only files actually written this run — skip pending-diff (withheld)
+		// and skipped entries.
+		if (f.Created || f.Changed) && f.Diff == "" && !f.Skipped {
+			addArgs += " " + filepath.ToSlash(f.Path)
+		}
+	}
+	if addArgs == "" {
+		return nil
+	}
+	return []string{
+		fmt.Sprintf("git -C %s add%s", projectPath, addArgs),
+		fmt.Sprintf(`git -C %s commit -m "chore: update agent directive files"`, projectPath),
+	}
 }
 
 // handleRefreshDirectives handles POST /api/p/{project}/directives/refresh:
@@ -252,6 +281,7 @@ func (s *Server) handleRefreshDirectives(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusInternalServerError, apiError("refresh_failed", err.Error()))
 		return
 	}
+	res.GitCommands = directiveGitCommands(p.Entry.Path, res.Files)
 
 	if err := p.ReloadConfig(); err != nil {
 		slog.Warn("directives refresh: failed to reload project config", "project", p.Entry.Name, "err", err)

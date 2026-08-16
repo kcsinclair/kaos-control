@@ -273,6 +273,12 @@ already-migrated project; diff-before-overwrite on a user-edited `AGENTS.md`.
     body) and `POST /api/p/{project}/directives/refresh` → `directives.Generate`, both returning the
     `GenerateResult`; role-gate as project-admin. Mount in `internal/http/server.go` near the init
     route (`server.go:173`).
+  - **Git tracking (FR-17):** the root directive files are outside the index/watcher (FR-15) and
+    generation never touches git, so both handlers populate `res.GitCommands` via a
+    `directiveGitCommands(projectPath, res.Files)` helper — when the project is a git repo, the
+    `git add …`/`git commit …` for every Created/Changed (non-`Diff`, non-`Skipped`) file, mirroring
+    `handleInitProject`'s already-initialised-repo branch. Add a `GitCommands []string` field to
+    `GenerateResult`. Auto-commit is deliberately not done (existing repo may hold staged user work).
 
 ### Acceptance criteria
 

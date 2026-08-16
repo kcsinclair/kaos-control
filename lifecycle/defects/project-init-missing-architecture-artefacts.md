@@ -1,7 +1,7 @@
 ---
 title: Project initialisation does not include architecture artefacts
 type: defect
-status: in-development
+status: done
 lineage: project-init-missing-architecture-artefacts
 created: "2026-08-15T13:28:13+10:00"
 priority: normal
@@ -75,6 +75,11 @@ first slice.
    exist and every embedded catalog file is present, writing only missing files (skip-if-exists,
    idempotent); create `decisions/`/`standards/` with `.gitkeep`.
 3. **Wire in.** Call it from `init` (`internal/initcmd`) and from project `Open`
-   (`internal/project/project.go`) so both new and existing projects converge.
+   (`internal/project/project.go`) so both new and existing projects converge. The scaffolded
+   files — including the `.gitkeep` placeholders (git cannot track empty dirs) — must be reported
+   in the `created` set so `handleInitProject`'s commit / returned `git add` commands actually
+   track them; a reconcile on an existing repo surfaces the same `git add`/`commit` commands
+   rather than leaving `decisions/`/`standards/` untracked (same gap as directive-file
+   generation — see [[agent-directives-generation-2]] FR-17).
 4. **Tests.** New project gets the full catalog + empty `decisions/`/`standards/`; an
    already-populated tree is untouched; a partial tree is completed; re-running is a no-op.

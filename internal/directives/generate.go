@@ -32,6 +32,13 @@ type GenerateResult struct {
 	// Skipped names files intentionally not written this run (GEMINI.md
 	// with no gemini driver configured — FR-12).
 	Skipped []string `json:"skipped,omitempty"`
+	// GitCommands, when the project is a git repo, holds the exact
+	// `git add …`/`git commit …` the caller should run to track the files
+	// this run wrote (FR-17). Generation writes to disk but never touches
+	// git itself; the HTTP handlers populate this, mirroring how init hands
+	// back git commands on an already-initialised repo. Empty when no files
+	// were written or the project is not a git repo.
+	GitCommands []string `json:"gitCommands,omitempty"`
 }
 
 // GenerateOptions configures Generate.

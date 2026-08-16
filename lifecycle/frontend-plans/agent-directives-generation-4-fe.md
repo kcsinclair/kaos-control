@@ -56,7 +56,8 @@ project summary so the UI can decide whether to offer migration.
     `disabledAgents`, `skipped`).
 - **Edit** `web/src/types/api.ts`:
   - Add `directivesMigrationAvailable?: boolean` to the project-summary type (beside `initialised`,
-    line 20/69) and a `GenerateResult` interface mirroring the backend struct.
+    line 20/69) and a `GenerateResult` interface mirroring the backend struct — including
+    `gitCommands?: string[]` (the add/commit lines for the files the run wrote — FR-17).
 - **Edit** `web/src/stores/project.ts`:
   - Expose `directivesMigrationAvailable` from the loaded summary for components to read.
 
@@ -90,6 +91,9 @@ any diff for a user-edited `AGENTS.md`) before applying, and the decline path te
     response carries a `diff` (user-edited AGENTS.md), render it (reuse the app's existing diff/code
     display) and require an explicit **Overwrite** confirm that re-calls with `force: true`.
     On success show the created/changed/skipped list and refresh the summary so the banner clears.
+    **Also render `gitCommands` (FR-17)** as a copyable block — "the new AGENTS.md/GEMINI.md are not
+    tracked yet; run these to commit them" — since the root directive files are outside the index
+    and generation does not touch git.
 - **Edit** `web/src/views/project/WorkspaceView.vue`:
   - Render `DirectiveMigrationBanner` when `directivesMigrationAvailable` (alongside the existing
     `InitRequiredBanner` at line 103), gated so it does not show simultaneously with the
@@ -121,7 +125,8 @@ and the reusable opt-in panel the Architecture Wizard invokes as its final scaff
     explicit overwrite (shared logic with M2 — extract a `useDirectiveApply()` composable so the
     modal and panel share the call/diff/confirm flow).
 - **New** `web/src/composables/useDirectiveApply.ts`:
-  - Wraps call → inspect `diff` → optional force re-call → summary refresh; consumed by the modal
+  - Wraps call → inspect `diff` → optional force re-call → summary refresh; exposes the returned
+    `gitCommands` for the caller to render as a copyable commit hint (FR-17); consumed by the modal
     (M2) and panel (M3).
 - **Edit** project settings/menu (where project-level actions live — verify the settings view used
   by `EditProjectModal.vue`'s entry point): add a "Refresh directives" entry that opens the panel.
