@@ -1,7 +1,7 @@
 ---
 title: "Post-resolution routing behavior for open-questions resolve (Milestone 4)"
 type: test
-status: approved
+status: in-qa
 lineage: open-questions-gui
 parent: lifecycle/defects/open-questions-gui-9-defect.md
 ---
