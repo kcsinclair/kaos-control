@@ -62,6 +62,21 @@ export const useArchitectureWizardStore = defineStore('architectureWizard', () =
     return answers.value.find((a) => a.question_id === questionId)?.value
   }
 
+  // The next question neither answered nor skipped this session (FR-7). On
+  // resume, only `answers` survives in the persisted state (skipped
+  // questions aren't tracked server-side), so a previously-skipped question
+  // may be asked again — harmless, since skipping already meant "no strong
+  // preference".
+  const currentQuestion = computed(
+    () =>
+      questions.value.find(
+        (q) => answerFor(q.id) === undefined && !skippedQuestionIds.value.includes(q.id),
+      ) ?? null,
+  )
+  const answeredQuestionCount = computed(
+    () => answers.value.length + skippedQuestionIds.value.length,
+  )
+
   function applyError(e: unknown, fallback: string): void {
     error.value = e instanceof ApiError ? e.message : fallback
   }
@@ -107,6 +122,22 @@ export const useArchitectureWizardStore = defineStore('architectureWizard', () =
     if (!skippedQuestionIds.value.includes(questionId)) {
       skippedQuestionIds.value.push(questionId)
     }
+  }
+
+  // Answer/skip the current question and autosave (resume, OQ-3). Returns
+  // whether every question has now been answered or skipped.
+  function answerCurrentQuestion(project: string, value: string): boolean {
+    if (!currentQuestion.value) return true
+    setAnswer(currentQuestion.value.id, value)
+    persistState(project)
+    return currentQuestion.value === null
+  }
+
+  function skipCurrentQuestion(project: string): boolean {
+    if (!currentQuestion.value) return true
+    skip(currentQuestion.value.id)
+    persistState(project)
+    return currentQuestion.value === null
   }
 
   async function fetchRecommendations(project: string): Promise<void> {
@@ -241,11 +272,15 @@ export const useArchitectureWizardStore = defineStore('architectureWizard', () =
     isArchitectureChosen,
     isStackChosen,
     canCommit,
+    currentQuestion,
+    answeredQuestionCount,
     answerFor,
     start,
     setPath,
     setAnswer,
     skip,
+    answerCurrentQuestion,
+    skipCurrentQuestion,
     fetchRecommendations,
     chooseArchitecture,
     fetchStacks,

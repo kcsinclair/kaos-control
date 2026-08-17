@@ -14,7 +14,7 @@ vi.mock('@/api/architecture', () => ({
   getWizard: vi.fn(),
   recommend: vi.fn(),
   listStacks: vi.fn(),
-  saveWizardState: vi.fn(),
+  saveWizardState: vi.fn().mockResolvedValue(undefined),
   discardWizardState: vi.fn(),
   commitWizard: vi.fn(),
 }))
@@ -23,6 +23,7 @@ import {
   getWizard,
   recommend,
   commitWizard,
+  saveWizardState,
 } from '@/api/architecture'
 import { ApiError } from '@/api/client'
 import { useArchitectureWizardStore } from '@/stores/architectureWizard'
@@ -173,6 +174,46 @@ describe('architectureWizard store', () => {
     expect(result).toBeNull()
     expect(store.error).toBeTruthy()
     expect(vi.mocked(commitWizard)).not.toHaveBeenCalled()
+  })
+
+  it('currentQuestion advances through the set as answers/skips land, and answerCurrentQuestion/skipCurrentQuestion report completion', () => {
+    const store = useArchitectureWizardStore()
+    store.setPath('guided')
+    store.questions = [
+      { id: 'offline', prompt: 'Offline-capable?', kind: 'hard', options: [] },
+      { id: 'realtime', prompt: 'Realtime?', kind: 'soft', options: [] },
+    ]
+
+    expect(store.currentQuestion?.id).toBe('offline')
+
+    expect(store.answerCurrentQuestion('testproject', 'yes')).toBe(false)
+    expect(store.answerFor('offline')).toBe('yes')
+    expect(store.currentQuestion?.id).toBe('realtime')
+
+    expect(store.skipCurrentQuestion('testproject')).toBe(true)
+    expect(store.skippedQuestionIds).toContain('realtime')
+    expect(store.currentQuestion).toBeNull()
+  })
+
+  it('answering a question triggers a debounced saveWizardState', () => {
+    vi.useFakeTimers()
+    try {
+      const store = useArchitectureWizardStore()
+      store.setPath('guided')
+      store.questions = [{ id: 'offline', prompt: 'Offline-capable?', kind: 'hard', options: [] }]
+
+      store.answerCurrentQuestion('testproject', 'yes')
+      expect(vi.mocked(saveWizardState)).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(500)
+      expect(vi.mocked(saveWizardState)).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(saveWizardState)).toHaveBeenCalledWith(
+        'testproject',
+        expect.objectContaining({ path: 'guided', answers: [{ question_id: 'offline', value: 'yes' }] }),
+      )
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('a server error surfaces via `error` without throwing', async () => {

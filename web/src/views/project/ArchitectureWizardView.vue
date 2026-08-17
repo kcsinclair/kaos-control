@@ -9,6 +9,7 @@ import PriorRunGate from '@/components/architecture/PriorRunGate.vue'
 import PathChoiceStep from '@/components/architecture/PathChoiceStep.vue'
 import BrowseCatalogStep from '@/components/architecture/BrowseCatalogStep.vue'
 import StackChoiceStep from '@/components/architecture/StackChoiceStep.vue'
+import GuidedQuestionStep from '@/components/architecture/GuidedQuestionStep.vue'
 import type { WizardStepperStep } from '@/components/architecture/WizardStepper.vue'
 import type { CatalogItem } from '@/types/api'
 
@@ -86,6 +87,16 @@ function onChoosePath(path: 'browse' | 'guided'): void {
   store.step = path === 'browse' ? 'browse' : 'questions'
 }
 
+function onGuidedComplete(): void {
+  store.step = 'recommend'
+}
+
+function onShowEverythingAnyway(): void {
+  store.setPath('browse')
+  store.persistState(project.value)
+  store.step = 'browse'
+}
+
 function onArchitectureChosen(item: CatalogItem): void {
   store.chooseArchitecture(item)
   store.persistState(project.value)
@@ -153,8 +164,15 @@ const canAdvance = computed(() => {
             @chosen="onStackChosen"
           />
 
-          <!-- Guided questions/recommendation and confirm/done are filled in by
-               later milestones — this shell only hosts navigation. -->
+          <GuidedQuestionStep
+            v-else-if="currentStepKey === 'questions'"
+            :project="project"
+            @complete="onGuidedComplete"
+            @browse-anyway="onShowEverythingAnyway"
+          />
+
+          <!-- Recommendation and confirm/done are filled in by later
+               milestones — this shell only hosts navigation. -->
           <p v-else class="step-placeholder">
             This step isn't implemented yet — see
             lifecycle/frontend-plans/onboarding-architecture-selection-4-fe.md.
