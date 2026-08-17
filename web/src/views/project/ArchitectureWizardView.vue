@@ -13,6 +13,7 @@ import GuidedQuestionStep from '@/components/architecture/GuidedQuestionStep.vue
 import RecommendationStep from '@/components/architecture/RecommendationStep.vue'
 import ConfirmStep from '@/components/architecture/ConfirmStep.vue'
 import WizardSuccess from '@/components/architecture/WizardSuccess.vue'
+import ScaffoldStep from '@/components/architecture/ScaffoldStep.vue'
 import type { WizardStepperStep } from '@/components/architecture/WizardStepper.vue'
 import type { CatalogItem } from '@/types/api'
 
@@ -210,12 +211,7 @@ const canAdvance = computed(() => {
             @scaffold="onEnterScaffold"
           />
 
-          <!-- Scaffolding is filled in by Milestone 7 — this shell only
-               hosts navigation. -->
-          <p v-else class="step-placeholder">
-            This step isn't implemented yet — see
-            lifecycle/frontend-plans/onboarding-architecture-selection-4-fe.md.
-          </p>
+          <ScaffoldStep v-else-if="currentStepKey === 'scaffold'" :project="project" />
         </div>
 
         <div class="wizard-footer">
