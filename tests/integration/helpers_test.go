@@ -106,7 +106,20 @@ func newTestEnvWithCfgYAML(t *testing.T, seeds []seedArtifact, cfgYAML string) *
 }
 
 // newTestEnvFull is the shared implementation for newTestEnv and newTestEnvWithFrontend.
-func newTestEnvFull(t *testing.T, seeds []seedArtifact, frontendFS fs.FS, cfgYAML string) *testEnv {
+// newTestEnvWithScaffold opens the project WITH the architecture-catalog
+// scaffold enabled (the production default), seeding the ~24 shipped catalog
+// artefacts + decisions/standards. Integration tests default to *no* scaffold
+// (see newTestEnvFull) so artifact counts, graph nodes, and git status reflect
+// only the test's own seeded fixtures; use this only when a test needs the
+// seeded catalog present.
+func newTestEnvWithScaffold(t *testing.T, seeds []seedArtifact) *testEnv {
+	t.Helper()
+	return newTestEnvFull(t, seeds, nil, defaultCfgYAML, func(o *project.OpenOptions) {
+		o.SkipArchitectureScaffold = false
+	})
+}
+
+func newTestEnvFull(t *testing.T, seeds []seedArtifact, frontendFS fs.FS, cfgYAML string, openOpts ...func(*project.OpenOptions)) *testEnv {
 	t.Helper()
 
 	root := t.TempDir()
@@ -215,10 +228,19 @@ func newTestEnvFull(t *testing.T, seeds []seedArtifact, frontendFS fs.FS, cfgYAM
 	// In tests, dataDir is the t.TempDir() — pass it explicitly as DevopsLogDir
 	// so devops run logs land inside the temp dir (not in its parent, where the
 	// production default would put them when dataDir == appHome/data).
-	proj, err := project.Open(entry, dataDir, project.OpenOptions{
+	opts := project.OpenOptions{
 		MaxConcurrentAgents: 2,
 		DevopsLogDir:        dataDir,
-	})
+		// Integration tests run without the architecture-catalog scaffold so
+		// artifact counts / graph nodes / git status reflect only seeded
+		// fixtures, not the ~24 shipped catalog artefacts. Opt in per-test via
+		// newTestEnvWithScaffold.
+		SkipArchitectureScaffold: true,
+	}
+	for _, apply := range openOpts {
+		apply(&opts)
+	}
+	proj, err := project.Open(entry, dataDir, opts)
 	if err != nil {
 		t.Fatal(err)
 	}

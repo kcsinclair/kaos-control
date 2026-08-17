@@ -225,10 +225,13 @@ agents:
 		t.Fatalf("LoadProject: unexpected error: %v", err)
 	}
 
-	if len(cfg.Agents) != 1 {
-		t.Fatalf("expected 1 agent, got %d", len(cfg.Agents))
+	// ValidateAndRepair auto-injects the idea-capture/docs-capture generation
+	// agents, so assert on the configured agent by name, not the total count.
+	agp := findAgentConfig(cfg, "ollama-agent")
+	if agp == nil {
+		t.Fatal("ollama-agent not found in loaded config")
 	}
-	ag := cfg.Agents[0]
+	ag := *agp
 	if ag.Driver != "ollama" {
 		t.Errorf("Driver: got %q, want %q", ag.Driver, "ollama")
 	}

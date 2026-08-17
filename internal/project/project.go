@@ -79,6 +79,12 @@ type OpenOptions struct {
 	// HookBinaryPath is the absolute path to the kaos-control binary used as
 	// the hook-helper command. If empty, os.Executable() is used at run time.
 	HookBinaryPath string
+
+	// SkipArchitectureScaffold disables the EnsureArchitectureScaffold call on
+	// Open (which otherwise seeds the shipped catalog + decisions/standards
+	// into the project). Off in production; used by tests that need a
+	// controlled, un-augmented catalog.
+	SkipArchitectureScaffold bool
 }
 
 // Open loads the project config, opens the SQLite index, scans the lifecycle tree,
@@ -92,8 +98,10 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 
 	// Retrofit lifecycle/architecture/ for existing projects that predate it
 	// (or whose tree is missing/incomplete): idempotent, skip-if-exists.
-	if _, err := architecture.EnsureArchitectureScaffold(entry.Path); err != nil {
-		slog.Warn("project: failed to reconcile architecture scaffold", "name", entry.Name, "err", err)
+	if !opts.SkipArchitectureScaffold {
+		if _, err := architecture.EnsureArchitectureScaffold(entry.Path); err != nil {
+			slog.Warn("project: failed to reconcile architecture scaffold", "name", entry.Name, "err", err)
+		}
 	}
 
 	// Open git first so the index can use it for created-date backfill during scan.

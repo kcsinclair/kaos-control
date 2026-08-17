@@ -51,10 +51,13 @@ agents:
 	if err != nil {
 		t.Fatalf("LoadProject: unexpected error: %v", err)
 	}
-	if len(cfg.Agents) != 1 {
-		t.Fatalf("expected 1 agent, got %d", len(cfg.Agents))
+	// ValidateAndRepair auto-injects the idea-capture/docs-capture generation
+	// agents, so assert on the configured agent by name, not the total count.
+	agp := findAgentConfig(cfg, "requirements-analyst")
+	if agp == nil {
+		t.Fatal("requirements-analyst not found in loaded config")
 	}
-	ag := cfg.Agents[0]
+	ag := *agp
 	if ag.Driver != "claude-code-cli" {
 		t.Errorf("driver: got %q, want %q", ag.Driver, "claude-code-cli")
 	}
@@ -185,10 +188,8 @@ agents:
 	if err != nil {
 		t.Fatalf("LoadProject with mixed agents: %v", err)
 	}
-	if len(cfg.Agents) != 2 {
-		t.Fatalf("expected 2 agents, got %d", len(cfg.Agents))
-	}
-
+	// ValidateAndRepair auto-injects the idea-capture/docs-capture generation
+	// agents; verify the two configured agents by name rather than by count.
 	byName := make(map[string]config.AgentConfig)
 	for _, ag := range cfg.Agents {
 		byName[ag.Name] = ag
@@ -277,10 +278,8 @@ agents:
 	data := readJSON(t, resp)
 
 	agentsRaw, _ := data["agents"].([]any)
-	if len(agentsRaw) != 2 {
-		t.Fatalf("expected 2 agents, got %d", len(agentsRaw))
-	}
-
+	// ValidateAndRepair auto-injects the idea-capture/docs-capture generation
+	// agents, so the API also lists them; verify the configured agents by name.
 	byName := make(map[string]map[string]any)
 	for _, raw := range agentsRaw {
 		ag, _ := raw.(map[string]any)
