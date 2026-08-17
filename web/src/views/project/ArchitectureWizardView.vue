@@ -6,7 +6,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useArchitectureWizardStore } from '@/stores/architectureWizard'
 import WizardStepper from '@/components/architecture/WizardStepper.vue'
 import PriorRunGate from '@/components/architecture/PriorRunGate.vue'
+import PathChoiceStep from '@/components/architecture/PathChoiceStep.vue'
+import BrowseCatalogStep from '@/components/architecture/BrowseCatalogStep.vue'
+import StackChoiceStep from '@/components/architecture/StackChoiceStep.vue'
 import type { WizardStepperStep } from '@/components/architecture/WizardStepper.vue'
+import type { CatalogItem } from '@/types/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,13 +18,25 @@ const store = useArchitectureWizardStore()
 
 const project = computed(() => route.params.project as string)
 
-const STEPS: WizardStepperStep[] = [
+// Step sequence branches on the chosen path (FR-4): Browse skips straight
+// from the catalog to the stack picker; Guided runs the question set then
+// shows a transparent recommendation before the same stack picker.
+const STEPS_GUIDED: WizardStepperStep[] = [
   { key: 'path', label: 'Path' },
-  { key: 'select', label: 'Select architecture' },
+  { key: 'questions', label: 'Questions' },
+  { key: 'recommend', label: 'Recommendation' },
   { key: 'stack', label: 'Choose stack' },
   { key: 'confirm', label: 'Confirm' },
   { key: 'done', label: 'Done' },
 ]
+const STEPS_BROWSE: WizardStepperStep[] = [
+  { key: 'path', label: 'Path' },
+  { key: 'browse', label: 'Browse' },
+  { key: 'stack', label: 'Choose stack' },
+  { key: 'confirm', label: 'Confirm' },
+  { key: 'done', label: 'Done' },
+]
+const STEPS = computed(() => (store.path === 'browse' ? STEPS_BROWSE : STEPS_GUIDED))
 
 // Whether the user has explicitly acknowledged an already-run wizard (FR-3) —
 // separate from store.priorRun itself, which stays populated so the gate can
@@ -32,9 +48,11 @@ const showPriorRunGate = computed(
 )
 
 const currentStepKey = computed(() =>
-  STEPS.some((s) => s.key === store.step) ? store.step : 'path',
+  STEPS.value.some((s) => s.key === store.step) ? store.step : 'path',
 )
-const currentStepIndex = computed(() => STEPS.findIndex((s) => s.key === currentStepKey.value))
+const currentStepIndex = computed(() =>
+  STEPS.value.findIndex((s) => s.key === currentStepKey.value),
+)
 
 onMounted(() => {
   void store.start(project.value)
@@ -54,13 +72,51 @@ function goBack(): void {
     exitWizard()
     return
   }
-  store.step = STEPS[currentStepIndex.value - 1].key
+  store.step = STEPS.value[currentStepIndex.value - 1].key
 }
 
 function goNext(): void {
-  if (currentStepIndex.value >= STEPS.length - 1) return
-  store.step = STEPS[currentStepIndex.value + 1].key
+  if (currentStepIndex.value >= STEPS.value.length - 1) return
+  store.step = STEPS.value[currentStepIndex.value + 1].key
 }
+
+function onChoosePath(path: 'browse' | 'guided'): void {
+  store.setPath(path)
+  store.persistState(project.value)
+  store.step = path === 'browse' ? 'browse' : 'questions'
+}
+
+function onArchitectureChosen(item: CatalogItem): void {
+  store.chooseArchitecture(item)
+  store.persistState(project.value)
+  store.step = 'stack'
+}
+
+function onStackChosen(item: CatalogItem): void {
+  store.chooseStack(item)
+  store.persistState(project.value)
+  store.step = 'confirm'
+}
+
+// The footer Next button is a fallback for re-advancing through
+// already-completed steps (e.g. after Back) — each step's own primary
+// action is what normally advances the wizard.
+const canAdvance = computed(() => {
+  switch (currentStepKey.value) {
+    case 'path':
+      return store.isPathChosen
+    case 'browse':
+      return store.isArchitectureChosen
+    case 'questions':
+      return store.recommendations.length > 0
+    case 'recommend':
+      return store.isArchitectureChosen
+    case 'stack':
+      return store.isStackChosen
+    default:
+      return false
+  }
+})
 </script>
 
 <template>
@@ -83,9 +139,23 @@ function goNext(): void {
         <WizardStepper :steps="STEPS" :current-key="currentStepKey" />
 
         <div class="wizard-step-body">
-          <!-- Step content is filled in by later milestones (Path/Guided/Browse/
-               Stack/Recommend/Confirm) — this shell only hosts navigation. -->
-          <p class="step-placeholder">
+          <PathChoiceStep v-if="currentStepKey === 'path'" @choose="onChoosePath" />
+
+          <BrowseCatalogStep
+            v-else-if="currentStepKey === 'browse'"
+            :project="project"
+            @chosen="onArchitectureChosen"
+          />
+
+          <StackChoiceStep
+            v-else-if="currentStepKey === 'stack'"
+            :project="project"
+            @chosen="onStackChosen"
+          />
+
+          <!-- Guided questions/recommendation and confirm/done are filled in by
+               later milestones — this shell only hosts navigation. -->
+          <p v-else class="step-placeholder">
             This step isn't implemented yet — see
             lifecycle/frontend-plans/onboarding-architecture-selection-4-fe.md.
           </p>
@@ -98,7 +168,7 @@ function goNext(): void {
             <button
               type="button"
               class="btn-primary"
-              :disabled="currentStepIndex >= STEPS.length - 1"
+              :disabled="currentStepIndex >= STEPS.length - 1 || !canAdvance"
               @click="goNext"
             >Next</button>
           </div>

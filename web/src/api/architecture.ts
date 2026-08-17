@@ -69,6 +69,22 @@ export function recommend(
   )
 }
 
+export interface WizardCatalog {
+  architectures: CatalogItem[]
+  techStacks: CatalogItem[]
+}
+
+// listCatalog returns the full candidate catalog (every architecture and tech
+// stack, with pros/cons) so Browse can render cards before any architecture
+// is chosen. See onboarding-architecture-selection-4-fe.md Milestone 3 (OQ-6).
+export function listCatalog(project: string): Promise<WizardCatalog> {
+  return api
+    .get<{ architectures: CatalogItem[]; tech_stacks: CatalogItem[] }>(
+      `/p/${encodeURIComponent(project)}/architecture/wizard/catalog`,
+    )
+    .then((r) => ({ architectures: r.architectures, techStacks: r.tech_stacks }))
+}
+
 export function listStacks(
   project: string,
   architecture: string,
