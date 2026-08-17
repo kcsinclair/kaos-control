@@ -272,6 +272,7 @@ func (s *Server) buildRouter() chi.Router {
 				r.Get("/architecture/wizard", s.handleGetArchitectureWizard)
 				r.Post("/architecture/wizard/recommend", s.handleRecommendArchitecture)
 				r.Get("/architecture/wizard/stacks", s.handleListWizardStacks)
+				r.Get("/architecture/wizard/catalog", s.handleListWizardCatalog)
 				r.Put("/architecture/wizard/state", s.handlePutWizardState)
 				r.Delete("/architecture/wizard/state", s.handleDeleteWizardState)
 				r.Post("/architecture/wizard/commit", s.handleCommitArchitectureWizard)

@@ -203,6 +203,35 @@ func (s *Server) handleListWizardStacks(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{"stacks": ranked})
 }
 
+// handleListWizardCatalog handles GET /architecture/wizard/catalog: the full
+// candidate catalog — every architecture and tech-stack with title, summary,
+// labels, related_to, and pros/cons — so the Browse step can render cards and
+// the comparison table before any architecture is chosen (FR-5, resolves
+// FE-plan OQ-6). Unlike wizard/recommend (needs answers, returns top 3) and
+// wizard/stacks (needs a chosen architecture), this takes no inputs. pros/cons
+// live only as `## Pros`/`## Cons` markdown bodies parsed by LoadCatalog, so
+// this endpoint is the single HTTP source for them — the frontend never
+// re-parses catalog markdown.
+func (s *Server) handleListWizardCatalog(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+	if userFromCtx(r.Context()) == nil {
+		writeJSON(w, http.StatusUnauthorized, apiError("unauthorized", "authentication required"))
+		return
+	}
+
+	arches, stacks, err := architecture.LoadCatalog(p.Entry.Path)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"architectures": arches, "tech_stacks": stacks})
+}
+
 // handlePutWizardState handles PUT /api/p/{project}/architecture/wizard/state
 func (s *Server) handlePutWizardState(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())

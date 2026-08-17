@@ -1,7 +1,7 @@
 ---
 title: Frontend Plan — Architecture Wizard (Guided Selection)
 type: plan-frontend
-status: blocked
+status: draft
 lineage: onboarding-architecture-selection
 parent: lifecycle/requirements/onboarding-architecture-selection-2.md
 labels:
@@ -12,7 +12,7 @@ labels:
     - ux
 release: KC-Release5
 assignees:
-    - role: product-owner
+    - role: frontend-developer
       who: agent
 ---
 
@@ -132,14 +132,23 @@ decision-signal labels, an embed/link to the relationship map, direct architectu
 compatible-stack picker. The user may switch from Guided to Browse ("show me everything anyway")
 at any time (FR-4).
 
+**Data source (OQ-6 resolved):** the full-catalog listing endpoint now exists —
+`GET /api/p/{project}/architecture/wizard/catalog` → `{ architectures: CatalogItem[], tech_stacks:
+CatalogItem[] }` (each item carries `title`/`summary`/`labels`/`related_to`/`pros`/`cons`). It
+takes no inputs and is the single HTTP source of pros/cons — do **not** re-parse catalog markdown
+client-side.
+
 ### Files to change
 
+- **Edit** `web/src/api/architecture.ts` — add `listCatalog(project)` → `GET …/wizard/catalog`,
+  returning `{ architectures, techStacks }` (mirror the existing `listStacks` client). Add the
+  `CatalogItem` type (with `pros`/`cons`) to `web/src/types/api.ts` if not already present.
 - **New** `web/src/components/architecture/PathChoiceStep.vue` — Browse vs Guided, plus a
   persistent "Show me everything anyway" control surfaced throughout Guided.
 - **New** `web/src/components/architecture/BrowseCatalogStep.vue` — architecture cards (title,
-  summary, pros/cons, labels) + a comparison table; embeds or links `ArchitectureMapView.vue`
-  ([[architecture-relationship-map]]); selecting a card sets `chosenArchitecture`. Handles the
-  **empty-catalog** case with a clear message (dependency note above).
+  summary, pros/cons, labels) + a comparison table, fed by `listCatalog`; embeds or links
+  `ArchitectureMapView.vue` ([[architecture-relationship-map]]); selecting a card sets
+  `chosenArchitecture`. Handles the **empty-catalog** case with a clear message.
 - **New** `web/src/components/architecture/StackChoiceStep.vue` — after an architecture is chosen
   (either path), lists compatible stacks from `listStacks`, language-ranked (FR-6, FR-10), with
   confirm/override. Shared by both paths.
@@ -275,11 +284,18 @@ backend reports scaffolding is available (backend M7); otherwise a "coming soon 
   (`ArchitectureWizardView.vue`, `WizardStepper.vue`, `PriorRunGate.vue`, the
   `architecture/wizard` route, the sidebar entry, and the post-create/post-init
   "Set up architecture now" hand-offs).
-- **Milestone 3 onward**: blocked — see Open Questions below.
+- **Milestone 3 onward**: unblocked (OQ-6 resolved — the `wizard/catalog` endpoint now exists);
+  M3–M7 pending, assigned to `frontend-developer`.
 
-## Open Questions
+## Resolved Questions
 
-- **OQ-6 (blocking).** `BrowseCatalogStep.vue` (Milestone 3, FR-5) needs, for **every** catalog
+- **OQ-6 (resolved 2026-08-17).** Fixed by adding the backend read endpoint
+  `GET /api/p/{project}/architecture/wizard/catalog` → `{ architectures, tech_stacks }` (reuses
+  `architecture.LoadCatalog()`; returns each item's `pros`/`cons`), plus integration coverage
+  (`tests/integration/architecture_wizard_catalog_test.go`). Browse consumes it via a new
+  `listCatalog` API client (M3). No client-side markdown parsing. Original analysis kept below.
+
+- **OQ-6 (original).** `BrowseCatalogStep.vue` (Milestone 3, FR-5) needs, for **every** catalog
   architecture, its `title`/`summary`/`labels`/`related_to`/**`pros`/`cons`** up front, before any
   architecture is chosen — that's what the cards and comparison table render. No backend endpoint
   returns this today:

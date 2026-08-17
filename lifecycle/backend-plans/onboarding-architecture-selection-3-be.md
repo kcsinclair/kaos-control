@@ -361,3 +361,19 @@ depends on this.
    `POST …/recommend` returns ranked candidates + why; `POST …/commit` (as product-owner) yields
    promoted copies + summary + ADR-0001; re-commit a different architecture → archived prior +
    new superseding ADR; abandon before commit → tree unchanged.
+
+## Addendum (2026-08-17) — full-catalog listing endpoint
+
+Resolves [[onboarding-architecture-selection-4-fe]] **OQ-6**: the frontend Browse step needs the
+whole candidate catalog (every architecture + tech-stack, including `pros`/`cons`) before any pick,
+which no endpoint returned — `recommend` needs answers, `stacks` needs a chosen architecture, and
+`pros`/`cons` live only in `## Pros`/`## Cons` markdown bodies parsed by `LoadCatalog`.
+
+- **Added** `GET /api/p/{project}/architecture/wizard/catalog` → `{ architectures: CatalogItem[],
+  tech_stacks: CatalogItem[] }` — `handleListWizardCatalog` in
+  [internal/http/architecture_wizard.go](internal/http/architecture_wizard.go), mounted in
+  [internal/http/server.go](internal/http/server.go) beside the other `wizard/*` routes. Takes no
+  inputs; auth-gated like the sibling reads; a thin marshal of `architecture.LoadCatalog()`
+  (`CatalogItem` already JSON-tags `pros`/`cons`).
+- **Test** `tests/integration/architecture_wizard_catalog_test.go` — full catalog returned with
+  pros/cons and no query params; unauthenticated → 401.
