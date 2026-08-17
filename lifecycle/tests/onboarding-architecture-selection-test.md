@@ -1,7 +1,7 @@
 ---
 title: "Integration Tests — Architecture Wizard (Guided Selection)"
 type: test
-status: approved
+status: in-qa
 lineage: onboarding-architecture-selection
 parent: lifecycle/test-plans/onboarding-architecture-selection-5-test.md
 ---
