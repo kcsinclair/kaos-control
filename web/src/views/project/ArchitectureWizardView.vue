@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArchitectureWizardStore } from '@/stores/architectureWizard'
 import WizardStepper from '@/components/architecture/WizardStepper.vue'
@@ -11,6 +11,8 @@ import BrowseCatalogStep from '@/components/architecture/BrowseCatalogStep.vue'
 import StackChoiceStep from '@/components/architecture/StackChoiceStep.vue'
 import GuidedQuestionStep from '@/components/architecture/GuidedQuestionStep.vue'
 import RecommendationStep from '@/components/architecture/RecommendationStep.vue'
+import ConfirmStep from '@/components/architecture/ConfirmStep.vue'
+import WizardSuccess from '@/components/architecture/WizardSuccess.vue'
 import type { WizardStepperStep } from '@/components/architecture/WizardStepper.vue'
 import type { CatalogItem } from '@/types/api'
 
@@ -30,6 +32,7 @@ const STEPS_GUIDED: WizardStepperStep[] = [
   { key: 'stack', label: 'Choose stack' },
   { key: 'confirm', label: 'Confirm' },
   { key: 'done', label: 'Done' },
+  { key: 'scaffold', label: 'Scaffolding' },
 ]
 const STEPS_BROWSE: WizardStepperStep[] = [
   { key: 'path', label: 'Path' },
@@ -37,6 +40,7 @@ const STEPS_BROWSE: WizardStepperStep[] = [
   { key: 'stack', label: 'Choose stack' },
   { key: 'confirm', label: 'Confirm' },
   { key: 'done', label: 'Done' },
+  { key: 'scaffold', label: 'Scaffolding' },
 ]
 const STEPS = computed(() => (store.path === 'browse' ? STEPS_BROWSE : STEPS_GUIDED))
 
@@ -58,6 +62,14 @@ const currentStepIndex = computed(() =>
 
 onMounted(() => {
   void store.start(project.value)
+})
+
+// Safety net for every exit path (Cancel, browser back, route away): local
+// wizard state shouldn't outlive this view. In-progress answers already
+// live server-side via persistState (resume, OQ-3); after a successful
+// commit the backend has already cleared the resumable state too.
+onUnmounted(() => {
+  store.reset()
 })
 
 function onPriorRunContinue(): void {
@@ -108,6 +120,14 @@ function onStackChosen(item: CatalogItem): void {
   store.chooseStack(item)
   store.persistState(project.value)
   store.step = 'confirm'
+}
+
+function onCommitted(): void {
+  store.step = 'done'
+}
+
+function onEnterScaffold(): void {
+  store.step = 'scaffold'
 }
 
 // The footer Next button is a fallback for re-advancing through
@@ -178,8 +198,20 @@ const canAdvance = computed(() => {
             @browse-anyway="onShowEverythingAnyway"
           />
 
-          <!-- Confirm/done are filled in by later milestones — this shell
-               only hosts navigation. -->
+          <ConfirmStep
+            v-else-if="currentStepKey === 'confirm'"
+            :project="project"
+            @committed="onCommitted"
+          />
+
+          <WizardSuccess
+            v-else-if="currentStepKey === 'done'"
+            :project="project"
+            @scaffold="onEnterScaffold"
+          />
+
+          <!-- Scaffolding is filled in by Milestone 7 — this shell only
+               hosts navigation. -->
           <p v-else class="step-placeholder">
             This step isn't implemented yet — see
             lifecycle/frontend-plans/onboarding-architecture-selection-4-fe.md.
