@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useArchitectureWizardStore } from '@/stores/architectureWizard'
 import WizardStepper from '@/components/architecture/WizardStepper.vue'
 import PriorRunGate from '@/components/architecture/PriorRunGate.vue'
+import WizardResetConfirm from '@/components/architecture/WizardResetConfirm.vue'
 import PathChoiceStep from '@/components/architecture/PathChoiceStep.vue'
 import BrowseCatalogStep from '@/components/architecture/BrowseCatalogStep.vue'
 import StackChoiceStep from '@/components/architecture/StackChoiceStep.vue'
@@ -80,6 +81,24 @@ function onPriorRunContinue(): void {
 function exitWizard(): void {
   store.reset()
   void router.push(`/p/${encodeURIComponent(project.value)}/architecture/map`)
+}
+
+// Defect: arch-wizard-no-reset-button — "Start Again" discards all
+// in-progress selections and returns to the first step, from any point in
+// the flow. Discarding server-side resumable state first (before reset +
+// re-start) prevents start() from immediately restoring what was just
+// cleared.
+const showResetConfirm = ref(false)
+
+function requestReset(): void {
+  showResetConfirm.value = true
+}
+
+async function confirmReset(): Promise<void> {
+  showResetConfirm.value = false
+  store.reset()
+  await store.discardResumableState(project.value)
+  void store.start(project.value)
 }
 
 function goBack(): void {
@@ -215,7 +234,15 @@ const canAdvance = computed(() => {
         </div>
 
         <div class="wizard-footer">
-          <button type="button" class="btn-secondary" @click="exitWizard">Cancel</button>
+          <div class="wizard-footer-start">
+            <button type="button" class="btn-secondary" @click="exitWizard">Cancel</button>
+            <button
+              v-if="!store.commitResult"
+              type="button"
+              class="btn-secondary"
+              @click="requestReset"
+            >Start Again</button>
+          </div>
           <div class="wizard-footer-nav">
             <button type="button" class="btn-secondary" @click="goBack">Back</button>
             <button
@@ -228,6 +255,12 @@ const canAdvance = computed(() => {
         </div>
       </template>
     </template>
+
+    <WizardResetConfirm
+      v-if="showResetConfirm"
+      @confirm="confirmReset"
+      @close="showResetConfirm = false"
+    />
   </div>
 </template>
 
@@ -274,6 +307,10 @@ const canAdvance = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.wizard-footer-start {
+  display: flex;
+  gap: var(--space-3);
 }
 .wizard-footer-nav {
   display: flex;
