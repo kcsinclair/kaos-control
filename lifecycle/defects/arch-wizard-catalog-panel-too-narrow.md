@@ -1,7 +1,7 @@
 ---
 title: Architecture Wizard Catalog Panel Too Narrow — Table Overflows
 type: defect
-status: in-development
+status: done
 lineage: arch-wizard-catalog-panel-too-narrow
 created: "2026-08-18T10:56:09+10:00"
 priority: normal
