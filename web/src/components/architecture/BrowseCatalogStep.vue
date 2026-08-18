@@ -93,24 +93,26 @@ onMounted(load)
         </li>
       </ul>
 
-      <table class="compare-table" aria-label="Architecture comparison">
-        <thead>
-          <tr>
-            <th scope="col">Architecture</th>
-            <th scope="col">Summary</th>
-            <th v-for="l in allLabels" :key="l" scope="col">{{ l }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="a in architectures" :key="a.path">
-            <th scope="row">{{ a.title }}</th>
-            <td>{{ a.summary }}</td>
-            <td v-for="l in allLabels" :key="l" class="compare-cell">
-              <span v-if="a.labels.includes(l)" aria-label="yes">✓</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="compare-table-scroll">
+        <table class="compare-table" aria-label="Architecture comparison">
+          <thead>
+            <tr>
+              <th scope="col">Architecture</th>
+              <th scope="col">Summary</th>
+              <th v-for="l in allLabels" :key="l" scope="col">{{ l }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in architectures" :key="a.path">
+              <th scope="row">{{ a.title }}</th>
+              <td>{{ a.summary }}</td>
+              <td v-for="l in allLabels" :key="l" class="compare-cell">
+                <span v-if="a.labels.includes(l)" aria-label="yes">✓</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </template>
   </div>
 </template>
@@ -221,8 +223,12 @@ onMounted(load)
   font-weight: 600;
   color: var(--color-accent);
 }
+.compare-table-scroll {
+  overflow-x: auto;
+}
 .compare-table {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
   font-size: var(--text-sm);
 }

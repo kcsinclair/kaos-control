@@ -233,7 +233,7 @@ const canAdvance = computed(() => {
 
 <style scoped>
 .wizard-view {
-  max-width: 800px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: var(--space-6) var(--space-4);
   display: flex;
