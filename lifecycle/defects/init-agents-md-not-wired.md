@@ -1,7 +1,7 @@
 ---
 title: Project Initialisation Does Not Set Up AGENTS.md with Claude and Gemini Directives
 type: defect
-status: draft
+status: approved
 lineage: init-agents-md-not-wired
 created: "2026-08-19T09:25:51+10:00"
 priority: normal
