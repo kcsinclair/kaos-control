@@ -17,9 +17,11 @@ import (
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/authcmd"
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/devopscmd"
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/hookcmd"
+	"github.com/kaos-control/kaos-control/internal/architecture"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/backfillcmd"
 	"github.com/kaos-control/kaos-control/internal/config"
+	"github.com/kaos-control/kaos-control/internal/directives"
 	khttp "github.com/kaos-control/kaos-control/internal/http"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/initcmd"
@@ -226,6 +228,11 @@ func run() error {
 		HookServerAddr: appCfg.Server.Listen,
 		HookBinaryPath: selfBinary,
 	}
+
+	// Wire the directive generator in as the Architecture Wizard's optional
+	// scaffolding step (FR-17/FR-18). Registered once at startup; until this
+	// runs the wizard reports scaffolding as unavailable.
+	architecture.RegisterScaffolder(directives.Scaffolder{})
 
 	// Open each project (loads config + opens/scans SQLite index).
 	// Each project gets its own derived context so that UnregisterProject can

@@ -88,7 +88,11 @@ func PatchAgentConfig(projectRoot string, m DirectiveModel) (PatchAgentConfigRes
 
 	agentsNode := mappingValue(root, "agents")
 	if agentsNode == nil || agentsNode.Kind != yaml.SequenceNode {
-		return PatchAgentConfigResult{}, fmt.Errorf("%s: no top-level agents: sequence", cfgPath)
+		// No agents sequence to patch — a valid state (a config that doesn't
+		// declare the standard agents has nothing to tune to the stack). Skip
+		// gracefully so directive-file generation still succeeds rather than
+		// failing the whole scaffold.
+		return PatchAgentConfigResult{}, nil
 	}
 
 	var disabled []string
