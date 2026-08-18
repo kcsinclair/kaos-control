@@ -107,6 +107,7 @@ watch(view, (v) => {
         :edges="edges"
         :node-style="nodeStyle"
         :edge-style="edgeStyleForEdge"
+        :show-node-titles="true"
         @node-click="onNodeClick"
       />
       <Graph2DView
