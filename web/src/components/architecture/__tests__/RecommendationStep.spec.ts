@@ -88,4 +88,63 @@ describe('RecommendationStep', () => {
 
     expect(wrapper.emitted('browse-anyway')).toBeTruthy()
   })
+
+  it('summarises the questions and the answers given', () => {
+    const store = useArchitectureWizardStore()
+    store.questions = [
+      {
+        id: 'offline',
+        prompt: 'Must it work offline?',
+        kind: 'hard',
+        options: [
+          { value: 'yes', label: 'Yes, fully offline' },
+          { value: 'no', label: 'No' },
+        ],
+      },
+      { id: 'scale', prompt: 'Expected scale?', kind: 'soft', options: [{ value: 'high', label: 'High' }] },
+    ]
+    store.answers = [{ question_id: 'offline', value: 'yes' }]
+    store.recommendations = [recommendation()]
+
+    const wrapper = mount(RecommendationStep)
+    const summary = wrapper.find('.qa-summary')
+    expect(summary.exists()).toBe(true)
+    expect(summary.text()).toContain('Must it work offline?')
+    expect(summary.text()).toContain('Yes, fully offline') // answer label, not the raw value
+    // An unanswered/skipped question is shown as "No preference".
+    expect(summary.text()).toContain('No preference')
+  })
+
+  it('shows an explicit best-fit heading and badge when the match is exact', () => {
+    const store = useArchitectureWizardStore()
+    store.recommendations = [recommendation()]
+    store.droppedConstraints = []
+
+    const wrapper = mount(RecommendationStep)
+    expect(wrapper.find('.recommend-title').text()).toBe('Your best-fit architecture')
+    expect(wrapper.find('.recommend-card--best .recommend-badge').text()).toBe('Best fit')
+  })
+
+  it('flags the result as a closest match, not a best fit, when constraints were dropped', () => {
+    const store = useArchitectureWizardStore()
+    store.recommendations = [recommendation()]
+    store.droppedConstraints = ['mobile']
+
+    const wrapper = mount(RecommendationStep)
+    expect(wrapper.find('.recommend-title').text()).toContain('closest fits')
+    expect(wrapper.find('.recommend-card--best .recommend-badge').text()).toBe('Closest match')
+  })
+
+  it('says so and offers Browse when there is no match at all', async () => {
+    const store = useArchitectureWizardStore()
+    store.recommendations = []
+
+    const wrapper = mount(RecommendationStep)
+    expect(wrapper.find('.recommend-title').text()).toBe('No clear match')
+    expect(wrapper.find('.recommend-cards').exists()).toBe(false)
+    const noMatch = wrapper.find('.no-match')
+    expect(noMatch.exists()).toBe(true)
+    await noMatch.find('button.show-everything-btn').trigger('click')
+    expect(wrapper.emitted('browse-anyway')).toBeTruthy()
+  })
 })
