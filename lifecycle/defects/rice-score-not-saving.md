@@ -1,7 +1,7 @@
 ---
 title: RICE Score Not Saved — Displays N/A After Entry
 type: defect
-status: draft
+status: approved
 lineage: rice-score-not-saving
 created: "2026-08-19T09:28:11+10:00"
 priority: normal
