@@ -7,9 +7,11 @@
 // "no exact match — closest fits" (OQ-2 dropped constraints) / "no clear
 // match" state otherwise. Each candidate carries a visible "why", and an
 // override expander falls back to Browse for any other catalog item (FR-4).
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useArchitectureWizardStore } from '@/stores/architectureWizard'
 import type { CatalogItem } from '@/types/api'
+
+const props = defineProps<{ project: string }>()
 
 const emit = defineEmits<{
   chosen: [item: CatalogItem]
@@ -18,6 +20,17 @@ const emit = defineEmits<{
 
 const store = useArchitectureWizardStore()
 const overrideExpanded = ref(false)
+
+// Own the recommendation fetch rather than relying on the questions step
+// having populated it. This makes the step robust to a page refresh, back
+// navigation, or a race where it mounts before the prior step's fetch
+// resolved (which showed a blank result until a manual refresh). Skip when
+// results are already loaded to avoid a redundant call.
+onMounted(() => {
+  if (store.answers.length > 0 && store.recommendations.length === 0 && !store.loading) {
+    void store.fetchRecommendations(props.project)
+  }
+})
 
 // Every question the user went through, paired with the option label they
 // picked (or "No preference" when skipped/unanswered) — so the recommendation
@@ -58,6 +71,11 @@ const heading = computed(() => {
       </dl>
     </details>
 
+    <div v-if="store.loading" class="recommend-loading" role="status">
+      Finding your best-fit architecture…
+    </div>
+
+    <template v-else>
     <h2 class="recommend-title">{{ heading }}</h2>
 
     <div
@@ -120,6 +138,7 @@ const heading = computed(() => {
         </button>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -162,6 +181,11 @@ const heading = computed(() => {
 .qa-answer--none {
   font-weight: 400;
   font-style: italic;
+  color: var(--color-text-muted);
+}
+.recommend-loading {
+  padding: var(--space-4);
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 .recommend-title {

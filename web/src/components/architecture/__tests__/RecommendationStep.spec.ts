@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { useArchitectureWizardStore } from '@/stores/architectureWizard'
@@ -43,7 +43,7 @@ describe('RecommendationStep', () => {
       recommendation({ slug: 'edge-hybrid', title: 'Edge Hybrid', path: 'lifecycle/architecture/architectures/edge-hybrid.md' }, ['Default bias — no strong signal either way']),
     ]
 
-    const wrapper = mount(RecommendationStep)
+    const wrapper = mount(RecommendationStep, { props: { project: 'testproject' } })
 
     const cards = wrapper.findAll('li.recommend-card')
     expect(cards).toHaveLength(3)
@@ -61,7 +61,7 @@ describe('RecommendationStep', () => {
     store.recommendations = [recommendation()]
     store.droppedConstraints = ['mobile', 'ai-ml']
 
-    const wrapper = mount(RecommendationStep)
+    const wrapper = mount(RecommendationStep, { props: { project: 'testproject' } })
 
     const banner = wrapper.find('.dropped-banner')
     expect(banner.exists()).toBe(true)
@@ -74,7 +74,7 @@ describe('RecommendationStep', () => {
     store.recommendations = [recommendation()]
     store.droppedConstraints = []
 
-    const wrapper = mount(RecommendationStep)
+    const wrapper = mount(RecommendationStep, { props: { project: 'testproject' } })
     expect(wrapper.find('.dropped-banner').exists()).toBe(false)
   })
 
@@ -82,7 +82,7 @@ describe('RecommendationStep', () => {
     const store = useArchitectureWizardStore()
     store.recommendations = [recommendation()]
 
-    const wrapper = mount(RecommendationStep)
+    const wrapper = mount(RecommendationStep, { props: { project: 'testproject' } })
     await wrapper.find('button.override-toggle').trigger('click')
     await wrapper.find('button.show-everything-btn').trigger('click')
 
@@ -106,7 +106,7 @@ describe('RecommendationStep', () => {
     store.answers = [{ question_id: 'offline', value: 'yes' }]
     store.recommendations = [recommendation()]
 
-    const wrapper = mount(RecommendationStep)
+    const wrapper = mount(RecommendationStep, { props: { project: 'testproject' } })
     const summary = wrapper.find('.qa-summary')
     expect(summary.exists()).toBe(true)
     expect(summary.text()).toContain('Must it work offline?')
@@ -120,7 +120,7 @@ describe('RecommendationStep', () => {
     store.recommendations = [recommendation()]
     store.droppedConstraints = []
 
-    const wrapper = mount(RecommendationStep)
+    const wrapper = mount(RecommendationStep, { props: { project: 'testproject' } })
     expect(wrapper.find('.recommend-title').text()).toBe('Your best-fit architecture')
     expect(wrapper.find('.recommend-card--best .recommend-badge').text()).toBe('Best fit')
   })
@@ -130,16 +130,38 @@ describe('RecommendationStep', () => {
     store.recommendations = [recommendation()]
     store.droppedConstraints = ['mobile']
 
-    const wrapper = mount(RecommendationStep)
+    const wrapper = mount(RecommendationStep, { props: { project: 'testproject' } })
     expect(wrapper.find('.recommend-title').text()).toContain('closest fits')
     expect(wrapper.find('.recommend-card--best .recommend-badge').text()).toBe('Closest match')
+  })
+
+  it('fetches on mount when answers exist but no results are loaded (refresh / back-nav / race)', () => {
+    const store = useArchitectureWizardStore()
+    store.answers = [{ question_id: 'offline', value: 'yes' }]
+    store.recommendations = []
+    const spy = vi.spyOn(store, 'fetchRecommendations').mockResolvedValue()
+
+    mount(RecommendationStep, { props: { project: 'testproject' } })
+
+    expect(spy).toHaveBeenCalledWith('testproject')
+  })
+
+  it('does not refetch when results are already loaded', () => {
+    const store = useArchitectureWizardStore()
+    store.answers = [{ question_id: 'offline', value: 'yes' }]
+    store.recommendations = [recommendation()]
+    const spy = vi.spyOn(store, 'fetchRecommendations').mockResolvedValue()
+
+    mount(RecommendationStep, { props: { project: 'testproject' } })
+
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('says so and offers Browse when there is no match at all', async () => {
     const store = useArchitectureWizardStore()
     store.recommendations = []
 
-    const wrapper = mount(RecommendationStep)
+    const wrapper = mount(RecommendationStep, { props: { project: 'testproject' } })
     expect(wrapper.find('.recommend-title').text()).toBe('No clear match')
     expect(wrapper.find('.recommend-cards').exists()).toBe(false)
     const noMatch = wrapper.find('.no-match')

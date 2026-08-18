@@ -214,6 +214,7 @@ const canAdvance = computed(() => {
 
           <RecommendationStep
             v-else-if="currentStepKey === 'recommend'"
+            :project="project"
             @chosen="onArchitectureChosen"
             @browse-anyway="onShowEverythingAnyway"
           />
