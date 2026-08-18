@@ -1,7 +1,7 @@
 ---
 title: 3D Architecture Map Missing Artifact Name Labels
 type: defect
-status: approved
+status: in-development
 lineage: 3d-map-missing-artifact-labels
 created: "2026-08-19T09:22:35+10:00"
 priority: normal
@@ -12,6 +12,7 @@ labels:
     - map
     - frontend
     - visualization
+release: KC-Release5
 ---
 
 # 3D Architecture Map Missing Artifact Name Labels
