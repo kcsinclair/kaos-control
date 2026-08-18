@@ -1,7 +1,7 @@
 ---
 title: 'Architecture Wizard: No ''Start Again'' Button to Reset Wizard'
 type: defect
-status: approved
+status: in-development
 lineage: arch-wizard-no-reset-button
 created: "2026-08-18T10:58:20+10:00"
 priority: normal
