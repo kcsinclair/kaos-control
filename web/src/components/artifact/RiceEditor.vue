@@ -41,10 +41,13 @@ function extractComponents(fm: ArtifactFrontmatter): RiceComponents {
 const isOpen = ref(false)
 const stored = ref<RiceComponents>(extractComponents(props.frontmatter))
 
-const reachStr = ref('')
-const impactStr = ref('')
-const confidenceStr = ref('')
-const effortStr = ref('')
+// These hold input values. Note: Vue's v-model on <input type="number">
+// coerces the bound value to a *number* on edit (even though we seed them with
+// strings), so these can be either — parseField/fieldError handle both.
+const reachStr = ref<string | number>('')
+const impactStr = ref<string | number>('')
+const confidenceStr = ref<string | number>('')
+const effortStr = ref<string | number>('')
 
 const wrapRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
@@ -57,10 +60,17 @@ watch(() => props.frontmatter, (fm) => {
 const closedLabel = computed(() => formatRice(riceScore(stored.value)))
 
 // ── parsing + local live state ──────────────────────────────────────────────
-function parseField(raw: string): number | null {
-  const t = raw.trim()
-  if (t === '') return null
-  return Number(t)
+// raw may be a string (seeded / cleared / select) or a number (v-model on a
+// type="number" input coerces to number on edit — the source of the
+// "edited values won't save" defect).
+function parseField(raw: string | number | null | undefined): number | null {
+  if (raw == null || raw === '') return null
+  const n = typeof raw === 'number' ? raw : Number(raw.trim())
+  return Number.isNaN(n) ? null : n
+}
+
+function isBlank(raw: string | number | null | undefined): boolean {
+  return raw == null || (typeof raw === 'string' ? raw.trim() === '' : Number.isNaN(raw))
 }
 
 const localComponents = computed<RiceComponents>(() => ({
@@ -70,8 +80,8 @@ const localComponents = computed<RiceComponents>(() => ({
   rice_effort: parseField(effortStr.value),
 }))
 
-function fieldError(field: keyof RiceComponents, raw: string, value: number | null): string | null {
-  if (raw.trim() === '') return null
+function fieldError(field: keyof RiceComponents, raw: string | number, value: number | null): string | null {
+  if (isBlank(raw)) return null
   return validateRiceComponent(field, value)
 }
 
