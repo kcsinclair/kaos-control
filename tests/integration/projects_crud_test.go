@@ -874,6 +874,7 @@ func TestInitProject_CreatesScaffolding(t *testing.T) {
 		"lifecycle/config.yaml",
 		"AGENTS.md",
 		"CLAUDE.md",
+		"GEMINI.md",
 		".claude/settings.json",
 		".gitignore",
 		"lifecycle/devops/sample.yaml",

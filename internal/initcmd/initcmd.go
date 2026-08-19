@@ -125,7 +125,12 @@ func ScaffoldProject(opts ScaffoldOptions) (ScaffoldResult, error) {
 	// the config patch is skipped while no stack is promoted. GEMINI.md is
 	// written when the project configures a gemini driver (FR-12). config.yaml
 	// was written above, so driver discovery works. Idempotent.
-	genRes, err := directives.Generate(abs, directives.GenerateOptions{Force: opts.Force.ClaudeMd})
+	genRes, err := directives.Generate(abs, directives.GenerateOptions{
+		Force:         opts.Force.ClaudeMd,
+		IncludeGemini: true, // always establish the full multi-agent set at init
+		ProjectName:   projectName,
+		Language:      opts.Language,
+	})
 	if err != nil {
 		return ScaffoldResult{Dirs: dirs, Files: files, Architecture: arch},
 			fmt.Errorf("generating agent directives: %w", err)

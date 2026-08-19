@@ -51,8 +51,17 @@ type GenerateOptions struct {
 	// Drivers lists the agent drivers configured for this project (e.g.
 	// "claude-code-cli", "gemini-cli"). When nil, Generate reads them from
 	// lifecycle/config.yaml itself. GEMINI.md is only written when a
-	// "gemini-cli" or "gemini" driver is present (FR-12).
+	// "gemini-cli" or "gemini" driver is present (FR-12) unless IncludeGemini
+	// forces it.
 	Drivers []string
+	// IncludeGemini forces GEMINI.md even when no gemini driver is configured.
+	// Used at init to establish the full AGENTS.md/CLAUDE.md/GEMINI.md set so
+	// the project visibly supports multiple agents out of the box.
+	IncludeGemini bool
+	// ProjectName and Language populate the generic (pre-wizard) AGENTS.md
+	// header. Ignored once a stack is promoted — the model supplies them.
+	ProjectName string
+	Language    string
 }
 
 // Generate ties BuildModel, RenderAgents/RenderPointer, and
@@ -85,7 +94,11 @@ func Generate(projectRoot string, opts GenerateOptions) (GenerateResult, error) 
 
 	var agentsBody []byte
 	if generic {
-		agentsBody, err = GenericAgents(filepath.Base(filepath.Clean(projectRoot)), "")
+		name := opts.ProjectName
+		if name == "" {
+			name = filepath.Base(filepath.Clean(projectRoot))
+		}
+		agentsBody, err = GenericAgents(name, opts.Language)
 	} else {
 		agentsBody, err = RenderAgents(m)
 	}
@@ -108,7 +121,7 @@ func Generate(projectRoot string, opts GenerateOptions) (GenerateResult, error) 
 	}
 	result.Files = append(result.Files, relativizeFileWrite(fw, claudeFile))
 
-	if hasGeminiDriver(drivers) {
+	if hasGeminiDriver(drivers) || opts.IncludeGemini {
 		fw, err = writeFile(filepath.Join(projectRoot, geminiFile), pointer, opts.Force)
 		if err != nil {
 			return GenerateResult{}, fmt.Errorf("writing %s: %w", geminiFile, err)

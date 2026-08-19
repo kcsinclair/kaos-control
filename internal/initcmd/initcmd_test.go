@@ -111,7 +111,7 @@ func TestScaffoldProject_SeedsArchitectureCatalog(t *testing.T) {
 // pointer, reported in ScaffoldResult.Directives.
 func TestScaffold_EmitsAgentsMdPrimarySet(t *testing.T) {
 	dir := t.TempDir()
-	res, err := ScaffoldProject(ScaffoldOptions{ProjectRoot: dir, ProjectName: "my-project"})
+	res, err := ScaffoldProject(ScaffoldOptions{ProjectRoot: dir, ProjectName: "my-project", Language: "Go"})
 	if err != nil {
 		t.Fatalf("ScaffoldProject: %v", err)
 	}
@@ -123,26 +123,30 @@ func TestScaffold_EmitsAgentsMdPrimarySet(t *testing.T) {
 	if !strings.Contains(string(agents), "kaos-control:generated:start") {
 		t.Error("AGENTS.md is missing the managed-region markers")
 	}
-
-	claude, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
-	if err != nil {
-		t.Fatalf("CLAUDE.md not created: %v", err)
-	}
-	if strings.TrimSpace(string(claude)) != "@AGENTS.md" {
-		t.Errorf("CLAUDE.md = %q, want an @AGENTS.md pointer", string(claude))
+	if !strings.Contains(string(agents), "Go") {
+		t.Error("AGENTS.md is missing the --language hint")
 	}
 
-	var haveAgents, haveClaude bool
-	for _, r := range res.Directives {
-		switch r.Path {
-		case "AGENTS.md":
-			haveAgents = true
-		case "CLAUDE.md":
-			haveClaude = true
+	// CLAUDE.md and GEMINI.md are @AGENTS.md pointers; GEMINI.md is always
+	// emitted at init (IncludeGemini) so the project visibly supports both.
+	for _, f := range []string{"CLAUDE.md", "GEMINI.md"} {
+		body, err := os.ReadFile(filepath.Join(dir, f))
+		if err != nil {
+			t.Fatalf("%s not created: %v", f, err)
+		}
+		if strings.TrimSpace(string(body)) != "@AGENTS.md" {
+			t.Errorf("%s = %q, want an @AGENTS.md pointer", f, string(body))
 		}
 	}
-	if !haveAgents || !haveClaude {
-		t.Errorf("Directives result missing AGENTS.md/CLAUDE.md: %+v", res.Directives)
+
+	have := map[string]bool{}
+	for _, r := range res.Directives {
+		have[r.Path] = true
+	}
+	for _, want := range []string{"AGENTS.md", "CLAUDE.md", "GEMINI.md"} {
+		if !have[want] {
+			t.Errorf("Directives result missing %s: %+v", want, res.Directives)
+		}
 	}
 }
 
