@@ -156,6 +156,15 @@ func (s *Server) handleRecommendArchitecture(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Return empty arrays rather than JSON null (nil slices) so clients can
+	// safely read .length without a null guard.
+	if recs == nil {
+		recs = []architecture.Recommendation{}
+	}
+	if dropped == nil {
+		dropped = []string{}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"recommendations":     recs,
 		"dropped_constraints": dropped,

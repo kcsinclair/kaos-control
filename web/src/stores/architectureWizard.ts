@@ -145,8 +145,10 @@ export const useArchitectureWizardStore = defineStore('architectureWizard', () =
     error.value = null
     try {
       const res = await apiRecommend(project, answers.value)
-      recommendations.value = res.recommendations
-      droppedConstraints.value = res.dropped_constraints
+      // The API can send these as JSON null (Go nil slices) when empty;
+      // default to [] so downstream `.length` access never throws.
+      recommendations.value = res.recommendations ?? []
+      droppedConstraints.value = res.dropped_constraints ?? []
     } catch (e: unknown) {
       applyError(e, 'Failed to compute recommendations.')
     } finally {

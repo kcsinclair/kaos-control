@@ -134,6 +134,22 @@ describe('architectureWizard store', () => {
     ])
   })
 
+  it('normalises null recommendations/dropped_constraints to [] (Go nil slices)', async () => {
+    vi.mocked(recommend).mockResolvedValue({
+      // The API can serialise empty Go slices as JSON null.
+      recommendations: null as unknown as [],
+      dropped_constraints: null as unknown as [],
+    })
+
+    const store = useArchitectureWizardStore()
+    await store.fetchRecommendations('testproject')
+
+    expect(store.recommendations).toEqual([])
+    expect(store.droppedConstraints).toEqual([])
+    // Guards against the "null is not an object (droppedConstraints.length)" crash.
+    expect(store.droppedConstraints.length).toBe(0)
+  })
+
   it('commit() calls the commit endpoint with architecture + stack + answers + Q&A', async () => {
     const arch = makeArchitecture()
     const stack = makeStack()
