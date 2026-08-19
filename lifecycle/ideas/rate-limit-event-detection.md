@@ -1,7 +1,7 @@
 ---
 title: Detect Claude Code rate_limit_event for Precise Quota Signalling
 type: idea
-status: draft
+status: planning
 lineage: rate-limit-event-detection
 priority: medium
 labels:
