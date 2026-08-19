@@ -1,7 +1,7 @@
 ---
 title: Architecture and ADR Artifacts Missing from List View and Other Surfaces
 type: defect
-status: draft
+status: approved
 lineage: architecture-adr-artifacts-missing-from-list-view
 created: "2026-08-19T10:53:32+10:00"
 priority: normal
