@@ -34,6 +34,11 @@ type ScaffoldChoice struct {
 type ScaffoldResult struct {
 	Applied []string `json:"applied"`
 	Skipped []string `json:"skipped"`
+	// Committed is true when the applied files were auto-committed (a repo
+	// kaos-control created). GitCommands, for a pre-existing user repo, holds
+	// the git add/commit the user should run to track them (FR-17).
+	Committed   bool     `json:"committed,omitempty"`
+	GitCommands []string `json:"git_commands,omitempty"`
 }
 
 // Scaffolder generates scaffolding for a chosen architecture + stack. It is

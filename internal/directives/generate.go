@@ -32,13 +32,15 @@ type GenerateResult struct {
 	// Skipped names files intentionally not written this run (GEMINI.md
 	// with no gemini driver configured — FR-12).
 	Skipped []string `json:"skipped,omitempty"`
-	// GitCommands, when the project is a git repo, holds the exact
+	// GitCommands, for a pre-existing (user-owned) repo, holds the exact
 	// `git add …`/`git commit …` the caller should run to track the files
-	// this run wrote (FR-17). Generation writes to disk but never touches
-	// git itself; the HTTP handlers populate this, mirroring how init hands
-	// back git commands on an already-initialised repo. Empty when no files
-	// were written or the project is not a git repo.
+	// this run wrote (FR-17). Empty when the files were auto-committed
+	// (see Committed), when nothing was written, or when not a git repo.
 	GitCommands []string `json:"gitCommands,omitempty"`
+	// Committed is true when kaos-control auto-committed the written files
+	// itself — the case for a repo it created (managed). Generation writes
+	// to disk but never touches git; the HTTP handlers set this.
+	Committed bool `json:"committed,omitempty"`
 }
 
 // GenerateOptions configures Generate.

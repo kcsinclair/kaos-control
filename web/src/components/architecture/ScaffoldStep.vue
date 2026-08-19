@@ -111,6 +111,12 @@ onMounted(load)
         <ul>
           <li v-for="p in result.skipped" :key="p">{{ p }}</li>
         </ul>
+
+        <p v-if="result.committed" class="scaffold-committed">✓ Committed to git.</p>
+        <div v-else-if="result.git_commands?.length" class="scaffold-git">
+          <p>These files aren't committed yet — run these to track them:</p>
+          <pre class="scaffold-git-cmds">{{ result.git_commands.join('\n') }}</pre>
+        </div>
       </div>
     </template>
 
@@ -223,6 +229,25 @@ onMounted(load)
   padding-left: 1.2em;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+}
+.scaffold-committed {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+}
+.scaffold-git {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.scaffold-git-cmds {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  overflow-x: auto;
+  white-space: pre;
 }
 .run-scaffold-btn {
   align-self: flex-start;

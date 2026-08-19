@@ -705,6 +705,11 @@ export interface ScaffoldChoice {
 export interface ScaffoldResult {
   applied: string[]
   skipped: string[]
+  // committed is true when kaos-control auto-committed the applied files (a
+  // repo it created). git_commands, for a pre-existing user repo, holds the
+  // git add/commit to run to track them.
+  committed?: boolean
+  git_commands?: string[]
 }
 
 export interface WizardScaffoldAvailability {

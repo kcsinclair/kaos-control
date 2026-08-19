@@ -127,6 +127,15 @@ func (s *Server) handleInitProject(w http.ResponseWriter, r *http.Request) {
 			created = append(created, r.Path)
 		}
 	}
+	// Include the architecture catalog scaffold (README, architectures/*,
+	// tech-stacks/*, decisions/ + standards/ .gitkeep) so a fresh project's
+	// git tracks everything kaos-control created, not just the top-level
+	// scaffold.
+	for _, r := range res.Architecture {
+		if r.Created {
+			created = append(created, r.Path)
+		}
+	}
 
 	// Git handling.
 	gitInitialised := false
@@ -139,6 +148,12 @@ func (s *Server) handleInitProject(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		gitInitialised = true
+		// Mark this repo as kaos-control-created so later scaffolding
+		// (directive generation) auto-commits rather than handing back
+		// commands, per the new-folder policy.
+		if err := kgit.MarkManaged(projectPath); err != nil {
+			slog.Warn("init: failed to mark repo as kaos-control-managed", "project", name, "err", err)
+		}
 
 		if len(created) > 0 {
 			repo, err := kgit.Open(projectPath)
@@ -217,37 +232,32 @@ func (s *Server) handleMigrateDirectives(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusInternalServerError, apiError("migrate_failed", err.Error()))
 		return
 	}
-	res.GitCommands = directiveGitCommands(p.Entry.Path, res.Files)
+	res.Committed, res.GitCommands = trackDirectiveFiles(p.Entry.Path, res.Files, "kaos-control: migrate agent directives")
 
 	writeJSON(w, http.StatusOK, res)
 }
 
-// directiveGitCommands returns the git add/commit the user should run to track
-// the root directive files a migrate/refresh run wrote. Directive files
-// (AGENTS.md/CLAUDE.md/GEMINI.md) live at the project root, outside the index
-// and the fsnotify watch, and generation never touches git itself — so without
-// this the files are written to disk but left untracked. Mirrors the
-// already-initialised-repo branch of handleInitProject. Returns nil when the
-// project is not a git repo or nothing was actually written (FR-17).
-func directiveGitCommands(projectPath string, files []directives.FileWrite) []string {
-	if !kgit.IsRepo(projectPath) {
-		return nil
-	}
-	var addArgs string
+// trackDirectiveFiles gets the root directive files a migrate/refresh run wrote
+// under git per the new-folder policy: for a repo kaos-control created it
+// auto-commits them and returns committed=true; for a pre-existing user repo it
+// returns the git add/commit commands for the user to run (never touching their
+// history). Directive files (AGENTS.md/CLAUDE.md/GEMINI.md) live at the project
+// root, outside the index and fsnotify watch, and generation never touches git
+// itself — so without this they'd be written but left untracked (FR-17).
+func trackDirectiveFiles(projectPath string, files []directives.FileWrite, commitMsg string) (bool, []string) {
+	var paths []string
 	for _, f := range files {
 		// Only files actually written this run — skip pending-diff (withheld)
 		// and skipped entries.
 		if (f.Created || f.Changed) && f.Diff == "" && !f.Skipped {
-			addArgs += " " + filepath.ToSlash(f.Path)
+			paths = append(paths, filepath.ToSlash(f.Path))
 		}
 	}
-	if addArgs == "" {
-		return nil
+	committed, cmds, err := kgit.TrackGenerated(projectPath, paths, commitMsg)
+	if err != nil {
+		slog.Warn("directives: git tracking failed", "project", projectPath, "err", err)
 	}
-	return []string{
-		fmt.Sprintf("git -C %s add%s", projectPath, addArgs),
-		fmt.Sprintf(`git -C %s commit -m "chore: update agent directive files"`, projectPath),
-	}
+	return committed, cmds
 }
 
 // handleRefreshDirectives handles POST /api/p/{project}/directives/refresh:
@@ -281,7 +291,7 @@ func (s *Server) handleRefreshDirectives(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusInternalServerError, apiError("refresh_failed", err.Error()))
 		return
 	}
-	res.GitCommands = directiveGitCommands(p.Entry.Path, res.Files)
+	res.Committed, res.GitCommands = trackDirectiveFiles(p.Entry.Path, res.Files, "kaos-control: refresh agent directives")
 
 	if err := p.ReloadConfig(); err != nil {
 		slog.Warn("directives refresh: failed to reload project config", "project", p.Entry.Name, "err", err)

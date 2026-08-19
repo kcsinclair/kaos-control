@@ -2,7 +2,10 @@
 
 package directives
 
-import "github.com/kaos-control/kaos-control/internal/architecture"
+import (
+	"github.com/kaos-control/kaos-control/internal/architecture"
+	kgit "github.com/kaos-control/kaos-control/internal/git"
+)
 
 // scaffoldStepKey identifies the agent-directives offering in the wizard's
 // optional scaffolding step.
@@ -48,5 +51,14 @@ func (Scaffolder) Run(projectRoot, archSlug, stackSlug string, choices []archite
 		}
 	}
 	out.Skipped = append(out.Skipped, res.Skipped...)
+
+	// Track the generated directive files under git per the new-folder policy:
+	// auto-commit for a repo kaos-control created, else hand back the commands.
+	committed, cmds, err := kgit.TrackGenerated(projectRoot, out.Applied, "kaos-control: agent directive files")
+	if err != nil {
+		return out, err
+	}
+	out.Committed = committed
+	out.GitCommands = cmds
 	return out, nil
 }
