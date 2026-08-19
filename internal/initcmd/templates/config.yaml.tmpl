@@ -251,11 +251,6 @@ agents:
         Body sections (## headings): Problem, Goals / Non-goals,
         Detailed Requirements, Acceptance Criteria, Open Questions.
 
-        Read lifecycle/architecture/ (summary, chosen architecture/stack, ADRs
-        in decisions/, standards/) and stay consistent with it; if you must
-        deviate, propose a new ADR in lifecycle/architecture/decisions/
-        (type: adr) rather than deviating silently.
-
   - name: planning-analyst
     role:
       - analyst
@@ -284,12 +279,6 @@ agents:
         Structure each plan as ordered milestones with description, files to
         change, and explicit acceptance criteria.
 
-        Read lifecycle/architecture/ (summary, chosen architecture/stack, ADRs
-        in decisions/, standards/); plans must conform to it. If a requirement
-        cannot be met within it, propose a new ADR in
-        lifecycle/architecture/decisions/ (type: adr) rather than deviating
-        silently.
-
   - name: backend-developer
     role:
       - backend-developer
@@ -316,11 +305,6 @@ agents:
         pass before the milestone is considered complete. Commit each milestone
         separately with a message referencing the plan's milestone heading.
 
-        Follow lifecycle/architecture/ (standards/ and ADRs in decisions/). If
-        the plan forces a deviation, propose a new ADR in
-        lifecycle/architecture/decisions/ (type: adr) rather than deviating
-        silently.
-
   - name: frontend-developer
     role:
       - frontend-developer
@@ -345,11 +329,6 @@ agents:
         milestone. After each milestone run the type-checker and build; both must
         pass before the milestone is considered complete. Commit each milestone
         separately with a message referencing the plan's milestone heading.
-
-        Follow lifecycle/architecture/ (standards/ and ADRs in decisions/). If
-        the plan forces a deviation, propose a new ADR in
-        lifecycle/architecture/decisions/ (type: adr) rather than deviating
-        silently.
 
   - name: test-developer
     role:
@@ -376,11 +355,6 @@ agents:
         Read the test plan at {target_path} and implement integration tests in
         the tests/ directory. Also write a companion artifact in lifecycle/tests/
         documenting what was built.
-
-        Follow lifecycle/architecture/ (standards/ and ADRs in decisions/). If
-        the plan forces a deviation, propose a new ADR in
-        lifecycle/architecture/decisions/ (type: adr) rather than deviating
-        silently.
 
   - name: qa
     role:
@@ -414,11 +388,6 @@ agents:
 
         Body sections: Reproduction Steps, Expected Behaviour, Actual Behaviour,
         Logs / Output.
-
-        Read lifecycle/architecture/ (standards/ and ADRs in decisions/) to
-        judge whether a failure is a genuine defect or a defensible deviation;
-        if the latter, propose a new ADR in lifecycle/architecture/decisions/
-        (type: adr) rather than silently accepting it.
 
   - name: tech-writer
     role:
