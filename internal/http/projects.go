@@ -136,6 +136,13 @@ func (s *Server) handleInitProject(w http.ResponseWriter, r *http.Request) {
 			created = append(created, r.Path)
 		}
 	}
+	// Include the generated directive files (AGENTS.md + CLAUDE.md/GEMINI.md
+	// pointers) so they're tracked too.
+	for _, r := range res.Directives {
+		if r.Created {
+			created = append(created, r.Path)
+		}
+	}
 
 	// Git handling.
 	gitInitialised := false

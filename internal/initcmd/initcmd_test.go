@@ -5,6 +5,7 @@ package initcmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/kaos-control/kaos-control/internal/config"
@@ -104,30 +105,44 @@ func TestScaffoldProject_SeedsArchitectureCatalog(t *testing.T) {
 	}
 }
 
-// TestCLAUDEMdTemplateLanguageConditional verifies that the CLAUDE.md template
-// includes the language section when Language is set and omits it when blank.
-func TestCLAUDEMdTemplateLanguageConditional(t *testing.T) {
-	withLang, err := renderTemplate("CLAUDE.md.tmpl", TemplateData{
-		ProjectName: "my-project",
-		Language:    "Go",
-	})
+// TestScaffold_EmitsAgentsMdPrimarySet verifies init produces the
+// AGENTS.md-primary directive layout (defect init-agents-md-not-wired):
+// AGENTS.md canonical (with managed markers) + CLAUDE.md as an @AGENTS.md
+// pointer, reported in ScaffoldResult.Directives.
+func TestScaffold_EmitsAgentsMdPrimarySet(t *testing.T) {
+	dir := t.TempDir()
+	res, err := ScaffoldProject(ScaffoldOptions{ProjectRoot: dir, ProjectName: "my-project"})
 	if err != nil {
-		t.Fatalf("renderTemplate with language failed: %v", err)
+		t.Fatalf("ScaffoldProject: %v", err)
 	}
 
-	withoutLang, err := renderTemplate("CLAUDE.md.tmpl", TemplateData{
-		ProjectName: "my-project",
-		Language:    "",
-	})
+	agents, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
 	if err != nil {
-		t.Fatalf("renderTemplate without language failed: %v", err)
+		t.Fatalf("AGENTS.md not created: %v", err)
+	}
+	if !strings.Contains(string(agents), "kaos-control:generated:start") {
+		t.Error("AGENTS.md is missing the managed-region markers")
 	}
 
-	if got := string(withLang); !contains(got, "Go") {
-		t.Error("expected language 'Go' to appear in CLAUDE.md when Language is set")
+	claude, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("CLAUDE.md not created: %v", err)
 	}
-	if got := string(withoutLang); contains(got, "Primary Language") {
-		t.Error("expected 'Primary Language' section to be absent when Language is empty")
+	if strings.TrimSpace(string(claude)) != "@AGENTS.md" {
+		t.Errorf("CLAUDE.md = %q, want an @AGENTS.md pointer", string(claude))
+	}
+
+	var haveAgents, haveClaude bool
+	for _, r := range res.Directives {
+		switch r.Path {
+		case "AGENTS.md":
+			haveAgents = true
+		case "CLAUDE.md":
+			haveClaude = true
+		}
+	}
+	if !haveAgents || !haveClaude {
+		t.Errorf("Directives result missing AGENTS.md/CLAUDE.md: %+v", res.Directives)
 	}
 }
 

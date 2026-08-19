@@ -872,10 +872,11 @@ func TestInitProject_CreatesScaffolding(t *testing.T) {
 	// Landmark files / dirs must exist after init.
 	landmarks := []string{
 		"lifecycle/config.yaml",
+		"AGENTS.md",
 		"CLAUDE.md",
 		".claude/settings.json",
 		".gitignore",
-		"devops/sample.yaml",
+		"lifecycle/devops/sample.yaml",
 		"lifecycle/ideas/.gitkeep",
 		"lifecycle/requirements/.gitkeep",
 		"lifecycle/docs/.gitkeep",

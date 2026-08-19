@@ -64,8 +64,9 @@ type ScaffoldOptions struct {
 // directories and seed files so callers can render or filter independently.
 type ScaffoldResult struct {
 	Dirs         []Result // from scaffoldDirs (lifecycle/* plus tests/, devops/)
-	Files        []Result // from writeSeedFiles (config.yaml, CLAUDE.md, etc.)
+	Files        []Result // from writeSeedFiles (config.yaml, .claude/settings.json, etc.)
 	Architecture []Result // from architecture.EnsureArchitectureScaffold (lifecycle/architecture/*)
+	Directives   []Result // from directives.Generate (AGENTS.md + CLAUDE.md/GEMINI.md pointers)
 }
 
 // ScaffoldProject creates the standard kaos-control project layout at
@@ -117,7 +118,26 @@ func ScaffoldProject(opts ScaffoldOptions) (ScaffoldResult, error) {
 		arch[i] = Result{Path: r.Path, Created: r.Created}
 	}
 
-	return ScaffoldResult{Dirs: dirs, Files: files, Architecture: arch}, nil
+	// Generate the AGENTS.md-primary directive set: AGENTS.md (canonical, with
+	// managed-region markers so a later `init --refresh-directives` updates it
+	// in place) plus CLAUDE.md and GEMINI.md as `@AGENTS.md` pointers. Content
+	// is the generic, pre-wizard baseline until the Architecture Wizard runs;
+	// the config patch is skipped while no stack is promoted. GEMINI.md is
+	// written when the project configures a gemini driver (FR-12). config.yaml
+	// was written above, so driver discovery works. Idempotent.
+	genRes, err := directives.Generate(abs, directives.GenerateOptions{Force: opts.Force.ClaudeMd})
+	if err != nil {
+		return ScaffoldResult{Dirs: dirs, Files: files, Architecture: arch},
+			fmt.Errorf("generating agent directives: %w", err)
+	}
+	var directiveResults []Result
+	for _, f := range genRes.Files {
+		if f.Created || f.Changed {
+			directiveResults = append(directiveResults, Result{Path: f.Path, Created: true})
+		}
+	}
+
+	return ScaffoldResult{Dirs: dirs, Files: files, Architecture: arch, Directives: directiveResults}, nil
 }
 
 // Run is the entrypoint for the `kaos-control init` subcommand.
@@ -228,6 +248,11 @@ func Run(args []string) error {
 		}
 	}
 	for _, r := range res.Architecture {
+		if r.Created {
+			fmt.Printf("  created  %s\n", r.Path)
+		}
+	}
+	for _, r := range res.Directives {
 		if r.Created {
 			fmt.Printf("  created  %s\n", r.Path)
 		}
