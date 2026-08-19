@@ -249,6 +249,7 @@ agents:
           status: draft
           lineage: <same slug as the parent idea>
           parent: <path to parent idea>
+          created: <current date-time, RFC3339 — e.g. 2026-08-19T07:30:00Z>
 
         Body sections (use ## headings):
           - Problem
@@ -320,6 +321,7 @@ agents:
           status: draft
           lineage: <same slug as the requirement>
           parent: <path to the requirement>
+          created: <current date-time, RFC3339 — e.g. 2026-08-19T07:30:00Z>
 
         Structure each plan body as ordered milestones. Each milestone must
         have: description, files to change, and explicit acceptance criteria.
@@ -490,6 +492,7 @@ agents:
           status: draft
           lineage: <same slug as the test plan>
           parent: <path to the test plan>
+          created: <current date-time, RFC3339 — e.g. 2026-08-19T07:30:00Z>
 
         The artifact body should summarise scenarios covered and point to
         the specific test files in tests/.
@@ -543,6 +546,7 @@ agents:
           lineage: <lineage of the feature being tested>
           parent: <path to the failing test artifact or feature>
           labels: [defect]
+          created: <current date-time, RFC3339 — e.g. 2026-08-19T07:30:00Z>
           assignees:
             - role: <backend-developer | frontend-developer | test-developer>
               who: agent
