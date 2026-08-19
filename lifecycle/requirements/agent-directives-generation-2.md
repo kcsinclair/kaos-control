@@ -1,7 +1,7 @@
 ---
 title: Agent Directives Generation — Stack-Tuned Directive Files & Agent Prompts at Init
 type: requirement
-status: draft
+status: done
 lineage: agent-directives-generation
 parent: lifecycle/ideas/agent-directives-generation.md
 labels:
