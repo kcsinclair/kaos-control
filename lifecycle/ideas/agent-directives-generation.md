@@ -1,7 +1,7 @@
 ---
 title: Agent Directives Generation — CLAUDE.md, AGENTS.md and Stack-Tuned Prompts at Init
 type: idea
-status: clarifying
+status: done
 lineage: agent-directives-generation
 created: "2026-08-14T12:30:00+10:00"
 priority: normal
