@@ -115,6 +115,9 @@ func TestWriteSummary_IsIdempotent(t *testing.T) {
 	if string(first) != string(second) {
 		t.Errorf("WriteSummary is not idempotent:\n--- first ---\n%s\n--- second ---\n%s", first, second)
 	}
+	if !strings.Contains(string(first), "created:") {
+		t.Errorf("expected a created: field in the summary frontmatter, got:\n%s", first)
+	}
 
 	entries, err := os.ReadDir(filepath.Join(root, "lifecycle", "architecture"))
 	if err != nil {

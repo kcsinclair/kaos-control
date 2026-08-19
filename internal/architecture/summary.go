@@ -40,9 +40,10 @@ type SummaryInput struct {
 // summaryFrontmatter is the frontmatter shape written for
 // architecture-summary.md.
 type summaryFrontmatter struct {
-	Title  string `yaml:"title"`
-	Type   string `yaml:"type"`
-	Status string `yaml:"status"`
+	Title   string `yaml:"title"`
+	Type    string `yaml:"type"`
+	Status  string `yaml:"status"`
+	Created string `yaml:"created,omitempty"`
 }
 
 // WriteSummary deterministically (re)writes
@@ -53,9 +54,10 @@ type summaryFrontmatter struct {
 // the same input overwrites in place rather than duplicating (NFR-2/NFR-3).
 func WriteSummary(projectRoot string, in SummaryInput) (relPath string, err error) {
 	fmBytes, err := yaml.Marshal(summaryFrontmatter{
-		Title:  "Architecture Summary",
-		Type:   "doc",
-		Status: "approved",
+		Title:   "Architecture Summary",
+		Type:    "doc",
+		Status:  "approved",
+		Created: createdFor(filepath.Join(projectRoot, filepath.FromSlash(architectureDir), "architecture-summary.md")),
 	})
 	if err != nil {
 		return "", fmt.Errorf("marshalling summary frontmatter: %w", err)

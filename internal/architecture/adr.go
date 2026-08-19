@@ -95,7 +95,7 @@ func CreateADR(projectRoot string, req ADRRequest) (string, error) {
 			return "", statErr
 		}
 
-		content, cerr := buildADRContent(req.Title, status, req.Body)
+		content, cerr := buildADRContent(req.Title, status, createdFor(absPath), req.Body)
 		if cerr != nil {
 			return "", cerr
 		}
@@ -145,12 +145,12 @@ func WriteADR0001(projectRoot, arch, stack, qaTrail string, rejected []string) (
 		}
 	}
 
-	content, cerr := buildADRContent(title, "approved", body.String())
+	absPath := filepath.Join(decisionsDir, filename)
+	content, cerr := buildADRContent(title, "approved", createdFor(absPath), body.String())
 	if cerr != nil {
 		return "", cerr
 	}
 
-	absPath := filepath.Join(decisionsDir, filename)
 	if werr := writeAtomic(absPath, content); werr != nil {
 		return "", werr
 	}
@@ -161,13 +161,14 @@ func WriteADR0001(projectRoot, arch, stack, qaTrail string, rejected []string) (
 // date field is intentionally omitted — this primitive is deterministic and
 // carries no clock; callers/UI stamp a date if wanted.
 type adrFrontmatter struct {
-	Title  string `yaml:"title"`
-	Type   string `yaml:"type"`
-	Status string `yaml:"status"`
+	Title   string `yaml:"title"`
+	Type    string `yaml:"type"`
+	Status  string `yaml:"status"`
+	Created string `yaml:"created,omitempty"`
 }
 
-func buildADRContent(title, status, body string) ([]byte, error) {
-	fmBytes, err := yaml.Marshal(adrFrontmatter{Title: title, Type: "adr", Status: status})
+func buildADRContent(title, status, created, body string) ([]byte, error) {
+	fmBytes, err := yaml.Marshal(adrFrontmatter{Title: title, Type: "adr", Status: status, Created: created})
 	if err != nil {
 		return nil, fmt.Errorf("marshalling ADR frontmatter: %w", err)
 	}

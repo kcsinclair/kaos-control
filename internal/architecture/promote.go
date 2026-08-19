@@ -112,6 +112,12 @@ func promoteOne(projectRoot, sourceRel, kind string) (destRel string, archived [
 	if serr != nil {
 		return "", nil, fmt.Errorf("stamping parent on %s: %w", kind, serr)
 	}
+	// Stamp a created: date on the promoted copy (catalog sources carry none),
+	// preserving an existing value on re-promote so the operation stays
+	// idempotent.
+	if stamped, ok := artifact.EnsureFrontmatterField(content, "created", createdFor(absDest)); ok {
+		content = stamped
+	}
 
 	if werr := writeAtomic(absDest, content); werr != nil {
 		return "", nil, fmt.Errorf("writing %s: %w", kind, werr)

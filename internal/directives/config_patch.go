@@ -323,7 +323,7 @@ func architectureClause(role string) string {
 			"requirement genuinely cannot be met within the recorded " +
 			"architecture, stack, or standards, do not deviate silently: " +
 			"propose a new ADR in lifecycle/architecture/decisions/ (type: adr) " +
-			"capturing the decision, context, and consequences."
+			"capturing the decision, context, and consequences, including a created: field (current date-time in RFC3339) in its frontmatter."
 	case "qa":
 		return "Before triaging failures, read lifecycle/architecture/ — the " +
 			"architecture summary, the chosen architecture and tech stack, the " +
@@ -331,14 +331,14 @@ func architectureClause(role string) string {
 			"whether a failure reflects a genuine defect or a deliberate, " +
 			"defensible deviation. If it's the latter, do not silently accept " +
 			"it: propose a new ADR in lifecycle/architecture/decisions/ (type: " +
-			"adr) capturing the decision, context, and consequences."
+			"adr) capturing the decision, context, and consequences, including a created: field (current date-time in RFC3339) in its frontmatter."
 	default:
 		return "Follow the architecture standards and ADRs in " +
 			"lifecycle/architecture/ (standards/ and decisions/). If this work " +
 			"forces a deviation from the recorded architecture or standards, do " +
 			"not deviate silently: propose a new ADR in " +
 			"lifecycle/architecture/decisions/ (type: adr) capturing the " +
-			"decision, context, and consequences."
+			"decision, context, and consequences, including a created: field (current date-time in RFC3339) in its frontmatter."
 	}
 }
 

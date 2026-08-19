@@ -68,6 +68,10 @@ func TestPromote_EmptyDir_CreatesRootCopiesWithParent(t *testing.T) {
 	if !strings.Contains(stackContent, "parent: lifecycle/architecture/tech-stacks/go-vue.md") {
 		t.Errorf("promoted tech-stack missing parent stamp:\n%s", stackContent)
 	}
+	// Promoted copies also get a created: stamp (catalog sources carry none).
+	if !strings.Contains(archContent, "created:") || !strings.Contains(stackContent, "created:") {
+		t.Errorf("promoted copies missing created: stamp:\narch:\n%s\nstack:\n%s", archContent, stackContent)
+	}
 
 	// Catalog sources are untouched.
 	archAfter, _ := os.ReadFile(filepath.Join(root, "lifecycle/architecture/architectures/postgres-modular-monolith.md"))

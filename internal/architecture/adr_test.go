@@ -129,6 +129,9 @@ func TestWriteADR0001_IsIdempotent(t *testing.T) {
 	if !strings.Contains(content, "## Rejected alternatives") || !strings.Contains(content, "Microservices") {
 		t.Errorf("expected rejected-alternatives section, got:\n%s", content)
 	}
+	if !strings.Contains(content, "created:") {
+		t.Errorf("expected a created: field in the ADR frontmatter, got:\n%s", content)
+	}
 }
 
 func TestCreateADR_DefaultStatusIsDraftWhenEmpty(t *testing.T) {
