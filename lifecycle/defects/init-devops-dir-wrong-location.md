@@ -1,7 +1,7 @@
 ---
 title: Project Init Creates devops Directory in Project Root Instead of lifecycle/devops
 type: defect
-status: draft
+status: approved
 lineage: init-devops-dir-wrong-location
 created: "2026-08-19T09:34:52+10:00"
 priority: normal
