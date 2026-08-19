@@ -42,7 +42,7 @@ var seedFileSpecs = []seedFileSpec{
 	},
 	{
 		tmpl:    "sample-pipeline.yaml.tmpl",
-		relPath: "devops/sample.yaml",
+		relPath: "lifecycle/devops/sample.yaml",
 		force:   func(f ForceFlags) bool { return f.Config },
 	},
 }

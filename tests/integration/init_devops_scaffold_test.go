@@ -31,7 +31,7 @@ func TestInit_CreatesDevopsDir(t *testing.T) {
 		t.Fatalf("initcmd.Run failed: %v", err)
 	}
 
-	devopsDirPath := filepath.Join(dir, "devops")
+	devopsDirPath := filepath.Join(dir, "lifecycle", "devops")
 	info, err := os.Stat(devopsDirPath)
 	if err != nil {
 		t.Fatalf("devops/ directory not found after init: %v", err)
@@ -56,13 +56,13 @@ func TestInit_CreatesSamplePipeline(t *testing.T) {
 		t.Fatalf("initcmd.Run failed: %v", err)
 	}
 
-	samplePath := filepath.Join(dir, "devops", "sample.yaml")
+	samplePath := filepath.Join(dir, "lifecycle", "devops", "sample.yaml")
 	if _, err := os.Stat(samplePath); err != nil {
 		t.Fatalf("devops/sample.yaml not found after init: %v", err)
 	}
 
 	// Use devops.Discover to parse the devops/ directory.
-	pipelines, warnings := devops.Discover(filepath.Join(dir, "devops"))
+	pipelines, warnings := devops.Discover(filepath.Join(dir, "lifecycle", "devops"))
 	for _, w := range warnings {
 		t.Errorf("unexpected discovery warning: %v", w)
 	}
@@ -105,7 +105,7 @@ func TestInit_Idempotent_DevopsDir(t *testing.T) {
 		t.Fatalf("first initcmd.Run failed: %v", err)
 	}
 
-	samplePath := filepath.Join(dir, "devops", "sample.yaml")
+	samplePath := filepath.Join(dir, "lifecycle", "devops", "sample.yaml")
 	contentBefore, err := os.ReadFile(samplePath)
 	if err != nil {
 		t.Fatalf("reading devops/sample.yaml before second init: %v", err)
@@ -131,7 +131,7 @@ func TestInit_PreservesExistingDevops(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create devops/ and write a custom pipeline before init.
-	devopsDirPath := filepath.Join(dir, "devops")
+	devopsDirPath := filepath.Join(dir, "lifecycle", "devops")
 	if err := os.MkdirAll(devopsDirPath, 0o755); err != nil {
 		t.Fatalf("pre-creating devops/ dir: %v", err)
 	}
