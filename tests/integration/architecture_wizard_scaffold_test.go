@@ -63,6 +63,14 @@ func TestWizardScaffold_DirectivesScaffolder_GeneratesDirectiveFiles(t *testing.
 		}
 	}
 
+	// Build/lint/test pipelines are bootstrapped from the promoted stack's
+	// stack_profile into lifecycle/devops/.
+	for _, f := range []string{"build.yaml", "lint.yaml", "test.yaml"} {
+		if _, err := os.Stat(filepath.Join(env.projectRoot, "lifecycle", "devops", f)); err != nil {
+			t.Errorf("expected lifecycle/devops/%s bootstrapped by the scaffold run: %v", f, err)
+		}
+	}
+
 	// The test env's repo was created by the harness, not by kaos-control
 	// (unmanaged), so the generated files are surfaced as git commands to run
 	// rather than auto-committed.

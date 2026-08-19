@@ -4,6 +4,7 @@ package directives
 
 import (
 	"github.com/kaos-control/kaos-control/internal/architecture"
+	"github.com/kaos-control/kaos-control/internal/devops"
 	kgit "github.com/kaos-control/kaos-control/internal/git"
 )
 
@@ -25,10 +26,11 @@ var _ architecture.Scaffolder = Scaffolder{}
 func (Scaffolder) Available(archSlug, stackSlug string) ([]architecture.ScaffoldStep, bool) {
 	return []architecture.ScaffoldStep{{
 		Key:   scaffoldStepKey,
-		Title: "Agent directive files",
-		Description: "Generate AGENTS.md (with CLAUDE.md and GEMINI.md pointing to it) and tune " +
-			"the agent prompts in lifecycle/config.yaml — repo layout, per-role write paths, and " +
-			"build/lint/test commands — to the chosen stack.",
+		Title: "Agent directives + devops pipelines",
+		Description: "Generate AGENTS.md (with CLAUDE.md and GEMINI.md pointing to it), tune the " +
+			"agent prompts in lifecycle/config.yaml — repo layout, per-role write paths, and " +
+			"build/lint/test commands — to the chosen stack, and bootstrap build/lint/test " +
+			"pipelines under lifecycle/devops/ from the stack profile.",
 	}}, true
 }
 
@@ -52,9 +54,20 @@ func (Scaffolder) Run(projectRoot, archSlug, stackSlug string, choices []archite
 	}
 	out.Skipped = append(out.Skipped, res.Skipped...)
 
-	// Track the generated directive files under git per the new-folder policy:
+	// Bootstrap build/lint/test devops pipelines from the promoted stack's
+	// stack_profile (skip-if-exists). Best-effort: a project without a promoted
+	// stack simply gets no pipelines rather than failing the whole scaffold.
+	if profile, _, perr := architecture.LoadPromotedStackProfile(projectRoot); perr == nil {
+		pipelines, berr := devops.BootstrapPipelines(projectRoot, profile)
+		if berr != nil {
+			return out, berr
+		}
+		out.Applied = append(out.Applied, pipelines...)
+	}
+
+	// Track the generated files under git per the new-folder policy:
 	// auto-commit for a repo kaos-control created, else hand back the commands.
-	committed, cmds, err := kgit.TrackGenerated(projectRoot, out.Applied, "kaos-control: agent directive files")
+	committed, cmds, err := kgit.TrackGenerated(projectRoot, out.Applied, "kaos-control: agent directives + devops pipelines")
 	if err != nil {
 		return out, err
 	}
