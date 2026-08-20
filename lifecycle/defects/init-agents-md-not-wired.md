@@ -1,7 +1,7 @@
 ---
 title: Project Initialisation Does Not Set Up AGENTS.md with Claude and Gemini Directives
 type: defect
-status: approved
+status: done
 lineage: init-agents-md-not-wired
 created: "2026-08-19T09:25:51+10:00"
 priority: normal
@@ -36,3 +36,11 @@ Project initialisation should:
 ## Actual Behaviour
 
 Project initialisation does not create or populate `AGENTS.md`, and does not update `CLAUDE.md` to use the new `@AGENTS.md` delegation pattern. The current `CLAUDE.md` continues to hold the full content directly, leaving the Gemini directives integration unimplemented and the new dual-agent structure not established during onboarding.
+
+## Resolution (done)
+
+`ScaffoldProject` now calls `directives.Generate`, so `kaos-control init` emits the
+AGENTS.md-primary set: **AGENTS.md** (canonical, with managed-region markers and the
+`--language` hint), plus **CLAUDE.md** and **GEMINI.md** as `@AGENTS.md` pointers. The files
+are reported in the scaffold result and auto-committed on a fresh (kaos-control-created) repo.
+Verified: `internal/initcmd/initcmd.go`, `initcmd_test.go` (`TestScaffold_EmitsAgentsMdPrimarySet`).

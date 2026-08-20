@@ -1,7 +1,7 @@
 ---
 title: Architecture and ADR Artifacts Missing from List View and Other Surfaces
 type: defect
-status: approved
+status: done
 lineage: architecture-adr-artifacts-missing-from-list-view
 created: "2026-08-19T10:53:32+10:00"
 priority: normal
@@ -31,3 +31,11 @@ Artifacts of type `architecture`, `tech-stack`, and `adr` should appear in the l
 ## Actual Behaviour
 
 Architecture and ADR artifacts are not shown in the list view or other artifact-browsing surfaces. They are likely either excluded by a type filter that predates the KC-Release5 architecture artifact types, or the indexer is not recognising them as known types, causing them to be omitted from query results.
+
+## Resolution (done)
+
+Root cause was hardcoded filter dropdowns, not the index (the types index and appear unfiltered).
+Fixed: added the `architecture` **stage** to the list and board `stageOptions`, and the
+`architecture`/`tech-stack`/`adr` **types** to the board `typeOptions` (the list already had them).
+The graph/map type filter is data-driven, so `adr` appears there once an ADR node exists. Verified
+in `web/src/views/project/ArtifactListView.vue` and `KanbanBoardView.vue`.

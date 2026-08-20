@@ -1,7 +1,7 @@
 ---
 title: Agent Editor Does Not Load All Data from config.yaml
 type: defect
-status: planning
+status: done
 lineage: agent-editor-incomplete-config-load
 created: "2026-05-22T10:14:42+10:00"
 priority: normal
@@ -29,3 +29,12 @@ All fields defined for the agent in `config.yaml` (e.g. prompt template, allowed
 ## Actual Behaviour
 
 The agent editor only loads a partial subset of the agent's configuration data from `config.yaml`. Some fields are missing or blank despite being present in the config file, meaning edits made via the UI may overwrite or lose data that was not surfaced in the form.
+
+## Resolution (done)
+
+Fixed in `AgentConfigForm` via Milestone 2 (`4851b83e` — populate the form from the full agent
+config, `props.initial`) and Milestone 3 (`9fb3886f` — lossless prompt-template round-trip): the
+editor now loads every `config.yaml` field (driver, model, endpoint, allowed_write_paths,
+prompt_templates, git_identity, timeouts, ollama/base_url, …) and preserves them on save, so UI
+edits no longer drop config that wasn't surfaced. Verified in
+`web/src/components/agent/AgentConfigForm.vue`.
