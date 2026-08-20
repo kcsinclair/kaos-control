@@ -168,3 +168,39 @@ func TestProjectQueue_GlobalQueueUnchanged(t *testing.T) {
 	j, _ := pending[0].(map[string]any)
 	assert.Equal(t, id2, j["id"])
 }
+// TestProjectQueue_ArtifactListShowsQueued verifies that an artefact with a
+// pending queue job is reported as active_agent_status="queued" by the
+// artifacts list — queued jobs have no agent_runs row, so the handler overlays
+// the live queue's pending state (fixes: queued-for-agent-status-not-shown).
+func TestProjectQueue_ArtifactListShowsQueued(t *testing.T) {
+	setupFakeClaude(t, 0)
+	env := newQueueTestEnv(t, []seedArtifact{
+		{relPath: "lifecycle/ideas/q-idea.md", content: makeApprovedArtifact("Q Idea", "idea", "q-idea")},
+	})
+	// Hold the queue so the job stays pending (queued) rather than running.
+	env.dispatcher.Pause("test-hold")
+
+	resp := env.doRequest("POST", "/api/queue", map[string]any{
+		"project":       "testproject",
+		"artifact_path": "lifecycle/ideas/q-idea.md",
+		"agent":         "requirements-analyst",
+	})
+	requireStatus(t, resp, 201)
+
+	list := env.doRequest("GET", "/api/p/testproject/artifacts", nil)
+	requireStatus(t, list, 200)
+	items, _ := readJSON(t, list)["items"].([]any)
+	var found bool
+	for _, raw := range items {
+		it, _ := raw.(map[string]any)
+		if it["path"] == "lifecycle/ideas/q-idea.md" {
+			found = true
+			if st, _ := it["active_agent_status"].(string); st != "queued" {
+				t.Errorf("expected active_agent_status=queued in the list, got %q", st)
+			}
+		}
+	}
+	if !found {
+		t.Error("q-idea artifact not present in the list")
+	}
+}

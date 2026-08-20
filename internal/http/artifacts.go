@@ -77,6 +77,19 @@ func (s *Server) handleListArtifacts(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
 	}
+	// Queued jobs have no agent_runs row (those exist only once a run starts),
+	// so ActiveAgentStatusByTargetPath never reports "queued". Overlay the live
+	// queue's pending jobs for this project so the list matches the detail view
+	// (which reads the queue directly). Never override a running status.
+	if s.queue != nil {
+		if pending, perr := s.queue.PendingJobs(); perr == nil {
+			for _, j := range pending {
+				if j.Project == p.Entry.Name && j.ArtifactPath != "" && activeStatuses[j.ArtifactPath] == "" {
+					activeStatuses[j.ArtifactPath] = "queued"
+				}
+			}
+		}
+	}
 	for _, item := range items {
 		item.AgentRunCount = counts[item.Path]
 		item.ActiveAgentStatus = activeStatuses[item.Path]

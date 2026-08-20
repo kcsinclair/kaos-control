@@ -580,6 +580,13 @@ func (d *Dispatcher) Cancel(id string) error {
 }
 
 // StateSnapshot assembles the GET /api/queue response payload.
+// PendingJobs returns all jobs currently in the pending state (across
+// projects). Used to surface queued artefacts, which have no agent_runs row
+// (those are created only when a run starts).
+func (d *Dispatcher) PendingJobs() ([]*Job, error) {
+	return d.store.ListByState(StatePending)
+}
+
 func (d *Dispatcher) StateSnapshot() (*queueSnapshot, error) {
 	running, err := d.store.ListByState(StateRunning)
 	if err != nil {

@@ -232,6 +232,17 @@ useWebSocket(project, 'agent.finished', (_e: WsEvent) => {
   store.fetchList(project, { limit: 0, offset: undefined })
 })
 
+// Re-fetch when a job is queued or cancelled so the "Queued for Agent" pill
+// appears/clears live — queued jobs fire no agent.started/finished event.
+useWebSocket(project, 'queue.added', (_e: WsEvent) => {
+  store.invalidate()
+  store.fetchList(project, { limit: 0, offset: undefined })
+})
+useWebSocket(project, 'queue.cancelled', (_e: WsEvent) => {
+  store.invalidate()
+  store.fetchList(project, { limit: 0, offset: undefined })
+})
+
 function initFiltersFromQuery() {
   const q = route.query
   if (typeof q.status === 'string') selectedStatus.value = q.status
