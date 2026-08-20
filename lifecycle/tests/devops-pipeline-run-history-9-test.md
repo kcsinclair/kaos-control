@@ -2,7 +2,7 @@
 created: "2026-07-14T19:34:44+10:00"
 title: "Tests — DevOps Pipeline Run History"
 type: test
-status: approved
+status: done
 lineage: devops-pipeline-run-history
 parent: lifecycle/defects/devops-pipeline-run-history-9-defect.md
 ---
