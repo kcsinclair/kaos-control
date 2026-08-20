@@ -507,20 +507,31 @@ export interface WsEvent {
 export const TERMINAL_STATUSES = ['done', 'rejected', 'abandoned'] as const
 export type TerminalStatus = typeof TERMINAL_STATUSES[number]
 
+// Mirrors internal/architecture's architectureDir constant.
+const ARCHITECTURE_DIR = 'lifecycle/architecture'
+
 /**
- * True when a row is architecture *catalog* material rather than a lifecycle
- * work item: a candidate architecture / tech-stack (carrying the `catalog`
- * label) or a superseded promoted choice (under architecture/archive/). The
- * project's *chosen* architecture, ADRs, and standards are NOT catalog material
- * — they never carry the label and live at the architecture root, so they stay
- * visible. Shared by the list + board "Show catalog" toggle.
+ * True when a row belongs to the architecture *zone* — the whole
+ * `lifecycle/architecture/` tree (catalog candidates, the chosen
+ * architecture/stack, ADRs, standards, the summary, and the archive alike) —
+ * rather than a lifecycle work item (FR-9). Reference material, not
+ * something to triage on the list/board, so it's hidden by default behind
+ * the "show architecture inline" escape hatch (FR-9a). Role-based (by path),
+ * never `type:`-based, since the summary/standards deliberately share
+ * `type: doc` with ordinary docs. The `catalog` label check is a defensive
+ * fallback for any catalog-labelled artifact that somehow lives outside the
+ * zone path. See [[architecture-overview-view]].
  */
-export function isCatalogMaterial(row: Pick<ArtifactRow, 'path' | 'frontmatter'>): boolean {
+export function isArchitectureZone(row: Pick<ArtifactRow, 'path' | 'frontmatter'>): boolean {
+  const path = row.path ?? ''
+  if (path === ARCHITECTURE_DIR || path.startsWith(ARCHITECTURE_DIR + '/')) return true
   const labels = row.frontmatter?.labels ?? []
   if (labels.includes('catalog')) return true
-  if ((row.path ?? '').includes('/architecture/archive/')) return true
   return false
 }
+
+/** @deprecated use {@link isArchitectureZone} — kept for callers not yet migrated. */
+export const isCatalogMaterial = isArchitectureZone
 
 export interface RunResultUsage {
   input_tokens: number

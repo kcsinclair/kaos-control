@@ -45,12 +45,11 @@ export const useUiStore = defineStore('ui', () => {
   // Session-only (not persisted to localStorage per plan §F3).
   const showTestsOnKanban = ref<boolean>(false)
 
-  // Whether architecture *catalog* material is visible in the list/board.
-  // The candidate architectures + tech-stacks (carrying the `catalog` label)
-  // and superseded promoted choices (under architecture/archive/) are a picker
-  // + reference set, not lifecycle work items, so they are hidden by default.
-  // The project's *chosen* architecture, ADRs, and standards are unaffected —
-  // they never carry the `catalog` label. Shared across list + board so the
+  // Whether the whole architecture zone (lifecycle/architecture/ — catalog
+  // candidates, the chosen architecture/stack, ADRs, standards, summary, and
+  // archive alike) is visible inline in the list/board (FR-9a). The overview
+  // view now owns that zone; the "show architecture inline" toggle is an
+  // off-by-default escape hatch. Shared across list + board so the
   // preference is consistent. Session-only. See [[architecture-overview-view]].
   const showCatalog = ref<boolean>(false)
 

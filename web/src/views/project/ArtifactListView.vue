@@ -18,7 +18,7 @@ import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug, ShieldCheck, BookOpen, Bot, FileText } from 'lucide-vue-next'
 import type { ArtifactRow, WsEvent } from '@/types/api'
-import { TERMINAL_STATUSES, isCatalogMaterial } from '@/types/api'
+import { TERMINAL_STATUSES, isArchitectureZone } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
 import { formatRice, riceScore, type RiceComponents } from '@/lib/rice'
 import RiceEditor from '@/components/artifact/RiceEditor.vue'
@@ -45,9 +45,11 @@ const visibleItems = computed(() => {
   let base = showCompleted.value
     ? store.items
     : store.items.filter(r => !(TERMINAL_STATUSES as readonly string[]).includes(r.status))
-  // Architecture catalog candidates + archived choices are reference material,
-  // not lifecycle work items — hidden unless "Show catalog" is on.
-  if (!ui.showCatalog) base = base.filter(r => !isCatalogMaterial(r))
+  // The whole architecture zone (catalog candidates, chosen
+  // architecture/stack, ADRs, standards, summary, archive) is reference
+  // material, not lifecycle work items — hidden unless "show architecture
+  // inline" is on (FR-9a).
+  if (!ui.showCatalog) base = base.filter(r => !isArchitectureZone(r))
   if (!searchText.value) return base
   const q = searchText.value.toLowerCase()
   return base.filter(r => {
@@ -299,7 +301,7 @@ onMounted(async () => {
           class="toggle-input"
           v-model="ui.showCatalog"
         />
-        <span class="toggle-text">Show catalog</span>
+        <span class="toggle-text">Show architecture inline</span>
       </label>
       <button class="btn-check-status" @click="showStatusPanel = !showStatusPanel">
         <ShieldCheck :size="15" />

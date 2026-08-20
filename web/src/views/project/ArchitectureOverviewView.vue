@@ -11,6 +11,7 @@ import RationalePanel from '@/components/architecture/overview/RationalePanel.vu
 import BreakingRequirementsPanel from '@/components/architecture/overview/BreakingRequirementsPanel.vue'
 import StandardsPanel from '@/components/architecture/overview/StandardsPanel.vue'
 import AdrListPanel from '@/components/architecture/overview/AdrListPanel.vue'
+import ArchiveStrip from '@/components/architecture/overview/ArchiveStrip.vue'
 import NewAdrModal from '@/components/artifact/NewAdrModal.vue'
 
 const route = useRoute()
@@ -27,6 +28,7 @@ const {
   summary,
   standards,
   adrs,
+  archive,
   reload,
 } = useArchitectureOverview(project)
 
@@ -82,6 +84,7 @@ function onAdrCreated(path: string) {
         <BreakingRequirementsPanel :project="project" :summary="summary" />
         <StandardsPanel :project="project" :standards="standards" />
         <AdrListPanel :project="project" :adrs="adrs" />
+        <ArchiveStrip :project="project" :archive="archive" />
       </div>
     </div>
 
