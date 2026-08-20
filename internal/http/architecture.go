@@ -145,6 +145,26 @@ func (s *Server) handleNextADRNumber(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"number": number})
 }
 
+// handleArchitectureOverview handles GET /api/p/{project}/architecture/overview.
+// Read-only: requires an authenticated session but no editor role, mirroring
+// handleArchitectureMap. Missing/absent parts of the architecture zone
+// degrade to empty/null fields in the payload rather than 5xx (NFR-5).
+func (s *Server) handleArchitectureOverview(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	if p == nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("no_project", "no project in context"))
+		return
+	}
+
+	overview, err := architecture.LoadOverview(p.Entry.Path, p.Idx)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("fs_error", err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, overview)
+}
+
 // reindexPath synchronously re-indexes a repo-relative artifact path,
 // best-effort — the fsnotify watcher will pick up anything missed here.
 func reindexPath(p *project.Project, relPath string) {

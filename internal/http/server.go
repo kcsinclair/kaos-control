@@ -271,6 +271,7 @@ func (s *Server) buildRouter() chi.Router {
 				r.Post("/architecture/promote", s.handlePromoteArchitecture)
 				r.Post("/architecture/adrs", s.handleCreateADR)
 				r.Get("/architecture/adrs/next", s.handleNextADRNumber)
+				r.Get("/architecture/overview", s.handleArchitectureOverview)
 
 				// Architecture Wizard (guided/browse selection)
 				r.Get("/architecture/wizard", s.handleGetArchitectureWizard)
