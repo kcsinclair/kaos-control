@@ -270,19 +270,25 @@ break.) No new ADR is required for this requirement.
   summary structure), or render the relevant summary sections as-is with links?
   A stable, agreed heading contract for the summary would make FR-5's per-item
   mapping robust.
+
+> ender the relevant summary sections as-is with links
+
 - **OQ-2 — Standards/summary type discovery.** [[architectural-artefacts]] uses
   `type: doc` for the summary and standards in v1. Should the overview locate
   them by **path** (`architecture-summary.md`, `standards/*`) or by `type`/label?
   Path-based discovery is proposed for v1 given `type: doc` is shared.
+
 - **OQ-3 — Tech-to-component mapping source (FR-3).** Is the architecture ↔ stack
   component mapping derived from existing artifact content (stack profile / body
   wiki-links), or does it need an explicit mapping field the wizard would record
   in the summary? v1 assumes it is derived from existing content; confirm whether
   an explicit mapping is wanted.
+
 - **OQ-4 — Removal vs. demotion of the list/board toggle (FR-9a).** Should the
   interim "Show catalog" toggle be **removed** entirely once the zone is fully
   represented here, or kept as an off-by-default "show architecture inline"
   escape hatch? Default assumption: keep it demoted/off.
+
 - **OQ-5 — Archive strip scope (FR-9).** How much of the archive should the
   history/provenance strip show by default (latest superseded choice only vs. full
   history), and is it collapsed by default?
