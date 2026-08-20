@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"sync"
 )
 
 // ShellStubDriver is a test-only agent driver that runs a configurable shell
@@ -50,7 +51,17 @@ func (d *ShellStubDriver) Start(ctx context.Context, run Run) (Process, error) {
 
 	p := &stubProcess{cmd: cmd, progress: progressCh, stderrBuf: rb}
 
+	// Both reader goroutines below only ever write to progressCh (the stdout
+	// scanner) or read from stderr (never touching progressCh). Neither may
+	// close progressCh until the other has finished, or a send on the
+	// already-closed channel panics. A WaitGroup lets a third goroutine close
+	// it exactly once, after both readers are done — mirroring the pattern in
+	// startCommandProcess (agent.go).
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	go func() {
+		defer wg.Done()
 		sc := bufio.NewScanner(stdout)
 		for sc.Scan() {
 			line := sc.Text()
@@ -67,7 +78,7 @@ func (d *ShellStubDriver) Start(ctx context.Context, run Run) (Process, error) {
 	}()
 
 	go func() {
-		defer close(progressCh)
+		defer wg.Done()
 		buf := make([]byte, 1024)
 		for {
 			n, readErr := stderr.Read(buf)
@@ -78,6 +89,11 @@ func (d *ShellStubDriver) Start(ctx context.Context, run Run) (Process, error) {
 				break
 			}
 		}
+	}()
+
+	go func() {
+		wg.Wait()
+		close(progressCh)
 	}()
 
 	return p, nil
