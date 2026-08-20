@@ -1,4 +1,5 @@
 ---
+created: "2026-05-13T14:53:31+10:00"
 title: "Git Context Display — Test Plan"
 type: plan-test
 status: done

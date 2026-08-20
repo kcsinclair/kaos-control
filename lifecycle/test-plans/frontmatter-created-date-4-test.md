@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T12:49:46+10:00"
 title: "Test Plan: Frontmatter Created Date"
 type: plan-test
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T07:45:54+10:00"
 title: 'Frontend plan: auto-transition artifacts to blocked on open questions'
 type: plan-frontend
 status: done

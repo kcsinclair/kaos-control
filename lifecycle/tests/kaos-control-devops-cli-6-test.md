@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: "Tests — DevOps CLI with Linux-User Identity Mapping"
 type: test
 status: done

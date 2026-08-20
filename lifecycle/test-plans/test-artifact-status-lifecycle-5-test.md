@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T07:58:52+10:00"
 title: "Test Plan: Test Artifact Status Lifecycle"
 type: plan-test
 status: done

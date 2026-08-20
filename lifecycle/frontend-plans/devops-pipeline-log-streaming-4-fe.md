@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T19:15:20+10:00"
 title: "Frontend Plan — Pipeline Log Streaming Split-Pane View"
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T20:26:37+10:00"
 title: "Kanban View — Frontend Plan"
 type: plan-frontend
 status: done

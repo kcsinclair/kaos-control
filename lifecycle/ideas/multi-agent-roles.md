@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: Queue work should include multi-agent roles
 type: idea
 status: draft

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T12:07:56+10:00"
 title: Dashboard Home Screen — Defect Fix Tests (blocked artifact auto-transition)
 type: test
 status: approved

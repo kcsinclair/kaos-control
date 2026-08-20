@@ -1,4 +1,5 @@
 ---
+created: "2026-04-26T10:00:45+10:00"
 title: Integration tests — approved → done transition coverage
 type: test
 status: approved

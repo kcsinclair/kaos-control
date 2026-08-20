@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T18:49:27+10:00"
 title: "Test Fix: Remove duplicate strPtr declaration in patch_release_test.go"
 type: test
 status: done

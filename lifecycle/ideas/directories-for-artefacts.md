@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T11:31:34+10:00"
 title: Directories for Artefacts
 type: idea
 status: done

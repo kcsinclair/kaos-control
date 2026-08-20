@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T18:39:30+10:00"
 title: Tests — Fix stale graphConstants mock in ForceGraph3D and Graph2DView approved-ring suites
 type: test
 status: draft

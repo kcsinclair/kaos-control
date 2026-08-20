@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T17:42:32+10:00"
 title: AGENTS.md-Primary Directive Files + Migration Command
 type: requirement
 status: blocked

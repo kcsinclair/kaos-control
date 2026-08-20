@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: Env-Override Claude Code Driver (Ollama / Anthropic-compatible endpoints)
 type: requirement
 status: done

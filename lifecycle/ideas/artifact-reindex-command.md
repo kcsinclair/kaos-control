@@ -1,4 +1,5 @@
 ---
+created: "2026-08-11T16:37:29+10:00"
 title: A reindex command/action to rebuild the artifact cache on demand
 type: idea
 status: draft

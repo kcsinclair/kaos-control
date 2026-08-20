@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T16:25:15+10:00"
 title: 'Backend Plan: Init Bootstrap — Config Defaults, DevOps Scaffold, and Pipeline Creation API'
 type: plan-backend
 status: done

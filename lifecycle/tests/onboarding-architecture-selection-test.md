@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T18:03:35+10:00"
 title: "Integration Tests — Architecture Wizard (Guided Selection)"
 type: test
 status: approved

@@ -1,4 +1,5 @@
 ---
+created: "2026-04-29T18:43:24+10:00"
 title: "Test Plan — Move Running Agents Indicator to Menu Bar"
 type: plan-test
 status: done

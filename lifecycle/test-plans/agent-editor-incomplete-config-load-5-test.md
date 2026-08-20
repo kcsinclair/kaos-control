@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T09:38:03+10:00"
 title: 'Tests: Agent Editor Config Load and Round-Trip Preservation'
 type: plan-test
 status: done

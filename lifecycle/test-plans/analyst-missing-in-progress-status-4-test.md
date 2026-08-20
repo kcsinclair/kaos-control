@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:52:40+10:00"
 title: "Test Plan: Analyst Agent Active Status Transitions"
 type: plan-test
 status: done

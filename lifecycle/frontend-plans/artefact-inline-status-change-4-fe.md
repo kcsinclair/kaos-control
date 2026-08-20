@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T18:13:42+10:00"
 title: "Frontend Plan — Inline Status Transition Dropdown"
 type: plan-frontend
 status: done

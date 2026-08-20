@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: ProjectQueuePanel unit tests — fix ID-based assertions to use artifact_path
 type: test
 status: draft

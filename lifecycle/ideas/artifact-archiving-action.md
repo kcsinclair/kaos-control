@@ -1,4 +1,5 @@
 ---
+created: "2026-08-11T15:29:18+10:00"
 title: GUI-triggered archiving that moves completed artifacts into subfolders and rewrites references
 type: idea
 status: draft

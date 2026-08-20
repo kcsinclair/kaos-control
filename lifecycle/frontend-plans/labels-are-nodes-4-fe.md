@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T16:47:26+10:00"
 title: 'Frontend Plan: Labels as Graph Nodes with Priority Visualisation'
 type: plan-frontend
 status: done

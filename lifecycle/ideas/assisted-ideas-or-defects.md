@@ -1,4 +1,5 @@
 ---
+created: "2026-04-26T19:15:38+10:00"
 title: Assisted ideas or defects
 type: idea
 status: done

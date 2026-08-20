@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: Frontend plan — Release artefacts in markdown
 type: plan-frontend
 status: done

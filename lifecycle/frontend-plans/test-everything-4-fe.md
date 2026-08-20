@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: 'Frontend Plan: Run All Tests and Auto-file Defects'
 type: plan-frontend
 status: done

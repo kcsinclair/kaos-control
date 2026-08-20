@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: "Frontend Plan: Default to Usage Guide; Require -d/--daemon to Start the Server"
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: "Auto-Triage Raw Ideas — Integration Test Suite"
 type: test
 status: done

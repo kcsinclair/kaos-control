@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T09:45:45+10:00"
 title: RICE Scoring for Ideas and Defects
 type: requirement
 status: done

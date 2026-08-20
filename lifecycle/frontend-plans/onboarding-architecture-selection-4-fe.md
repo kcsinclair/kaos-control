@@ -1,4 +1,5 @@
 ---
+created: "2026-08-17T17:55:07+10:00"
 title: Frontend Plan — Architecture Wizard (Guided Selection)
 type: plan-frontend
 status: done

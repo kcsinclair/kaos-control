@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T16:54:43+10:00"
 title: CLI Init Scaffold Command
 type: requirement
 status: done

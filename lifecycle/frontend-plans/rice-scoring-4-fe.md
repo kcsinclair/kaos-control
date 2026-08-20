@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T09:52:12+10:00"
 title: "Frontend Plan — RICE Scoring Column, Inline & Detail Editing"
 type: plan-frontend
 status: done

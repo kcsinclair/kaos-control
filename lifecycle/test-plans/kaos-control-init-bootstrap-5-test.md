@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T16:26:41+10:00"
 title: 'Test Plan: Init Bootstrap — Config Defaults, DevOps Scaffold, and Create Pipeline'
 type: plan-test
 status: done

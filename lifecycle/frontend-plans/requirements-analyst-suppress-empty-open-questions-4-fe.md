@@ -1,4 +1,5 @@
 ---
+created: "2026-08-11T17:22:13+10:00"
 title: 'Frontend Plan: Suppress Empty Open Questions Section (No-Regression)'
 type: plan-frontend
 status: done

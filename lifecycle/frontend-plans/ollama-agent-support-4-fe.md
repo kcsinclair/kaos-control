@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T13:56:23+10:00"
 title: Ollama Agent Support — Frontend Plan
 type: plan-frontend
 status: done

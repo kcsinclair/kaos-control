@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T09:52:47+10:00"
 title: "Test Plan — RICE Scoring for Ideas and Defects"
 type: plan-test
 status: done

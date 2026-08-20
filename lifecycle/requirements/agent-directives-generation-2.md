@@ -1,4 +1,5 @@
 ---
+created: "2026-08-16T19:05:19+10:00"
 title: Agent Directives Generation — Stack-Tuned Directive Files & Agent Prompts at Init
 type: requirement
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T11:31:39+10:00"
 title: Prompt to Idea
 type: idea
 status: done

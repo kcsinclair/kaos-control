@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T12:28:52+10:00"
 title: "Frontend Plan: Auto-Create Projects Directory on First Run"
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T09:36:53+10:00"
 title: 'Backend: Agent-Read API Returns the Full Non-Secret AgentConfig'
 type: plan-backend
 status: done

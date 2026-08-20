@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T15:05:41+10:00"
 title: "Frontend Plan — Architectural Artefacts On-Disk Model"
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T10:24:28+10:00"
 title: "Frontend Plan — Inline Priority Display and Editing"
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:52:34+10:00"
 title: "Test Plan: Agent Launcher Panels"
 type: plan-test
 status: done

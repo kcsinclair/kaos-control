@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: Isolate agent runs in sub-branches so unverified work can't break the shared branch
 type: idea
 status: draft

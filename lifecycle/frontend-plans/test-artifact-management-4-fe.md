@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T17:35:12+10:00"
 title: "Test Artifact Management — Frontend Plan"
 type: plan-frontend
 status: done

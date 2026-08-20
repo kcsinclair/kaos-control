@@ -1,4 +1,5 @@
 ---
+created: "2026-04-28T12:36:09+10:00"
 title: "Hide Done Items by Default — Backend Plan"
 type: plan-backend
 status: done

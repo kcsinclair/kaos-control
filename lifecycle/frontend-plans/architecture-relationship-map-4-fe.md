@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T15:55:57+10:00"
 title: "Frontend Plan — Architecture Relationship Map"
 type: plan-frontend
 status: done

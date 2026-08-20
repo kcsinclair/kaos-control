@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T17:37:48+10:00"
 title: CLI Auth User Management — Integration & Unit Test Suite
 type: test
 status: approved

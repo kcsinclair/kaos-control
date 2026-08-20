@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T10:59:45+10:00"
 title: Universal Text Filter — Frontend Plan
 type: plan-frontend
 status: done

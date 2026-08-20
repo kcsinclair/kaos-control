@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: MapView ForceGraph3D stub rendering and label-prop binding tests
 type: test
 status: draft

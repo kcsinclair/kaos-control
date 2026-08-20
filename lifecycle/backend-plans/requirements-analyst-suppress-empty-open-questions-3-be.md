@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T10:57:10+10:00"
 title: 'Backend Plan: Suppress Empty Open Questions Section'
 type: plan-backend
 status: blocked

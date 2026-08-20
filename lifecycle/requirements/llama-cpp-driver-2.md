@@ -1,4 +1,5 @@
 ---
+created: "2026-08-11T18:15:34+10:00"
 title: llama.cpp Agent Driver for Local Models
 type: requirement
 status: blocked

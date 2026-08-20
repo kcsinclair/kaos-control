@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: 'Frontend Plan: Agent Usage Analytics Report'
 type: plan-frontend
 status: done

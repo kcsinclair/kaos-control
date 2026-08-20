@@ -1,4 +1,5 @@
 ---
+created: "2026-04-29T18:42:35+10:00"
 title: "Frontend Plan — Move Running Agents Indicator to Menu Bar"
 type: plan-frontend
 status: done

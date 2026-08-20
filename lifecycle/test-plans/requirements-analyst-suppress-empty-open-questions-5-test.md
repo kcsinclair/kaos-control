@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T11:05:01+10:00"
 title: 'Test Plan: Suppress Empty Open Questions Section'
 type: plan-test
 status: blocked

@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T12:59:00+10:00"
 title: "Frontend plan: no UI changes required for ignore-pattern support"
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T13:21:31+10:00"
 title: Table Pagination Controls
 type: idea
 status: done

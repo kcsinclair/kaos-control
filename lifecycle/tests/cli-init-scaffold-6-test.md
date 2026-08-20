@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T10:47:45+10:00"
 title: "CLI Init Scaffold — Integration Test Suite"
 type: test
 status: approved

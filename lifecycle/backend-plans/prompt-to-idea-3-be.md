@@ -1,4 +1,5 @@
 ---
+created: "2026-04-26T15:57:11+10:00"
 title: "Conversational Idea Capture – Backend Plan"
 type: plan-backend
 status: done

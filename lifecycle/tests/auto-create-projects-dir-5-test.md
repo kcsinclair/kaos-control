@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T12:36:11+10:00"
 title: 'Tests: Auto-Create Projects Directory on First Run'
 type: test
 status: approved

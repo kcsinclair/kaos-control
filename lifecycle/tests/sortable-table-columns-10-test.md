@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: ParseErrorsView sort tests — vi.mock hoisting fix
 type: test
 status: done

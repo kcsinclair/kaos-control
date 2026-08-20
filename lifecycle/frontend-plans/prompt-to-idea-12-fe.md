@@ -1,4 +1,5 @@
 ---
+created: "2026-04-26T20:17:51+10:00"
 title: "Single-Submit Idea & Defect Capture – Frontend Plan"
 type: plan-frontend
 status: done

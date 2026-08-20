@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T13:19:47+10:00"
 title: "Tests: Frontmatter Created Date"
 type: test
 status: approved

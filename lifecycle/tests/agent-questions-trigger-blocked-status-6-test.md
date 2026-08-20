@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T10:28:18+10:00"
 title: "Tests: auto-transition artifacts to blocked on open questions"
 type: test
 status: done

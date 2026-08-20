@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T16:27:52+10:00"
 title: "New Project Init: Existing or New Directory — Frontend Plan"
 type: plan-frontend
 status: done

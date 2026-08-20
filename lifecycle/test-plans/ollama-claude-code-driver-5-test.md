@@ -1,4 +1,5 @@
 ---
+created: "2026-06-26T18:18:32+10:00"
 title: "Env-Override Claude Code Driver — Test Plan"
 type: plan-test
 status: done

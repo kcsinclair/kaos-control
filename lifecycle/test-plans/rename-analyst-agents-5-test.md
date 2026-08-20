@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:39:40+10:00"
 title: "Test Plan — Rename Analyst Agents to Phase-First Convention"
 type: plan-test
 status: done

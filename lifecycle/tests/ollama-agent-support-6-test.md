@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T17:36:51+10:00"
 title: "Ollama Agent Support — Test Suite"
 type: test
 status: draft

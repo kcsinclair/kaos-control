@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T14:41:54+10:00"
 title: Move Running Agents Indicator to Menu Bar
 type: requirement
 status: done

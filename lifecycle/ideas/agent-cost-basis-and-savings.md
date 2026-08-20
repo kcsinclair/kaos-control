@@ -1,4 +1,5 @@
 ---
+created: "2026-08-11T15:09:57+10:00"
 title: Record a cost basis per agent run so local models report savings, not spend
 type: idea
 status: draft

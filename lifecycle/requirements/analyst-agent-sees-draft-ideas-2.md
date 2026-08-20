@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T14:42:43+10:00"
 title: Agent Launcher Must Filter Input Artifacts by Approved Status
 type: requirement
 status: done

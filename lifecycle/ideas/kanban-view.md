@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T12:35:57+10:00"
 title: Kanban View
 type: idea
 status: done

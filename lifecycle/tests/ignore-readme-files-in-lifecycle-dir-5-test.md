@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T13:46:56+10:00"
 title: "Tests: ignore patterns for lifecycle indexer"
 type: test
 status: done

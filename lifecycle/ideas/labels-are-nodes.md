@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T16:14:31+10:00"
 title: Labels are Nodes
 type: idea
 status: done

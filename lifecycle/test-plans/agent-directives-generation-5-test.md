@@ -1,4 +1,5 @@
 ---
+created: "2026-08-16T18:57:57+10:00"
 title: "Test Plan — Stack-Tuned Directive Files & Agent Prompts at Init"
 type: plan-test
 status: done

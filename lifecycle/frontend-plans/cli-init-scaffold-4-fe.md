@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T10:08:06+10:00"
 title: "CLI Init Scaffold — Frontend Plan"
 type: plan-frontend
 status: done

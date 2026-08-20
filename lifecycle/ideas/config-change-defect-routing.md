@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T10:09:10+10:00"
 title: Route config-owning defects to a config owner at triage, not to developer agents
 type: idea
 status: draft

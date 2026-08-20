@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:53:27+10:00"
 title: Innovation Maker — Detailed Requirements
 type: requirement
 status: done

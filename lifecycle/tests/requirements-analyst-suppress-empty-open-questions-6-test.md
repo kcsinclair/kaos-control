@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T11:03:28+10:00"
 title: Test Suite — Suppress Empty Open Questions Section
 type: test
 status: blocked

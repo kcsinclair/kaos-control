@@ -1,4 +1,5 @@
 ---
+created: "2026-05-13T14:52:03+10:00"
 title: "Git Context Display — Backend Plan"
 type: plan-backend
 status: done

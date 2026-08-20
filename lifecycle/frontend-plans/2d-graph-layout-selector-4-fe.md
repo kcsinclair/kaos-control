@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:15:32+10:00"
 title: 2D Graph Layout Selector — Frontend Plan
 type: plan-frontend
 status: done

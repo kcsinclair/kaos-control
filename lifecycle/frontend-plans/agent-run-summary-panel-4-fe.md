@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T20:40:10+10:00"
 title: 'Frontend Plan: Agent Run Summary Panel'
 type: plan-frontend
 status: done

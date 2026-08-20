@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: End-to-end smoke tests for core flows — Test Plan
 type: plan-test
 status: done

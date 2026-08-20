@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:56:58+10:00"
 title: Ollama Agent Support
 type: requirement
 status: done

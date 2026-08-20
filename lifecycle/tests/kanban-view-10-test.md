@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T10:23:32+10:00"
 title: Kanban Routing — SPA Catch-All Fix Integration Tests
 type: test
 status: approved

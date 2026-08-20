@@ -1,4 +1,5 @@
 ---
+created: "2026-05-05T18:50:39+10:00"
 title: 'Test Plan: Lineage Status Checker'
 type: plan-test
 status: done

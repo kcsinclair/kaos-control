@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T17:42:23+10:00"
 title: Tests — Light Mode Colour Scheme for Graphs
 type: test
 status: done

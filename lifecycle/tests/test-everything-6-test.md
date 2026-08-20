@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: 'Tests: Run All Tests and Auto-file Defects'
 type: test
 status: draft

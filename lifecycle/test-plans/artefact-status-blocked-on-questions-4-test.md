@@ -1,4 +1,5 @@
 ---
+created: "2026-04-29T15:57:22+10:00"
 title: "Tests: Auto-block on open questions"
 type: plan-test
 status: done

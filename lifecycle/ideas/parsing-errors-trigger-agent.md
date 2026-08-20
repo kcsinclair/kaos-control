@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T11:38:52+10:00"
 title: Parsing Errors can Trigger an Agent to resolve
 type: idea
 status: draft

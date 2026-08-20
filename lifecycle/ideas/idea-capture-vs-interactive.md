@@ -1,4 +1,5 @@
 ---
+created: "2026-04-26T19:17:06+10:00"
 title: Idea Capture vs Interactive
 type: idea
 status: done

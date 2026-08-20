@@ -1,4 +1,5 @@
 ---
+created: "2026-04-24T11:44:07+10:00"
 title: Frontend Development Plan — kaos-control v1
 type: plan-frontend
 status: done

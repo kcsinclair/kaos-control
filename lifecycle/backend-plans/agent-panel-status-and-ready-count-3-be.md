@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T10:41:41+10:00"
 title: 'Backend Plan: Agent Ready-Count Endpoint'
 type: plan-backend
 status: done

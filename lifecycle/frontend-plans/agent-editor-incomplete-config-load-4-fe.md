@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T09:37:32+10:00"
 title: 'Frontend: Agent Editor Loads Every Field and Merges on Save'
 type: plan-frontend
 status: done

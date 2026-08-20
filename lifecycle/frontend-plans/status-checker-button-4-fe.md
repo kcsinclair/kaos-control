@@ -1,4 +1,5 @@
 ---
+created: "2026-05-05T18:50:09+10:00"
 title: 'Frontend Plan: Lineage Status Checker UI'
 type: plan-frontend
 status: done

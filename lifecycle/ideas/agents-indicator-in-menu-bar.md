@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T13:18:21+10:00"
 title: Move Running Agents Indicator to Menu Bar
 type: idea
 status: done

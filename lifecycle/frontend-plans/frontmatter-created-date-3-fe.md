@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T12:49:17+10:00"
 title: "Frontend Plan: Frontmatter Created Date"
 type: plan-frontend
 status: done

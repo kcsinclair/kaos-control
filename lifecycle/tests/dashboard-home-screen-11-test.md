@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T22:20:54+10:00"
 title: performance.test.ts — correct total_tickets field name in all mocks
 type: test
 status: approved

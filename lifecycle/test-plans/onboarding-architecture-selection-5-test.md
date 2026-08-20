@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T18:09:12+10:00"
 title: Test Plan — Architecture Wizard (Guided Selection)
 type: plan-test
 status: blocked

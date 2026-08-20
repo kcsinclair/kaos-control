@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: "Test Coverage: Frontend Component Tests for Inline Release Display and Editing"
 type: test
 status: done

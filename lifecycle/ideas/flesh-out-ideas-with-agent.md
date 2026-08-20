@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T11:31:35+10:00"
 title: Flesh Out Ideas with Agent
 type: idea
 status: draft

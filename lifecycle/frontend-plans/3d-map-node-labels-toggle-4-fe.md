@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T10:34:24+10:00"
 title: 'Frontend Plan: 3D Map Node Labels Toggle'
 type: plan-frontend
 status: done

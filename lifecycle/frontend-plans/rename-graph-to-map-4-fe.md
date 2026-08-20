@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T10:28:27+10:00"
 title: "Frontend Plan: Rename Graph to Map in UI and Routing"
 type: plan-frontend
 status: done

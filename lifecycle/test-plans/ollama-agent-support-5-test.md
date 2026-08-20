@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T13:57:18+10:00"
 title: "Ollama Agent Support — Test Plan"
 type: plan-test
 status: done

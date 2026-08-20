@@ -1,4 +1,5 @@
 ---
+created: "2026-05-11T11:51:26+10:00"
 title: 'Backend: Per-Agent Role-Specific Ready Counts'
 type: plan-backend
 status: done

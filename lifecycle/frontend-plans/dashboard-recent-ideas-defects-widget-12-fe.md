@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T12:31:51+10:00"
 title: "Frontend Plan: Update Recent Ideas and Defects Widget Limit to 7"
 type: plan-frontend
 status: done

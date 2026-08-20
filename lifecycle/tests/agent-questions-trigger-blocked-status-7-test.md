@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T22:22:02+10:00"
 title: "Tests: system-role workflow transition permissions (M1)"
 type: test
 status: approved

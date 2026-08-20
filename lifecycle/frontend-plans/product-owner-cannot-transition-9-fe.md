@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T12:59:15+10:00"
 title: "Frontend Plan: Filter Transition Dialog by Allowed Targets"
 type: plan-frontend
 status: done

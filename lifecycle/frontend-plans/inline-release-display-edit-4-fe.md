@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T17:07:57+10:00"
 title: "Frontend Plan: Inline Release Display and Editing"
 type: plan-frontend
 status: done

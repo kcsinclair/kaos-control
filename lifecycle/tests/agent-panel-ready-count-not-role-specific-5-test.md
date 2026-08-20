@@ -1,4 +1,5 @@
 ---
+created: "2026-05-11T13:11:30+10:00"
 title: "Test: Per-Agent Role-Specific Ready Counts"
 type: test
 status: approved

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T17:35:50+10:00"
 title: "Dashboard Home Screen — Frontend Plan"
 type: plan-frontend
 status: done

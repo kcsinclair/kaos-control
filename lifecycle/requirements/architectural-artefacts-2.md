@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T15:01:26+10:00"
 title: Architectural Artefacts — On-Disk Model
 type: requirement
 status: done

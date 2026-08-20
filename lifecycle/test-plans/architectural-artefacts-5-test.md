@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T15:06:28+10:00"
 title: "Test Plan — Architectural Artefacts On-Disk Model"
 type: plan-test
 status: done

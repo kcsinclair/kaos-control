@@ -1,4 +1,5 @@
 ---
+created: "2026-04-28T10:36:30+10:00"
 title: "Test Plan: Frontmatter Role-Based Assignment Control"
 type: plan-test
 status: done

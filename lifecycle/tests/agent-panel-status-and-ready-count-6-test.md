@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T16:13:29+10:00"
 title: Agent Panel Status and Ready Count — Integration Tests
 type: test
 status: approved

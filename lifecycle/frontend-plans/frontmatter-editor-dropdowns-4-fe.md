@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T09:43:43+10:00"
 title: 'Frontend Plan: Frontmatter Editor Dropdowns'
 type: plan-frontend
 status: done

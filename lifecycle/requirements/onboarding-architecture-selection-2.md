@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T17:01:20+10:00"
 title: Architecture Wizard — Guided Architecture & Stack Selection
 type: requirement
 status: done

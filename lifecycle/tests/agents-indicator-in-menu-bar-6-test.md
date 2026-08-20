@@ -1,4 +1,5 @@
 ---
+created: "2026-04-30T18:04:21+10:00"
 title: "Test Suite — Move Running Agents Indicator to Menu Bar"
 type: test
 status: approved

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: Run all tests and auto-file defects for failures — Requirements
 type: requirement
 status: done

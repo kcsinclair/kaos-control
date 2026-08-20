@@ -1,4 +1,5 @@
 ---
+created: "2026-04-26T18:39:09+10:00"
 title: "Conversational Idea Capture – Integration Tests"
 type: test
 status: approved

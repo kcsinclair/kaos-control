@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T10:23:32+10:00"
 title: "Integration Tests — Architectural Artefacts On-Disk Model"
 type: test
 status: done

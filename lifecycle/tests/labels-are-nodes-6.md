@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T17:44:13+10:00"
 title: Integration Tests — Labels as Graph Nodes with Priority Visualisation
 type: test
 status: approved

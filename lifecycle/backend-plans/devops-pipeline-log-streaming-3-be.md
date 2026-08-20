@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T19:14:36+10:00"
 title: "Backend Plan — Pipeline Log Streaming Endpoint Enhancements"
 type: plan-backend
 status: done

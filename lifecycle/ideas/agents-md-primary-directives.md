@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T17:40:19+10:00"
 title: AGENTS.md-primary directive files + a simple migration option
 type: idea
 status: clarifying

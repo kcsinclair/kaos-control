@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T11:31:33+10:00"
 title: Artefacts for Defects
 type: idea
 status: done

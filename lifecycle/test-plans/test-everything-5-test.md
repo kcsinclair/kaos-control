@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: 'Test Plan: Run All Tests and Auto-file Defects'
 type: plan-test
 status: done

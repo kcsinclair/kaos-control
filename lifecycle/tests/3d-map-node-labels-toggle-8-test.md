@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: 'Fix: GraphView.labels ForceGraph3D tests use 3D view mode'
 type: test
 status: approved

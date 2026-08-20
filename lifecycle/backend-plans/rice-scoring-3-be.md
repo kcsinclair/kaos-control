@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T09:51:33+10:00"
 title: "Backend Plan — RICE Scoring for Ideas and Defects"
 type: plan-backend
 status: done

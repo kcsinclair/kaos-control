@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T07:54:45+10:00"
 title: 'Backend Plan: DevOps Pipeline Management'
 type: plan-backend
 status: done

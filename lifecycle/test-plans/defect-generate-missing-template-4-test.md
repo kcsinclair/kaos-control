@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T15:59:36+10:00"
 title: 'Test plan — defect-generate template fallback, self-repair, and graceful UI'
 type: plan-test
 status: done

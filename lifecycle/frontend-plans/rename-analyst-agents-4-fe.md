@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:39:13+10:00"
 title: "Frontend Plan — Rename Analyst Agents to Phase-First Convention"
 type: plan-frontend
 status: done

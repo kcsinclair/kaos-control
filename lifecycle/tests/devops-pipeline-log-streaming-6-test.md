@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T21:56:42+10:00"
 title: "Tests — Pipeline Log Streaming View"
 type: test
 status: approved

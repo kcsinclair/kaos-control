@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:44:23+10:00"
 title: "Test Coverage — Rename Analyst Agents to Phase-First Convention"
 type: test
 status: approved

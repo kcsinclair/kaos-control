@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T10:08:45+10:00"
 title: "CLI Init Scaffold — Test Plan"
 type: plan-test
 status: done

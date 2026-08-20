@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T15:59:04+10:00"
 title: 'Frontend plan — graceful defect-generation errors and config-health guidance'
 type: plan-frontend
 status: done

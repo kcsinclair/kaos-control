@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T10:54:38+10:00"
 title: "Tests — Agent Editor Config Load and Round-Trip Preservation"
 type: test
 status: approved

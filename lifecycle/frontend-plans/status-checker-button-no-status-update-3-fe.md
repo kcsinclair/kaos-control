@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:38:25+10:00"
 title: "Fix Status Check Frontend Type Mismatches"
 type: plan-frontend
 status: done

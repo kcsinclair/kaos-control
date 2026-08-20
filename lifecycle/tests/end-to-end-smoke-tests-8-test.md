@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: "Tests: Fix CSS selector in 01-login.spec.ts (summary-card)"
 type: test
 status: done

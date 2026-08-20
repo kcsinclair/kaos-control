@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T18:17:59+10:00"
 title: "Test Coverage: Inline Release Display and Editing"
 type: test
 status: done

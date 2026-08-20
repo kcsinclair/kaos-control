@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T15:52:00+10:00"
 title: Architecture Relationship Map
 type: requirement
 status: done

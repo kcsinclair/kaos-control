@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T22:00:27+10:00"
 title: Labels as Graph Nodes with Priority Visualisation
 type: requirement
 status: done

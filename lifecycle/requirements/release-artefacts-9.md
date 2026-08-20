@@ -1,4 +1,5 @@
 ---
+created: "2026-08-11T15:09:57+10:00"
 title: Release Artefacts in Markdown — reverse to markdown-authoritative
 type: requirement
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T12:17:40+10:00"
 title: Architectural Artefacts
 type: idea
 status: done

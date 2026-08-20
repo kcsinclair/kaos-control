@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T12:29:05+10:00"
 title: 'Test Plan: Auto-Create Projects Directory on First Run'
 type: plan-test
 status: done

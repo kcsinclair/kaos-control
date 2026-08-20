@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T10:42:13+10:00"
 title: 'Frontend Plan: Ready-Count Badge and Running-State Highlight'
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-11T11:52:07+10:00"
 title: "Test: Verify Per-Agent Role-Specific Ready Counts"
 type: plan-test
 status: done

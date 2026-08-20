@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T11:49:53+10:00"
 title: 'Frontend Plan: Lineage Filter with Autocomplete'
 type: plan-frontend
 status: abandoned

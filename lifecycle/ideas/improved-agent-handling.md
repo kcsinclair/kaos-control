@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: Improved Agent Handling
 type: idea
 status: draft

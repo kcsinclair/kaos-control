@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: "Auto-Triage Raw Ideas — Watcher Rerun After Status Reset"
 type: test
 status: approved

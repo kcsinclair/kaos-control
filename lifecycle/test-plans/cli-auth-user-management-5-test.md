@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T09:29:58+10:00"
 title: CLI Auth User Management and Secured API — Test Plan
 type: plan-test
 status: done

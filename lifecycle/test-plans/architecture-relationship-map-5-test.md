@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T15:56:43+10:00"
 title: "Test Plan — Architecture Relationship Map"
 type: plan-test
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T18:25:13+10:00"
 title: Agent Run Summary Panel with Token Efficiency Metrics
 type: requirement
 status: done

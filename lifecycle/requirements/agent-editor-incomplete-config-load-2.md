@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: Agent Editor Loads and Preserves All config.yaml Fields
 type: requirement
 status: blocked

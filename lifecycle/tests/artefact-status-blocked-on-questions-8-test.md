@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: "Tests: fix unmocked getOpenQuestions in blocked-banner Vitest suite"
 type: test
 status: draft

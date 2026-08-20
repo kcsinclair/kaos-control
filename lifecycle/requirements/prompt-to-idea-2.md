@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T14:43:45+10:00"
 title: Conversational Idea Capture Agent
 type: requirement
 status: done

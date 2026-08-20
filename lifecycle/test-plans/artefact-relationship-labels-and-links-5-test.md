@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: 'Test Plan: Artefact Relationship Labels and Clickable Links'
 type: plan-test
 status: done

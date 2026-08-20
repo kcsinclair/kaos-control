@@ -1,4 +1,5 @@
 ---
+created: "2026-04-29T09:01:27+10:00"
 title: "Test Plan — Collapsible Sidebar with Icon-Only Mode"
 type: plan-test
 status: done

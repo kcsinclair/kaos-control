@@ -1,4 +1,5 @@
 ---
+created: "2026-04-29T18:41:55+10:00"
 title: "Backend Plan — Move Running Agents Indicator to Menu Bar"
 type: plan-backend
 status: done

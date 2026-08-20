@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T13:55:30+10:00"
 title: "Ollama Agent Support — Backend Plan"
 type: plan-backend
 status: done

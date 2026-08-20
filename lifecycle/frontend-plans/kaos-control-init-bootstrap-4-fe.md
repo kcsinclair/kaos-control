@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T16:26:00+10:00"
 title: 'Frontend Plan: Init Bootstrap — Create Pipeline Dialog and YAML Editor'
 type: plan-frontend
 status: done

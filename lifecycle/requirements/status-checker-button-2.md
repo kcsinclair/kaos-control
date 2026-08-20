@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T14:43:12+10:00"
 title: Lineage Status Checker
 type: requirement
 status: done

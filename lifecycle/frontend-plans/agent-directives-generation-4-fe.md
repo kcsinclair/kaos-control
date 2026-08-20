@@ -1,4 +1,5 @@
 ---
+created: "2026-08-16T19:05:58+10:00"
 title: "Frontend Plan — Directive Migration Offer & Refresh Affordance"
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-13T07:43:08+10:00"
 title: Test Suite — Agent Run Summary Panel
 type: test
 status: approved

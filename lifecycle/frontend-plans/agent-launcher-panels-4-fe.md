@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T15:07:50+10:00"
 title: 'Frontend Plan: Agent Launcher Panels'
 type: plan-frontend
 status: done

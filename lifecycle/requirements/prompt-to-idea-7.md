@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T22:00:38+10:00"
 title: Single-Submit Idea Capture (Brain Dump Mode)
 type: requirement
 status: done

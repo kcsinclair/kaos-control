@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T19:15:54+10:00"
 title: "Test Plan — Pipeline Log Streaming View"
 type: plan-test
 status: done

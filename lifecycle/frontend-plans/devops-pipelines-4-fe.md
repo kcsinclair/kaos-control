@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T07:55:25+10:00"
 title: 'Frontend Plan: DevOps Pipeline Management'
 type: plan-frontend
 status: done

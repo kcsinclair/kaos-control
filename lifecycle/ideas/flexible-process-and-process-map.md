@@ -1,4 +1,5 @@
 ---
+created: "2026-06-26T18:18:32+10:00"
 title: Flexible Process and Process Map
 type: idea
 status: draft

@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T12:53:30+10:00"
 title: Multi Language Support
 type: idea
 status: draft

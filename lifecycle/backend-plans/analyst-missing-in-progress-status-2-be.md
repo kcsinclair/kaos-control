@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:51:44+10:00"
 title: "Backend Plan: Add Active Status to Analyst Agents"
 type: plan-backend
 status: done

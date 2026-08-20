@@ -1,4 +1,5 @@
 ---
+created: "2026-04-24T11:46:21+10:00"
 title: Test Plan — kaos-control v1
 type: plan-test
 status: done

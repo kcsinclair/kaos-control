@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T10:58:43+10:00"
 title: "Universal Text Filter — Backend Plan"
 type: plan-backend
 status: done

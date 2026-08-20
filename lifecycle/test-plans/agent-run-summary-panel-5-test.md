@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T20:40:59+10:00"
 title: 'Test Plan: Agent Run Summary Panel'
 type: plan-test
 status: done

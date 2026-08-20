@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: "Collapsible Sidebar Icons — Defect Fix: nav-item count updated to 12"
 type: test
 status: draft

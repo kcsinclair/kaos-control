@@ -1,4 +1,5 @@
 ---
+created: "2026-04-28T10:14:25+10:00"
 title: "Table Pagination — Frontend Plan"
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-04-28T10:36:01+10:00"
 title: "Frontend Plan: Assignee Editing in Frontmatter Panel"
 type: plan-frontend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:42:35+10:00"
 title: Frontend Plan — Light Mode Colour Scheme for Graphs
 type: plan-frontend
 status: done

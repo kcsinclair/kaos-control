@@ -1,4 +1,5 @@
 ---
+created: "2026-05-11T11:51:47+10:00"
 title: "Frontend: Display Per-Agent Ready Counts from Backend Endpoint"
 type: plan-frontend
 status: done

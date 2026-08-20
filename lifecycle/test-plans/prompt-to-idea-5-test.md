@@ -1,4 +1,5 @@
 ---
+created: "2026-04-26T15:58:57+10:00"
 title: Conversational Idea Capture – Test Plan
 type: plan-test
 status: done

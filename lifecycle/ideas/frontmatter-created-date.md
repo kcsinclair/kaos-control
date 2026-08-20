@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T12:46:53+10:00"
 title: Frontmatter Created Date for Artifacts
 type: idea
 status: done

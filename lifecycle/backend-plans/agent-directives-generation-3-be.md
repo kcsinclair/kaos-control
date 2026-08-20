@@ -1,4 +1,5 @@
 ---
+created: "2026-08-16T19:05:37+10:00"
 title: "Backend Plan — Stack-Tuned Directive Files & Agent Prompts at Init"
 type: plan-backend
 status: done

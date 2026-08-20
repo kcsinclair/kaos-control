@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T10:33:38+10:00"
 title: 'Backend Plan: 3D Map Node Labels Toggle'
 type: plan-backend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-08-16T18:58:57+10:00"
 title: Agent Directives Generation — Integration Tests
 type: test
 status: done

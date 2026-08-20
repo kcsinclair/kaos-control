@@ -1,4 +1,5 @@
 ---
+created: "2026-08-13T10:52:39+10:00"
 title: Embedded security-scan devops pipeline with pluggable scanners and auto defect tracking
 type: idea
 status: draft

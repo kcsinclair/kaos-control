@@ -1,4 +1,5 @@
 ---
+created: "2026-04-28T10:19:04+10:00"
 title: "Sortable Table Columns — Frontend Plan"
 type: plan-frontend
 status: done

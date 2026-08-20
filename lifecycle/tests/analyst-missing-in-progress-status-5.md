@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:52:57+10:00"
 title: 'Tests: Analyst Agent Active Status Transitions'
 type: test
 status: approved

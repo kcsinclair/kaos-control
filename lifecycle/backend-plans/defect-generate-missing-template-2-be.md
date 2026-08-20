@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T15:58:32+10:00"
 title: 'Backend plan — defect-generate template fallback, config self-repair, and graceful degradation'
 type: plan-backend
 status: done

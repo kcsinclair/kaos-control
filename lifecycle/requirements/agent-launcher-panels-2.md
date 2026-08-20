@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T15:21:49+10:00"
 title: Agent Launcher Panels
 type: requirement
 status: done

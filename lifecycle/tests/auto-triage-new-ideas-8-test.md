@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: "Auto-Triage Locked Lineage — Defect Regression Test"
 type: test
 status: approved

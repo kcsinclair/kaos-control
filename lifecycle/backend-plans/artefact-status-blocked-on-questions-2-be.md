@@ -1,4 +1,5 @@
 ---
+created: "2026-04-29T15:56:48+10:00"
 title: "Backend: Auto-transition to blocked when Open Questions are added"
 type: plan-backend
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-04-27T12:58:45+10:00"
 title: "Backend plan: configurable ignore patterns for lifecycle indexer"
 type: plan-backend
 status: done

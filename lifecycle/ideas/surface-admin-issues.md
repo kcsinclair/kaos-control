@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: Surface Admin Issues in GUI
 type: idea
 status: draft

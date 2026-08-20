@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: "Frontend Plan — Inherit Priority and Release Through Lineage"
 type: plan-frontend
 status: done

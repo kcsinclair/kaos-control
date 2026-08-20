@@ -1,4 +1,5 @@
 ---
+created: "2026-04-29T09:00:13+10:00"
 title: "Backend Plan — Collapsible Sidebar with Icon-Only Mode"
 type: plan-backend
 status: done

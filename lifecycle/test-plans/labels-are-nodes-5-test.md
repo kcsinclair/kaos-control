@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T16:48:08+10:00"
 title: "Test Plan: Labels as Graph Nodes with Priority Visualisation"
 type: plan-test
 status: done

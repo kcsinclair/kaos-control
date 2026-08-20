@@ -1,4 +1,5 @@
 ---
+created: "2026-08-14T12:17:42+10:00"
 title: Architecture Relationship Map
 type: idea
 status: done
