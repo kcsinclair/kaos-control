@@ -141,6 +141,60 @@ func TestHandleArchitectureOverview_EmptyProject(t *testing.T) {
 	}
 }
 
+// TestHandleArchitectureOverview_DiskChangeReflectedOnNextCall pins FR-12 at
+// the endpoint: a standard written directly to disk between two GETs, with
+// no reindex call in between, appears in the second response. This is the
+// disk-fallback half of the freshness contract; TestWatcher_ArchitectureSubdirsEmitFileChanged
+// (internal/watcher) pins the live fsnotify half the frontend relies on to
+// know when to re-fetch.
+func TestHandleArchitectureOverview_DiskChangeReflectedOnNextCall(t *testing.T) {
+	p, cleanup := newTestProject(t)
+	defer cleanup()
+
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodGet, "/api/p/test/architecture/overview", nil)
+	req = withProjectAndUser(req, p, "po@test")
+	w := httptest.NewRecorder()
+	s.handleArchitectureOverview(w, req)
+
+	var before map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &before); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if standards, _ := before["standards"].([]any); len(standards) != 0 {
+		t.Fatalf("expected no standards before the disk write, got %v", standards)
+	}
+
+	// Write a standard directly to disk — no p.Idx.IndexFile call, simulating
+	// an external edit the watcher hasn't (yet) caught up with.
+	standardPath := filepath.Join(p.Entry.Path, "lifecycle/architecture/standards/secrets.md")
+	if err := os.MkdirAll(filepath.Dir(standardPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(standardPath,
+		[]byte("---\ntitle: Secrets Handling\ntype: doc\nstatus: approved\n---\n\nBody.\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/api/p/test/architecture/overview", nil)
+	req2 = withProjectAndUser(req2, p, "po@test")
+	w2 := httptest.NewRecorder()
+	s.handleArchitectureOverview(w2, req2)
+
+	var after map[string]any
+	if err := json.Unmarshal(w2.Body.Bytes(), &after); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	standards, ok := after["standards"].([]any)
+	if !ok || len(standards) != 1 {
+		t.Fatalf("expected the unindexed standard to appear, got %v", after["standards"])
+	}
+	item := standards[0].(map[string]any)
+	if item["title"] != "Secrets Handling" {
+		t.Errorf("standards[0].title: got %v", item["title"])
+	}
+}
+
 // listArchitectureFiles returns the content of every .md file under
 // lifecycle/architecture/, keyed by repo-relative path.
 func listArchitectureFiles(t *testing.T, projectRoot string) map[string]string {
