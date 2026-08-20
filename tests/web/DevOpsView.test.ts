@@ -22,15 +22,21 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import DevOpsView from '../../web/src/views/project/DevOpsView.vue'
 import PipelineCard from '../../web/src/components/devops/PipelineCard.vue'
 import { useDevOpsStore } from '../../web/src/stores/devops'
-import type { Pipeline } from '../../web/src/api/devops'
+import type { Pipeline, RunHistoryRow } from '../../web/src/api/devops'
 
 // ---------------------------------------------------------------------------
 // Module mocks
 // ---------------------------------------------------------------------------
 
 const mockListPipelines = vi.fn().mockResolvedValue({ pipelines: [] })
+// RunHistory.vue (mounted inside PipelineCard) calls listPipelineRuns on mount
+// to populate devops.pipelineHistory, which drives the .latest-run-badge.
+// Default to no history so existing tests that don't care about the badge
+// are unaffected.
+const mockListPipelineRuns = vi.fn().mockResolvedValue({ runs: [] })
 vi.mock('@/api/devops', () => ({
   listPipelines: (...args: unknown[]) => mockListPipelines(...args),
+  listPipelineRuns: (...args: unknown[]) => mockListPipelineRuns(...args),
   runPipeline: vi.fn().mockResolvedValue({ run_id: 'test-run-id' }),
   cancelPipeline: vi.fn().mockResolvedValue(undefined),
   getRunLog: vi.fn().mockResolvedValue(''),
@@ -315,13 +321,22 @@ describe('PipelineCard — run status styling', () => {
     expect(wrapper.find('.pipeline-card').classes()).toContain('pipeline-card--passed')
   })
 
-  it('shows Failed run-status badge when run has failed', async () => {
-    const wrapper = await mountPipelineCard(buildPipeline, {
-      runId: 'run-123',
-      overallStatus: 'failed',
-      steps: buildPipeline.steps.map((s) => ({ name: s.name, status: 'failed', output: [] })),
-    })
-    expect(wrapper.find('.run-status--failed').exists()).toBe(true)
+  it('shows the .latest-run-badge--failed badge when the latest historical run failed', async () => {
+    // The failed badge is driven by historical run data (devops.latestRunForPipeline),
+    // not by the currently-active run's overallStatus, so no activeRun is set here.
+    const failedRow: RunHistoryRow = {
+      run_id: 'run-999',
+      status: 'failed',
+      started_at: new Date().toISOString(),
+      ended_at: new Date().toISOString(),
+      duration_ms: 1234,
+    }
+    mockListPipelineRuns.mockResolvedValueOnce({ runs: [failedRow] })
+
+    const wrapper = await mountPipelineCard(buildPipeline)
+
+    expect(wrapper.find('.latest-run-badge--failed').exists()).toBe(true)
+    expect(wrapper.find('.run-status--failed').exists()).toBe(false)
   })
 })
 
