@@ -278,6 +278,8 @@ break.) No new ADR is required for this requirement.
   them by **path** (`architecture-summary.md`, `standards/*`) or by `type`/label?
   Path-based discovery is proposed for v1 given `type: doc` is shared.
 
+> Path-based works.
+
 - **OQ-3 — Tech-to-component mapping source (FR-3).** Is the architecture ↔ stack
   component mapping derived from existing artifact content (stack profile / body
   wiki-links), or does it need an explicit mapping field the wizard would record
