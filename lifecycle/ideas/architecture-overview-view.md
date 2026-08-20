@@ -52,3 +52,38 @@ wizard and to raise a new ADR.
 A later enhancement can add an auto-generated diagram of the *actual* current
 system derived from the codebase ([[architecture-auto-diagram]]), displayed
 beside the intended architecture for drift comparison.
+
+## Owning the architecture zone (catalog visibility)
+
+The generic lifecycle surfaces — list and board — are about **flow**: artifacts
+moving idea → requirement → plan → dev → QA → release. Everything under
+`lifecycle/architecture/` is **standing reference**, not flow, and so does not
+belong on those surfaces by default. This view is its proper home, and the
+end-state should be that it *owns the whole architecture zone*:
+
+- the **catalog** (candidate `architectures/` + `tech-stacks/`, carrying the
+  `catalog` label) — browsable here as the menu of options for change, so users
+  never need it cluttering the board;
+- the **chosen** architecture + tech-stack (promoted to the architecture root);
+- the **summary**, **ADRs** (`decisions/`), and **standards**;
+- the **archive** (`architecture/archive/` — superseded promoted choices), shown
+  as a history/provenance strip, not as live work items.
+
+**Interim vs. destination.** As a first step (shipped ahead of this view) the
+list and board hide *catalog material* — candidates (`catalog` label) and
+archived choices (`architecture/archive/`) — behind a single **"Show catalog"**
+toggle, keyed on the label rather than on `type` so the project's *chosen*
+architecture, ADRs, and standards stay visible. See `isCatalogMaterial()` in
+`web/src/types/api.ts` and the toggle in `ArtifactListView.vue` /
+`KanbanBoardView.vue`. This is deliberately a stopgap.
+
+Once this overview view exists, the cleaner model is: the list/board **exclude
+the architecture zone entirely by default** (it has its own home here), demoting
+the per-view "Show catalog" toggle to an optional "show architecture inline"
+escape hatch — or removing it, since the zone is fully represented in this view.
+The discriminator stays **catalog-role**, not artifact `type`: candidates and
+archive are reference/history; chosen + ADRs + standards are the live
+architecture. Nothing under `lifecycle/architecture/` is ever **deleted** on
+selection — superseded choices are archived, and (in the kaos-control repo
+itself) the catalog files are the byte-identical source of the shipped embedded
+catalog (`catalogfs`), so removal would break the product.

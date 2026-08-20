@@ -506,6 +506,21 @@ export interface WsEvent {
 export const TERMINAL_STATUSES = ['done', 'rejected', 'abandoned'] as const
 export type TerminalStatus = typeof TERMINAL_STATUSES[number]
 
+/**
+ * True when a row is architecture *catalog* material rather than a lifecycle
+ * work item: a candidate architecture / tech-stack (carrying the `catalog`
+ * label) or a superseded promoted choice (under architecture/archive/). The
+ * project's *chosen* architecture, ADRs, and standards are NOT catalog material
+ * — they never carry the label and live at the architecture root, so they stay
+ * visible. Shared by the list + board "Show catalog" toggle.
+ */
+export function isCatalogMaterial(row: Pick<ArtifactRow, 'path' | 'frontmatter'>): boolean {
+  const labels = row.frontmatter?.labels ?? []
+  if (labels.includes('catalog')) return true
+  if ((row.path ?? '').includes('/architecture/archive/')) return true
+  return false
+}
+
 export interface RunResultUsage {
   input_tokens: number
   cache_creation_input_tokens: number

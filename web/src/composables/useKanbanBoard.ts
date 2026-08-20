@@ -4,7 +4,7 @@ import { ref, computed, reactive } from 'vue'
 import { api } from '@/api/client'
 import * as artifactsApi from '@/api/artifacts'
 import type { ArtifactRow, ArtifactFilter, WsEvent } from '@/types/api'
-import { TERMINAL_STATUSES } from '@/types/api'
+import { TERMINAL_STATUSES, isCatalogMaterial } from '@/types/api'
 import { parseArtifactDate } from '@/composables/useFormatDate'
 import { useUiStore } from '@/stores/ui'
 import { useWebSocket } from '@/composables/useWebSocket'
@@ -86,6 +86,9 @@ export function useKanbanBoard(project: string) {
     return items.filter(a => {
       // Hide test artifacts unless the "Show Tests" toggle is on
       if (!uiStore.showTestsOnKanban && a.type === 'test') return false
+      // Hide architecture catalog candidates + archived choices unless
+      // "Show catalog" is on (the chosen architecture/ADRs/standards stay).
+      if (!uiStore.showCatalog && isCatalogMaterial(a)) return false
       // Release artifacts are never shown on the Kanban board
       if (a.type === 'release') return false
       if (hideTerminal.value && (TERMINAL_STATUSES as readonly string[]).includes(a.status)) return false

@@ -18,7 +18,7 @@ import { useTextFilterShortcut } from '@/composables/useTextFilterShortcut'
 import { useUiStore } from '@/stores/ui'
 import { MessageSquarePlus, Bug, ShieldCheck, BookOpen, Bot, FileText } from 'lucide-vue-next'
 import type { ArtifactRow, WsEvent } from '@/types/api'
-import { TERMINAL_STATUSES } from '@/types/api'
+import { TERMINAL_STATUSES, isCatalogMaterial } from '@/types/api'
 import { formatShortDate, formatFullDateTime } from '@/composables/useFormatDate'
 import { formatRice, riceScore, type RiceComponents } from '@/lib/rice'
 import RiceEditor from '@/components/artifact/RiceEditor.vue'
@@ -42,9 +42,12 @@ useTextFilterShortcut(textFilterRef)
 const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination()
 
 const visibleItems = computed(() => {
-  const base = showCompleted.value
+  let base = showCompleted.value
     ? store.items
     : store.items.filter(r => !(TERMINAL_STATUSES as readonly string[]).includes(r.status))
+  // Architecture catalog candidates + archived choices are reference material,
+  // not lifecycle work items — hidden unless "Show catalog" is on.
+  if (!ui.showCatalog) base = base.filter(r => !isCatalogMaterial(r))
   if (!searchText.value) return base
   const q = searchText.value.toLowerCase()
   return base.filter(r => {
@@ -187,8 +190,8 @@ function highlightMatch(text: string): string {
   )
 }
 
-// Reset to page 1 when showCompleted toggle changes
-watch(showCompleted, () => { resetSort(); setPage(1) })
+// Reset to page 1 when the showCompleted / showCatalog toggles change
+watch([showCompleted, () => ui.showCatalog], () => { resetSort(); setPage(1) })
 
 // Reset to page 1 after sort change
 watch([sortColumn, sortDirection], () => setPage(1))
@@ -289,6 +292,14 @@ onMounted(async () => {
           v-model="showCompleted"
         />
         <span class="toggle-text">Show completed</span>
+      </label>
+      <label class="toggle-label" v-if="!store.loading">
+        <input
+          type="checkbox"
+          class="toggle-input"
+          v-model="ui.showCatalog"
+        />
+        <span class="toggle-text">Show catalog</span>
       </label>
       <button class="btn-check-status" @click="showStatusPanel = !showStatusPanel">
         <ShieldCheck :size="15" />

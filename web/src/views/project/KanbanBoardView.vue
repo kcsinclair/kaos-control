@@ -178,6 +178,14 @@ onMounted(async () => {
         />
         <span class="toggle-text">Show Tests</span>
       </label>
+      <label class="toggle-label">
+        <input
+          type="checkbox"
+          class="toggle-input"
+          v-model="uiStore.showCatalog"
+        />
+        <span class="toggle-text">Show Catalog</span>
+      </label>
       <button class="btn-check-status" @click="showStatusPanel = !showStatusPanel">
         <ShieldCheck :size="15" />
         Check statuses
