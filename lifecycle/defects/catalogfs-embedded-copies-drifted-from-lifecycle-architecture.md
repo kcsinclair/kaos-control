@@ -1,14 +1,16 @@
 ---
-title: "catalogfs embedded architecture catalog has drifted from lifecycle/architecture/ source files"
+title: catalogfs embedded architecture catalog has drifted from lifecycle/architecture/ source files
 type: defect
-status: approved
+status: in-development
 lineage: architectural-artefacts
-parent: lifecycle/backend-plans/architectural-artefacts-3-be.md
 created: "2026-08-20T12:21:00+10:00"
-labels: [defect]
+parent: lifecycle/backend-plans/architectural-artefacts-3-be.md
+labels:
+    - defect
+release: KC-Release5
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # catalogfs embedded architecture catalog has drifted from lifecycle/architecture/ source files
