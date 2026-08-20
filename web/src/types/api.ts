@@ -737,3 +737,35 @@ export interface WizardScaffoldRunResult {
   available: boolean
   result?: ScaffoldResult
 }
+
+// Architecture Overview — mirrors internal/architecture/overview.go (Overview,
+// OverviewItem, Role). See [[architecture-overview-view]].
+
+export type CatalogRole =
+  | 'catalog'
+  | 'chosen-architecture'
+  | 'chosen-stack'
+  | 'summary'
+  | 'standard'
+  | 'adr'
+  | 'archive'
+
+export interface OverviewItem {
+  path: string
+  title: string
+  status: string
+  type: string
+  created?: string
+  catalog_role: CatalogRole
+}
+
+export interface ArchitectureOverview {
+  has_chosen_architecture: boolean
+  chosen_architecture: OverviewItem | null
+  chosen_stack: OverviewItem | null
+  summary: OverviewItem | null
+  standards: OverviewItem[]
+  adrs: OverviewItem[]
+  archive: OverviewItem[]
+  catalog: OverviewItem[]
+}

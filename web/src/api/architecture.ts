@@ -2,6 +2,7 @@
 
 import { api } from './client'
 import type {
+  ArchitectureOverview,
   WizardAnswer,
   WizardCommitRequest,
   WizardCommitResult,
@@ -13,6 +14,12 @@ import type {
   CatalogItem,
   ScaffoldChoice,
 } from '@/types/api'
+
+// getOverview loads the assembled, read-only architecture-zone model (FR-9)
+// backing ArchitectureOverviewView — see [[architecture-overview-view]].
+export function getOverview(project: string): Promise<ArchitectureOverview> {
+  return api.get<ArchitectureOverview>(`/p/${encodeURIComponent(project)}/architecture/overview`)
+}
 
 export interface PromoteArchitectureResult {
   promoted_architecture: string
