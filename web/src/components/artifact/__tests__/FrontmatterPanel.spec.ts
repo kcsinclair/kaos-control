@@ -30,6 +30,11 @@ vi.mock('@/stores/theme', () => ({
     isDark: false,
   }),
 }))
+vi.mock('@/stores/queue', () => ({
+  useQueueStore: () => ({
+    snapshot: { running: null, pending: [] },
+  }),
+}))
 
 /** Build a minimal ArtifactDetail for use in tests. */
 function makeArtifact(overrides?: Partial<ArtifactDetail['frontmatter']>): ArtifactDetail {

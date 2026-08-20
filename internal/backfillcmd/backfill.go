@@ -46,11 +46,23 @@ func Run(args []string) error {
 	var (
 		seen, alreadyHad, updated, failed int
 	)
+	// The architecture catalog (candidate architectures/ and tech-stacks/) is
+	// shipped reference content — in this repo it is also the embed source, and
+	// stamping created: into it would both drift the embedded copy and ship
+	// per-file dates into every new project. Skip it. Promoted copies, ADRs,
+	// and the summary live elsewhere under lifecycle/architecture/ and are
+	// still stamped.
+	catalogArch := filepath.Join(lcDir, "architecture", "architectures")
+	catalogStack := filepath.Join(lcDir, "architecture", "tech-stacks")
+
 	walkErr := filepath.WalkDir(lcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
+			if path == catalogArch || path == catalogStack {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		if !strings.HasSuffix(path, ".md") {
