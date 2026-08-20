@@ -1,14 +1,16 @@
 ---
-title: "ShellStubDriver panics with \"send on closed channel\" under concurrent integration test load"
+title: ShellStubDriver panics with "send on closed channel" under concurrent integration test load
 type: defect
-status: approved
+status: in-development
 lineage: shell-stub-driver-panic-send-on-closed-channel
-parent: internal/agent/shell_stub.go
 created: "2026-08-20T12:22:00+10:00"
-labels: [defect]
+parent: internal/agent/shell_stub.go
+labels:
+    - defect
+release: KC-Release5
 assignees:
-  - role: backend-developer
-    who: agent
+    - role: backend-developer
+      who: agent
 ---
 
 # ShellStubDriver panics with "send on closed channel" under concurrent integration test load
