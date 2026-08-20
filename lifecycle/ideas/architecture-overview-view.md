@@ -1,7 +1,7 @@
 ---
 title: Architecture Overview — Visualise the Chosen Architecture
 type: idea
-status: draft
+status: approved
 lineage: architecture-overview-view
 created: "2026-08-14T12:30:00+10:00"
 priority: normal
