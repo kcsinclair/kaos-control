@@ -1,7 +1,7 @@
 ---
 title: Architecture Overview View — Visualise the Chosen Architecture
 type: requirement
-status: approved
+status: planning
 lineage: architecture-overview-view
 created: "2026-08-20T00:00:00Z"
 parent: lifecycle/ideas/architecture-overview-view.md
