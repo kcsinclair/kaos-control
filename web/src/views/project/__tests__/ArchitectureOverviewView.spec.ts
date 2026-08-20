@@ -26,6 +26,7 @@ const overviewState = {
   adrs: ref<unknown[]>([]),
   archive: computed(() => []),
   catalog: computed(() => []),
+  reload: vi.fn(),
 }
 
 vi.mock('@/composables/useArchitectureOverview', () => ({

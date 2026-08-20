@@ -1,17 +1,22 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useArchitectureOverview } from '@/composables/useArchitectureOverview'
+import { useUiStore } from '@/stores/ui'
 import ChosenArchitecturePanel from '@/components/architecture/overview/ChosenArchitecturePanel.vue'
 import TechStackPanel from '@/components/architecture/overview/TechStackPanel.vue'
 import RationalePanel from '@/components/architecture/overview/RationalePanel.vue'
 import BreakingRequirementsPanel from '@/components/architecture/overview/BreakingRequirementsPanel.vue'
 import StandardsPanel from '@/components/architecture/overview/StandardsPanel.vue'
 import AdrListPanel from '@/components/architecture/overview/AdrListPanel.vue'
+import NewAdrModal from '@/components/artifact/NewAdrModal.vue'
 
 const route = useRoute()
+const router = useRouter()
 const project = route.params.project as string
+const ui = useUiStore()
 
 const {
   loading,
@@ -22,13 +27,31 @@ const {
   summary,
   standards,
   adrs,
+  reload,
 } = useArchitectureOverview(project)
+
+// One-click actions (FR-8): the map and wizard are each reachable in one
+// click; raising an ADR reuses the existing NewAdrModal.vue rather than
+// introducing a new authoring surface (NFR-2).
+const showNewAdrModal = ref(false)
+
+function onAdrCreated(path: string) {
+  showNewAdrModal.value = false
+  ui.success('ADR created!')
+  reload()
+  router.push(`/p/${project}/artifacts/${path}`)
+}
 </script>
 
 <template>
   <div class="overview-view">
     <div class="overview-header">
       <h2 class="overview-title">Architecture Overview</h2>
+      <div class="overview-actions">
+        <router-link class="btn-ghost" :to="`/p/${project}/architecture/map`">Relationship map</router-link>
+        <router-link class="btn-ghost" :to="`/p/${project}/architecture/wizard`">Architecture Wizard</router-link>
+        <button class="btn-primary" type="button" @click="showNewAdrModal = true">New ADR</button>
+      </div>
     </div>
 
     <div v-if="loading" class="overview-state" role="status" aria-live="polite">Loading architecture overview…</div>
@@ -61,6 +84,13 @@ const {
         <AdrListPanel :project="project" :adrs="adrs" />
       </div>
     </div>
+
+    <NewAdrModal
+      v-if="showNewAdrModal"
+      :project="project"
+      @close="showNewAdrModal = false"
+      @created="onAdrCreated"
+    />
   </div>
 </template>
 
@@ -70,6 +100,11 @@ const {
   max-width: 1100px;
 }
 .overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
 .overview-title {
@@ -77,6 +112,15 @@ const {
   font-weight: 600;
   color: var(--color-text);
   margin: 0;
+}
+.overview-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.overview-actions .btn-ghost,
+.overview-actions .btn-primary {
+  padding: var(--space-1) var(--space-3);
 }
 .overview-state {
   padding: var(--space-8);
@@ -111,6 +155,8 @@ const {
 .btn-primary {
   background: var(--color-accent);
   color: #fff;
+  border: none;
+  cursor: pointer;
 }
 .btn-primary:hover {
   opacity: 0.88;
@@ -118,6 +164,8 @@ const {
 .btn-ghost {
   border: 1px solid var(--color-border);
   color: var(--color-text);
+  background: none;
+  cursor: pointer;
 }
 .btn-ghost:hover {
   background: var(--color-bg);
