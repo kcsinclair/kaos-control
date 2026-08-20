@@ -1,7 +1,7 @@
 ---
 title: tests/cli_init_test.go and tests/cli_directives_test.go are stale after the AGENTS.md-primary directives refactor
 type: defect
-status: in-development
+status: done
 lineage: agent-directives-generation
 created: "2026-08-20T12:23:00+10:00"
 parent: lifecycle/tests/agent-directives-generation-6-test.md
