@@ -1,18 +1,19 @@
 ---
-created: "2026-07-14T19:34:44+10:00"
 title: Frontend Lint Coverage Gap
 type: idea
 status: blocked
 lineage: frontend-lint-gap
+created: "2026-07-14T19:34:44+10:00"
 priority: medium
 labels:
     - frontend
     - tooling
     - quality
-release: KC-Release5
+release: KC-Release6
 assignees:
     - role: product-owner
       who: agent
+parent: lifecycle/ideas/architecture-overview-view.md
 ---
 
 # Frontend Lint Coverage Gap

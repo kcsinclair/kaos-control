@@ -1,9 +1,9 @@
 ---
-created: "2026-08-11T18:15:34+10:00"
 title: llama.cpp Agent Driver for Local Models
 type: requirement
 status: blocked
 lineage: llama-cpp-driver
+created: "2026-08-11T18:15:34+10:00"
 priority: normal
 parent: lifecycle/ideas/llama-cpp-driver.md
 labels:
@@ -14,7 +14,7 @@ labels:
     - go
     - portability
     - feature
-release: KC-Release5
+release: KC-Release6
 assignees:
     - role: product-owner
       who: agent

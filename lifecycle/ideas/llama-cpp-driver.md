@@ -13,7 +13,8 @@ labels:
     - go
     - portability
     - feature
-release: KC-Release5
+release: KC-Release6
+parent: lifecycle/ideas/architecture-overview-view.md
 ---
 
 # llama.cpp Agent Driver for Local Models
