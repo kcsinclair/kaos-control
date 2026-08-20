@@ -1,7 +1,7 @@
 ---
 title: 'New Project Init: Existing or New Directory'
 type: idea
-status: clarifying
+status: done
 lineage: new-project-init-directory-options
 created: "2026-08-14T11:38:41+10:00"
 priority: normal
