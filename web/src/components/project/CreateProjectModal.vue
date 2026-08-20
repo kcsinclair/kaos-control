@@ -174,18 +174,11 @@ async function handleSubmit() {
 
     const result = await projectStore.create(payload)
 
+    const verb = result.alreadyInitialised ? 'added' : 'created'
+    ui.success(`Project "${form.name}" ${verb} at ${result.resolvedPath}.`)
     if (result.alreadyInitialised) {
-      const message = `${result.resolvedPath} is already an initialised kaos-control project.`
-      if (mode.value === 'existing') {
-        errors.path = message
-      } else {
-        errors.dirName = message
-      }
-      return
-    }
-
-    ui.success(`Project "${form.name}" created at ${result.resolvedPath}.`)
-    if (result.partialCompletion) {
+      ui.info('The directory was already an initialised kaos-control project — it was added as-is, nothing was changed.')
+    } else if (result.partialCompletion) {
       ui.info('The existing directory had a partial lifecycle/ tree — the missing pieces were completed.')
     }
     createdProjectName.value = form.name

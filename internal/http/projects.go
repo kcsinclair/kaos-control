@@ -612,12 +612,16 @@ func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reject an already-initialised target rather than re-scaffolding (FR4/NFR2).
-	if config.IsInitialised(target) {
-		writeJSON(w, http.StatusOK, createProjectResult{
-			ResolvedPath:       target,
-			AlreadyInitialised: true,
-		})
+	// An "existing" target that is already a kaos-control project is the normal
+	// "add / register an existing project" case: fall through and register it.
+	// ScaffoldProject is idempotent (Force left zero), so it completes only any
+	// missing pieces and leaves a fully-initialised tree untouched (FR5/NFR2).
+	// A "new" target that is already initialised is a genuine conflict — the
+	// user asked to create a fresh directory, not adopt an existing project.
+	alreadyInitialised := config.IsInitialised(target)
+	if alreadyInitialised && mode == "new" {
+		writeJSON(w, http.StatusConflict, apiError("target_exists",
+			"directory is already an initialised kaos-control project: "+target))
 		return
 	}
 
@@ -691,7 +695,7 @@ func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 		projectSummary:     projectToSummary(p),
 		ResolvedPath:       target,
 		Created:            created,
-		AlreadyInitialised: false,
+		AlreadyInitialised: alreadyInitialised,
 		PartialCompletion:  partialCompletion,
 	})
 }
