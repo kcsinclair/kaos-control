@@ -1,7 +1,7 @@
 ---
 title: Architecture Overview View — Backend Plan
 type: plan-backend
-status: approved
+status: in-development
 lineage: architecture-overview-view
 parent: lifecycle/requirements/architecture-overview-view-2.md
 created: "2026-08-20T09:00:00Z"
