@@ -1,14 +1,16 @@
 ---
-title: "DevOpsView.test.ts asserts removed .run-status--failed class instead of .latest-run-badge--failed"
+title: DevOpsView.test.ts asserts removed .run-status--failed class instead of .latest-run-badge--failed
 type: defect
-status: draft
+status: approved
 lineage: devops-pipeline-run-history
-parent: lifecycle/tests/devops-pipeline-run-history-9-test.md
 created: "2026-08-20T12:25:00+10:00"
-labels: [defect]
+parent: lifecycle/tests/devops-pipeline-run-history-9-test.md
+labels:
+    - defect
+release: KC-Release5
 assignees:
-  - role: test-developer
-    who: agent
+    - role: test-developer
+      who: agent
 ---
 
 # DevOpsView.test.ts asserts removed .run-status--failed class instead of .latest-run-badge--failed
