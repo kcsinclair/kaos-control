@@ -293,6 +293,8 @@ break.) No new ADR is required for this requirement.
   represented here, or kept as an off-by-default "show architecture inline"
   escape hatch? Default assumption: keep it demoted/off.
 
+> kept as an off-by-default “show architecture inline” escape hatch
+
 - **OQ-5 — Archive strip scope (FR-9).** How much of the archive should the
   history/provenance strip show by default (latest superseded choice only vs. full
   history), and is it collapsed by default?
