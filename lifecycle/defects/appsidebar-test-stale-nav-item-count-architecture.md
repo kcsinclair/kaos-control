@@ -1,12 +1,13 @@
 ---
 title: AppSidebar.test.ts hardcodes 15 nav items but sidebar now has 16 (missing Architecture entry)
 type: defect
-status: approved
+status: in-development
 lineage: collapsible-sidebar-icons
 created: "2026-08-20T12:24:00+10:00"
 parent: lifecycle/tests/collapsible-sidebar-icons-8-test.md
 labels:
     - defect
+release: KC-Release5
 assignees:
     - role: test-developer
       who: agent
