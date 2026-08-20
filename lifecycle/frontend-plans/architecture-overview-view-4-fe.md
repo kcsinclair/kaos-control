@@ -1,7 +1,7 @@
 ---
 title: Architecture Overview View — Frontend Plan
 type: plan-frontend
-status: approved
+status: in-development
 lineage: architecture-overview-view
 parent: lifecycle/requirements/architecture-overview-view-2.md
 created: "2026-08-20T09:05:00Z"
