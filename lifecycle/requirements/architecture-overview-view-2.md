@@ -286,6 +286,8 @@ break.) No new ADR is required for this requirement.
   in the summary? v1 assumes it is derived from existing content; confirm whether
   an explicit mapping is wanted.
 
+> This is explicitly defined in the architectures/* and tech-stacks/* documents, the references are hard.
+
 - **OQ-4 — Removal vs. demotion of the list/board toggle (FR-9a).** Should the
   interim "Show catalog" toggle be **removed** entirely once the zone is fully
   represented here, or kept as an off-by-default "show architecture inline"
