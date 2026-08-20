@@ -1,7 +1,7 @@
 ---
 title: Architecture Overview View — Visualise the Chosen Architecture
 type: requirement
-status: blocked
+status: draft
 lineage: architecture-overview-view
 created: "2026-08-20T00:00:00Z"
 parent: lifecycle/ideas/architecture-overview-view.md
@@ -262,7 +262,7 @@ break.) No new ADR is required for this requirement.
       the modular-monolith architecture and Go + Vue stack and honours
       [[adr-no-header-based-client-ip-trust]]. *(NFR-6)*
 
-## Open Questions
+## Resolved Questions
 
 - **OQ-1 — Summary parsing granularity.** FR-4/FR-5 source the Q&A and the
   architecture-breaking requirements from `architecture-summary.md`. Does the view
@@ -298,3 +298,5 @@ break.) No new ADR is required for this requirement.
 - **OQ-5 — Archive strip scope (FR-9).** How much of the archive should the
   history/provenance strip show by default (latest superseded choice only vs. full
   history), and is it collapsed by default?
+
+> show 10 items by default and collapsed on open.
