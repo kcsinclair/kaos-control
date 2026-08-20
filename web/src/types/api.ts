@@ -136,6 +136,7 @@ export interface ArtifactFrontmatter {
   depends_on?: string[]
   blocks?: string[]
   related_to?: string[]
+  summary?: string
   members?: string[]
   release?: string
   sprint?: string
