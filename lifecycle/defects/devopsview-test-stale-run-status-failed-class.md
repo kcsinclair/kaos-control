@@ -1,7 +1,7 @@
 ---
 title: DevOpsView.test.ts asserts removed .run-status--failed class instead of .latest-run-badge--failed
 type: defect
-status: approved
+status: in-development
 lineage: devops-pipeline-run-history
 created: "2026-08-20T12:25:00+10:00"
 parent: lifecycle/tests/devops-pipeline-run-history-9-test.md
