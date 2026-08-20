@@ -271,7 +271,7 @@ break.) No new ADR is required for this requirement.
   A stable, agreed heading contract for the summary would make FR-5's per-item
   mapping robust.
 
-> ender the relevant summary sections as-is with links
+> render the relevant summary sections as-is with links
 
 - **OQ-2 — Standards/summary type discovery.** [[architectural-artefacts]] uses
   `type: doc` for the summary and standards in v1. Should the overview locate
