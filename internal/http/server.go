@@ -138,7 +138,11 @@ func New(cfg ServerConfig, projects map[string]*project.Project) *Server {
 func (s *Server) buildRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	// No middleware.RealIP: kaos-control has no reverse proxy in front of it,
+	// so r.RemoteAddr (the real TCP peer) must not be overwritten from
+	// client-supplied X-Forwarded-For/X-Real-IP/True-Client-IP headers — the
+	// loopback-only local-identity bypass in auth.go depends on it being
+	// trustworthy. See lifecycle/architecture/decisions/adr-0001-no-header-based-client-ip-trust.md.
 	r.Use(slogMiddleware)
 	r.Use(middleware.Recoverer)
 

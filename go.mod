@@ -7,7 +7,7 @@ toolchain go1.25.13
 require (
 	github.com/coder/websocket v1.8.14
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.19.2
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.11.1
