@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T17:02:59+10:00"
 title: "GET /allowed-targets returns 404 — endpoint not implemented"
 type: defect
 status: done

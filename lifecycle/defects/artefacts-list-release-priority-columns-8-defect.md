@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: TC6 release-filter + text-search test fails because TextFilter debounce is not advanced
 type: defect
 status: done

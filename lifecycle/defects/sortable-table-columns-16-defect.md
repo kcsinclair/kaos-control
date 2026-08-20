@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: "useSortableTable: empty strings and nulls not sorted to end"
 type: defect
 status: done

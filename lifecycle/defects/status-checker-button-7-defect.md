@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T11:48:35+10:00"
 title: POST /status-check/advance response schema mismatch — outcome always empty
 type: defect
 status: done

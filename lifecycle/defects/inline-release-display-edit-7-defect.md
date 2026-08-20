@@ -1,4 +1,5 @@
 ---
+created: "2026-05-12T18:23:16+10:00"
 title: patch_release_test.go redeclares strPtr — integration test build broken
 type: defect
 status: done

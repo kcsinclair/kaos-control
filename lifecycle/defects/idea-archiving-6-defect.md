@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: Dot-prefixed directories created at runtime are indexed due to watcher walk race condition
 type: defect
 status: abandoned

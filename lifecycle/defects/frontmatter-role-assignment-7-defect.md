@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:50:45+10:00"
 title: "PUT /artifacts accepts assignee with empty `who` field (no 400 returned)"
 type: defect
 status: done

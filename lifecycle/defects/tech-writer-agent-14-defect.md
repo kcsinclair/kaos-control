@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: 2D map shows 'project not found' alert and no nodes render when doc artifacts present
 type: defect
 status: done

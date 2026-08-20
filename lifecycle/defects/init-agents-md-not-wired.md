@@ -11,6 +11,10 @@ labels:
     - directives
     - agent
     - config
+release: KC-Release5
+rice_reach: 100
+rice_impact: 0.5
+rice_confidence: 25
 ---
 
 # Project Initialisation Does Not Set Up AGENTS.md with Claude and Gemini Directives

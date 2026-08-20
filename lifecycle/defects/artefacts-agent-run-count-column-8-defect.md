@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: TC2 Runs column header locator fails — CSS text-transform:uppercase breaks case-sensitive regex
 type: defect
 status: done

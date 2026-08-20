@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: "useSortableTable perf: text sort for 1,000 rows intermittently exceeds 100 ms under full-suite load"
 type: defect
 status: done

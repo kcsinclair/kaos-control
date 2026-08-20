@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T08:18:09+10:00"
 title: DashboardGrid missing panel slot — activity-feed widget not rendered
 type: defect
 status: done

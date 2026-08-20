@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T11:32:40+10:00"
 title: Promoted architecture copy parent graph edge missing after startup scan
 type: defect
 status: done

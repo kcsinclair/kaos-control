@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:50:45+10:00"
 title: 'Dark Mode: Unreadable Black Text on Dark Backgrounds and Low-Contrast Stage Pills'
 type: defect
 status: done

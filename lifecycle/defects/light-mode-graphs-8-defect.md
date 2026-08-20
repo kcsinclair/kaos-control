@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T18:12:07+10:00"
 title: ForceGraph3D.vue dimColor() contains theme-dependent hex literals outside graphConstants.ts
 type: defect
 status: done

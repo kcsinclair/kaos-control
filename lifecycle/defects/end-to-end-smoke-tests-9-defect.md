@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: E2E test harness does not pass daemon flag or serve command to start server
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: TestTriageStartup_SingleRawIdea fails due to pollForArtifactStatus parsing bug
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: AgentsRunsView projectQueue tests crash because agents store mock lacks runs array
 type: defect
 status: done

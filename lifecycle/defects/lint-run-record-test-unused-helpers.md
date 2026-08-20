@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: 'go vet lint failure: unused seedRunRecord/writeMinimalLogFile test helpers'
 type: defect
 status: done

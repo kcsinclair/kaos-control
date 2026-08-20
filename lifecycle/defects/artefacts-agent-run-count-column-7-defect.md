@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: E2E stub-agent missing prompt_templates causes 409 on triggerRun (TC1, TC3, TC4)
 type: defect
 status: done

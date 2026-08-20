@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: ParseErrorsView sort tests crash — useRoute mock missing query property
 type: defect
 status: done

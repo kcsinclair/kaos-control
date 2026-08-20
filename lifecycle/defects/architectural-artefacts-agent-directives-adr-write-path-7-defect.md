@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T11:53:03+10:00"
 title: Analyst and developer agents missing allowed write path for ADR decisions
 type: defect
 status: done

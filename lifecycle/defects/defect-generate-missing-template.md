@@ -1,4 +1,5 @@
 ---
+created: "2026-08-11T17:56:02+10:00"
 title: '"New Defect → Generate" fails with ''idea-capture agent has no template "defect-generate"'''
 type: defect
 status: done

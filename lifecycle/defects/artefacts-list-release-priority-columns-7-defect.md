@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: Release sort pins empty release to tail in both directions instead of first-in-ascending
 type: defect
 status: done

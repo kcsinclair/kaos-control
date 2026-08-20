@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T11:32:40+10:00"
 title: Catalog and project-own architecture artefacts fail to index on server startup
 type: defect
 status: done

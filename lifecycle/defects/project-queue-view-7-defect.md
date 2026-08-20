@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: ProjectQueuePanel realtime tests fail to inspect mock WebSocket calls due to new instances
 type: defect
 status: done

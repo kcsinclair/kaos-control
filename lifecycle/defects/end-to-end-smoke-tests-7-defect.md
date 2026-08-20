@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: Test 01 uses wrong CSS selector `.stat-card` — SummaryCountCard renders `.summary-card`
 type: defect
 status: done

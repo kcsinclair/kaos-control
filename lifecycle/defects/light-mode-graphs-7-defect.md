@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T18:11:55+10:00"
 title: Stale graphConstants mock breaks ForceGraph3D and Graph2DView approved-ring tests (21 failures)
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:50:45+10:00"
 title: GET /api/p/:project/config/kanban missing requireAuth middleware — returns 200 unauthenticated
 type: defect
 status: done

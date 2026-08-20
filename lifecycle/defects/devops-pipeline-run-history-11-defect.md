@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: Pipeline card latest-run summary badge not visible after run completion
 type: defect
 status: abandoned

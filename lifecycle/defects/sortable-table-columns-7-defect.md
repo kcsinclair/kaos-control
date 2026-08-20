@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T17:02:59+10:00"
 title: useSortableTable columns API mismatch — sort not applied for any type
 type: defect
 status: done

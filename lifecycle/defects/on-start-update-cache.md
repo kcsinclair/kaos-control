@@ -1,4 +1,5 @@
 ---
+created: "2026-04-25T11:42:17+10:00"
 title: On Startup Update Cache
 type: defect
 status: done

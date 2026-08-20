@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T17:02:59+10:00"
 title: artifact.indexed WebSocket event not emitted after release rename propagation
 type: defect
 status: done

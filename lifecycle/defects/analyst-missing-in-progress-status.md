@@ -1,4 +1,5 @@
 ---
+created: "2026-05-06T12:53:11+10:00"
 title: Analyst Agent Does Not Set In-Progress Status During Execution
 type: defect
 status: done

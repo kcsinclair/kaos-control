@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: "ArtifactListView TC6: listArtifacts not called after text input — TypeError on mock.calls"
 type: defect
 status: done

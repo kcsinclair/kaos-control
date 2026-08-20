@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: DashboardGrid chart section aria-label changed; tests expect "Charts" but component renders "Charts top"/"Charts bottom"
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T17:02:59+10:00"
 title: SortHeader.vue uses slot for label text but test plan specifies a label prop
 type: defect
 status: done

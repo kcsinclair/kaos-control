@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T11:53:03+10:00"
 title: Design and build agents missing propose ADR on deviation directive
 type: defect
 status: done

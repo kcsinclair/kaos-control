@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:50:45+10:00"
 title: 'Watcher tests flaky under full test-suite load: external-edit events not delivered within 2 s window'
 type: defect
 status: done

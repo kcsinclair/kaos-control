@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: Dashboard header btn-new-idea precedes btn-new-defect, violating FR-4 DOM order
 type: defect
 status: done

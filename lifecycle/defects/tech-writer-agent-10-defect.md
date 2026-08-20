@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: Artifact detail view renders 'project not found' when docs-stage fixtures are active
 type: defect
 status: abandoned

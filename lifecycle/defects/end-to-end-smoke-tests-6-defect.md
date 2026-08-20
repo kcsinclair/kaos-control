@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: Fixture config.yaml uses `roles:` instead of `role:` for tech-writer agent
 type: defect
 status: done

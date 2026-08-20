@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: TestTriageAPI_Success fails due to race condition with startup rescan
 type: defect
 status: done

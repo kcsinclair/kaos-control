@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: Integration tests fail to compile due to duplicate helper declarations
 type: defect
 status: done

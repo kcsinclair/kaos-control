@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: "ArtifactListView Release sort: TC1/TC3 expect empty values first in ascending (stale after empty-string-to-end fix)"
 type: defect
 status: done

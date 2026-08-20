@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: 'go vet lint failure: unused artifactRow/parseArtifactList/extractJSONField in devopscmd'
 type: defect
 status: done

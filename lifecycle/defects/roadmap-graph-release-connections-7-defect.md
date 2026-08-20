@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T18:31:56+10:00"
 title: Unscheduled releases collapse to shared terminus instead of forming individual chain
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T18:44:17+10:00"
 title: 'Dashboard stats/distribution tests fail: blocked artifacts auto-transitioned to draft on index'
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T18:12:22+10:00"
 title: ForceGraph3D.vue hardcodes
 type: defect
 status: done

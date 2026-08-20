@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T16:12:59+10:00"
 title: MapFilters test fixture missing required props showReleases, showNodeTitles, showNodeLineage
 type: defect
 status: done

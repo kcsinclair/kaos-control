@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: TestTriageWatcher_CreateRawIdea_TriageRuns fails due to pollForArtifactStatus parsing bug
 type: defect
 status: done

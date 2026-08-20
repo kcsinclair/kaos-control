@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:50:45+10:00"
 title: 'Generate endpoint returns 500 instead of 400 for short input when agent is not configured'
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T18:17:00+10:00"
 title: "Missing integration test file open_questions_routing_test.go"
 type: defect
 status: done

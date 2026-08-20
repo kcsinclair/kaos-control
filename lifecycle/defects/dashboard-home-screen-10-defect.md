@@ -1,4 +1,5 @@
 ---
+created: "2026-05-10T12:02:21+10:00"
 title: performance.test.ts mocks stats API with field "total" but component expects "total_tickets"; renders only 2 of 4 stat cards
 type: defect
 status: done

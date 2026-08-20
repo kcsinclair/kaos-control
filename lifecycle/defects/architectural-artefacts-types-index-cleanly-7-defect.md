@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T11:32:40+10:00"
 title: Pre-seeded architecture, tech-stack, and adr artefacts not indexed on startup scan
 type: defect
 status: done

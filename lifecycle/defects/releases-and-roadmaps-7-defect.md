@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T17:02:59+10:00"
 title: "PUT /releases/:id returns 500 instead of 404 for non-existent ID"
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: Required-plans gate not enforced for requirement when plans are absent
 type: defect
 status: done

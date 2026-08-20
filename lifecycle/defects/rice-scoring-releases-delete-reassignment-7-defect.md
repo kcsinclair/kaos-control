@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T18:17:00+10:00"
 title: Release delete reassignment verification fails with Scan destination argument mismatch in TestReleaseDelete_WithReassignment
 type: defect
 status: done

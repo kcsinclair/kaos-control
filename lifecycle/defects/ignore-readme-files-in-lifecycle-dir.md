@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:50:45+10:00"
 title: Lifecycle indexer does not ignore README.md files; no configurable ignore patterns in YAML config
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: Blocked questions test fails because getOpenQuestions API endpoint is not mocked
 type: defect
 status: done

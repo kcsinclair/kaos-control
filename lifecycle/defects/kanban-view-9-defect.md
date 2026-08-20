@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:50:45+10:00"
 title: SPA routing integration tests fail because test server has no embedded frontend
 type: defect
 status: done

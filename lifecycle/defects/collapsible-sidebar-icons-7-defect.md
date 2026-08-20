@@ -1,4 +1,5 @@
 ---
+created: "2026-05-09T09:37:19+10:00"
 title: "AppSidebar tests hardcode 6 nav items but sidebar now has 12 — tests need updating"
 type: defect
 status: done

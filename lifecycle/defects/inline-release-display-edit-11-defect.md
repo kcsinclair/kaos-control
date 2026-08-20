@@ -1,4 +1,5 @@
 ---
+created: "2026-05-16T20:41:53+10:00"
 title: Test infrastructure for inline-release-display-edit not committed (vitest.config.ts and package.json scripts missing)
 type: defect
 status: done

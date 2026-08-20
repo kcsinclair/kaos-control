@@ -1,4 +1,5 @@
 ---
+created: "2026-08-15T18:17:00+10:00"
 title: Release artifacts query fails with Scan destination argument mismatch in TestReleases_ListArtifactsForRelease
 type: defect
 status: done

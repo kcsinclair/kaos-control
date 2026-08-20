@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: 'staticcheck SA5011: possible nil pointer dereference in backfillRecord'
 type: defect
 status: done

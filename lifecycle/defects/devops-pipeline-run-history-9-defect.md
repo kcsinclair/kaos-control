@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: E2E Test 'pipeline card shows the latest-run summary badge after a run' fails to spawn server
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: "Flaky integration test TestWatcherDeletesRowOnFileRemoval due to fsnotify event coalescence"
 type: defect
 status: done

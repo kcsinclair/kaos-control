@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: Flaky TestSupervisor_PersistsMetricsOnFinish test fails due to false truncated stream marking
 type: defect
 status: done

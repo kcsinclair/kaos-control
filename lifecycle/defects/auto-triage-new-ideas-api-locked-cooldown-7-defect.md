@@ -1,4 +1,5 @@
 ---
+created: "2026-06-14T17:56:17+10:00"
 title: TestTriageAPI_LockedLineage fails due to startup rescan lock and 5s cooldown
 type: defect
 status: done

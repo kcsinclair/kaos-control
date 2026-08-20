@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T18:32:06+10:00"
 title: 7-day gap between releases labelled "7 days" instead of "1 week"
 type: defect
 status: done

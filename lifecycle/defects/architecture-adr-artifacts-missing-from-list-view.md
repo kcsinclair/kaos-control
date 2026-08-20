@@ -12,6 +12,7 @@ labels:
     - frontend
     - index
     - ui
+release: KC-Release5
 ---
 
 # Architecture and ADR Artifacts Missing from List View and Other Surfaces

@@ -1,4 +1,5 @@
 ---
+created: "2026-07-14T19:34:44+10:00"
 title: E2E Test 'expanding a history row shows the inline log pane' fails to spawn server
 type: defect
 status: done

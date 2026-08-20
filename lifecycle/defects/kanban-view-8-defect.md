@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:50:45+10:00"
 title: Kanban config API returns empty columns and card_fields due to missing JSON struct tags
 type: defect
 status: done

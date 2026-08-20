@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T17:02:59+10:00"
 title: ParseErrorsView.sort.test.ts fails to collect — vi.mock factory references top-level variable before initialization
 type: defect
 status: done

@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T17:02:59+10:00"
 title: "TestRequiredPlansGateBlocks uses product-owner user — gate bypass prevents expected 409"
 type: defect
 status: done

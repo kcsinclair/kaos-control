@@ -1,4 +1,5 @@
 ---
+created: "2026-05-07T16:50:45+10:00"
 title: Product Owner cannot transition artefact
 type: defect
 status: done
