@@ -1,7 +1,7 @@
 ---
 title: "make lint fails govulncheck: Go 1.25.12 stdlib and chi v5.2.5 have known CVEs"
 type: defect
-status: draft
+status: approved
 lineage: go-toolchain-chi-govulncheck-advisories
 created: "2026-08-20T12:20:00+10:00"
 labels: [defect]
