@@ -1,7 +1,7 @@
 ---
 title: "Tests — Detect rate_limit_event for Precise Quota Signalling"
 type: test
-status: draft
+status: approved
 lineage: rate-limit-event-detection
 parent: lifecycle/test-plans/rate-limit-event-detection-5-test.md
 created: "2026-08-15T00:00:00+10:00"
