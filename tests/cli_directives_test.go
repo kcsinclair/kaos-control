@@ -22,6 +22,75 @@ import (
 	"github.com/kaos-control/kaos-control/internal/architecture/catalogfs"
 )
 
+// legacyClaudeMdFixture is a genuine pre-refactor CLAUDE.md body — the last
+// rendered form of internal/initcmd/templates/CLAUDE.md.tmpl before commit
+// 0a6956c2 ("feat(init): emit AGENTS.md-primary directive set on project
+// init") replaced it with the AGENTS.md-primary pointer scheme. `runInit`
+// now always produces the already-migrated layout (CLAUDE.md as a bare
+// `@AGENTS.md` pointer), so it can no longer stand in for a legacy fixture;
+// this constant is written directly to disk instead so migrate-directives
+// has real legacy content to migrate.
+const legacyClaudeMdFixture = `# CLAUDE.md — legacy-project
+
+Guidance for Claude Code (claude.ai/code) when working in this repository.
+
+## Repository Layout
+
+` + "```" + `
+<project-root>/
+├── lifecycle/              Artifact store (ideas → requirements → plans → releases)
+│   ├── config.yaml         Per-project configuration (roles, agents, stages)
+│   ├── architecture/       Chosen architecture/stack, ADRs (decisions/), standards
+│   ├── ideas/
+│   ├── requirements/
+│   ├── backend-plans/
+│   ├── frontend-plans/
+│   ├── test-plans/
+│   ├── tests/
+│   ├── prototypes/
+│   ├── releases/
+│   ├── defects/
+│   └── docs/
+└── tests/                  Integration test code
+` + "```" + `
+
+## Lineage Filename Convention
+
+Artifacts for a single idea share a **slug** and carry a **monotonic index** across stages:
+
+` + "```" + `
+lifecycle/ideas/login.md             (originating idea — no index suffix)
+lifecycle/requirements/login-2.md
+lifecycle/backend-plans/login-3-be.md
+lifecycle/frontend-plans/login-4-fe.md
+lifecycle/test-plans/login-5-test.md
+` + "```" + `
+
+- The first file in a lineage has **no index suffix**. Subsequent indices start at ` + "`-2`" + `.
+- The index is monotonic **per lineage, across all stages** — never reused.
+- Rejected-and-replanned artifacts get the **next** index; superseded files stay in place.
+- Every non-originating artifact has ` + "`parent:`" + ` in its YAML frontmatter pointing to the previous file.
+
+## Frontmatter Requirements
+
+Required fields on every artifact: ` + "`title`, `type`, `status`, `lineage`" + `.
+
+## Commit Conventions
+
+- Commits should be small and focused. Don't amend published commits; create new ones.
+- When a plan drove a change, reference the plan's milestone heading in the commit message.
+- Do not skip pre-commit hooks or signing.
+
+## Agent Roles
+
+Roles split by lifecycle phase:
+
+- **Think:** ` + "`analyst`" + ` — reads ideas → writes requirements; reads requirements → writes plans.
+- **Make:** ` + "`backend-developer`, `frontend-developer`, `test-developer`" + ` — implement plans in code.
+- **Verify:** ` + "`qa`" + ` — runs tests, raises defects in ` + "`lifecycle/defects/`" + `.
+- **Cross-cutting:** ` + "`product-owner`, `reviewer`" + `.
+`
+
 func writePromotedGoVueStack(t *testing.T, projectDir string) {
 	t.Helper()
 	raw, err := catalogfs.FS.ReadFile("tech-stacks/go-vue.md")
@@ -44,8 +113,21 @@ func TestMigrateDirectivesCmd_LegacyLayout_ProducesAgentsClaudeGemini(t *testing
 	if _, _, code := runInit(t, dir); code != 0 {
 		t.Fatalf("init: want exit 0, got %d", code)
 	}
-	legacyClaudeMd, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
-	if err != nil {
+
+	// init produces the already-migrated AGENTS.md-primary layout (including
+	// a GEMINI.md pointer — init always establishes the full multi-agent set
+	// via IncludeGemini: true, unlike migrate-directives); rewind this
+	// project to a genuine pre-refactor legacy layout — no AGENTS.md or
+	// GEMINI.md, CLAUDE.md holding the real (non-pointer) content — so the
+	// migration path this test names is actually exercised.
+	if err := os.Remove(filepath.Join(dir, "AGENTS.md")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(dir, "GEMINI.md")); err != nil {
+		t.Fatal(err)
+	}
+	legacyClaudeMd := []byte(legacyClaudeMdFixture)
+	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), legacyClaudeMd, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -90,6 +172,16 @@ func TestMigrateDirectivesCmd_PendingDiff_ExitsNonZeroWithForceHint(t *testing.T
 	dir := t.TempDir()
 	if _, _, code := runInit(t, dir); code != 0 {
 		t.Fatalf("init: want exit 0, got %d", code)
+	}
+
+	// Rewind to a genuine legacy layout, as above: without a legacy
+	// (non-pointer) CLAUDE.md, migrate-directives no-ops before it ever
+	// looks at AGENTS.md, and the pending-diff path below is never reached.
+	if err := os.Remove(filepath.Join(dir, "AGENTS.md")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte(legacyClaudeMdFixture), 0o644); err != nil {
+		t.Fatal(err)
 	}
 
 	userAgentsMd := "# Hand-written AGENTS.md that predates migration\n"

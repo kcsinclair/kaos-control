@@ -83,23 +83,35 @@ var lifecycleDirs = []string{
 	"lifecycle/defects",
 	"lifecycle/docs",
 	"lifecycle/devops",
+	"lifecycle/architecture",
 	"tests",
-	"devops",
 }
 
-// seedFiles lists the seed files that `init` writes
-// (forward-slash paths as they appear in stdout output).
-// Kept in sync with internal/initcmd/seedfiles.go:seedFileSpecs.
+// seedFiles lists the template-rendered seed files that `init` writes via
+// writeSeedFiles (forward-slash paths as they appear in stdout output).
+// Kept in sync with internal/initcmd/seedfiles.go:seedFileSpecs. AGENTS.md/
+// CLAUDE.md/GEMINI.md are NOT seed files — they are generated separately by
+// directives.Generate (see directiveFiles below).
 var seedFiles = []string{
 	"lifecycle/config.yaml",
-	"CLAUDE.md",
 	".claude/settings.json",
 	".gitignore",
-	"devops/sample.yaml",
+	"lifecycle/devops/sample.yaml",
 }
 
-// claudeMdSections are the five required top-level sections in CLAUDE.md.
-var claudeMdSections = []string{
+// directiveFiles lists the AGENTS.md-primary directive set that init
+// establishes via directives.Generate (internal/directives/generate.go),
+// always including GEMINI.md (IncludeGemini: true at init).
+var directiveFiles = []string{
+	"AGENTS.md",
+	"CLAUDE.md",
+	"GEMINI.md",
+}
+
+// agentsMdSections are the required top-level sections in the generated
+// AGENTS.md (internal/directives/templates/AGENTS.md.tmpl). CLAUDE.md is
+// just a one-line `@AGENTS.md` pointer and carries none of this content.
+var agentsMdSections = []string{
 	"## Repository Layout",
 	"## Lineage Filename Convention",
 	"## Frontmatter Requirements",
@@ -150,6 +162,19 @@ func TestInit_FullFlow_EmptyDir(t *testing.T) {
 		}
 	}
 
+	// All 3 directive files (AGENTS.md, CLAUDE.md, GEMINI.md) must exist and
+	// appear as "created".
+	for _, f := range directiveFiles {
+		absF := filepath.Join(dir, filepath.FromSlash(f))
+		if _, err := os.Stat(absF); err != nil {
+			t.Errorf("missing directive file %s: %v", f, err)
+		}
+		wantLine := "created  " + f
+		if !strings.Contains(stdout, wantLine) {
+			t.Errorf("stdout does not list %q as created\nstdout:\n%s", wantLine, stdout)
+		}
+	}
+
 	// lifecycle/config.yaml must parse as valid YAML.
 	cfgData, err := os.ReadFile(filepath.Join(dir, "lifecycle", "config.yaml"))
 	if err != nil {
@@ -170,16 +195,25 @@ func TestInit_FullFlow_EmptyDir(t *testing.T) {
 		t.Errorf(".claude/settings.json is not valid JSON: %v", err)
 	}
 
-	// CLAUDE.md must contain all five required sections.
+	// AGENTS.md must contain all five required sections.
+	agentsMdData, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("reading AGENTS.md: %v", err)
+	}
+	agentsMd := string(agentsMdData)
+	for _, section := range agentsMdSections {
+		if !strings.Contains(agentsMd, section) {
+			t.Errorf("AGENTS.md missing section %q", section)
+		}
+	}
+
+	// CLAUDE.md must be a bare `@AGENTS.md` pointer, not the real content.
 	claudeMdData, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
 	if err != nil {
 		t.Fatalf("reading CLAUDE.md: %v", err)
 	}
-	claudeMd := string(claudeMdData)
-	for _, section := range claudeMdSections {
-		if !strings.Contains(claudeMd, section) {
-			t.Errorf("CLAUDE.md missing section %q", section)
-		}
+	if string(claudeMdData) != "@AGENTS.md\n" {
+		t.Errorf("CLAUDE.md: want bare pointer %q, got %q", "@AGENTS.md\n", claudeMdData)
 	}
 
 	// .gitignore must contain the SQLite index pattern.
@@ -204,9 +238,9 @@ func TestInit_Idempotency(t *testing.T) {
 		t.Fatalf("first run: want exit 0, got %d", code)
 	}
 
-	// Snapshot seed file contents after first run.
-	snapshot := make(map[string][]byte, len(seedFiles))
-	for _, f := range seedFiles {
+	// Snapshot seed and directive file contents after first run.
+	snapshot := make(map[string][]byte, len(seedFiles)+len(directiveFiles))
+	for _, f := range append(append([]string{}, seedFiles...), directiveFiles...) {
 		data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(f)))
 		if err != nil {
 			t.Fatalf("snapshot read %s: %v", f, err)
@@ -249,8 +283,10 @@ func TestInit_Idempotency(t *testing.T) {
 		}
 	}
 
-	// Seed file contents must be byte-identical after the second run.
-	for _, f := range seedFiles {
+	// Seed and directive file contents must be byte-identical after the
+	// second run (the directive files are refreshed surgically via their
+	// managed-region markers, which should be a no-op with nothing changed).
+	for f := range snapshot {
 		after, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(f)))
 		if err != nil {
 			t.Fatalf("post-run read %s: %v", f, err)
@@ -318,8 +354,9 @@ func TestInit_ForceFlags(t *testing.T) {
 			t.Fatalf("first run: want exit 0, got %d", code)
 		}
 
-		// Overwrite all seed files with a recognisable marker.
-		for _, f := range seedFiles {
+		// Overwrite all seed and directive files with a recognisable marker.
+		allForced := append(append([]string{}, seedFiles...), directiveFiles...)
+		for _, f := range allForced {
 			if err := os.WriteFile(
 				filepath.Join(dir, filepath.FromSlash(f)),
 				[]byte("MARKER"),
@@ -340,8 +377,10 @@ func TestInit_ForceFlags(t *testing.T) {
 			t.Fatalf("--force run: want exit 0, got %d", code)
 		}
 
-		// All seed files must have been overwritten (no longer "MARKER").
-		for _, f := range seedFiles {
+		// All seed and directive files must have been overwritten (no longer
+		// "MARKER"); "MARKER" has no managed-region markers, so --force (which
+		// implies ForceFlags.ClaudeMd) must replace it outright.
+		for _, f := range allForced {
 			data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(f)))
 			if err != nil {
 				t.Fatalf("reading %s: %v", f, err)
