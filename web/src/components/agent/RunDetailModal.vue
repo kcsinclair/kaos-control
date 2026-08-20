@@ -29,6 +29,15 @@ const TERMINAL_RUN_STATUSES = new Set(['done', 'failed', 'killed', 'killed-timeo
 const showRawLog = ref(false)
 const agentsStore = useAgentsStore()
 
+// Files under lifecycle/ are artifacts and link to the editor; other produced
+// files (code, config) are shown as plain paths.
+function isLifecycleArtifact(path: string): boolean {
+  return path.startsWith('lifecycle/') && path.endsWith('.md')
+}
+function artifactLink(path: string): string {
+  return `/p/${encodeURIComponent(props.project)}/artifacts/${path}`
+}
+
 // When a run finishes while the modal is open, pick up the result from the store.
 watch(
   () => agentsStore.runResults.get(props.runId),
@@ -233,11 +242,19 @@ function handleKeydown(e: KeyboardEvent) {
             <pre class="rdm-log rdm-log--err">{{ run.stderr_tail }}</pre>
           </div>
 
-          <!-- Artifacts produced -->
+          <!-- Files created / modified -->
           <div class="rdm-field" v-if="run.artifacts_produced?.length">
-            <div class="rdm-field-label">Artifacts produced</div>
+            <div class="rdm-field-label">Files created / modified</div>
             <ul class="rdm-artifacts">
-              <li v-for="p in run.artifacts_produced" :key="p" class="rdm-artifact-path rdm-mono">{{ p }}</li>
+              <li v-for="p in run.artifacts_produced" :key="p" class="rdm-artifact-path rdm-mono">
+                <router-link
+                  v-if="isLifecycleArtifact(p)"
+                  :to="artifactLink(p)"
+                  class="rdm-artifact-link"
+                  @click="emit('close')"
+                >{{ p }}</router-link>
+                <span v-else>{{ p }}</span>
+              </li>
             </ul>
           </div>
 
@@ -383,6 +400,13 @@ function handleKeydown(e: KeyboardEvent) {
 .rdm-artifact-path {
   font-size: 12px;
   color: var(--color-text);
+}
+.rdm-artifact-link {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.rdm-artifact-link:hover {
+  text-decoration: underline;
 }
 
 /* Status chip — matches AgentsRunsView */

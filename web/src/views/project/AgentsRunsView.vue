@@ -358,16 +358,18 @@ onMounted(() => {
                     <div class="detail-label">Stderr tail</div>
                     <pre class="detail-log detail-log--err">{{ run.stderr_tail }}</pre>
                   </div>
-                  <!-- Artifacts produced -->
+                  <!-- Files created / modified -->
                   <div v-if="run.artifacts_produced?.length" class="detail-section">
-                    <div class="detail-label">Artifacts produced</div>
+                    <div class="detail-label">Files created / modified</div>
                     <div class="artifact-list">
-                      <button
-                        v-for="p in run.artifacts_produced"
-                        :key="p"
-                        class="artifact-link"
-                        @click="router.push(`/p/${project}/artifacts/${p}`)"
-                      >{{ p }}</button>
+                      <template v-for="p in run.artifacts_produced" :key="p">
+                        <button
+                          v-if="p.startsWith('lifecycle/') && p.endsWith('.md')"
+                          class="artifact-link"
+                          @click="router.push(`/p/${project}/artifacts/${p}`)"
+                        >{{ p }}</button>
+                        <span v-else class="artifact-plain rdm-mono">{{ p }}</span>
+                      </template>
                     </div>
                   </div>
                   <!-- Denied-calls summary (runs with denials) -->

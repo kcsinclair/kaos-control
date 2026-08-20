@@ -1013,15 +1013,21 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	denials := m.DeniedCalls(run.RunID)
 	hasDenials := len(denials) > 0
 
+	// Files the agent created or modified, derived from its own tool-use log.
+	// This is git-independent (works in non-git projects) and reflects exactly
+	// what the agent did — the source of truth for "output recorded".
+	produced := filesFromRunLog(run.LogPath, m.root)
+
 	// Commit any files produced within allowed paths — unless the run had
-	// denied tool calls, in which case we skip auto-commit (FR15).
-	var produced []string
+	// denied tool calls, in which case we skip auto-commit (FR15). Git-visible
+	// changes are unioned into `produced` so anything the agent generated
+	// indirectly (e.g. via a Bash command) is also recorded.
 	if m.git != nil && !hasDenials {
 		files, err := m.git.ModifiedFiles(run.AllowedPaths)
 		if err != nil {
 			slog.Warn("agent: git status failed", "run_id", run.RunID, "err", err)
 		} else if len(files) > 0 {
-			produced = files
+			produced = unionStrings(produced, files)
 
 			// Backfill parent: on any child lifecycle artifact that omitted it.
 			// We patch disk before AddAndCommit so the correction lands in the
