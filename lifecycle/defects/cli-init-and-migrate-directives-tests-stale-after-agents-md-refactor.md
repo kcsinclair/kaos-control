@@ -1,14 +1,20 @@
 ---
-title: "tests/cli_init_test.go and tests/cli_directives_test.go are stale after the AGENTS.md-primary directives refactor"
+title: tests/cli_init_test.go and tests/cli_directives_test.go are stale after the AGENTS.md-primary directives refactor
 type: defect
-status: approved
+status: in-development
 lineage: agent-directives-generation
-parent: lifecycle/tests/agent-directives-generation-6-test.md
 created: "2026-08-20T12:23:00+10:00"
-labels: [defect]
+parent: lifecycle/tests/agent-directives-generation-6-test.md
+labels:
+    - defect
+release: KC-Release5
 assignees:
-  - role: test-developer
-    who: agent
+    - role: test-developer
+      who: agent
+rice_reach: 100
+rice_impact: 0.25
+rice_confidence: 100
+rice_effort: 0.1
 ---
 
 # tests/cli_init_test.go and tests/cli_directives_test.go are stale after the AGENTS.md-primary directives refactor
