@@ -1,12 +1,29 @@
+---
+title: "Plan: migrate FEATURES.md into feature artifacts (tech-writer)"
+type: doc
+status: draft
+lineage: features-md-to-feature-artifacts
+created: "2026-08-21T14:55:00+10:00"
+priority: normal
+labels:
+    - doc
+    - features
+    - migration
+    - tech-writer
+assignees:
+    - role: tech-writer
+      who: agent
+---
+
 # Plan: migrate FEATURES.md into `feature` artifacts (tech-writer)
 
 **Role:** tech-writer · **Type of work:** documentation migration · **Status:** ready
 
 ## Objective
 
-Convert the archived subsystem sections still in [FEATURES.md](../FEATURES.md)
+Convert the archived subsystem sections still in [FEATURES.md](../../FEATURES.md)
 into first-class `type: feature` lifecycle artifacts under
-[`lifecycle/features/`](../lifecycle/features/), then reduce FEATURES.md to a
+[`lifecycle/features/`](../features/), then reduce FEATURES.md to a
 pure deprecation pointer. The Features view (left menu) reads these artifacts and
 groups them by their `function:` field.
 
@@ -25,8 +42,8 @@ job.
   `-N` index). It carries a `function:` field (the Features-view grouping key)
   and links back to the artifacts that delivered it via `related_to:`.
 - **Copy the shape from an existing one.** Use
-  [`lifecycle/features/architecture-wizard-and-catalog.md`](../lifecycle/features/architecture-wizard-and-catalog.md)
-  and [`agent-permission-mediation.md`](../lifecycle/features/agent-permission-mediation.md)
+  [`lifecycle/features/architecture-wizard-and-catalog.md`](../features/architecture-wizard-and-catalog.md)
+  and [`agent-permission-mediation.md`](../features/agent-permission-mediation.md)
   as templates — match their frontmatter and body structure exactly.
 - **Do NOT re-migrate** what already exists. Already done (skip these sections):
   Architecture (wizard/catalog + overview/zone), Agent directives generation,
