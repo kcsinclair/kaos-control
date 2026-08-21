@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,21 +24,35 @@ type client struct {
 }
 
 // newClient builds a client from the app config and resolved identity.
-// The base URL is derived from App.Server.Listen, honouring PublicHost/TLS.
+//
+// The CLI runs on the same host as the server, so it targets the LOCAL listen
+// address (loopback + the configured port). It deliberately ignores
+// server.public_host — that setting is a browser/WebSocket-origin concern and
+// carries no port, so using it here sent the CLI to the public URL (a proxy /
+// other service) instead of the local server. Set KAOS_CONTROL_SERVER to a full
+// base URL (e.g. https://host:port) to target a server elsewhere.
 func newClient(appCfg *config.App, identity authMode) *client {
-	listen := appCfg.Server.Listen
+	if base := strings.TrimSpace(os.Getenv("KAOS_CONTROL_SERVER")); base != "" {
+		return &client{
+			baseURL:    strings.TrimRight(base, "/"),
+			identity:   identity,
+			httpClient: &http.Client{},
+		}
+	}
+
 	scheme := "http"
 	if appCfg.Server.TLS.Enabled {
 		scheme = "https"
 	}
 
-	host := appCfg.Server.PublicHost
-	if host == "" {
-		host = listen
-		// If listen is :port (no host), prepend 127.0.0.1.
-		if strings.HasPrefix(host, ":") {
-			host = "127.0.0.1" + host
+	host := appCfg.Server.Listen
+	if h, port, err := net.SplitHostPort(host); err == nil {
+		if h == "" || h == "0.0.0.0" || h == "::" {
+			h = "127.0.0.1" // wildcard/empty bind → reach it on loopback
 		}
+		host = net.JoinHostPort(h, port)
+	} else if strings.HasPrefix(host, ":") {
+		host = "127.0.0.1" + host
 	}
 
 	return &client{
