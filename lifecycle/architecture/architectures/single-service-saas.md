@@ -1,7 +1,7 @@
 ---
 title: Single-Service Cloud SaaS
 type: architecture
-status: draft
+status: approved
 lineage: arch-single-service-saas
 labels:
     - architecture

@@ -1,7 +1,7 @@
 ---
 title: Modular Monolith
 type: architecture
-status: draft
+status: approved
 lineage: arch-modular-monolith
 labels:
     - architecture

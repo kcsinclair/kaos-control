@@ -1,7 +1,7 @@
 ---
 title: Cloud-Native Microservices
 type: architecture
-status: draft
+status: approved
 lineage: arch-cloud-native-microservices
 labels:
     - architecture

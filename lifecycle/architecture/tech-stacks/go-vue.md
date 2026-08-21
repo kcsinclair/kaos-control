@@ -1,7 +1,7 @@
 ---
 title: Go + Vue (High-Performance Lean Stack)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-go-vue
 labels:
     - tech-stack

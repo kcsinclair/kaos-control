@@ -1,7 +1,7 @@
 ---
 title: Go + gRPC Microservices Backbone
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-go-grpc-microservices
 labels:
     - tech-stack

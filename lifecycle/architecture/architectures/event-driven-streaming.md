@@ -1,7 +1,7 @@
 ---
 title: Event-Driven / Streaming Architecture
 type: architecture
-status: draft
+status: approved
 lineage: arch-event-driven-streaming
 labels:
     - architecture

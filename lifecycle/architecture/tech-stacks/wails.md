@@ -1,7 +1,7 @@
 ---
 title: Wails (Go + Native Webview)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-wails
 labels:
     - tech-stack

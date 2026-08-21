@@ -1,7 +1,7 @@
 ---
 title: Mobile-Native Application
 type: architecture
-status: draft
+status: approved
 lineage: arch-mobile-native
 labels:
     - architecture

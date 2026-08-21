@@ -1,7 +1,7 @@
 ---
 title: Serverless / Functions-as-a-Service
 type: architecture
-status: draft
+status: approved
 lineage: arch-serverless-faas
 labels:
     - architecture

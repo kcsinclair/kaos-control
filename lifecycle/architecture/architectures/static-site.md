@@ -1,7 +1,7 @@
 ---
 title: Static Website / JAMstack
 type: architecture
-status: draft
+status: approved
 lineage: arch-static-site
 labels:
     - architecture

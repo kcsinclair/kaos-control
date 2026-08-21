@@ -1,7 +1,7 @@
 ---
 title: Architecture Overview View — Overview Endpoint Integration Tests
 type: test
-status: in-qa
+status: approved
 lineage: architecture-overview-view
 parent: lifecycle/test-plans/architecture-overview-view-5-test.md
 created: "2026-08-20T19:00:00Z"

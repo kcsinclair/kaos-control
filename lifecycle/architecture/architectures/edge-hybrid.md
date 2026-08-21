@@ -1,7 +1,7 @@
 ---
 title: Edge / Distributed Hybrid
 type: architecture
-status: draft
+status: approved
 lineage: arch-edge-hybrid
 labels:
     - architecture

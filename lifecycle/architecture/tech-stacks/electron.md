@@ -1,7 +1,7 @@
 ---
 title: Electron (Node + Chromium)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-electron
 labels:
     - tech-stack

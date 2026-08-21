@@ -1,7 +1,7 @@
 ---
 title: TypeScript React + Node/NestJS (Ecosystem Leader)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-ts-react-nest
 labels:
     - tech-stack

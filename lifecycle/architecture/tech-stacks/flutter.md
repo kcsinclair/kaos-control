@@ -1,7 +1,7 @@
 ---
 title: Flutter (Dart, Canvas-Rendered)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-flutter
 labels:
     - tech-stack

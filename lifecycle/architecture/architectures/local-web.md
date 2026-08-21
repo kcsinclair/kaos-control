@@ -1,7 +1,7 @@
 ---
 title: Local Web-based Application
 type: architecture
-status: draft
+status: approved
 lineage: arch-local-web
 labels:
     - architecture

@@ -1,7 +1,7 @@
 ---
 title: Hugo (Static Site Generator)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-hugo
 labels:
     - tech-stack

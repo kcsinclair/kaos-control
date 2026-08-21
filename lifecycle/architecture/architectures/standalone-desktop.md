@@ -1,7 +1,7 @@
 ---
 title: Standalone Desktop Application
 type: architecture
-status: draft
+status: approved
 lineage: arch-standalone-desktop
 labels:
     - architecture

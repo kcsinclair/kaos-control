@@ -1,7 +1,7 @@
 ---
 title: Java + Spring Boot / Angular (Enterprise Heavyweight)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-java-spring-angular
 labels:
     - tech-stack

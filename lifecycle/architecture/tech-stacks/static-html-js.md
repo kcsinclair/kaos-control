@@ -1,7 +1,7 @@
 ---
 title: Static HTML / CSS / JS (No-Framework Frontend)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-static-html-js
 labels:
     - tech-stack

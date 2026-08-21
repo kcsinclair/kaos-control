@@ -1,7 +1,7 @@
 ---
 title: Tauri (Rust + Native Webview)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-tauri
 labels:
     - tech-stack

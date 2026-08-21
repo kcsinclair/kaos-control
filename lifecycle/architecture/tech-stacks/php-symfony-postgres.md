@@ -1,7 +1,7 @@
 ---
 title: PHP + Symfony / PostgreSQL
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-php-symfony-postgres
 labels:
     - tech-stack

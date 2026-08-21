@@ -1,7 +1,7 @@
 ---
 title: Simple PHP (Server-Rendered, No Framework)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-php-simple
 labels:
     - tech-stack

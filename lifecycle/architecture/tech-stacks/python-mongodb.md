@@ -1,7 +1,7 @@
 ---
 title: Python + MongoDB (Document-Oriented)
 type: tech-stack
-status: draft
+status: approved
 lineage: stack-python-mongodb
 labels:
     - tech-stack
