@@ -84,6 +84,42 @@ func TestPromote_EmptyDir_CreatesRootCopiesWithParent(t *testing.T) {
 	}
 }
 
+func TestPromote_StripsCatalogLabel(t *testing.T) {
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, "lifecycle/architecture/architectures/modular-monolith.md"),
+		"---\ntitle: Modular Monolith\ntype: architecture\nstatus: approved\nlabels:\n    - architecture\n    - catalog\n    - collaborative\n---\n\nBody.\n")
+	mustWrite(t, filepath.Join(root, "lifecycle/architecture/tech-stacks/go-vue.md"),
+		"---\ntitle: Go + Vue\ntype: tech-stack\nstatus: approved\nlabels:\n    - tech-stack\n    - catalog\n---\n\nBody.\n")
+
+	result, err := architecture.Promote(root, architecture.PromotionRequest{
+		ArchitectureCatalogPath: "architectures/modular-monolith.md",
+		TechStackCatalogPath:    "tech-stacks/go-vue.md",
+	})
+	if err != nil {
+		t.Fatalf("Promote: %v", err)
+	}
+
+	arch := readFile(t, filepath.Join(root, result.PromotedArchitecture))
+	stack := readFile(t, filepath.Join(root, result.PromotedTechStack))
+	// The chosen copies are no longer catalog candidates.
+	if strings.Contains(arch, "- catalog") {
+		t.Errorf("promoted architecture still carries the catalog label:\n%s", arch)
+	}
+	if strings.Contains(stack, "- catalog") {
+		t.Errorf("promoted tech-stack still carries the catalog label:\n%s", stack)
+	}
+	// Sibling labels are preserved.
+	if !strings.Contains(arch, "- architecture") || !strings.Contains(arch, "- collaborative") {
+		t.Errorf("promoted architecture lost sibling labels:\n%s", arch)
+	}
+
+	// The catalog SOURCE keeps its catalog label (only the promoted copy changes).
+	src := readFile(t, filepath.Join(root, "lifecycle/architecture/architectures/modular-monolith.md"))
+	if !strings.Contains(src, "- catalog") {
+		t.Errorf("catalog source lost its catalog label:\n%s", src)
+	}
+}
+
 func TestPromote_SameSelection_IsIdempotent(t *testing.T) {
 	root := writeCatalogFixture(t)
 	req := architecture.PromotionRequest{

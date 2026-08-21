@@ -253,6 +253,57 @@ func EnsureFrontmatterField(raw []byte, key, value string) ([]byte, bool) {
 	return []byte("---" + newFm + s[fmEnd:]), true
 }
 
+// RemoveFrontmatterListItem removes a single `- item` entry from the block
+// sequence under key within the YAML frontmatter (e.g. dropping `catalog` from
+// labels:). Only the region between the --- fences is touched, and only the
+// sequence block immediately under key is scanned, so an identically-named item
+// under a different key is left alone. Returns (patched, true) when an entry was
+// removed, or (raw, false) when key, its block, or the item is not present.
+// Block style only (`key:` on its own line, `- x` entries beneath) — the format
+// the catalog uses; inline `key: [a, b]` is not handled.
+func RemoveFrontmatterListItem(raw []byte, key, item string) ([]byte, bool) {
+	s := string(raw)
+	if !strings.HasPrefix(s, "---") {
+		return raw, false
+	}
+	closeIdx := strings.Index(s[3:], "\n---")
+	if closeIdx < 0 {
+		return raw, false
+	}
+	fmEnd := 3 + closeIdx
+	fmSection := s[3:fmEnd]
+
+	keyRe := regexp.MustCompile(`^` + regexp.QuoteMeta(key) + `:\s*$`)
+	itemRe := regexp.MustCompile(`^[ \t]+-[ \t]*` + regexp.QuoteMeta(item) + `[ \t]*$`)
+
+	lines := strings.Split(fmSection, "\n")
+	out := make([]string, 0, len(lines))
+	inBlock := false
+	removed := false
+	for _, ln := range lines {
+		if inBlock {
+			trimmed := strings.TrimLeft(ln, " \t")
+			if strings.HasPrefix(trimmed, "-") {
+				if !removed && itemRe.MatchString(ln) {
+					removed = true
+					continue // drop this entry
+				}
+				out = append(out, ln)
+				continue
+			}
+			inBlock = false // a non-sequence line ends the block
+		}
+		if keyRe.MatchString(ln) {
+			inBlock = true
+		}
+		out = append(out, ln)
+	}
+	if !removed {
+		return raw, false
+	}
+	return []byte("---" + strings.Join(out, "\n") + s[fmEnd:]), true
+}
+
 // openQuestionSentinels are placeholder section contents that mean "there are
 // no open questions". Agents sometimes emit one of these instead of omitting
 // the section entirely; they must NOT trip the auto-block gate. Compared

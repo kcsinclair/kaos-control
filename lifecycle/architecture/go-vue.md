@@ -5,7 +5,6 @@ status: approved
 lineage: stack-go-vue
 labels:
     - tech-stack
-    - catalog
     - backend
     - frontend
     - go

@@ -134,6 +134,44 @@ func TestParse_RiceFieldZeroIsNotNil(t *testing.T) {
 // TestFrontmatter_RiceYAMLRoundTrip verifies that yaml.Marshal (the mechanism
 // buildMarkdown relies on) omits nil RICE fields and emits set fields with
 // their numeric value.
+func TestRemoveFrontmatterListItem(t *testing.T) {
+	const doc = "---\n" +
+		"title: X\n" +
+		"type: architecture\n" +
+		"labels:\n" +
+		"    - architecture\n" +
+		"    - catalog\n" +
+		"    - collaborative\n" +
+		"related_to:\n" +
+		"    - catalog\n" + // same value under a different key — must survive
+		"---\n\nBody with a - catalog dash that must survive.\n"
+
+	out, ok := artifact.RemoveFrontmatterListItem([]byte(doc), "labels", "catalog")
+	if !ok {
+		t.Fatal("expected the catalog label to be removed")
+	}
+	s := string(out)
+	// The labels block lost catalog but kept its siblings.
+	if strings.Contains(s, "labels:\n    - architecture\n    - collaborative\n") == false {
+		t.Errorf("labels block not as expected:\n%s", s)
+	}
+	// The catalog entry under related_to and the body dash are untouched.
+	if !strings.Contains(s, "related_to:\n    - catalog\n") {
+		t.Errorf("related_to catalog entry was wrongly removed:\n%s", s)
+	}
+	if !strings.Contains(s, "Body with a - catalog dash that must survive.") {
+		t.Errorf("body was modified:\n%s", s)
+	}
+
+	// Absent item / absent key → (raw, false).
+	if _, ok := artifact.RemoveFrontmatterListItem([]byte(doc), "labels", "nope"); ok {
+		t.Error("expected false for an item that is not present")
+	}
+	if _, ok := artifact.RemoveFrontmatterListItem([]byte(doc), "missing", "catalog"); ok {
+		t.Error("expected false for a key that is not present")
+	}
+}
+
 func TestFrontmatter_RiceYAMLRoundTrip(t *testing.T) {
 	fm := artifact.Frontmatter{
 		Title: "Test", Type: "idea", Status: "draft", Lineage: "test",

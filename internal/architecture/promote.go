@@ -112,6 +112,12 @@ func promoteOne(projectRoot, sourceRel, kind string) (destRel string, archived [
 	if serr != nil {
 		return "", nil, fmt.Errorf("stamping parent on %s: %w", kind, serr)
 	}
+	// A promoted copy is the project's *chosen* artefact, no longer a catalog
+	// candidate — drop the `catalog` label so it isn't classified as catalog
+	// material (list/board filters, the overview's catalog list).
+	if stripped, ok := artifact.RemoveFrontmatterListItem(content, "labels", "catalog"); ok {
+		content = stripped
+	}
 	// Stamp a created: date on the promoted copy (catalog sources carry none),
 	// preserving an existing value on re-promote so the operation stays
 	// idempotent.

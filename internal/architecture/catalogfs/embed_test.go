@@ -3,14 +3,53 @@
 package catalogfs_test
 
 import (
-	"bytes"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/kaos-control/kaos-control/internal/architecture/catalogfs"
 )
+
+// projectLocalFrontmatter are frontmatter keys that legitimately differ between
+// the shipped/embedded catalog and this repo's own copies: they are per-project
+// lifecycle state, not catalog content. The embedded catalog ships a neutral
+// default (status: draft) for fresh projects to seed from, while this repo may
+// approve its own copies for use — that divergence must not read as drift.
+// created: is likewise project-local (stamped per project, never on the
+// shipped catalog). Everything else — the architecture description, labels,
+// related_to, summary — must stay byte-identical.
+var projectLocalFrontmatter = []string{"status:", "created:"}
+
+// canonicalForDrift strips the project-local frontmatter lines so drift is
+// judged on catalog content alone. Body is left untouched.
+func canonicalForDrift(raw []byte) string {
+	s := string(raw)
+	if !strings.HasPrefix(s, "---") {
+		return s
+	}
+	closeIdx := strings.Index(s[3:], "\n---")
+	if closeIdx < 0 {
+		return s
+	}
+	fmEnd := 3 + closeIdx
+	var keep []string
+	for _, line := range strings.Split(s[3:fmEnd], "\n") {
+		trimmed := strings.TrimSpace(line)
+		skip := false
+		for _, k := range projectLocalFrontmatter {
+			if strings.HasPrefix(trimmed, k) {
+				skip = true
+				break
+			}
+		}
+		if !skip {
+			keep = append(keep, line)
+		}
+	}
+	return "---" + strings.Join(keep, "\n") + s[fmEnd:]
+}
 
 // repoLifecycleArchitectureDir locates this repo's own lifecycle/architecture/
 // tree from the catalogfs package's test working directory
@@ -50,8 +89,8 @@ func TestFS_MatchesRepoCatalog(t *testing.T) {
 			t.Errorf("%s: embedded copy has no live counterpart at lifecycle/architecture/%s: %v", p, p, err)
 			return nil
 		}
-		if !bytes.Equal(embedded, live) {
-			t.Errorf("%s: embedded copy has drifted from lifecycle/architecture/%s", p, p)
+		if canonicalForDrift(embedded) != canonicalForDrift(live) {
+			t.Errorf("%s: embedded copy has drifted from lifecycle/architecture/%s (content differs beyond project-local status/created)", p, p)
 		}
 		return nil
 	}); err != nil {

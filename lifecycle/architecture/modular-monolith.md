@@ -5,7 +5,6 @@ status: approved
 lineage: arch-modular-monolith
 labels:
     - architecture
-    - catalog
     - collaborative
     - low-complexity
     - low-cost-start
