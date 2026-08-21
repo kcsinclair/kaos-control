@@ -417,6 +417,14 @@ func (idx *Index) Scan(stages []config.Stage) error {
 		return fmt.Errorf("walking architecture zone: %w", err)
 	}
 
+	// lifecycle/features/ is likewise a standing-reference zone (shipped-capability
+	// records, see artifact.IsFeaturePath) — not a lineage stage, so scan it
+	// explicitly the same way. Unlike the architecture zone, features are meant
+	// to be browsed in the list/board, not hidden.
+	if err := walkStageDir(filepath.Join(resolvedLifecycle, "features")); err != nil {
+		return fmt.Errorf("walking features zone: %w", err)
+	}
+
 	slog.Info("scan complete",
 		"indexed", indexed,
 		"skipped", skipped,

@@ -138,9 +138,9 @@ function onAdrCreated(path: string) {
 
 const project = route.params.project as string
 
-const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'releases', 'architecture']
+const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'releases', 'architecture', 'features']
 const statusOptions = ['', 'raw', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa', 'in-progress', 'done', 'approved', 'blocked', 'rejected', 'abandoned']
-const typeOptions = ['', 'idea', 'requirement', 'plan-backend', 'plan-frontend', 'plan-test', 'test', 'prototype', 'defect', 'architecture', 'tech-stack', 'adr']
+const typeOptions = ['', 'idea', 'requirement', 'plan-backend', 'plan-frontend', 'plan-test', 'test', 'prototype', 'defect', 'architecture', 'tech-stack', 'adr', 'feature']
 
 const selectedStage = ref(store.filter.stage ?? '')
 const selectedStatus = ref(store.filter.status ?? '')

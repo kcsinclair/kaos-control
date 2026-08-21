@@ -94,6 +94,11 @@ const router = createRouter({
           component: () => import('@/views/project/RoadmapView.vue'),
         },
         {
+          path: 'features',
+          name: 'features',
+          component: () => import('@/views/project/FeaturesView.vue'),
+        },
+        {
           path: 'agents',
           name: 'agents',
           component: () => import('@/views/project/AgentsRunsView.vue'),

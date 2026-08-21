@@ -134,6 +134,33 @@ func TestParse_RiceFieldZeroIsNotNil(t *testing.T) {
 // TestFrontmatter_RiceYAMLRoundTrip verifies that yaml.Marshal (the mechanism
 // buildMarkdown relies on) omits nil RICE fields and emits set fields with
 // their numeric value.
+func TestFeatureType_StandingReferenceParses(t *testing.T) {
+	// A feature artifact under lifecycle/features/ is a standing-reference
+	// record: type feature is known, and it is exempt from the lineage
+	// requirement (like the architecture zone).
+	raw := "---\ntitle: Architecture Wizard\ntype: feature\nstatus: approved\n" +
+		"summary: Guided Q&A that recommends and promotes an architecture.\n---\n\nBody.\n"
+	a := artifact.Parse([]byte(raw), "lifecycle/features/architecture-wizard.md", time.Now())
+	if len(a.ParseErrs) != 0 {
+		t.Fatalf("unexpected parse errors: %v", a.ParseErrs)
+	}
+	if a.FM.Type != "feature" {
+		t.Errorf("type = %q, want feature", a.FM.Type)
+	}
+
+	// The same file OUTSIDE the features zone would require a lineage.
+	b := artifact.Parse([]byte(raw), "lifecycle/requirements/architecture-wizard.md", time.Now())
+	foundLineageErr := false
+	for _, e := range b.ParseErrs {
+		if strings.Contains(e, "lineage") {
+			foundLineageErr = true
+		}
+	}
+	if !foundLineageErr {
+		t.Errorf("expected a missing-lineage error outside the features zone, got %v", b.ParseErrs)
+	}
+}
+
 func TestRemoveFrontmatterListItem(t *testing.T) {
 	const doc = "---\n" +
 		"title: X\n" +

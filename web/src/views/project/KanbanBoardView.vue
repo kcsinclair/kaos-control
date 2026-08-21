@@ -44,9 +44,9 @@ const showStatusPanel = ref(false)
 const textFilterRef = ref<{ focus: () => void } | null>(null)
 useTextFilterShortcut(textFilterRef)
 
-const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'architecture']
+const stageOptions = ['', 'ideas', 'requirements', 'backend-plans', 'frontend-plans', 'test-plans', 'dev-plans', 'tests', 'prototypes', 'defects', 'architecture', 'features']
 const statusOptions = ['', 'raw', 'draft', 'clarifying', 'planning', 'in-development', 'in-qa', 'in-progress', 'done', 'approved', 'blocked', 'rejected', 'abandoned']
-const typeOptions = ['', 'idea', 'requirement', 'plan-backend', 'plan-frontend', 'plan-test', 'test', 'prototype', 'defect', 'architecture', 'tech-stack', 'adr']
+const typeOptions = ['', 'idea', 'requirement', 'plan-backend', 'plan-frontend', 'plan-test', 'test', 'prototype', 'defect', 'architecture', 'tech-stack', 'adr', 'feature']
 
 const selectedStage = ref('')
 const selectedStatus = ref('')

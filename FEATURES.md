@@ -1,19 +1,24 @@
 # kaos-control — Features
 
-A snapshot of what kaos-control does today. Every feature listed is shipped
-and reachable from the running binary — either as an HTTP API route, a Vue
-view in the SPA, or both.
-
-> **Status:** pre-1.0, active development. Working towards a first stable
-> release on `KC-Release0`.
+> **⚠️ Deprecated (2026-08-21).** Features are now first-class lifecycle
+> artifacts of `type: feature` under `lifecycle/features/`, indexed like
+> everything else and browsable in the app via the **Features** view (grouped
+> by function, with search + filter). This hand-maintained file drifted for
+> months precisely because it lived outside the lifecycle; it no longer has to
+> be kept in sync. **Add new features as feature artifacts, not here.**
 >
-> **Roadmap:** kaos-control's own roadmap lives inside the running app
-> rather than in this file. Open the **Roadmap** view for the Gantt-chart
-> and 3D-graph views of upcoming releases and the artifacts assigned to
-> them — both are live, dogfooded, and the canonical source for what's
-> next.
+> The sections below are **retained as an archive** and are being migrated into
+> `lifecycle/features/` incrementally. Already migrated: the architecture
+> subsystem, agent directives generation, agent permission mediation, agent
+> usage reports, and project onboarding.
+>
+> **Roadmap:** kaos-control's own roadmap lives inside the running app — open
+> the **Roadmap** view.
 
 ---
+
+<!-- ARCHIVE below — historical snapshot, migrating to lifecycle/features/. -->
+
 
 ## Lifecycle & artifacts
 
@@ -30,11 +35,17 @@ agent-driveable.
   `sprints/`, `prototypes/`, `devops/` — one directory per artifact stage.
 - **Type vocabulary.** `idea`, `requirement`, `plan-backend`,
   `plan-frontend`, `plan-test`, `test`, `prototype`, `defect`, `release`,
-  `sprint`, plus configurable types per project.
+  `sprint`, the architecture types `architecture`, `tech-stack`, `adr`, plus
+  configurable types per project.
 - **Frontmatter parser.** Required fields: `title`, `type`, `status`,
   `lineage`. Optional: `priority`, `release`, `parent`, `assignees`,
-  `labels`, `created`. Parse errors surface in the **Parse Errors**
-  view rather than silently breaking.
+  `labels`, `created`, `summary`, `depends_on`, `blocks`, `related_to`, and
+  the RICE fields (`rice_reach` / `rice_impact` / `rice_confidence` /
+  `rice_effort`). Parse errors surface in the **Parse Errors** view rather
+  than silently breaking.
+- **RICE prioritisation.** Enter Reach / Impact / Confidence / Effort on an
+  artifact; the RICE score is computed, stored, and is a sortable column in
+  the list. Effort accepts decimals (e.g. 0.1 months).
 - **Lineage tracking.** Every artifact in a chain shares a slug and
   carries a monotonic per-lineage index across stages
   (`login.md → login-2.md → login-3-be.md → login-4-fe.md`). Indexes

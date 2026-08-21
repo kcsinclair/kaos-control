@@ -26,6 +26,7 @@ import {
   Layers,
   CalendarClock,
   CalendarRange,
+  Sparkles,
   Server,
   FlaskConical,
   ListChecks,
@@ -120,6 +121,7 @@ const navSections = computed((): NavSection[] => {
     { label: 'Board',         to: `/p/${p}/artifacts/board`, icon: Columns3 },
     { label: 'Map',           to: `/p/${p}/map`,             icon: Network },
     { label: 'Roadmap',       to: `/p/${p}/roadmap`,         icon: CalendarRange },
+    { label: 'Features',      to: `/p/${p}/features`,        icon: Sparkles },
     { label: 'Architecture',  to: `/p/${p}/architecture`,    icon: Boxes },
   ]
   if (hasProductOwnerAccess) {

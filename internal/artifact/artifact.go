@@ -31,6 +31,10 @@ var KnownTypes = map[string]bool{
 	// these, the architecture summary, and ADRs are standing reference
 	// artefacts under lifecycle/architecture/ — see IsArchitecturePath.
 	"architecture": true, "tech-stack": true, "adr": true,
+	// feature: a standing-reference record of a shipped capability under
+	// lifecycle/features/ — a cross-cutting rollup, not a lineage stage (see
+	// IsFeaturePath). Replaces the hand-maintained FEATURES.md.
+	"feature": true,
 }
 
 // Edge kinds used in GraphEdge.Kind and the links table.
@@ -102,6 +106,9 @@ type Frontmatter struct {
 	Sprint         string     `yaml:"sprint,omitempty"       json:"sprint,omitempty"`
 	Assignees      []Assignee `yaml:"assignees,omitempty"    json:"assignees,omitempty"`
 	Summary        string     `yaml:"summary,omitempty"      json:"summary,omitempty"`
+	// Function is the functional area a feature belongs to; the Features view
+	// groups by it (e.g. "Architecture", "Agents", "Workflow").
+	Function       string     `yaml:"function,omitempty"     json:"function,omitempty"`
 	Description    string     `yaml:"description,omitempty"  json:"description,omitempty"`
 	RiceReach      *float64   `yaml:"rice_reach,omitempty"      json:"rice_reach,omitempty"`
 	RiceImpact     *float64   `yaml:"rice_impact,omitempty"     json:"rice_impact,omitempty"`
@@ -187,7 +194,7 @@ func Parse(raw []byte, relPath string, mtime time.Time) *Artifact {
 		a.ParseErrs = append(a.ParseErrs, "missing required field: status")
 		a.FM.Status = "draft"
 	}
-	if a.FM.Lineage == "" && !IsArchitecturePath(relPath) {
+	if a.FM.Lineage == "" && !IsArchitecturePath(relPath) && !IsFeaturePath(relPath) {
 		a.ParseErrs = append(a.ParseErrs, "missing required field: lineage")
 		a.FM.Lineage = slug
 	}
@@ -374,6 +381,14 @@ func IsArchitecturePath(relPath string) bool {
 	return strings.HasPrefix(filepath.ToSlash(relPath), "lifecycle/architecture/")
 }
 
+// IsFeaturePath reports whether relPath falls under lifecycle/features/, the
+// standing-reference zone of shipped-capability records. Like the architecture
+// zone it is a cross-cutting rollup, not a lineage stage, so it is exempt from
+// lineage/index validation.
+func IsFeaturePath(relPath string) bool {
+	return strings.HasPrefix(filepath.ToSlash(relPath), "lifecycle/features/")
+}
+
 // ----- filename / path helpers -----
 
 // indexSuffixRe matches an optional -N(-suffix) at the end of a filename stem.
@@ -531,6 +546,8 @@ func stageToType(stage string) string {
 		return "defect"
 	case "docs":
 		return "doc"
+	case "features":
+		return "feature"
 	case "releases":
 		return "release"
 	default:

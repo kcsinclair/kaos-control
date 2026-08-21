@@ -138,6 +138,8 @@ export interface ArtifactFrontmatter {
   related_to?: string[]
   summary?: string
   members?: string[]
+  /** Functional area a feature belongs to; the Features view groups by it. */
+  function?: string
   release?: string
   sprint?: string
   assignees?: ArtifactAssignee[]
