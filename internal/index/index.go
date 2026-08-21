@@ -797,6 +797,7 @@ type GraphNode struct {
 	Slug      string     `json:"slug"`
 	Index     int        `json:"index"`
 	Priority  string     `json:"priority,omitempty"`
+	Summary   string     `json:"summary,omitempty"`
 	Labels    []string   `json:"labels"`
 	StartDate *time.Time `json:"start_date,omitempty"`
 	EndDate   *time.Time `json:"end_date,omitempty"`
@@ -821,7 +822,7 @@ type GraphData struct {
 func (idx *Index) Graph(f Filter) (*GraphData, error) {
 	where, args := buildWhere(f)
 	rows, err := idx.db.Query(
-		`SELECT path, slug, lineage, idx, stage, type, status, title, priority FROM artifacts`+where+
+		`SELECT path, slug, lineage, idx, stage, type, status, title, priority, frontmatter_json FROM artifacts`+where+
 			` ORDER BY lineage, idx`,
 		args...,
 	)
@@ -834,8 +835,19 @@ func (idx *Index) Graph(f Filter) (*GraphData, error) {
 	var nodes []*GraphNode
 	for rows.Next() {
 		n := &GraphNode{}
-		if err := rows.Scan(&n.ID, &n.Slug, &n.Lineage, &n.Index, &n.Stage, &n.Type, &n.Status, &n.Title, &n.Priority); err != nil {
+		var fmJSON string
+		if err := rows.Scan(&n.ID, &n.Slug, &n.Lineage, &n.Index, &n.Stage, &n.Type, &n.Status, &n.Title, &n.Priority, &fmJSON); err != nil {
 			return nil, err
+		}
+		// Pull summary out of the frontmatter blob (no dedicated column) so the
+		// graph tooltip can show it.
+		if fmJSON != "" {
+			var fm struct {
+				Summary string `json:"summary"`
+			}
+			if json.Unmarshal([]byte(fmJSON), &fm) == nil {
+				n.Summary = fm.Summary
+			}
 		}
 		nodes = append(nodes, n)
 		nodeSet[n.ID] = true

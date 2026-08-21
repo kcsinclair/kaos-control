@@ -54,6 +54,35 @@ func TestArchitectureMap_NodesScopedToArchitectureType(t *testing.T) {
 	}
 }
 
+// TestGraph_IncludesSummaryFromFrontmatter verifies the graph tooltip data
+// carries the summary: frontmatter field (extracted from the stored blob).
+func TestGraph_IncludesSummaryFromFrontmatter(t *testing.T) {
+	idx := openTestIndex(t)
+	raw := "---\ntitle: Modular Monolith\ntype: architecture\nstatus: approved\n" +
+		"lineage: arch-modular-monolith\n" +
+		"summary: A single deployable organised into well-bounded modules.\n" +
+		"---\n\nBody.\n"
+	mustUpsertParsed(t, idx, raw, "lifecycle/architecture/architectures/modular-monolith.md")
+
+	data, err := idx.Graph(Filter{})
+	if err != nil {
+		t.Fatalf("Graph: %v", err)
+	}
+	var found *GraphNode
+	for _, n := range data.Nodes {
+		if n.Title == "Modular Monolith" {
+			found = n
+			break
+		}
+	}
+	if found == nil {
+		t.Fatal("node not found in graph")
+	}
+	if found.Summary != "A single deployable organised into well-bounded modules." {
+		t.Errorf("Summary = %q, want the frontmatter summary", found.Summary)
+	}
+}
+
 // TestArchitectureMap_WikiLinkCollapsesToRelated verifies FR-3: a pair linked
 // only by a body wiki-link appears as a single generic "related" edge.
 func TestArchitectureMap_WikiLinkCollapsesToRelated(t *testing.T) {

@@ -236,7 +236,22 @@ function tooltipHtml(node: GraphNode): string {
       : ''
     return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:${bg};border-radius:4px;color:${text}">${node.title}<br/><span style="opacity:.6">${node.status || 'backlog'}</span>${dateInfo}</div>`
   }
-  return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:${bg};border-radius:4px;color:${text}">${node.title || node.slug}<br/><span style="opacity:.6">${node.type} · ${node.status}</span></div>`
+  // Summary (from YAML frontmatter) shown beneath the type · status line when
+  // present — richest for architecture / tech-stack nodes. Escaped: it is
+  // user-authored markdown frontmatter injected as tooltip HTML.
+  const summary = node.summary
+    ? `<br/><span style="opacity:.75;display:block;max-width:280px;margin-top:3px;white-space:normal">${escapeHtml(node.summary)}</span>`
+    : ''
+  return `<div style="font:12px/1.4 sans-serif;padding:4px 8px;background:${bg};border-radius:4px;color:${text};max-width:300px">${escapeHtml(node.title || node.slug)}<br/><span style="opacity:.6">${node.type} · ${node.status}</span>${summary}</div>`
+}
+
+// Escape user-authored text before injecting into the tooltip's innerHTML.
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
 function timelineLinkLabel(edge: GraphEdge): string {

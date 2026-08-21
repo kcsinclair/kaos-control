@@ -318,6 +318,8 @@ export interface GraphNode {
   slug: string
   index: number
   priority?: string
+  /** summary: frontmatter field, shown in the graph tooltip when present. */
+  summary?: string
   labels?: string[]
   /** True for synthetic nodes such as the Backlog root in the roadmap graph */
   synthetic?: boolean
