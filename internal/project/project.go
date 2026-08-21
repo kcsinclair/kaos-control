@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -355,6 +356,16 @@ func (p *Project) StartWatcher(ctx context.Context) {
 	p.watcherDone = done
 	go func() {
 		defer close(done)
+		// Backstop: a panic in the watcher's event loop must not take the whole
+		// server down (per-request panics are already caught by the HTTP
+		// Recoverer, but background goroutines have no such net). Debounced
+		// handlers have their own recover in watcher.fire; this covers the loop.
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("watcher goroutine panicked; recovered to keep the server alive",
+					"project", p.Entry.Name, "panic", r, "stack", string(debug.Stack()))
+			}
+		}()
 		if err := p.Watcher.Start(ctx); err != nil {
 			slog.Error("watcher stopped with error", "project", p.Entry.Name, "err", err)
 		}

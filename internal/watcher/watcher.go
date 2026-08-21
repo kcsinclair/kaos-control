@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -151,6 +152,16 @@ func (w *Watcher) Start(ctx context.Context) error {
 			mu.Lock()
 			delete(timers, path)
 			mu.Unlock()
+			// AfterFunc runs fn in its own goroutine, so a panic here (e.g. in
+			// the re-index of a single changed file) would otherwise crash the
+			// whole server with no recovery. Contain it to this one event and
+			// log the stack so the root cause is still diagnosable.
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("watcher: recovered from panic in debounced handler; server kept alive",
+						"path", path, "panic", r, "stack", string(debug.Stack()))
+				}
+			}()
 			fn()
 		})
 	}
