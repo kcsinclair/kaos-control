@@ -1,7 +1,7 @@
 ---
 title: "Plan: migrate FEATURES.md into feature artifacts (tech-writer)"
 type: doc
-status: draft
+status: in-development
 lineage: features-md-to-feature-artifacts
 created: "2026-08-21T14:55:00+10:00"
 priority: normal
