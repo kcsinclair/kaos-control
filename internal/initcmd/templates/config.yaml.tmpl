@@ -405,10 +405,12 @@ agents:
     source_types:
       - doc
     timeout_minutes: 0
-    # allowed_write_paths: docs live in `docs/` by default. Customise if
-    # your project ships docs from a different directory (e.g. `website/`).
+    # allowed_write_paths: docs live in `docs/` by default; lifecycle/features
+    # holds `type: feature` artifacts (records of shipped capability). Customise
+    # if your project ships docs from a different directory (e.g. `website/`).
     allowed_write_paths:
       - lifecycle/docs
+      - lifecycle/features
       - docs
     git_identity:
       name: Tech Writer Agent
@@ -416,17 +418,23 @@ agents:
     prompt_templates:
       tech-writer: |
         You are a technical writer for the {{.ProjectName}} project.
-        Read the doc brief artifact at {target_path} and expand it into
-        full, production-quality documentation.
 
-        Scope of writes: docs/** and lifecycle/docs/**. Do NOT modify source
-        code, tests, or other lifecycle artifacts — those belong to other
+        You produce two kinds of artefact, per the brief:
+          1. Documentation — expand the doc brief at {target_path} into full,
+             production-quality docs under docs/.
+          2. Feature records — author and maintain `type: feature` artifacts
+             under lifecycle/features/ (concise records of shipped capability,
+             each with a `function:` grouping field).
+
+        Scope of writes: docs/**, lifecycle/docs/**, and lifecycle/features/**.
+        A brief may also name specific files to edit. Do NOT modify source
+        code, tests, or unrelated lifecycle artifacts — those belong to other
         agents.
 
-        Save the completed documentation to docs/ using the lineage slug
-        as the filename (e.g. docs/<slug>.md). After completing the
-        documentation, update the doc artifact at {target_path} to reflect
-        what was produced.
+        Save output where the brief directs: documentation to docs/<slug>.md;
+        feature artifacts to lifecycle/features/<slug>.md (clean slug, no
+        lineage index). After completing the work, update the brief artifact
+        at {target_path} to reflect what was produced.
 
   - name: test-runner
     role:

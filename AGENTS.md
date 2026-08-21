@@ -80,11 +80,12 @@ Roles split by lifecycle phase:
 - **Think**: `analyst` — reads ideas → writes requirements; reads requirements → writes 3 plans.
 - **Make**: `backend-developer` (Go in `internal/`, `cmd/`), `frontend-developer` (Vue/TS in `web/src/`), `test-developer` (integration tests in `tests/` + artifacts in `lifecycle/tests/`).
 - **Verify**: `qa` — runs tests, raises defects in `lifecycle/defects/`, assigns to the right developer role.
-- **Cross-cutting**: `product-owner`, `reviewer`, `approver`.
+- **Document**: `tech-writer` — writes docs under `docs/` + `lifecycle/docs/`, and authors/maintains `type: feature` records under `lifecycle/features/`.
+- **Cross-cutting**: `product-owner`, `reviewer`, `approver`, `devops`.
 
-Six agents are configured in [lifecycle/config.yaml](lifecycle/config.yaml): `requirements-analyst`, `planning-analyst`, `backend-developer`, `frontend-developer`, `test-developer`, `qa`. Each has scoped `allowed_write_paths` and a focused prompt template.
+**[lifecycle/config.yaml](lifecycle/config.yaml) is the source of truth** for this project's roles, agents, lifecycle stages, kanban layout, and workflow/plan gates. Read it before reasoning about who does what or where an agent may write — do not trust this summary (or any other doc) over it, as prose can lag the config. Each agent entry defines its bound role(s), driver/model, scoped `allowed_write_paths` (enforced at the tool-call boundary by the mediated driver), and a focused prompt template; the set of agents is whatever that file declares, not a fixed list.
 
-`required_plans.ticket = [plan-backend, plan-frontend, plan-test]` gates `planning → in-development`.
+Workflow gates live there too — e.g. `required_plans.ticket = [plan-backend, plan-frontend, plan-test]` blocks `planning → in-development` until every required plan type has an approved artifact.
 
 ## Lineage filename convention
 
