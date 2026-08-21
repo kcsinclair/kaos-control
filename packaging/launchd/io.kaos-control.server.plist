@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  kaos-control — macOS launchd LaunchAgent (per-user local server).
+
+  Rebuilds the binary then runs the foreground server (via
+  kaos-control-serve.sh). stdout+stderr — build output, server logs, and any
+  panic stack traces — are appended to the log file configured below.
+
+  Runs as your login user so agent runs inherit your HOME, ~/.claude
+  credentials, and git identity. Nothing needs root.
+
+  Install:
+    mkdir -p ~/.kaos-control/logs
+    cp packaging/launchd/io.kaos-control.server.plist ~/Library/LaunchAgents/
+    # Edit the /Users/keith paths in the copy if your home/repo differ
+    # (launchd does NOT expand $HOME inside a plist), then:
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.kaos-control.server.plist
+    launchctl enable   gui/$(id -u)/io.kaos-control.server
+
+  Rebuild + restart on demand (e.g. after a git pull):
+    launchctl kickstart -k gui/$(id -u)/io.kaos-control.server
+
+  Stop / uninstall:
+    launchctl bootout gui/$(id -u)/io.kaos-control.server
+    rm ~/Library/LaunchAgents/io.kaos-control.server.plist
+
+  Tail the log:
+    tail -f ~/.kaos-control/logs/kaos-control.log
+
+  Skip the slow SPA build on each start: set KC_BUILD_WEB=0 in
+  EnvironmentVariables below.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>io.kaos-control.server</string>
+
+  <!-- Build-then-serve through a login shell so go/pnpm/node/make are on PATH.
+       `exec` chains launchd -> zsh -> script -> server, so the tracked PID is
+       the server and SIGTERM reaches it directly. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-lc</string>
+    <string>exec '/Users/keith/Code/kaos-control/packaging/launchd/kaos-control-serve.sh'</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/keith/Code/kaos-control</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>LOG_LEVEL</key>
+    <string>info</string>
+    <!-- <key>KC_BUILD_WEB</key><string>0</string>  uncomment to skip pnpm build -->
+  </dict>
+
+  <!-- Start at login and keep it running; on exit it rebuilds and restarts. -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <!-- Don't spin on a broken build: >=30s between (re)starts. -->
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+  <key>ProcessType</key>
+  <string>Interactive</string>
+
+  <!-- Wait for the server's graceful drain after SIGTERM before SIGKILL. -->
+  <key>ExitTimeOut</key>
+  <integer>30</integer>
+
+  <!-- Build output + server logs + panic traces, appended across restarts. -->
+  <key>StandardOutPath</key>
+  <string>/Users/keith/.kaos-control/logs/kaos-control.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/keith/.kaos-control/logs/kaos-control.log</string>
+</dict>
+</plist>

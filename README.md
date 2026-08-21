@@ -186,7 +186,7 @@ If you plan to run agents, the [Claude Code permissions](#claude-code-permission
 
 ---
 
-## Run as a service (Linux, systemd)
+## Run as a service (Linux systemd / macOS launchd)
 
 `kaos-control -d` runs in the foreground and does not fork or write a PID file — backgrounding is the caller's job. On Linux, [`packaging/systemd/kaos-control.service`](packaging/systemd/kaos-control.service) does that as a **systemd user service**.
 
@@ -304,6 +304,21 @@ sudo loginctl disable-linger "$USER"       # only if you enabled it
 ### System-wide instead of per-user
 
 Running kaos-control as a system service (`/etc/systemd/system/`) works, but the unit then needs an explicit `User=`/`Group=`, a `HOME=` that matches that account, and that account must have its own `claude` login, git identity, and `~/.kaos-control`. Agents run as that user with that user's credentials. The per-user unit above avoids all of it; prefer it unless you specifically need a shared, headless, multi-admin install.
+
+### macOS (launchd)
+
+On macOS, [`packaging/launchd/io.kaos-control.server.plist`](packaging/launchd/io.kaos-control.server.plist) runs the server as a per-user **LaunchAgent**. Unlike the systemd unit it **rebuilds first**: it launches [`kaos-control-serve.sh`](packaging/launchd/kaos-control-serve.sh) through a login shell, which runs `make build-web && make build` and then `exec`s the fresh binary — so every (re)start serves current code. All output (build logs, server logs, panic traces) is appended to `~/.kaos-control/logs/kaos-control.log`.
+
+```bash
+mkdir -p ~/.kaos-control/logs
+cp packaging/launchd/io.kaos-control.server.plist ~/Library/LaunchAgents/
+# Edit the /Users/keith paths in the copy if your home/repo differ
+# (launchd does not expand $HOME in a plist).
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.kaos-control.server.plist
+launchctl enable   gui/$(id -u)/io.kaos-control.server
+```
+
+Rebuild + restart on demand (e.g. after a `git pull`): `launchctl kickstart -k gui/$(id -u)/io.kaos-control.server`. Stop/uninstall: `launchctl bootout gui/$(id -u)/io.kaos-control.server`. Tail the log: `tail -f ~/.kaos-control/logs/kaos-control.log`. Set `KC_BUILD_WEB=0` in the plist's `EnvironmentVariables` to skip the slow SPA build on each start.
 
 ---
 
