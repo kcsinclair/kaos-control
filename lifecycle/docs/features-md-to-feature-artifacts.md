@@ -1,7 +1,7 @@
 ---
 title: "Plan: migrate FEATURES.md into feature artifacts (tech-writer)"
 type: doc
-status: in-development
+status: done
 lineage: features-md-to-feature-artifacts
 created: "2026-08-21T14:55:00+10:00"
 priority: normal
@@ -162,3 +162,34 @@ Omit `related_to` rather than guessing a wrong link.
 - Never fabricate a capability or a `related_to` link; verify against the repo.
 - Preserve the six existing feature artifacts as-is.
 - Keep summaries factual and one sentence; bodies concise.
+
+## Completion (2026-08-21)
+
+All 17 worklist rows are done. New artifacts under `lifecycle/features/`
+(23 total with the six pre-existing ones), all parsing cleanly:
+
+`markdown-lifecycle-artifacts.md`, `rice-prioritisation.md`,
+`workflow-state-machine.md`, `graph-visualisation.md`,
+`agent-orchestration.md`, `idea-capture.md`, `releases-and-roadmap.md`,
+`dashboard.md`, `kanban-board.md`, `devops-pipelines.md`, `scheduler.md`,
+`ollama-local-llms.md`, `project-feed.md`, `multi-project.md`,
+`auth-and-authorisation.md`, `git-integration.md`, `operations.md`.
+
+- All use `status: approved`, `lineage: feature-<slug>` matching the
+  filename stem, and reuse the existing `function` buckets from the
+  worklist table — no near-duplicates introduced.
+- `related_to` links were added only where a matching idea/requirement (or,
+  for the roadmap Gantt claim, the code) confirmed the capability as
+  currently shipped; omitted where no confident match existed (e.g.
+  `markdown-lifecycle-artifacts.md` links the authoritative spec rather
+  than a specific idea, since the capability predates a single originating
+  idea file).
+- One stale claim was caught and corrected against code: FEATURES.md's
+  "Roadmap Gantt chart… period options (daily/weekly/monthly) coming soon"
+  is done, not pending — `web/src/components/releases/GanttChart.vue`
+  implements an autoscale/fixed period mode with week/month/quarter/
+  half-year/year granularity. `graph-visualisation.md` reflects the actual
+  implementation.
+- `FEATURES.md` is reduced to the deprecation banner + a short closing
+  note; the archived sections are gone (git history retains them).
+- No code, config, or non-feature lifecycle artifacts were touched.
