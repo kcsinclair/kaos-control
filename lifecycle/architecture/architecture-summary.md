@@ -9,7 +9,27 @@ created: "2026-08-21T10:46:34+10:00"
 
 ## Architecture-breaking requirements
 
-None surfaced by the questionnaire.
+The questionnaire surfaced none, but the following standing constraints are
+genuinely architecture-breaking — a change that violates one invalidates the
+chosen architecture or stack, and must be raised as a new ADR:
+
+- **Single self-contained binary.** Distribution is one binary with no external
+  database or services. This forbids cgo/native dependencies and mandates
+  pure-Go, embeddable choices — pure-Go SQLite
+  ([[adr-0003-pure-go-sqlite-index]]) and the embedded SPA
+  ([[adr-0004-embedded-spa-single-binary]]). Introducing a required external
+  datastore or a cgo dependency would break this.
+- **Local filesystem is the source of truth.** Markdown artifacts under
+  `lifecycle/` are authoritative; the index is a rebuildable cache
+  ([[index-is-a-cache]]). External edits (e.g. Obsidian sync) must reconcile via
+  the watcher. A design that made the database authoritative would break this.
+- **Agents execute arbitrary tools.** Orchestrated agent runs mutate files and
+  run commands, so tool calls must be mediated and scope-enforced
+  ([[adr-0006-mediated-agent-driver-permission-model]],
+  [[filesystem-sandboxing]]). Removing mediation would break the trust model.
+- **Direct-served, no trusted proxy hop.** The binary serves HTTP/TLS directly;
+  no reverse proxy is assumed, so client identity must not be derived from
+  spoofable headers ([[adr-0001-no-header-based-client-ip-trust]]).
 
 ## Selection Q&A
 
