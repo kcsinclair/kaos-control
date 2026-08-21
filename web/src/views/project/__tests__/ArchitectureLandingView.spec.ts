@@ -35,11 +35,47 @@ describe('ArchitectureLandingView', () => {
     expect(replace).toHaveBeenCalledWith('/p/testproject/architecture/overview')
   })
 
-  it('redirects to the relationship map when no architecture is chosen', async () => {
-    getOverview.mockResolvedValue({ has_chosen_architecture: false })
+  it('redirects to the relationship map when the zone is empty (catalog only)', async () => {
+    getOverview.mockResolvedValue({
+      has_chosen_architecture: false,
+      chosen_stack: null,
+      summary: null,
+      standards: [],
+      adrs: [],
+      archive: [],
+      catalog: [{ path: 'lifecycle/architecture/architectures/x.md' }],
+    })
     mount(ArchitectureLandingView)
     await flushPromises()
     expect(replace).toHaveBeenCalledWith('/p/testproject/architecture/map')
+  })
+
+  it('redirects to the overview when a summary exists but no architecture is chosen', async () => {
+    getOverview.mockResolvedValue({
+      has_chosen_architecture: false,
+      chosen_stack: null,
+      summary: { path: 'lifecycle/architecture/architecture-summary.md' },
+      standards: [],
+      adrs: [],
+      archive: [],
+    })
+    mount(ArchitectureLandingView)
+    await flushPromises()
+    expect(replace).toHaveBeenCalledWith('/p/testproject/architecture/overview')
+  })
+
+  it('redirects to the overview when ADRs exist but no architecture is chosen', async () => {
+    getOverview.mockResolvedValue({
+      has_chosen_architecture: false,
+      chosen_stack: null,
+      summary: null,
+      standards: [],
+      adrs: [{ path: 'lifecycle/architecture/decisions/adr-0001-x.md' }],
+      archive: [],
+    })
+    mount(ArchitectureLandingView)
+    await flushPromises()
+    expect(replace).toHaveBeenCalledWith('/p/testproject/architecture/overview')
   })
 
   it('degrades to the relationship map on an API error (NFR-5)', async () => {

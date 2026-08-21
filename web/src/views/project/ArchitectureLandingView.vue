@@ -17,8 +17,20 @@ const project = route.params.project as string
 onMounted(async () => {
   let target = 'architecture/map'
   try {
-    const overview = await getOverview(project)
-    if (overview.has_chosen_architecture) target = 'architecture/overview'
+    const ov = await getOverview(project)
+    // Prefer the overview whenever the project has ANY authored architecture
+    // content — a chosen architecture/stack, a summary, ADRs, standards, or
+    // archived choices. Catalog candidates alone don't count: a project that's
+    // only browsing options still belongs on the map. Mirrors the
+    // hasAnyContent gate in ArchitectureOverviewView.
+    const hasContent =
+      ov.has_chosen_architecture ||
+      !!ov.chosen_stack ||
+      !!ov.summary ||
+      (ov.standards?.length ?? 0) > 0 ||
+      (ov.adrs?.length ?? 0) > 0 ||
+      (ov.archive?.length ?? 0) > 0
+    if (hasContent) target = 'architecture/overview'
   } catch {
     // Degrades to the map on error (NFR-5) — it carries its own error state.
   }

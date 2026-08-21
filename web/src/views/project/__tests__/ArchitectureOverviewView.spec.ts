@@ -74,6 +74,48 @@ describe('ArchitectureOverviewView — empty / partial states', () => {
     expect(wrapper.text()).not.toContain('ADRs')
   })
 
+  it('renders the panels (not the empty state) when a summary exists but no architecture is chosen', async () => {
+    // Regression: the view used to hard-gate on hasChosenArchitecture, hiding
+    // an existing summary/ADRs/standards behind the "no architecture" empty
+    // state. It must now render whenever any architecture content exists.
+    overviewState.hasChosenArchitecture.value = false
+    overviewState.summary.value = {
+      path: 'lifecycle/architecture/architecture-summary.md',
+      title: 'Architecture Summary',
+      status: 'approved',
+      type: 'doc',
+      catalog_role: 'summary',
+    }
+    getArtifact.mockResolvedValue({
+      artifact: {
+        path: 'lifecycle/architecture/architecture-summary.md',
+        rel_path: 'architecture/architecture-summary.md',
+        slug: 'architecture-summary',
+        lineage: 'architecture-summary',
+        index: 0,
+        stage: '',
+        type: 'doc',
+        status: 'approved',
+        title: 'Architecture Summary',
+        frontmatter: { title: 'Architecture Summary', type: 'doc', status: 'approved', lineage: 'architecture-summary' },
+        mtime: '',
+        created: '',
+        agent_run_count: 0,
+      },
+      body: '# Architecture Summary\n\nWhy we chose this.',
+      body_html: '',
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+    await flushPromises()
+
+    // Empty state is gone; panels render (each degrading on its own).
+    expect(wrapper.text()).not.toContain('Run the Architecture Wizard')
+    expect(wrapper.text()).toContain('No architecture has been chosen yet.') // ChosenArchitecturePanel degrades
+    expect(wrapper.text()).toContain('No tech stack has been chosen yet.')
+  })
+
   it('degrades each panel independently when a chosen architecture exists but summary/standards/ADRs are absent', async () => {
     overviewState.hasChosenArchitecture.value = true
     overviewState.chosenArchitecture.value = {

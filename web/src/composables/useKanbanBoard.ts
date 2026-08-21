@@ -5,6 +5,9 @@ import { api } from '@/api/client'
 import * as artifactsApi from '@/api/artifacts'
 import type { ArtifactRow, ArtifactFilter, WsEvent } from '@/types/api'
 import { TERMINAL_STATUSES, isArchitectureZone } from '@/types/api'
+
+// Artifact types that live in the architecture zone.
+const ARCH_ZONE_TYPES = ['architecture', 'tech-stack', 'adr']
 import { parseArtifactDate } from '@/composables/useFormatDate'
 import { useUiStore } from '@/stores/ui'
 import { useWebSocket } from '@/composables/useWebSocket'
@@ -83,12 +86,18 @@ export function useKanbanBoard(project: string) {
   // Apply client-side filters to an artifact list
   function applyClientFilters(items: ArtifactRow[]): ArtifactRow[] {
     const q = searchText.value.toLowerCase()
+    // The user has explicitly scoped to the architecture zone (stage/type/label)
+    // — don't then hide every result.
+    const archScoped =
+      filters.stage === 'architecture' ||
+      (!!filters.type && ARCH_ZONE_TYPES.includes(filters.type)) ||
+      filters.label === 'catalog'
     return items.filter(a => {
       // Hide test artifacts unless the "Show Tests" toggle is on
       if (!uiStore.showTestsOnKanban && a.type === 'test') return false
       // Hide the whole architecture zone unless "show architecture inline"
-      // is on (FR-9a).
-      if (!uiStore.showCatalog && isArchitectureZone(a)) return false
+      // is on (FR-9a) or the user has explicitly filtered for it.
+      if (!uiStore.showCatalog && !archScoped && isArchitectureZone(a)) return false
       // Release artifacts are never shown on the Kanban board
       if (a.type === 'release') return false
       if (hideTerminal.value && (TERMINAL_STATUSES as readonly string[]).includes(a.status)) return false

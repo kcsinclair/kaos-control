@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArchitectureOverview } from '@/composables/useArchitectureOverview'
 import { useUiStore } from '@/stores/ui'
@@ -32,6 +32,22 @@ const {
   reload,
 } = useArchitectureOverview(project)
 
+// Render the panels whenever the project has ANY authored architecture content
+// — not only a promoted root architecture. A project can have a summary, ADRs,
+// or standards without (yet) a chosen architecture; each panel degrades
+// independently, so gating the whole view on hasChosenArchitecture would hide
+// the summary/ADRs/standards that DO exist. Catalog candidates alone don't
+// count — a project that's only browsing options belongs on the map.
+const hasAnyContent = computed(
+  () =>
+    hasChosenArchitecture.value ||
+    !!chosenStack.value ||
+    !!summary.value ||
+    standards.value.length > 0 ||
+    adrs.value.length > 0 ||
+    archive.value.length > 0,
+)
+
 // One-click actions (FR-8): the map and wizard are each reachable in one
 // click; raising an ADR reuses the existing NewAdrModal.vue rather than
 // introducing a new authoring surface (NFR-2).
@@ -59,9 +75,10 @@ function onAdrCreated(path: string) {
     <div v-if="loading" class="overview-state" role="status" aria-live="polite">Loading architecture overview…</div>
     <div v-else-if="error" class="overview-state error" role="alert">{{ error }}</div>
 
-    <!-- No promoted architecture yet (FR-10): one overall empty state
-         instead of six half-populated panels — it never errors. -->
-    <div v-else-if="!hasChosenArchitecture" class="overview-empty">
+    <!-- Nothing authored in the architecture zone yet (FR-10): one overall
+         empty state. Once ANY content exists (summary/ADRs/standards/chosen),
+         the panels render and each degrades independently. -->
+    <div v-else-if="!hasAnyContent" class="overview-empty">
       <p>No architecture has been chosen for this project yet.</p>
       <div class="overview-empty-actions">
         <router-link class="btn-primary" :to="`/p/${project}/architecture/wizard`">

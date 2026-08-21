@@ -41,6 +41,20 @@ useTextFilterShortcut(textFilterRef)
 
 const { currentPage, pageSize, sliceStart, sliceEnd, setPage, setPageSize } = usePagination()
 
+// Artifact types that live in the architecture zone.
+const ARCH_ZONE_TYPES = ['architecture', 'tech-stack', 'adr']
+
+// The user has explicitly scoped the view to the architecture zone — via the
+// architecture stage, an architecture-zone type, or the catalog label — so the
+// default zone-hide must not then wipe every result (that made "filter by
+// architecture" show nothing).
+const archScoped = computed(
+  () =>
+    selectedStage.value === 'architecture' ||
+    ARCH_ZONE_TYPES.includes(selectedType.value) ||
+    selectedLabel.value === 'catalog',
+)
+
 const visibleItems = computed(() => {
   let base = showCompleted.value
     ? store.items
@@ -48,8 +62,8 @@ const visibleItems = computed(() => {
   // The whole architecture zone (catalog candidates, chosen
   // architecture/stack, ADRs, standards, summary, archive) is reference
   // material, not lifecycle work items — hidden unless "show architecture
-  // inline" is on (FR-9a).
-  if (!ui.showCatalog) base = base.filter(r => !isArchitectureZone(r))
+  // inline" is on (FR-9a) or the user has explicitly filtered for it.
+  if (!ui.showCatalog && !archScoped.value) base = base.filter(r => !isArchitectureZone(r))
   if (!searchText.value) return base
   const q = searchText.value.toLowerCase()
   return base.filter(r => {
