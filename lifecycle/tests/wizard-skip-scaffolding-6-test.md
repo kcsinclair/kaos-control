@@ -1,7 +1,7 @@
 ---
 title: Wizard Skip / Selective Scaffolding — Integration Tests
 type: test
-status: approved
+status: in-qa
 lineage: wizard-skip-scaffolding
 parent: lifecycle/test-plans/wizard-skip-scaffolding-5-test.md
 created: "2026-08-22T15:10:00+10:00"
