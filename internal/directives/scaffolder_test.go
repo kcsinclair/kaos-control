@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/kaos-control/kaos-control/internal/architecture"
 )
 
 func TestScaffolder_Available_OffersAgentDirectivesStep(t *testing.T) {
@@ -25,7 +27,8 @@ func TestScaffolder_Available_OffersAgentDirectivesStep(t *testing.T) {
 func TestScaffolder_Run_GeneratesDirectiveFiles(t *testing.T) {
 	root := promotedGoVueFixture(t)
 
-	res, err := Scaffolder{}.Run(root, "modular-monolith", "go-vue", nil)
+	choices := []architecture.ScaffoldChoice{{StepKey: scaffoldStepKey, Selected: true}}
+	res, err := Scaffolder{}.Run(root, "modular-monolith", "go-vue", choices)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -37,6 +40,23 @@ func TestScaffolder_Run_GeneratesDirectiveFiles(t *testing.T) {
 		}
 		if _, err := os.Stat(filepath.Join(root, want)); err != nil {
 			t.Errorf("expected %s written to disk: %v", want, err)
+		}
+	}
+}
+
+func TestScaffolder_Run_UnselectedWritesNothing(t *testing.T) {
+	root := promotedGoVueFixture(t)
+
+	res, err := Scaffolder{}.Run(root, "modular-monolith", "go-vue", nil)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(res.Applied) != 0 || len(res.Skipped) != 0 || res.Committed || len(res.GitCommands) != 0 {
+		t.Fatalf("expected zero ScaffoldResult for no selection, got %+v", res)
+	}
+	for _, name := range []string{"AGENTS.md", "CLAUDE.md"} {
+		if _, err := os.Stat(filepath.Join(root, name)); !os.IsNotExist(err) {
+			t.Errorf("expected %s not written, stat err: %v", name, err)
 		}
 	}
 }

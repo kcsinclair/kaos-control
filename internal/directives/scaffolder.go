@@ -72,9 +72,14 @@ func scaffoldFileExists(projectRoot, name string) bool {
 }
 
 // Run generates the directive set and config patch under projectRoot, mapping
-// the write report onto the wizard's applied/skipped result. Choices are
-// ignored: this step has no naming fields.
+// the write report onto the wizard's applied/skipped result. It scaffolds
+// only when the agent-directives choice has Selected == true; otherwise it
+// writes nothing and returns a zero ScaffoldResult (FR-10/FR-11).
 func (Scaffolder) Run(projectRoot, archSlug, stackSlug string, choices []architecture.ScaffoldChoice) (architecture.ScaffoldResult, error) {
+	if !selected(choices, scaffoldStepKey) {
+		return architecture.ScaffoldResult{}, nil
+	}
+
 	res, err := Generate(projectRoot, GenerateOptions{})
 	if err != nil {
 		return architecture.ScaffoldResult{}, err
@@ -111,4 +116,16 @@ func (Scaffolder) Run(projectRoot, archSlug, stackSlug string, choices []archite
 	out.Committed = committed
 	out.GitCommands = cmds
 	return out, nil
+}
+
+// selected reports whether choices contains an entry for stepKey with
+// Selected == true. A missing entry, or one with Selected == false, means
+// "do not scaffold this step" (FR-9/FR-11).
+func selected(choices []architecture.ScaffoldChoice, stepKey string) bool {
+	for _, c := range choices {
+		if c.StepKey == stepKey && c.Selected {
+			return true
+		}
+	}
+	return false
 }
