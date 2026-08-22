@@ -3,9 +3,12 @@
 package directives
 
 import (
+	"os"
+
 	"github.com/kaos-control/kaos-control/internal/architecture"
 	"github.com/kaos-control/kaos-control/internal/devops"
 	kgit "github.com/kaos-control/kaos-control/internal/git"
+	"github.com/kaos-control/kaos-control/internal/sandbox"
 )
 
 // scaffoldStepKey identifies the agent-directives offering in the wizard's
@@ -31,7 +34,41 @@ func (Scaffolder) Available(projectRoot, archSlug, stackSlug string) ([]architec
 			"agent prompts in lifecycle/config.yaml — repo layout, per-role write paths, and " +
 			"build/lint/test commands — to the chosen stack, and bootstrap build/lint/test " +
 			"pipelines under lifecycle/devops/ from the stack profile.",
+		Present: directivesPresent(projectRoot),
 	}}, true
+}
+
+// directivesPresent reports whether a run of the agent-directives step would
+// have nothing left to do: AGENTS.md and CLAUDE.md already exist, and
+// GEMINI.md exists too if a gemini driver is configured (mirrors the files
+// Generate writes — see hasGeminiDriver). Read-only: it never calls
+// Generate, and resolves each filename through sandbox.Resolve before
+// os.Stat (FR-6). A config-load error is treated fail-safe as "not present"
+// so the step is still offered rather than erroring a read-only call.
+func directivesPresent(projectRoot string) bool {
+	if !scaffoldFileExists(projectRoot, agentsFile) || !scaffoldFileExists(projectRoot, claudeFile) {
+		return false
+	}
+	drivers, err := configuredDrivers(projectRoot)
+	if err != nil {
+		return false
+	}
+	if hasGeminiDriver(drivers) {
+		return scaffoldFileExists(projectRoot, geminiFile)
+	}
+	return true
+}
+
+// scaffoldFileExists resolves name (a fixed root-level filename) against
+// projectRoot through the sandbox and reports whether it exists. An
+// unresolvable/out-of-root path fails closed to false (FR-6).
+func scaffoldFileExists(projectRoot, name string) bool {
+	resolved, err := sandbox.Resolve(projectRoot, name)
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(resolved)
+	return err == nil
 }
 
 // Run generates the directive set and config patch under projectRoot, mapping
