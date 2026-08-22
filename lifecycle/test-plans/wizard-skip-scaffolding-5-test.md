@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Wizard Skip / Selective Scaffolding"
 type: plan-test
-status: approved
+status: in-development
 lineage: wizard-skip-scaffolding
 parent: lifecycle/requirements/wizard-skip-scaffolding-2.md
 created: "2026-08-22T14:30:00+10:00"
