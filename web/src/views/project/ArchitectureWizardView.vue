@@ -150,6 +150,13 @@ function onEnterScaffold(): void {
   store.step = 'scaffold'
 }
 
+// Skip / Finish and post-run Finish both land back on WizardSuccess (step
+// `done`) — the single terminal state for either outcome (FR-3).
+function onScaffoldFinish(): void {
+  store.scaffoldSettled = true
+  store.step = 'done'
+}
+
 // The footer Next button is a fallback for re-advancing through
 // already-completed steps (e.g. after Back) — each step's own primary
 // action is what normally advances the wizard.
@@ -231,7 +238,11 @@ const canAdvance = computed(() => {
             @scaffold="onEnterScaffold"
           />
 
-          <ScaffoldStep v-else-if="currentStepKey === 'scaffold'" :project="project" />
+          <ScaffoldStep
+            v-else-if="currentStepKey === 'scaffold'"
+            :project="project"
+            @finish="onScaffoldFinish"
+          />
         </div>
 
         <div class="wizard-footer">

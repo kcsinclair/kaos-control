@@ -54,11 +54,20 @@ const store = useArchitectureWizardStore()
       </li>
     </ul>
 
+    <p v-if="store.scaffoldSettled" class="success-copy scaffold-settled">
+      Scaffolding step complete.
+    </p>
+
     <div class="success-actions">
       <router-link :to="`/p/${project}/architecture/map`" class="btn-secondary">
         View relationship map
       </router-link>
-      <button type="button" class="btn-primary" @click="emit('scaffold')">
+      <button
+        v-if="!store.scaffoldSettled"
+        type="button"
+        class="btn-primary"
+        @click="emit('scaffold')"
+      >
         Set up scaffolding
       </button>
     </div>
@@ -81,6 +90,10 @@ const store = useArchitectureWizardStore()
   margin: 0;
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+}
+.success-copy.scaffold-settled {
+  font-weight: 600;
+  color: var(--color-accent);
 }
 .success-links {
   display: flex;

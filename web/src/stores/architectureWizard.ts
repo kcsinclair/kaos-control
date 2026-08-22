@@ -49,6 +49,10 @@ export const useArchitectureWizardStore = defineStore('architectureWizard', () =
   const commitResult = ref<WizardCommitResult | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  // Set true when ScaffoldStep emits `finish` (Skip / Finish, or post-run
+  // Finish) — lets WizardSuccess suppress re-entering the scaffold step
+  // (Milestone 4, FR-3).
+  const scaffoldSettled = ref(false)
 
   let persistTimer: ReturnType<typeof setTimeout> | null = null
   let persistProject = ''
@@ -246,6 +250,7 @@ export const useArchitectureWizardStore = defineStore('architectureWizard', () =
     priorRun.value = null
     priorRunResolved.value = false
     commitResult.value = null
+    scaffoldSettled.value = false
     loading.value = false
     error.value = null
     if (persistTimer !== null) {
@@ -268,6 +273,7 @@ export const useArchitectureWizardStore = defineStore('architectureWizard', () =
     priorRun,
     priorRunResolved,
     commitResult,
+    scaffoldSettled,
     loading,
     error,
     isPathChosen,
