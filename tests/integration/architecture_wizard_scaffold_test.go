@@ -49,7 +49,7 @@ func TestWizardScaffold_DirectivesScaffolder_GeneratesDirectiveFiles(t *testing.
 	postResp := env.doRequest("POST", "/api/p/testproject/architecture/wizard/scaffold", map[string]any{
 		"architecture": "modular-monolith",
 		"tech_stack":   "go-vue",
-		"choices":      []map[string]any{{"step_key": "agent-directives", "use_defaults": true}},
+		"choices":      []map[string]any{{"step_key": "agent-directives", "use_defaults": true, "selected": true}},
 	})
 	requireStatus(t, postResp, 200)
 	postData := readJSON(t, postResp)
@@ -155,4 +155,165 @@ func TestWizardCommit_WithoutScaffolding_YieldsCompleteProject(t *testing.T) {
 			t.Errorf("expected %q to exist after commit: %v", want, err)
 		}
 	}
+}
+
+// TestWizardScaffoldGet_ReportsPresence covers FR-4: before any scaffold run
+// the step's presence is false, and after a real run the same GET reports
+// present=true for that step.
+func TestWizardScaffoldGet_ReportsPresence(t *testing.T) {
+	architecture.RegisterScaffolder(directives.Scaffolder{})
+	t.Cleanup(func() { architecture.RegisterScaffolder(nil) })
+
+	env := newTestEnvWithScaffold(t, nil)
+
+	getBefore := env.doRequest("GET",
+		"/api/p/testproject/architecture/wizard/scaffold?architecture=modular-monolith&tech_stack=go-vue", nil)
+	requireStatus(t, getBefore, 200)
+	beforeStep0 := firstScaffoldStep(t, readJSON(t, getBefore))
+	if present, _ := beforeStep0["present"].(bool); present {
+		t.Errorf("expected present=false before any run, got %v", beforeStep0)
+	}
+
+	commit := env.doRequest("POST", "/api/p/testproject/architecture/wizard/commit",
+		wizardCommitReq("architectures/modular-monolith.md", "tech-stacks/go-vue.md", nil, nil, nil))
+	requireStatus(t, commit, 200)
+	commit.Body.Close()
+
+	postResp := env.doRequest("POST", "/api/p/testproject/architecture/wizard/scaffold", map[string]any{
+		"architecture": "modular-monolith",
+		"tech_stack":   "go-vue",
+		"choices":      []map[string]any{{"step_key": "agent-directives", "selected": true}},
+	})
+	requireStatus(t, postResp, 200)
+	postResp.Body.Close()
+
+	getAfter := env.doRequest("GET",
+		"/api/p/testproject/architecture/wizard/scaffold?architecture=modular-monolith&tech_stack=go-vue", nil)
+	requireStatus(t, getAfter, 200)
+	afterStep0 := firstScaffoldStep(t, readJSON(t, getAfter))
+	if present, _ := afterStep0["present"].(bool); !present {
+		t.Errorf("expected present=true after a run, got %v", afterStep0)
+	}
+}
+
+// TestWizardScaffoldGet_AuthenticatedNonProductOwner_Allowed covers NFR-3:
+// GET .../wizard/scaffold only requires an authenticated user, not the
+// product-owner role that POST requires.
+func TestWizardScaffoldGet_AuthenticatedNonProductOwner_Allowed(t *testing.T) {
+	env := newTestEnv(t, nil)
+	env.login("dev@test.local", "dev-pass-123")
+
+	resp := env.doRequest("GET",
+		"/api/p/testproject/architecture/wizard/scaffold?architecture=modular-monolith&tech_stack=go-vue", nil)
+	requireStatus(t, resp, 200)
+	resp.Body.Close()
+}
+
+// TestWizardScaffoldPost_NonProductOwner_Forbidden covers NFR-3: POST
+// .../wizard/scaffold requires the product-owner role, and a rejected
+// request writes nothing.
+func TestWizardScaffoldPost_NonProductOwner_Forbidden(t *testing.T) {
+	architecture.RegisterScaffolder(directives.Scaffolder{})
+	t.Cleanup(func() { architecture.RegisterScaffolder(nil) })
+
+	env := newTestEnvWithScaffold(t, nil)
+	env.login("dev@test.local", "dev-pass-123")
+
+	resp := env.doRequest("POST", "/api/p/testproject/architecture/wizard/scaffold", map[string]any{
+		"architecture": "modular-monolith",
+		"tech_stack":   "go-vue",
+		"choices":      []map[string]any{{"step_key": "agent-directives", "selected": true}},
+	})
+	requireStatus(t, resp, 403)
+	resp.Body.Close()
+
+	for _, f := range []string{"AGENTS.md", "CLAUDE.md"} {
+		if _, err := os.Stat(filepath.Join(env.projectRoot, f)); err == nil {
+			t.Errorf("expected %s NOT written for a forbidden POST", f)
+		}
+	}
+}
+
+// TestWizardScaffoldPost_SelectedFalse_WritesNothing covers FR-9/FR-10/
+// FR-11: a choice for the step with selected=false — the single-step
+// scaffolder's stand-in for "nothing selected" — applies nothing and writes
+// no files, contrasting with the selected=true run in
+// TestWizardScaffold_DirectivesScaffolder_GeneratesDirectiveFiles above.
+func TestWizardScaffoldPost_SelectedFalse_WritesNothing(t *testing.T) {
+	architecture.RegisterScaffolder(directives.Scaffolder{})
+	t.Cleanup(func() { architecture.RegisterScaffolder(nil) })
+
+	env := newTestEnvWithScaffold(t, nil)
+
+	commit := env.doRequest("POST", "/api/p/testproject/architecture/wizard/commit",
+		wizardCommitReq("architectures/modular-monolith.md", "tech-stacks/go-vue.md", nil, nil, nil))
+	requireStatus(t, commit, 200)
+	commit.Body.Close()
+
+	resp := env.doRequest("POST", "/api/p/testproject/architecture/wizard/scaffold", map[string]any{
+		"architecture": "modular-monolith",
+		"tech_stack":   "go-vue",
+		"choices":      []map[string]any{{"step_key": "agent-directives", "selected": false}},
+	})
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+	result, _ := data["result"].(map[string]any)
+	if applied, _ := result["applied"].([]any); len(applied) != 0 {
+		t.Errorf("expected no applied files for selected=false, got %v", applied)
+	}
+
+	for _, f := range []string{"AGENTS.md", "CLAUDE.md"} {
+		if _, err := os.Stat(filepath.Join(env.projectRoot, f)); err == nil {
+			t.Errorf("expected %s NOT written when the step is unselected", f)
+		}
+	}
+	for _, f := range []string{"build.yaml", "lint.yaml", "test.yaml"} {
+		if _, err := os.Stat(filepath.Join(env.projectRoot, "lifecycle", "devops", f)); err == nil {
+			t.Errorf("expected lifecycle/devops/%s NOT bootstrapped when the step is unselected", f)
+		}
+	}
+}
+
+// TestWizardScaffoldPost_NoNewArchitectureTreeArtefacts covers NFR-5: a real
+// scaffold run writes to the project root and lifecycle/devops/, not
+// lifecycle/architecture/ — so the architecture tree's file count after
+// commit is governed only by promotion, and a subsequent scaffold run adds
+// nothing there for the index to pick up as a new artefact type.
+func TestWizardScaffoldPost_NoNewArchitectureTreeArtefacts(t *testing.T) {
+	architecture.RegisterScaffolder(directives.Scaffolder{})
+	t.Cleanup(func() { architecture.RegisterScaffolder(nil) })
+
+	env := newTestEnvWithScaffold(t, nil)
+
+	commit := env.doRequest("POST", "/api/p/testproject/architecture/wizard/commit",
+		wizardCommitReq("architectures/modular-monolith.md", "tech-stacks/go-vue.md", nil, nil, nil))
+	requireStatus(t, commit, 200)
+	commit.Body.Close()
+
+	archDir := filepath.Join(env.projectRoot, "lifecycle", "architecture")
+	before := countArchitectureTreeFiles(t, archDir)
+
+	postResp := env.doRequest("POST", "/api/p/testproject/architecture/wizard/scaffold", map[string]any{
+		"architecture": "modular-monolith",
+		"tech_stack":   "go-vue",
+		"choices":      []map[string]any{{"step_key": "agent-directives", "selected": true}},
+	})
+	requireStatus(t, postResp, 200)
+	postResp.Body.Close()
+
+	after := countArchitectureTreeFiles(t, archDir)
+	if after != before {
+		t.Errorf("expected scaffold run to leave lifecycle/architecture/ file count unchanged (governed by promotion only): before=%d after=%d", before, after)
+	}
+}
+
+// firstScaffoldStep extracts steps[0] from a GET .../wizard/scaffold response body.
+func firstScaffoldStep(t *testing.T, data map[string]any) map[string]any {
+	t.Helper()
+	steps, _ := data["steps"].([]any)
+	if len(steps) == 0 {
+		t.Fatalf("expected at least one scaffold step, got %v", data)
+	}
+	step, _ := steps[0].(map[string]any)
+	return step
 }
