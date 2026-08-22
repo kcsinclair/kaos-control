@@ -1,7 +1,7 @@
 ---
 title: No header-based client IP trust (chi RealIP removed)
 type: adr
-status: draft
+status: approved
 lineage: adr-no-header-based-client-ip-trust
 created: "2026-08-20T14:52:00+10:00"
 labels:
