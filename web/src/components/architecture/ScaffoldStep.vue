@@ -7,7 +7,7 @@
 // naming fields default to the backend-supplied defaults; a "decide for
 // me" control resets that step back to those defaults (the backend's
 // ScaffoldChoice is one use_defaults flag per step, not per field).
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { getScaffold, runScaffold } from '@/api/architecture'
 import { ApiError } from '@/api/client'
 import { useArchitectureWizardStore } from '@/stores/architectureWizard'
@@ -17,6 +17,8 @@ const props = defineProps<{
   project: string
 }>()
 
+const emit = defineEmits<{ finish: [] }>()
+
 const store = useArchitectureWizardStore()
 
 const availability = ref<WizardScaffoldAvailability | null>(null)
@@ -24,6 +26,10 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const running = ref(false)
 const result = ref<ScaffoldResult | null>(null)
+// "Scaffold anyway" (FR-7) demotes Run to a secondary path off the
+// all-present panel; this reveals the normal step-card view.
+const showAnyway = ref(false)
+const allPresentFinishBtn = ref<HTMLButtonElement | null>(null)
 
 const stepState = reactive<
   Record<string, { selected: boolean; useDefaults: boolean; values: Record<string, string> }>
@@ -83,6 +89,25 @@ const choices = computed<ScaffoldChoice[]>(() =>
   })),
 )
 
+const hasSelected = computed(() => Object.values(stepState).some((s) => s.selected))
+
+const allPresent = computed(() => {
+  const steps = availability.value?.steps ?? []
+  return availability.value?.available === true && steps.length > 0 && steps.every((s) => s.present === true)
+})
+
+// Autofocus Skip / Finish as the default action when the all-present panel
+// appears — on initial load, or the moment it becomes true (FR-7).
+watch(allPresent, async (isAllPresent) => {
+  if (!isAllPresent) return
+  await nextTick()
+  allPresentFinishBtn.value?.focus()
+}, { immediate: true })
+
+function skipFinish(): void {
+  emit('finish')
+}
+
 async function submit(): Promise<void> {
   const arch = store.chosenArchitecture
   const stack = store.chosenStack
@@ -114,6 +139,9 @@ onMounted(load)
     <div v-else-if="!availability?.available" class="scaffold-state not-available">
       {{ availability?.message || 'Scaffolding isn\'t available for this stack yet.' }}
       See [[agent-directives-generation]] — coming soon.
+      <div class="scaffold-actions">
+        <button type="button" class="btn-primary skip-finish-btn" @click="skipFinish">Skip / Finish</button>
+      </div>
     </div>
 
     <template v-else-if="result">
@@ -133,10 +161,29 @@ onMounted(load)
           <pre class="scaffold-git-cmds">{{ result.git_commands.join('\n') }}</pre>
         </div>
       </div>
+      <div class="scaffold-actions">
+        <button type="button" class="btn-primary skip-finish-btn" @click="skipFinish">Finish</button>
+      </div>
     </template>
 
+    <div v-else-if="allPresent && !showAnyway" class="scaffold-state all-present" role="status">
+      <p>Everything's already in place — nothing to scaffold.</p>
+      <div class="scaffold-actions">
+        <button
+          ref="allPresentFinishBtn"
+          type="button"
+          class="btn-primary skip-finish-btn"
+          @click="skipFinish"
+        >Skip / Finish</button>
+        <button type="button" class="btn-secondary" @click="showAnyway = true">Scaffold anyway</button>
+      </div>
+    </div>
+
     <template v-else>
-      <div v-for="s in availability.steps" :key="s.key" class="scaffold-step-card">
+      <div v-if="!availability?.steps?.length" class="scaffold-state empty-steps">
+        No scaffolding steps are offered for this stack.
+      </div>
+      <div v-for="s in availability?.steps" :key="s.key" class="scaffold-step-card">
         <div class="scaffold-step-header">
           <label class="scaffold-step-select">
             <input
@@ -167,12 +214,15 @@ onMounted(load)
         </div>
       </div>
 
-      <button
-        type="button"
-        class="btn-primary run-scaffold-btn"
-        :disabled="running"
-        @click="submit"
-      >{{ running ? 'Running…' : 'Run scaffolding' }}</button>
+      <div class="scaffold-actions">
+        <button
+          type="button"
+          class="btn-primary run-scaffold-btn"
+          :disabled="running || !hasSelected"
+          @click="submit"
+        >{{ running ? 'Running…' : 'Run scaffolding' }}</button>
+        <button type="button" class="btn-primary skip-finish-btn" @click="skipFinish">Skip / Finish</button>
+      </div>
     </template>
   </div>
 </template>
@@ -195,11 +245,28 @@ onMounted(load)
   font-size: var(--text-sm);
 }
 .scaffold-state.error { color: #991b1b; }
-.scaffold-state.not-available {
+.scaffold-state.not-available,
+.scaffold-state.empty-steps {
   background: var(--color-surface);
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-md);
   line-height: 1.6;
+}
+.scaffold-state.all-present {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  line-height: 1.6;
+}
+.scaffold-state.all-present p {
+  margin: 0 0 var(--space-3);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.scaffold-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 .scaffold-step-card {
   display: flex;
@@ -318,4 +385,15 @@ onMounted(load)
 }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-primary:not(:disabled):hover { opacity: 0.88; }
+.btn-secondary {
+  padding: var(--space-2) var(--space-5);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: var(--color-border); }
 </style>
