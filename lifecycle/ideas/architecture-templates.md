@@ -1,19 +1,21 @@
 ---
 title: Architecture Catalog Shipping & Scaffolding Engine
 type: idea
-status: draft
+status: done
 lineage: architecture-templates
 created: "2026-05-15T13:10:31+10:00"
 priority: normal
+parent: lifecycle/ideas/kaos-control-devops-cli.md
 labels:
     - architecture
     - feature
     - onboarding
 release: KC-Release5
-parent: lifecycle/ideas/kaos-control-devops-cli.md
 ---
 
 # Architecture Catalog Shipping & Scaffolding Engine
+
+**This idea is an EPIC, many ideas came from this original concept**
 
 *(Retitled 2026-08-14 — was "Architecture Templates for Project Bootstrapping".
 The "named template bundles" framing was resolved away during rationalisation;
