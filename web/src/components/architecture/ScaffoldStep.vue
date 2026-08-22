@@ -25,7 +25,9 @@ const error = ref<string | null>(null)
 const running = ref(false)
 const result = ref<ScaffoldResult | null>(null)
 
-const stepState = reactive<Record<string, { useDefaults: boolean; values: Record<string, string> }>>({})
+const stepState = reactive<
+  Record<string, { selected: boolean; useDefaults: boolean; values: Record<string, string> }>
+>({})
 
 function defaultsFor(fields: { key: string; default_value: string }[] | undefined): Record<string, string> {
   return Object.fromEntries((fields ?? []).map((f) => [f.key, f.default_value]))
@@ -40,7 +42,8 @@ async function load(): Promise<void> {
   try {
     availability.value = await getScaffold(props.project, arch.slug, stack.slug)
     for (const s of availability.value.steps ?? []) {
-      stepState[s.key] = { useDefaults: true, values: defaultsFor(s.name_fields) }
+      // Default selection is empty on every load — the user opts in (OQ-4).
+      stepState[s.key] = { selected: false, useDefaults: true, values: defaultsFor(s.name_fields) }
     }
   } catch (e: unknown) {
     error.value = e instanceof ApiError ? e.message : 'Failed to load scaffolding options.'
@@ -57,15 +60,26 @@ function onFieldInput(stepKey: string, fieldKey: string, value: string): void {
 function decideForMe(stepKey: string): void {
   const step = availability.value?.steps?.find((s) => s.key === stepKey)
   if (!step) return
-  stepState[stepKey] = { useDefaults: true, values: defaultsFor(step.name_fields) }
+  stepState[stepKey] = {
+    selected: stepState[stepKey]?.selected ?? false,
+    useDefaults: true,
+    values: defaultsFor(step.name_fields),
+  }
 }
 
+function toggleSelected(stepKey: string, selected: boolean): void {
+  stepState[stepKey].selected = selected
+}
+
+// Emits a choice for every offered step, each with its real selected value —
+// the backend enforces selection, and sending all steps with explicit flags
+// is the OQ-2 "do these, not those" instruction (FR-11).
 const choices = computed<ScaffoldChoice[]>(() =>
   (availability.value?.steps ?? []).map((s) => ({
     step_key: s.key,
     values: stepState[s.key]?.values,
     use_defaults: stepState[s.key]?.useDefaults ?? true,
-    selected: true,
+    selected: stepState[s.key]?.selected ?? false,
   })),
 )
 
@@ -123,10 +137,22 @@ onMounted(load)
 
     <template v-else>
       <div v-for="s in availability.steps" :key="s.key" class="scaffold-step-card">
-        <h3 class="scaffold-step-title">{{ s.title }}</h3>
+        <div class="scaffold-step-header">
+          <label class="scaffold-step-select">
+            <input
+              type="checkbox"
+              :checked="stepState[s.key]?.selected"
+              @change="toggleSelected(s.key, ($event.target as HTMLInputElement).checked)"
+            />
+            <h3 class="scaffold-step-title">{{ s.title }}</h3>
+          </label>
+          <span class="presence-badge" :class="{ present: s.present }">
+            {{ s.present ? 'Already present' : 'Will be created' }}
+          </span>
+        </div>
         <p class="scaffold-step-desc">{{ s.description }}</p>
 
-        <div v-if="s.name_fields?.length" class="scaffold-fields">
+        <div v-if="s.name_fields?.length && stepState[s.key]?.selected" class="scaffold-fields">
           <label v-for="f in s.name_fields" :key="f.key" class="scaffold-field">
             {{ f.label }}
             <input
@@ -184,11 +210,38 @@ onMounted(load)
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
+.scaffold-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.scaffold-step-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
 .scaffold-step-title {
   margin: 0;
   font-size: var(--text-base);
   font-weight: 700;
   color: var(--color-text);
+}
+.presence-badge {
+  flex-shrink: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+.presence-badge.present {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
 }
 .scaffold-step-desc {
   margin: 0;
