@@ -1,7 +1,7 @@
 ---
 title: Provider Model for Agent API Endpoints
 type: idea
-status: draft
+status: approved
 lineage: provider-model-for-agents
 created: "2026-08-22T12:14:51+10:00"
 priority: normal
@@ -16,6 +16,11 @@ labels:
     - frontend
     - enhancement
     - medium-complexity
+release: KC-Release6
+rice_reach: 100
+rice_impact: 1
+rice_confidence: 75
+rice_effort: 0.2
 ---
 
 # Provider Model for Agent API Endpoints
