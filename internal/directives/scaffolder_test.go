@@ -10,7 +10,7 @@ import (
 )
 
 func TestScaffolder_Available_OffersAgentDirectivesStep(t *testing.T) {
-	steps, ok := Scaffolder{}.Available("modular-monolith", "go-vue")
+	steps, ok := Scaffolder{}.Available(t.TempDir(), "modular-monolith", "go-vue")
 	if !ok {
 		t.Fatal("expected agent-directives scaffolding to be available")
 	}

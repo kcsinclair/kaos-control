@@ -23,7 +23,7 @@ var _ architecture.Scaffolder = Scaffolder{}
 // Available offers the single agent-directives step for any chosen
 // architecture + stack. Generation reads the promoted stack profile from disk
 // (written by the wizard's commit), so it needs no naming choices up front.
-func (Scaffolder) Available(archSlug, stackSlug string) ([]architecture.ScaffoldStep, bool) {
+func (Scaffolder) Available(projectRoot, archSlug, stackSlug string) ([]architecture.ScaffoldStep, bool) {
 	return []architecture.ScaffoldStep{{
 		Key:   scaffoldStepKey,
 		Title: "Agent directives + devops pipelines",

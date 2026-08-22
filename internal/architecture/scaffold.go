@@ -19,6 +19,9 @@ type ScaffoldStep struct {
 	Title       string              `json:"title"`
 	Description string              `json:"description"`
 	NameFields  []ScaffoldNameField `json:"name_fields,omitempty"`
+	// Present reports that the artefact(s) this step would create already
+	// exist on disk; a run would report this step as skipped (FR-5).
+	Present bool `json:"present"`
 }
 
 // ScaffoldChoice is the caller's answer for one ScaffoldStep: explicit
@@ -28,6 +31,11 @@ type ScaffoldChoice struct {
 	StepKey     string            `json:"step_key"`
 	Values      map[string]string `json:"values,omitempty"`
 	UseDefaults bool              `json:"use_defaults"`
+	// Selected must be true for Run to scaffold this step. A choice with
+	// Selected == false — including the zero value / an absent field —
+	// means "do not scaffold this step" (FR-9/FR-11); a run with no
+	// selected step is a net no-op (FR-10).
+	Selected bool `json:"selected"`
 }
 
 // ScaffoldResult reports what a Scaffolder run actually did.
@@ -48,8 +56,10 @@ type ScaffoldResult struct {
 // never has a hard dependency on either landing (FR-17/FR-18).
 type Scaffolder interface {
 	// Available reports the scaffolding steps offered for archSlug/stackSlug,
-	// or ok=false if this combination isn't supported.
-	Available(archSlug, stackSlug string) (steps []ScaffoldStep, ok bool)
+	// or ok=false if this combination isn't supported. Available MUST be
+	// read-only (FR-5) and MUST resolve any path it inspects through
+	// internal/sandbox against projectRoot (FR-6).
+	Available(projectRoot, archSlug, stackSlug string) (steps []ScaffoldStep, ok bool)
 	// Run applies the chosen scaffolding steps under projectRoot.
 	Run(projectRoot, archSlug, stackSlug string, choices []ScaffoldChoice) (ScaffoldResult, error)
 }

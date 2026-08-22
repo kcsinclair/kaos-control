@@ -545,7 +545,7 @@ func (s *Server) handleGetWizardScaffold(w http.ResponseWriter, r *http.Request)
 
 	archSlug := r.URL.Query().Get("architecture")
 	stackSlug := r.URL.Query().Get("tech_stack")
-	steps, ok := scaffolder.Available(archSlug, stackSlug)
+	steps, ok := scaffolder.Available(p.Entry.Path, archSlug, stackSlug)
 	writeJSON(w, http.StatusOK, map[string]any{"available": ok, "steps": steps})
 }
 
