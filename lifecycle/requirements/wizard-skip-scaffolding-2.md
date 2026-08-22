@@ -235,6 +235,8 @@ required.
   this fixes the wire contract for [[architecture-templates]] and
   [[agent-directives-generation]].)
 
+> add an explicit selected/include boolean to ScaffoldChoice
+
 - **OQ-3** Should Skip / Finish be recorded anywhere (e.g. a note in
   `architecture-summary.md` that scaffolding was intentionally skipped on a
   retrofit), or is it a purely transient UI outcome with no persisted trace?
