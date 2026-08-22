@@ -1,7 +1,7 @@
 ---
 title: Architecture Wizard — First-Class "Skip Scaffolding / Finish" for Retrofits
 type: requirement
-status: blocked
+status: draft
 lineage: wizard-skip-scaffolding
 created: "2026-08-22T13:30:00+10:00"
 parent: lifecycle/ideas/wizard-skip-scaffolding.md
@@ -218,7 +218,7 @@ required.
 - [ ] No new artefact types, index entries, or watcher paths are added; a real
       run's files are picked up by the existing paths. *(NFR-5)* — see [[agent-directives-generation]]
 
-## Open Questions
+## Resolved Questions
 
 - **OQ-1** Presence granularity: is a per-**step** `present`/`partial` flag
   sufficient, or should the contract report presence per underlying **artefact**
@@ -246,3 +246,5 @@ required.
 - **OQ-4** For a partially-scaffolded project, should the default be "select only
   missing" (FR-8, assumed) or "select nothing, user opts in"? The former speeds
   the common finish-the-retrofit case; the latter is maximally conservative.
+
+> “select nothing, user opts in”
