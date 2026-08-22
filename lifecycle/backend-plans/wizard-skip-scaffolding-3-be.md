@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Wizard Skip Scaffolding / Selective Scaffolding (contract + directives reference impl)"
 type: plan-backend
-status: approved
+status: in-development
 lineage: wizard-skip-scaffolding
 parent: lifecycle/requirements/wizard-skip-scaffolding-2.md
 created: "2026-08-22T14:30:00+10:00"
