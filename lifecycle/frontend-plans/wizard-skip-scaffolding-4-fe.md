@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Wizard Skip / Finish + Selective Scaffolding (ScaffoldStep.vue)"
 type: plan-frontend
-status: draft
+status: approved
 lineage: wizard-skip-scaffolding
 parent: lifecycle/requirements/wizard-skip-scaffolding-2.md
 created: "2026-08-22T14:30:00+10:00"
