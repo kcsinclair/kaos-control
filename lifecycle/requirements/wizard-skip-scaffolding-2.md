@@ -241,6 +241,8 @@ required.
   `architecture-summary.md` that scaffolding was intentionally skipped on a
   retrofit), or is it a purely transient UI outcome with no persisted trace?
 
+> Transient
+
 - **OQ-4** For a partially-scaffolded project, should the default be "select only
   missing" (FR-8, assumed) or "select nothing, user opts in"? The former speeds
   the common finish-the-retrofit case; the latter is maximally conservative.
