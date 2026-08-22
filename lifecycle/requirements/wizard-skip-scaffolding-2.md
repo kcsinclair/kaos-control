@@ -225,15 +225,20 @@ required.
   (e.g. `CLAUDE.md` present but `GEMINI.md` missing within the directives step)?
   A step-level flag is simpler and matches the current `ScaffoldStep` shape; a
   finer grain gives clearer messaging on partial steps (FR-8).
+
+> per-step is sufficient
+
 - **OQ-2** Selection encoding: add an explicit `selected`/`include` boolean to
   `ScaffoldChoice`, or express "skip this" by **omitting** the step from
   `choices`? Omission is smaller but overloads "absent" to mean "skip"; an
   explicit flag is unambiguous but changes the struct. (Either satisfies FR-9;
   this fixes the wire contract for [[architecture-templates]] and
   [[agent-directives-generation]].)
+
 - **OQ-3** Should Skip / Finish be recorded anywhere (e.g. a note in
   `architecture-summary.md` that scaffolding was intentionally skipped on a
   retrofit), or is it a purely transient UI outcome with no persisted trace?
+
 - **OQ-4** For a partially-scaffolded project, should the default be "select only
   missing" (FR-8, assumed) or "select nothing, user opts in"? The former speeds
   the common finish-the-retrofit case; the latter is maximally conservative.
