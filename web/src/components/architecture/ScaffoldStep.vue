@@ -65,6 +65,7 @@ const choices = computed<ScaffoldChoice[]>(() =>
     step_key: s.key,
     values: stepState[s.key]?.values,
     use_defaults: stepState[s.key]?.useDefaults ?? true,
+    selected: true,
   })),
 )
 

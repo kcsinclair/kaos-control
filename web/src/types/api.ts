@@ -725,12 +725,18 @@ export interface ScaffoldStep {
   title: string
   description: string
   name_fields?: ScaffoldNameField[]
+  // Optional so a no-scaffolder / older response still type-checks;
+  // treated as false when absent (NFR-4). See
+  // lifecycle/frontend-plans/wizard-skip-scaffolding-4-fe.md Milestone 1.
+  present?: boolean
 }
 
 export interface ScaffoldChoice {
   step_key: string
   values?: Record<string, string>
   use_defaults: boolean
+  // Required — every emitted choice states its selection explicitly (OQ-2).
+  selected: boolean
 }
 
 export interface ScaffoldResult {
