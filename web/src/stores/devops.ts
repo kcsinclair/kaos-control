@@ -102,12 +102,28 @@ export const useDevOpsStore = defineStore('devops', () => {
     return pipelineHistory.value.get(slug)?.[0]
   }
 
+  /**
+   * Merge a freshly-fetched run list with whatever is already stored, instead of
+   * blind-overwriting. Guards against the REST GET (issued on mount, before any
+   * run has happened) resolving after a WS-driven `handleRunCompleted` update for
+   * the same slug and clobbering it with a stale/empty list.
+   */
+  function mergeRunHistory(fetched: RunHistoryRow[], existing: RunHistoryRow[]): RunHistoryRow[] {
+    const byRunId = new Map<string, RunHistoryRow>()
+    for (const row of existing) byRunId.set(row.run_id, row)
+    for (const row of fetched) byRunId.set(row.run_id, row)
+    return Array.from(byRunId.values())
+      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
+      .slice(0, 50)
+  }
+
   async function fetchPipelineHistory(project: string, slug: string, limit = 10): Promise<void> {
     historyLoading.value.set(slug, true)
     historyError.value.set(slug, null)
     try {
       const res = await devopsApi.listPipelineRuns(project, slug, limit)
-      pipelineHistory.value.set(slug, res.runs ?? [])
+      const existing = pipelineHistory.value.get(slug) ?? []
+      pipelineHistory.value.set(slug, mergeRunHistory(res.runs ?? [], existing))
     } catch (e: unknown) {
       historyError.value.set(slug, e instanceof Error ? e.message : 'Failed to load run history')
     } finally {
@@ -300,8 +316,7 @@ export const useDevOpsStore = defineStore('devops', () => {
       duration_ms: durationMs ?? null,
     }
     const existing = pipelineHistory.value.get(slug) ?? []
-    const deduped = [newRow, ...existing.filter((r) => r.run_id !== run.runId)]
-    pipelineHistory.value.set(slug, deduped.slice(0, 50))
+    pipelineHistory.value.set(slug, mergeRunHistory([newRow], existing))
 
     // Append terminal run-end line to flat log buffer
     if (slug === logPipelineSlug.value) {
