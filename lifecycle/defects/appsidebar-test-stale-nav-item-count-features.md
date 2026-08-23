@@ -1,7 +1,7 @@
 ---
 title: AppSidebar.test.ts hardcodes 16 nav items but sidebar now has 17 (missing Features entry)
 type: defect
-status: draft
+status: done
 lineage: appsidebar-test-stale-nav-item-count
 parent: tests/web/AppSidebar.test.ts
 labels:
@@ -55,3 +55,12 @@ AssertionError: expected 16 nav links on /p/testproject/artifacts: expected 17 t
 ## Fix guidance
 
 Add `'Features'` to `EXPECTED_NAV_LABELS` (line 51) in the position matching `AppSidebar.vue`'s nav array (between `'Roadmap'` and `'Architecture'`). Consider deriving the expected nav set from the component itself (or a shared fixture) rather than a hand-maintained literal array, to stop this recurring every time a nav item is added.
+
+## Resolution (done)
+
+Added `'Features'` to `EXPECTED_NAV_LABELS` (between `'Roadmap'` and `'Architecture'`,
+matching `AppSidebar.vue`) in `tests/web/AppSidebar.test.ts`. Full `tests/web`
+suite green (1548 tests). The recurrence-prevention suggestion — derive the
+expected nav set from the component instead of a hand-maintained literal — is
+deferred (see [[test-artifact-workflow-revision]] class of test-staleness); the
+minimal fix unblocks the suite for the release.

@@ -48,7 +48,7 @@ import { useUiStore } from '../../web/src/stores/ui'
 // (DevOps and Architecture Wizard are role-gated and absent in the default
 // test mount, which has no roles.)
 // ---------------------------------------------------------------------------
-const EXPECTED_NAV_LABELS = ['Dashboard', 'Feed', 'Reports', 'List', 'Board', 'Map', 'Roadmap', 'Architecture', 'Testing', 'Documentation', 'Agents', 'Queue', 'Scheduler', 'Config', 'Ollama', 'Parse Errors']
+const EXPECTED_NAV_LABELS = ['Dashboard', 'Feed', 'Reports', 'List', 'Board', 'Map', 'Roadmap', 'Features', 'Architecture', 'Testing', 'Documentation', 'Agents', 'Queue', 'Scheduler', 'Config', 'Ollama', 'Parse Errors']
 
 // ---------------------------------------------------------------------------
 // Module mocks — prevent real network I/O and WebSocket connections
