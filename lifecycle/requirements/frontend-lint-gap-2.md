@@ -1,7 +1,7 @@
 ---
 title: Frontend Lint Coverage Gap — ESLint & vue-tsc Integration
 type: requirement
-status: blocked
+status: draft
 lineage: frontend-lint-gap
 created: "2026-08-24T18:35:00+10:00"
 priority: medium
@@ -125,6 +125,6 @@ As a result, ~50 `.vue` Single File Components and ~100+ `.ts` files across `web
 - [ ] `make lint-frontend` executes in under 5 seconds locally. *(NFR-1)*
 - [ ] Related artifacts linked: [[frontend-lint-gap]], [[go-vue]], [[agent-directives-generation]].
 
-## Open Questions
+## Resolved Questions
 
-*None. All design questions raised in the originating idea [[frontend-lint-gap]] have been resolved (conservative ESLint Flat Config 9.x selected, test override block agreed, Prettier and Stylelint deferred/skipped, Biome deferred).*
+*No open questions. All design questions raised in the originating idea [[frontend-lint-gap]] have been resolved (conservative ESLint Flat Config 9.x selected, test override block agreed, Prettier and Stylelint deferred/skipped, Biome deferred).*
