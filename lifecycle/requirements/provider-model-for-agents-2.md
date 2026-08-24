@@ -1,7 +1,7 @@
 ---
 title: Provider Model for Agent API Endpoints
 type: requirement
-status: blocked
+status: draft
 lineage: provider-model-for-agents
 created: "2026-08-25T07:15:00+10:00"
 priority: normal
@@ -246,7 +246,7 @@ The server mounts the following authenticated routes under `/api/providers` (req
 
 ---
 
-## Open Questions
+## Resolved Questions
 
 1. **Handling Missing Providers in Cloned Projects:**
    - When a project is cloned to a new machine where app-level `~/.kaos-control/config.yaml` does not have a provider named in `lifecycle/config.yaml`, should the agent status indicator flag "Provider missing" in the UI, and should `config.ValidateProject` treat this as a warning or a blocking error?
@@ -257,3 +257,5 @@ The server mounts the following authenticated routes under `/api/providers` (req
 2. **Per-Provider Rate Limiting & Concurrency Caps:**
    - Should `ProviderConfig` optionally specify a `max_concurrent_requests` (e.g. for local servers with limited GPU VRAM or cloud accounts with low RPM tier limits)?
    - *Recommendation:* Defer per-provider concurrency caps to a follow-up enhancement; global `limits.max_concurrent_agents` and queue dispatching provide adequate protection for v1.
+
+> Proceed with recommendation.
