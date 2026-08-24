@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-08-25** — Milestone 7 — Provider Management REST API Endpoints ([[open-provider-support-3-be]]): Implement `/api/providers` CRUD, secret masking for API keys (NFR-1), `/api/providers/test` capability probe, and `/api/providers/{name}/models` model catalog discovery.
+
 - **2026-08-25** — Milestone 6 — Manager Integration & Driver Registration ([[open-provider-support-3-be]]): Register `openai-compatible` driver in `agent.Manager`, wire provider resolution and run parameter initialization in `StartRun`, and route legacy Ollama configurations through the OpenAI-compatible engine.
 
 - **2026-08-25** — Milestone 5 — OpenAI-Compatible Driver Core & Multi-turn Loop ([[open-provider-support-3-be]]): Implement `OpenAICompatibleDriver` satisfying `Driver` and `Process` interfaces, managing SSE streaming deltas, TTFT callbacks, multi-turn tool calling loops with iteration caps, and structured run logging.

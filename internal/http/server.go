@@ -200,6 +200,16 @@ func (s *Server) buildRouter() chi.Router {
 				r.Get("/{name}/models", s.handleOllamaModels)
 			})
 
+			// Provider management (app-level, not project-scoped)
+			r.Route("/providers", func(r chi.Router) {
+				r.Get("/", s.handleListProviders)
+				r.Post("/", s.handleCreateProvider)
+				r.Post("/test", s.handleTestProvider)
+				r.Put("/{name}", s.handleUpdateProvider)
+				r.Delete("/{name}", s.handleDeleteProvider)
+				r.Get("/{name}/models", s.handleProviderModels)
+			})
+
 			// Per-project routes
 			r.Route("/p/{project}", func(r chi.Router) {
 				r.Use(s.projectMiddleware)
