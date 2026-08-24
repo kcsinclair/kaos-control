@@ -1,7 +1,7 @@
 ---
 title: Agent Emits 'Open Questions' Header With No Questions, Triggering False Workflow Block
 type: defect
-status: draft
+status: approved
 lineage: agent-empty-open-questions-triggers-workflow-block
 created: "2026-08-24T19:26:13+10:00"
 priority: normal
