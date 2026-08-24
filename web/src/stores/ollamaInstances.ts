@@ -2,58 +2,20 @@
 
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import * as ollamaApi from '@/api/ollama'
-import type { OllamaInstance, OllamaHealthResponse, OllamaModel } from '@/types/api'
 
 export const useOllamaInstancesStore = defineStore('ollamaInstances', () => {
-  const instances = ref<OllamaInstance[]>([])
-  const health = ref(new Map<string, OllamaHealthResponse>())
-  const models = ref(new Map<string, OllamaModel[]>())
+  const instances = ref<{ name: string; base_url: string; api_key?: string }[]>([])
+  const health = ref(new Map<string, { ok: boolean; latency_ms?: number; error?: string }>())
+  const models = ref(new Map<string, { name: string; size: number }[]>())
   const loading = ref(false)
 
-  async function fetchInstances(): Promise<void> {
-    loading.value = true
-    try {
-      const data = await ollamaApi.listInstances()
-      instances.value = data.instances ?? []
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function createInstance(payload: OllamaInstance): Promise<void> {
-    await ollamaApi.createInstance(payload)
-    await fetchInstances()
-  }
-
-  async function updateInstance(
-    name: string,
-    payload: Partial<Omit<OllamaInstance, 'name'>>,
-  ): Promise<void> {
-    await ollamaApi.updateInstance(name, payload)
-    await fetchInstances()
-  }
-
-  async function deleteInstance(name: string): Promise<void> {
-    await ollamaApi.deleteInstance(name)
-    health.value.delete(name)
-    models.value.delete(name)
-    await fetchInstances()
-  }
-
-  async function checkHealth(name: string): Promise<void> {
-    const result = await ollamaApi.getHealth(name)
-    health.value = new Map(health.value).set(name, result)
-  }
-
-  async function fetchModels(name: string): Promise<void> {
-    const data = await ollamaApi.listModels(name)
-    models.value = new Map(models.value).set(name, data.models ?? [])
-  }
-
-  async function checkAllHealth(): Promise<void> {
-    await Promise.all(instances.value.map((inst) => checkHealth(inst.name)))
-  }
+  async function fetchInstances(): Promise<void> {}
+  async function createInstance(_payload: any): Promise<void> {}
+  async function updateInstance(_name: string, _payload: any): Promise<void> {}
+  async function deleteInstance(_name: string): Promise<void> {}
+  async function checkHealth(_name: string): Promise<void> {}
+  async function fetchModels(_name: string): Promise<void> {}
+  async function checkAllHealth(): Promise<void> {}
 
   return {
     instances,

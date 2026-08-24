@@ -2,15 +2,20 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { OllamaInstance } from '@/types/api'
+
+export interface LegacyOllamaInstance {
+  name: string
+  base_url: string
+  api_key?: string
+}
 
 const props = defineProps<{
-  initial?: OllamaInstance | null
+  initial?: LegacyOllamaInstance | null
   existingNames?: string[]
 }>()
 
 const emit = defineEmits<{
-  submit: [payload: OllamaInstance]
+  submit: [payload: LegacyOllamaInstance]
   cancel: []
 }>()
 

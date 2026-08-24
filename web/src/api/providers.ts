@@ -1,43 +1,71 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { api } from './client'
-import type { Provider, ProviderModel, ProviderProbeResult } from '@/types/api'
+import type { ProviderConfig, ProviderHealth, DiscoveredModel, ProviderProbeResult } from '@/types/api'
 
-export async function getProviders(): Promise<Provider[]> {
-  const data = await api.get<{ providers: Provider[] }>('/providers')
-  return data.providers ?? []
+export async function listProviders(): Promise<{ providers: ProviderConfig[] }> {
+  return api.get<{ providers: ProviderConfig[] }>('/providers')
 }
 
-export async function createProvider(provider: Provider): Promise<Provider> {
-  const data = await api.post<{ provider: Provider }>('/providers', provider)
-  return data.provider
+export async function getProvider(name: string): Promise<{ provider: ProviderConfig }> {
+  return api.get<{ provider: ProviderConfig }>(`/providers/${encodeURIComponent(name)}`)
+}
+
+export async function createProvider(data: ProviderConfig): Promise<{ provider: ProviderConfig }> {
+  return api.post<{ provider: ProviderConfig }>('/providers', data)
 }
 
 export async function updateProvider(
   name: string,
-  provider: Partial<Omit<Provider, 'name'>>,
-): Promise<Provider> {
-  const data = await api.put<{ provider: Provider }>(
+  data: Partial<ProviderConfig>,
+): Promise<{ provider: ProviderConfig }> {
+  return api.put<{ provider: ProviderConfig }>(
     `/providers/${encodeURIComponent(name)}`,
-    provider,
+    data,
   )
-  return data.provider
 }
 
-export async function saveProvider(provider: Provider, isEdit = false): Promise<Provider> {
+export async function deleteProvider(name: string): Promise<{ ok: boolean; deleted: string }> {
+  await api.delete<void>(`/providers/${encodeURIComponent(name)}`)
+  return { ok: true, deleted: name }
+}
+
+export async function getProviderHealth(name: string): Promise<ProviderHealth> {
+  const res = await api.get<{ healthy?: boolean; ok?: boolean; latency_ms?: number; error?: string }>(
+    `/providers/${encodeURIComponent(name)}/health`,
+  )
+  return {
+    ok: res.ok ?? res.healthy ?? false,
+    latency_ms: res.latency_ms,
+    error: res.error,
+  }
+}
+
+export async function getProviderModels(name: string): Promise<{ models: DiscoveredModel[] }> {
+  return api.get<{ models: DiscoveredModel[] }>(
+    `/providers/${encodeURIComponent(name)}/models`,
+  )
+}
+
+// ── Compatibility and convenience helpers ─────────────────────────────────
+
+export async function getProviders(): Promise<ProviderConfig[]> {
+  const data = await listProviders()
+  return data.providers ?? []
+}
+
+export async function saveProvider(provider: ProviderConfig, isEdit = false): Promise<ProviderConfig> {
   if (isEdit) {
-    return updateProvider(provider.name, {
+    const res = await updateProvider(provider.name, {
       base_url: provider.base_url,
       driver: provider.driver,
       api_key: provider.api_key,
       extra_headers: provider.extra_headers,
     })
+    return res.provider
   }
-  return createProvider(provider)
-}
-
-export async function deleteProvider(name: string): Promise<void> {
-  await api.delete<void>(`/providers/${encodeURIComponent(name)}`)
+  const res = await createProvider(provider)
+  return res.provider
 }
 
 export async function testConnection(payload: {
@@ -54,17 +82,15 @@ export async function testConnection(payload: {
   )
 }
 
-export async function listModels(name: string): Promise<ProviderModel[]> {
-  const data = await api.get<{ models: ProviderModel[] }>(
-    `/providers/${encodeURIComponent(name)}/models`,
-  )
+export async function listModels(name: string): Promise<DiscoveredModel[]> {
+  const data = await getProviderModels(name)
   return data.models ?? []
 }
 
 export async function testProvider(name: string, model?: string): Promise<ProviderProbeResult> {
   try {
     const testRes = await testConnection({ name, model })
-    let models: ProviderModel[] = []
+    let models: DiscoveredModel[] = []
     if (testRes.ok) {
       try {
         models = await listModels(name)
