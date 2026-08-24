@@ -1,7 +1,7 @@
 ---
 title: Provider Model for Agent API Endpoints
 type: requirement
-status: approved
+status: planning
 lineage: provider-model-for-agents
 created: "2026-08-25T07:15:00+10:00"
 priority: normal
