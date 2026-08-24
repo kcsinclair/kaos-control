@@ -5,6 +5,7 @@ status: clarifying
 lineage: llama-cpp-driver
 created: "2026-08-11T16:42:45+10:00"
 priority: normal
+parent: lifecycle/ideas/architecture-overview-view.md
 labels:
     - driver
     - agent
@@ -13,8 +14,8 @@ labels:
     - go
     - portability
     - feature
+    - open-provider-support
 release: KC-Release6
-parent: lifecycle/ideas/architecture-overview-view.md
 ---
 
 # llama.cpp Agent Driver for Local Models
