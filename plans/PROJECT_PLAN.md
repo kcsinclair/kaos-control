@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-08-25** — Milestone 1 — TypeScript Types & Provider API Client ([[open-provider-support-4-fe]]): Define TypeScript interfaces for Provider records, model discovery, and agent configuration extensions; implement provider management and probing API client module in web/src/api/providers.ts.
+
 - **2026-08-25** — Milestone 7 — Provider Management REST API Endpoints ([[open-provider-support-3-be]]): Implement `/api/providers` CRUD, secret masking for API keys (NFR-1), `/api/providers/test` capability probe, and `/api/providers/{name}/models` model catalog discovery.
 
 - **2026-08-25** — Milestone 6 — Manager Integration & Driver Registration ([[open-provider-support-3-be]]): Register `openai-compatible` driver in `agent.Manager`, wire provider resolution and run parameter initialization in `StartRun`, and route legacy Ollama configurations through the OpenAI-compatible engine.

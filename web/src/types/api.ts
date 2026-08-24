@@ -182,29 +182,73 @@ export interface LockRow {
   last_heartbeat: string
 }
 
+export interface Provider {
+  name: string
+  base_url: string
+  driver: string
+  api_key?: string
+  has_api_key?: boolean
+  extra_headers?: Record<string, string>
+}
+
+export interface ProviderModel {
+  id: string
+  name?: string
+  supports_tools?: boolean
+  supported_parameters?: string[]
+}
+
+export interface ProviderProbeResult {
+  ok: boolean
+  error?: string
+  latency_ms?: number
+  message?: string
+  models: ProviderModel[]
+}
+
+/** @deprecated use {@link Provider} — kept for backwards compatibility */
 export interface OllamaInstance {
   name: string
   base_url: string
   api_key?: string
 }
 
+/** @deprecated use {@link ProviderProbeResult} — kept for backwards compatibility */
 export interface OllamaHealthResponse {
   ok: boolean
   latency_ms?: number
   error?: string
 }
 
+/** @deprecated use {@link ProviderModel} — kept for backwards compatibility */
 export interface OllamaModel {
   name: string
   size: number
 }
 
+export interface AgentConfig {
+  name: string
+  role?: string | string[]
+  roles?: string[]
+  /** driver: 'ollama' | 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'inline' | 'claude-env' | 'openai-compatible' */
+  driver: string
+  provider?: string
+  model?: string
+  max_tool_iterations?: number
+  allowed_write_paths?: string[]
+  timeout_minutes?: number
+  git_identity?: { name?: string; email?: string }
+  prompt_templates?: Record<string, string>
+}
+
 export interface AgentSummary {
   name: string
   roles: string[]
-  /** driver: 'ollama' | 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'inline' | 'claude-env' */
+  /** driver: 'ollama' | 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'inline' | 'claude-env' | 'openai-compatible' */
   driver: string
+  provider?: string
   model?: string
+  max_tool_iterations?: number
   /** Non-secret base URL exposed by claude-env driver (BE-6); never auth_token. */
   base_url?: string
   active_status?: string
