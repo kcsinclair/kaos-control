@@ -1,7 +1,7 @@
 ---
 title: Local-Model Operability and UI Error Surfacing
 type: requirement
-status: draft
+status: approved
 lineage: local-model-operability
 parent: lifecycle/ideas/local-model-operability.md
 created: "2026-08-25T08:26:00+10:00"
