@@ -186,4 +186,6 @@ improvement — and Stage 2 can be its own follow-up commit.
 - **Prettier?** Out of scope for this idea. If we want format
   enforcement, file a separate `frontend-format-prettier` idea.
 
+> file a separate frontend-format-prettier idea
+
 - **Stylelint for `.vue` `<style>` blocks?** Probably overkill. Skip.
