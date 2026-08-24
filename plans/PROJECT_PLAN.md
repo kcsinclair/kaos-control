@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-08-25** — Milestone 6 — Manager Integration & Driver Registration ([[open-provider-support-3-be]]): Register `openai-compatible` driver in `agent.Manager`, wire provider resolution and run parameter initialization in `StartRun`, and route legacy Ollama configurations through the OpenAI-compatible engine.
+
 - **2026-08-25** — Milestone 5 — OpenAI-Compatible Driver Core & Multi-turn Loop ([[open-provider-support-3-be]]): Implement `OpenAICompatibleDriver` satisfying `Driver` and `Process` interfaces, managing SSE streaming deltas, TTFT callbacks, multi-turn tool calling loops with iteration caps, and structured run logging.
 
 - **2026-08-25** — Milestone 4 — Preflight Capability Verification & Token Delta Probing ([[open-provider-support-3-be]]): Implement preflight capability probe comparing prompt token deltas to hard-fail silent tool drops (Mode A), handle explicit 400 errors (Mode B), and check OpenRouter model parameter metadata (FR-5b).

@@ -44,12 +44,36 @@ func TestManager_DriverMapComplete(t *testing.T) {
 
 	required := []string{
 		"claude-code-cli", "claude-mediated", "claude-env",
-		"codex-cli", "ollama", "gemini", "gemini-cli", "shell-stub",
+		"codex-cli", "ollama", "openai-compatible", "gemini", "gemini-cli", "shell-stub",
 	}
 	for _, name := range required {
 		if _, ok := mgr.drivers[name]; !ok {
 			t.Errorf("driver %q missing from driver map", name)
 		}
+	}
+}
+
+// TestManager_OpenAICompatibleDriverWired verifies that StartRun with an openai-compatible
+// agent correctly routes to the driver.
+func TestManager_OpenAICompatibleDriverWired(t *testing.T) {
+	agents := []config.AgentConfig{
+		{
+			Name:     "openai-agent",
+			Roles:    []string{"analyst"},
+			Driver:   "openai-compatible",
+			Provider: "test-prov",
+			Model:    "gemma-4",
+			PromptTemplates: map[string]string{
+				"analyst": "test prompt {target_path}",
+			},
+		},
+	}
+	mgr, cleanup := newMinimalManager(t, agents, 4)
+	defer cleanup()
+
+	_, err := mgr.StartRun(context.Background(), "openai-agent", "lifecycle/ideas/test.md", "analyst", nil)
+	if err != nil && strings.Contains(err.Error(), "unknown driver") {
+		t.Errorf("StartRun returned 'unknown driver' for openai-compatible: %v", err)
 	}
 }
 

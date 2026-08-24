@@ -434,7 +434,7 @@ type Manager struct {
 
 // New creates an agent Manager. maxConcurrent caps parallel runs across the project.
 // logsDir is where per-run .log files are written; empty disables log files.
-// ollamaInstances is the app-level list of registered Ollama servers.
+// providers is the app-level list of registered LLM providers.
 // wf is the optional workflow engine used for type-aware transition validation.
 // agentCfg supplies the precheck timeout and bypass-permissions requirement.
 // serverAddr is the listen address used by the HTTP server (for hook-helper).
@@ -448,7 +448,7 @@ func New(
 	wf WorkflowEngine,
 	root string,
 	logsDir string,
-	ollamaInstances []config.OllamaInstance,
+	providers []config.Provider,
 	agentCfg config.AppAgentConfig,
 ) *Manager {
 	if maxConcurrent <= 0 {
@@ -486,15 +486,19 @@ func New(
 	hookDriver := &ClaudeHooksDriver{
 		StoreSecret: m.StoreRunSecret,
 	}
+	openAIDriver := &OpenAICompatibleDriver{
+		Providers: providers,
+	}
 	m.drivers = map[string]Driver{
-		"claude-code-cli": &ClaudeCodeDriver{},
-		"claude-mediated": hookDriver,
-		"claude-env":      &ClaudeEnvDriver{},
-		"codex-cli":       &CodexCLIDriver{},
-		"ollama":          &OllamaDriver{Instances: ollamaInstances},
-		"gemini":          &GeminiDriver{},
-		"gemini-cli":      &GeminiCliDriver{},
-		"shell-stub":      &ShellStubDriver{},
+		"claude-code-cli":   &ClaudeCodeDriver{},
+		"claude-mediated":   hookDriver,
+		"claude-env":        &ClaudeEnvDriver{},
+		"codex-cli":         &CodexCLIDriver{},
+		"openai-compatible": openAIDriver,
+		"ollama":            openAIDriver, // route legacy ollama agent driver through openai-compatible
+		"gemini":            &GeminiDriver{},
+		"gemini-cli":        &GeminiCliDriver{},
+		"shell-stub":        &ShellStubDriver{},
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
 	if err := idx.RecoverRunningRuns(); err != nil {
@@ -621,6 +625,11 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		relatedTestPath = targetPath
 	}
 
+	providerName := ag.Provider
+	if providerName == "" && ag.OllamaInstanceName != "" {
+		providerName = ag.OllamaInstanceName
+	}
+
 	run := Run{
 		RunID:              runID,
 		AgentName:          agentName,
@@ -637,6 +646,8 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		DoneOnSuccess:      ag.DoneOnSuccess,
 		TimeoutMinutes:     ag.TimeoutMinutes,
 		RelatedTestPath:    relatedTestPath,
+		ProviderName:       providerName,
+		MaxToolIterations:  ag.MaxToolIterations,
 		OllamaInstanceName: ag.OllamaInstanceName,
 		OllamaEndpoint:     ag.OllamaEndpoint,
 		ShellCommand:       ag.ShellCommand,
@@ -645,8 +656,8 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	}
 
 	// Wire TTFT recording for streaming drivers. The callback is called from
-	// the stdout goroutine; errors are logged but never abort the run.
-	if driverEmitsResultEvent(ag.Driver) {
+	// the stdout/stream goroutine; errors are logged but never abort the run.
+	if driverEmitsResultEvent(ag.Driver) || ag.Driver == "openai-compatible" || ag.Driver == "ollama" {
 		runIDCopy := runID
 		idx := m.idx
 		run.OnTTFT = func(ms int64) {
