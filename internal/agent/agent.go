@@ -97,6 +97,9 @@ type Run struct {
 	// claude-env driver fields (only used when Driver == "claude-env").
 	BaseURL   string // ANTHROPIC_BASE_URL override for the subprocess
 	AuthToken string // ANTHROPIC_AUTH_TOKEN override — secret, must never be logged or echoed
+	// OpenAI-compatible driver fields.
+	ProviderName      string // resolved from AgentConfig.Provider
+	MaxToolIterations int    // per-agent override; 0 = default (25)
 	// OnTTFT, when non-nil, is called once with the wall-clock milliseconds
 	// between process start and the first streamed content token. Set by the
 	// Manager for streaming drivers; nil for batch-mode drivers.
