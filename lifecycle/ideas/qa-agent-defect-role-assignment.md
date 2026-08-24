@@ -1,7 +1,7 @@
 ---
 title: QA Agent Should Assign Defects to the Correct Role
 type: idea
-status: draft
+status: approved
 lineage: qa-agent-defect-role-assignment
 created: "2026-04-28T10:30:51+10:00"
 priority: normal
