@@ -201,7 +201,11 @@ agent is a `{provider, model}` pair (see [[provider-model-for-agents]]).
 
 Some models emit tool calls in their **own syntax** and llama.cpp passes the
 text through as plain `content` instead of parsing it into `tool_calls`.
-Qwen3-Coder does exactly this. A driver that only reads `message.tool_calls`
+Qwen3-Coder does exactly this *through llama.cpp* — yet returns clean,
+OpenAI-shaped `tool_calls` through Ollama (verified 2026-08-24). Tool-call
+formatting is therefore a **server + chat-template property, not a model
+property**: the same model must be assumed to behave differently on different
+back ends, and the driver cannot key this behaviour off the model name. A driver that only reads `message.tool_calls`
 silently scores zero on those models — they appear to "not call tools" when in
 fact the server did not parse them.
 
@@ -223,6 +227,29 @@ fact the server did not parse them.
 Reference implementation: `benchmark/run_agent.py` in
 [`~/Code/agent-benchmark`](../ideas/llama-cpp-driver.md) (`parse_native_calls`,
 `NATIVE_FN` / `TOOL_CALL_JSON`).
+
+#### FR-5b: Preflight tool-capability verification
+
+Sending `tools` to an endpoint has **four** observed outcomes, and one of them is
+silent (see Prior art and measured evidence). The driver must not assume a
+successful HTTP 200 means the model saw the tools.
+
+- Before the first agent turn (or on the first turn), the driver performs a
+  **capability preflight**: it compares `usage.prompt_tokens` for the request
+  *with* `tools` against the same request *without* them. An **identical count
+  means the server silently dropped the tools** and the run cannot be an agent
+  run.
+- On a detected silent drop the run **fails fast** with a clear, actionable
+  terminal status naming the provider and model — never a hallucinated
+  "successful" answer.
+- An explicit server rejection (e.g. Ollama's HTTP 400
+  `"<model> does not support tools"`) is surfaced verbatim as the failure
+  reason; it is the *desirable* failure mode and must not be retried.
+- Where the provider advertises capability up front (OpenRouter exposes
+  `supported_parameters` containing `tools` on `/v1/models`), the driver
+  **should** consult it and refuse to start rather than discovering the problem
+  mid-run. This metadata is gateway-only; llama.cpp and Ollama do not expose it,
+  which is exactly why the token-delta preflight above is the general mechanism.
 
 #### FR-6: Streaming, progress, and TTFT
 
@@ -348,6 +375,29 @@ Consequences for this driver:
   with `max_tokens: 8192` and completed the suite. The 25 default set in
   Resolved Question 3 is therefore comfortably above the observed need; 12 is
   evidence that 25 is a safety cap rather than a working limit.
+
+**Live probe of both local servers (2026-08-24).** Sending an identical
+`read_file` tool definition produced **four distinct outcomes**:
+
+| Server · model | `tools` injected? | Outcome | Mode |
+|---|---|---|---|
+| llama.cpp `:7442` · `Dolphin3.0-Llama3.1-8B-Q4_K_M` | ❌ **dropped** (prompt_tokens 27 → 27) | confidently **hallucinated** the file as "Kubernetes Helm config"; `finish_reason: stop`; `tool_choice:"required"` also ignored | **A — silent drop (most dangerous: looks successful)** |
+| Ollama · `gemma3:12b` | — | HTTP 400 `"gemma3:12b does not support tools"` | **B — explicit rejection (safest failure)** |
+| Ollama · `qwen3-coder:30b` | ✅ +269 tokens | clean native `tool_calls` → `read_file({"path":"lifecycle/config.yaml"})` | **C — clean success** |
+| Ollama · `gemma4:26b` | ✅ +40 tokens | clean native `tool_calls` | **C — clean success** |
+| llama.cpp · Qwen3-Coder (per benchmark) | ✅ | native syntax passed through as `content` | **D — needs FR-5a recovery** |
+
+Two conclusions that shaped the requirements above:
+
+1. **The dangerous case is silent.** Mode A returns HTTP 200, `finish_reason:
+   stop`, and a fluent, entirely fabricated answer. Nothing in the response
+   distinguishes it from success — which is why FR-5b makes the `prompt_tokens`
+   delta a mandatory preflight rather than an optimisation.
+2. **Behaviour is per server+model, not per model.** Qwen3-Coder is mode D on
+   llama.cpp and mode C on Ollama. Capability must be *probed*, never inferred
+   from a model name — and the `:7442` llama.cpp deployment currently drops
+   `tools` despite `--jinja`, so it needs its template/router configuration
+   fixed before it can serve agent runs at all.
 
 **OpenRouter probe (2026-08-24, this analysis):** `/v1/models` returns 419
 models, **83% advertising `tools` in `supported_parameters`** — so capability is
