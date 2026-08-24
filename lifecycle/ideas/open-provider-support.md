@@ -15,6 +15,8 @@ labels:
     - feature
     - high-complexity
     - open-provider-support
+related_to:
+    - lifecycle/requirements/open-provider-support-2.md
 release: KC-Release6
 ---
 
@@ -100,9 +102,9 @@ This lineage is the parent for three requirements:
 
 1. **Provider abstraction + OpenAI-compatible agent driver** — the Provider
    entity (config, API, UI) plus the tool-calling driver. Absorbs the ideas
-   below. The tool-loop specification already exists in detail as
-   `requirements/open-provider-support-2.md` and is being generalised rather than
-   rewritten.
+   below. Specified in **[[open-provider-support-2]]** (the driver, tool-call
+   loop, and preflight) together with [[provider-model-for-agents]]'s
+   requirement (the Provider entity itself).
 2. **Provider failover** ([[switch-provider]]) — depends on 1. Cheaper than it
    looks: rate-limit/529 detection already ships
    ([[rate-limit-event-detection]], `extractRateLimitText` →
