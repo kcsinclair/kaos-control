@@ -14,6 +14,8 @@ labels:
     - config
     - feature
     - high-complexity
+release: KC-Release6
+parent: lifecycle/ideas/qa-agent-defect-role-assignment.md
 ---
 
 # Open Provider Support
