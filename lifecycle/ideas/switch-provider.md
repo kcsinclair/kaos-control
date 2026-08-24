@@ -14,6 +14,7 @@ labels:
     - feature
     - operability
     - ai-ml
+    - open-provider-support
 release: KC-Release6
 ---
 
