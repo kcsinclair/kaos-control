@@ -16,3 +16,4 @@ tests/e2e/test-results/
 .unison*
 .pnpm-store/
 **/__debug_bin*
+tests/web/test-results/
