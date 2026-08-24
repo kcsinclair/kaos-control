@@ -2,6 +2,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 
 const props = defineProps<{
@@ -9,6 +10,23 @@ const props = defineProps<{
   source?: string
   project: string
 }>()
+
+const router = useRouter()
+
+// Links inside the v-html'd markdown (wiki links, cross-references) are plain
+// <a> tags, so a click would trigger a full page reload. Intercept clicks on
+// internal ("/...") links and route them client-side; leave external links and
+// modified clicks (new-tab, etc.) to the browser.
+function onLinkClick(e: MouseEvent) {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+  const a = (e.target as HTMLElement | null)?.closest('a')
+  if (!a) return
+  const href = a.getAttribute('href') ?? ''
+  if (href.startsWith('/')) {
+    e.preventDefault()
+    router.push(href)
+  }
+}
 
 const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
 
@@ -48,7 +66,7 @@ const rendered = computed(() => {
 </script>
 
 <template>
-  <div class="md-preview" v-html="rendered" />
+  <div class="md-preview" v-html="rendered" @click="onLinkClick" />
 </template>
 
 <style scoped>

@@ -148,6 +148,9 @@ const selectedLabel = ref(store.filter.label ?? '')
 const selectedType = ref(store.filter.type ?? '')
 const selectedPriority = ref(store.filter.priority ?? '')
 const selectedRelease = ref(store.filter.release ?? '')
+// lineage is a URL-driven filter (no dropdown) — set by wiki links / cross-refs
+// that link to /artifacts?lineage=<slug>.
+const lineageFilter = ref(store.filter.lineage ?? '')
 const awaitingOnly = ref(false)
 const searchText = ref('')
 
@@ -161,6 +164,7 @@ function applyFilters() {
     type: selectedType.value || undefined,
     priority: selectedPriority.value || undefined,
     release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
+    lineage: lineageFilter.value || undefined,
     q: searchText.value || undefined,
     awaiting_answers: awaitingOnly.value || undefined,
     limit: 0,
@@ -180,6 +184,7 @@ function resetFilters() {
   selectedType.value = ''
   selectedPriority.value = ''
   selectedRelease.value = ''
+  lineageFilter.value = ''
   awaitingOnly.value = false
   searchText.value = ''
   applyFilters()
@@ -270,6 +275,7 @@ function initFiltersFromQuery() {
   if (typeof q.label === 'string') selectedLabel.value = q.label
   if (typeof q.priority === 'string') selectedPriority.value = q.priority
   if (typeof q.release === 'string') selectedRelease.value = q.release
+  if (typeof q.lineage === 'string') lineageFilter.value = q.lineage
   if (typeof q.q === 'string') searchText.value = q.q
   if (q.awaiting === '1') awaitingOnly.value = true
 }
@@ -395,6 +401,10 @@ onMounted(async () => {
         />
         <span class="toggle-text">Awaiting my answers</span>
       </label>
+      <span v-if="lineageFilter" class="lineage-chip">
+        lineage: {{ lineageFilter }}
+        <button class="lineage-chip-x" aria-label="Clear lineage filter" @click="lineageFilter = ''; applyFilters()">×</button>
+      </span>
       <button class="btn-ghost" @click="resetFilters">Reset</button>
     </div>
 
@@ -610,6 +620,25 @@ onMounted(async () => {
   padding: var(--space-3) var(--space-6);
   border-bottom: 1px solid var(--color-border);
   flex-wrap: wrap;
+}
+.lineage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  padding: 2px 6px 2px 8px;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  color: var(--color-accent);
+}
+.lineage-chip-x {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
 }
 .filter-bar select {
   padding: var(--space-1) var(--space-2);
