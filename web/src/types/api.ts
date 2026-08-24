@@ -317,6 +317,24 @@ export interface AgentRunRow {
   denied_tool_calls?: DenialRecord[] | null
   /** Populated for test-runner agent runs. */
   run_summary?: RunSummary
+  /** Time to first token in milliseconds (recorded for streaming drivers). */
+  ttft_ms?: number | null
+}
+
+export interface ToolCallRecord {
+  id: string
+  name: string
+  arguments: string
+  result?: string
+  is_recovered?: boolean
+}
+
+export interface RunTurn {
+  turn_number: number
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content?: string
+  tool_calls?: ToolCallRecord[]
+  is_recovered?: boolean
 }
 
 export interface ArtifactFilter {

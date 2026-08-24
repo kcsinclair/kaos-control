@@ -10,6 +10,8 @@ import RunFailureBanner from './RunFailureBanner.vue'
 import RawLogModal from './RawLogModal.vue'
 import TestRunSummaryCard from './TestRunSummaryCard.vue'
 import { useAgentsStore } from '@/stores/agents'
+import { parseLogTurns } from '@/lib/logParser'
+import type { RunTurn } from '@/types/api'
 
 const props = defineProps<{
   project: string
@@ -24,6 +26,35 @@ const error = ref<string | null>(null)
 
 const runResult = ref<RunResult | null>(null)
 const resultLoading = ref(false)
+
+const parsedTurns = ref<RunTurn[]>([])
+const expandedTurns = ref<Set<number>>(new Set())
+const expandedToolArgs = ref<Set<string>>(new Set())
+const expandedToolResults = ref<Set<string>>(new Set())
+
+function toggleTurn(turnNum: number) {
+  if (expandedTurns.value.has(turnNum)) {
+    expandedTurns.value.delete(turnNum)
+  } else {
+    expandedTurns.value.add(turnNum)
+  }
+}
+
+function toggleToolArg(id: string) {
+  if (expandedToolArgs.value.has(id)) {
+    expandedToolArgs.value.delete(id)
+  } else {
+    expandedToolArgs.value.add(id)
+  }
+}
+
+function toggleToolRes(id: string) {
+  if (expandedToolResults.value.has(id)) {
+    expandedToolResults.value.delete(id)
+  } else {
+    expandedToolResults.value.add(id)
+  }
+}
 
 const TERMINAL_RUN_STATUSES = new Set(['done', 'failed', 'killed', 'killed-timeout'])
 const showRawLog = ref(false)
@@ -68,6 +99,17 @@ onMounted(async () => {
         runResult.value = result
         resultLoading.value = false
       }
+    }
+
+    try {
+      const log = await agentsApi.getRunLog(props.project, props.runId)
+      if (log) {
+        parsedTurns.value = parseLogTurns(log)
+        // Auto-expand last 3 turns
+        parsedTurns.value.slice(-3).forEach((t) => expandedTurns.value.add(t.turn_number))
+      }
+    } catch {
+      // Non-fatal if log file is not yet created or unreadable
     }
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load run'
@@ -162,7 +204,7 @@ function handleKeydown(e: KeyboardEvent) {
             <div class="rdm-field-value rdm-mono">{{ run.target_path }}</div>
           </div>
 
-          <!-- Timestamps -->
+          <!-- Timestamps & TTFT -->
           <div class="rdm-row">
             <div class="rdm-field">
               <div class="rdm-field-label">Started at</div>
@@ -174,7 +216,7 @@ function handleKeydown(e: KeyboardEvent) {
             </div>
           </div>
 
-          <!-- Status / Exit code -->
+          <!-- Status / Exit code / TTFT -->
           <div class="rdm-row">
             <div class="rdm-field">
               <div class="rdm-field-label">Status</div>
@@ -188,6 +230,11 @@ function handleKeydown(e: KeyboardEvent) {
               <div class="rdm-field-label">Exit code</div>
               <div class="rdm-field-value">{{ run.exit_code != null ? run.exit_code : '—' }}</div>
             </div>
+          </div>
+
+          <div v-if="run.ttft_ms != null" class="rdm-field">
+            <div class="rdm-field-label">Time To First Token (TTFT)</div>
+            <div class="rdm-field-value">{{ run.ttft_ms }} ms</div>
           </div>
 
           <!-- Denial notice for done runs with denials (on_denial: continue) -->
@@ -217,6 +264,72 @@ function handleKeydown(e: KeyboardEvent) {
             v-if="run.run_summary"
             :summary="run.run_summary"
           />
+
+          <!-- Multi-turn timeline -->
+          <div v-if="parsedTurns.length" class="rdm-field">
+            <div class="rdm-field-label">Turn Timeline ({{ parsedTurns.length }} turn{{ parsedTurns.length === 1 ? '' : 's' }})</div>
+            <div class="rdm-turns-timeline">
+              <div
+                v-for="turn in parsedTurns"
+                :key="turn.turn_number"
+                class="rdm-turn-card"
+                :class="{ 'rdm-turn-card--recovered': turn.is_recovered }"
+              >
+                <div class="rdm-turn-header" @click="toggleTurn(turn.turn_number)">
+                  <span class="rdm-turn-badge" :data-role="turn.role">
+                    {{ turn.role === 'system' ? 'System Prompt' : turn.role === 'user' ? 'User Prompt' : `Turn ${turn.turn_number}` }}
+                  </span>
+                  <span v-if="turn.is_recovered" class="rdm-recovery-badge" title="Recovered native tool-call (FR-5a)">
+                    ⚡ Recovered Call
+                  </span>
+                  <span v-if="turn.tool_calls?.length" class="rdm-turn-tool-count">
+                    {{ turn.tool_calls.length }} tool call{{ turn.tool_calls.length === 1 ? '' : 's' }}
+                  </span>
+                  <span class="rdm-turn-toggle">{{ expandedTurns.has(turn.turn_number) ? '▲' : '▼' }}</span>
+                </div>
+
+                <div v-if="expandedTurns.has(turn.turn_number)" class="rdm-turn-body">
+                  <!-- Assistant reasoning or text -->
+                  <div v-if="turn.content" class="rdm-turn-content">
+                    <pre class="rdm-turn-text">{{ turn.content }}</pre>
+                  </div>
+
+                  <!-- Tool calls in this turn -->
+                  <div v-if="turn.tool_calls?.length" class="rdm-tool-calls-list">
+                    <div
+                      v-for="tc in turn.tool_calls"
+                      :key="tc.id"
+                      class="rdm-tool-card"
+                    >
+                      <div class="rdm-tool-header">
+                        <span class="rdm-tool-name">{{ tc.name }}</span>
+                        <span class="rdm-tool-id">{{ tc.id }}</span>
+                        <span v-if="tc.is_recovered" class="rdm-tool-rec-tag" title="Recovered native format (FR-5a)">FR-5a</span>
+                      </div>
+
+                      <!-- Arguments -->
+                      <div v-if="tc.arguments" class="rdm-tool-block">
+                        <div class="rdm-tool-block-header" @click="toggleToolArg(tc.id)">
+                          <span>Arguments</span>
+                          <span class="rdm-tool-toggle">{{ expandedToolArgs.has(tc.id) ? '▲' : '▼' }}</span>
+                        </div>
+                        <pre v-if="expandedToolArgs.has(tc.id)" class="rdm-code-block">{{ tc.arguments }}</pre>
+                      </div>
+
+                      <!-- Result -->
+                      <div v-if="tc.result" class="rdm-tool-block">
+                        <div class="rdm-tool-block-header" @click="toggleToolRes(tc.id)">
+                          <span>Output</span>
+                          <span class="rdm-tool-toggle">{{ expandedToolResults.has(tc.id) ? '▲' : '▼' }}</span>
+                        </div>
+                        <pre v-if="expandedToolResults.has(tc.id)" class="rdm-code-block rdm-code-block--res">{{ tc.result }}</pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Permission events -->
           <div v-if="agentsStore.permissionEvents.get(props.runId)?.length" class="rdm-field">
@@ -473,5 +586,166 @@ function handleKeydown(e: KeyboardEvent) {
 .rdm-btn-log:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Turn Timeline */
+.rdm-turns-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.rdm-turn-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.rdm-turn-card--recovered {
+  border-color: #f59e0b;
+}
+.rdm-turn-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+.rdm-turn-header:hover {
+  background: var(--color-bg);
+}
+.rdm-turn-badge {
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 11px;
+  background: var(--color-border);
+  color: var(--color-text);
+}
+.rdm-turn-badge[data-role="system"] {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+.rdm-turn-badge[data-role="user"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+.rdm-turn-badge[data-role="assistant"] {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.rdm-recovery-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.rdm-turn-tool-count {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+.rdm-turn-toggle {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+.rdm-turn-body {
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--color-bg);
+}
+.rdm-turn-content {
+  font-size: 12px;
+}
+.rdm-turn-text {
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  color: var(--color-text);
+}
+.rdm-tool-calls-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.rdm-tool-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.rdm-tool-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+.rdm-tool-name {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+.rdm-tool-id {
+  font-family: monospace;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+.rdm-tool-rec-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #b45309;
+}
+.rdm-tool-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rdm-tool-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+}
+.rdm-tool-block-header:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.rdm-tool-toggle {
+  font-size: 9px;
+}
+.rdm-code-block {
+  font-family: monospace;
+  font-size: 11px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  margin: 0;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.rdm-code-block--res {
+  color: #86efac;
 }
 </style>

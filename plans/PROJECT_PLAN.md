@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-08-25** — Milestone 4 — Multi-turn Live Progress & Tool-Call Timeline ([[open-provider-support-4-fe]]): Implement multi-turn log parser, interactive turn timeline in RunDetailModal with collapsible tool arguments and outputs, FR-5a recovery badges, and TTFT display.
+
 - **2026-08-25** — Milestone 3 — Agent Configuration & Launcher Updates ([[open-provider-support-4-fe]]): Add OpenAI-compatible driver support, provider selector, model picker, and max tool iterations config to agent editor and panels with emerald badge styling.
 
 - **2026-08-25** — Milestone 2 — Provider Settings View & Pinia Store ([[open-provider-support-4-fe]]): Create centralized Provider Settings view with presets, API key reveal toggle, header editor, connection testing, and Pinia provider store replacing OllamaSettingsView.

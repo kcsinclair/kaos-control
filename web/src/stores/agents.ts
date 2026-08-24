@@ -5,16 +5,80 @@ import { ref, computed } from 'vue'
 import * as agentsApi from '@/api/agents'
 import type { AgentRunRow, AgentSummary, RunResult, PermissionDecision, QuotaStatusPayload } from '@/types/api'
 
+function formatRawProgressLine(raw: string): string {
+  const trimmed = raw.trim()
+  if (trimmed.startsWith('# turn')) {
+    return `▸ ${trimmed.replace(/^#\s*/, '')}`
+  }
+  if (trimmed.startsWith('# executing tool')) {
+    return `▸ ${trimmed.replace(/^#\s*/, '')}`
+  }
+  if (trimmed.startsWith('# tool result')) {
+    return `  ✓ ${trimmed.replace(/^#\s*/, '')}`
+  }
+  if (trimmed.includes('recovered') && trimmed.includes('native tool call')) {
+    return `⚡ ${trimmed.replace(/^#\s*/, '')}`
+  }
+  if (trimmed.startsWith('# event: completed')) {
+    return '▸ completed'
+  }
+  if (trimmed.startsWith('# error:')) {
+    return `✗ ${trimmed.replace(/^# error:\s*/, '')}`
+  }
+  if (trimmed.startsWith('# error executing tool:')) {
+    return `✗ ${trimmed.replace(/^# error executing tool:\s*/, '')}`
+  }
+  if (trimmed.startsWith('#')) {
+    return '' // Suppress meta header comments from live progress window
+  }
+  return raw
+}
+
 // formatEvent renders a parsed stream event as a single line of text suitable
 // for the live progress panel.
 //
-// Handles two event shapes:
-//   - Claude Code stream-json: type in {system, assistant, user, result}
-//   - Ollama driver:           type in {started, output, completed, error}
+// Handles event shapes from:
+//   - OpenAI-compatible driver: choices with deltas/tool_calls/finish_reason
+//   - Claude Code stream-json:  type in {system, assistant, user, result}
+//   - Ollama driver:            type in {started, output, completed, error}
 //
 // Falls back to raw JSON on any unknown shape so we never silently drop info.
 function formatEvent(ev: Record<string, unknown>): string {
   const type = ev.type as string | undefined
+
+  // ── OpenAI-compatible streaming & multi-turn events ─────────────────────
+  if (Array.isArray(ev.choices)) {
+    const choices = ev.choices as Array<{
+      delta?: {
+        role?: string
+        content?: string
+        tool_calls?: Array<{
+          index?: number
+          id?: string
+          type?: string
+          function?: { name?: string; arguments?: string }
+        }>
+      }
+      finish_reason?: string | null
+    }>
+    if (choices.length > 0) {
+      const choice = choices[0]
+      if (choice.delta?.tool_calls?.length) {
+        const calls = choice.delta.tool_calls.map((tc) => {
+          const fn = tc.function?.name ?? 'tool'
+          const args = tc.function?.arguments ?? ''
+          return `▸ tool call: ${fn}${args ? ' ' + args : ''}`
+        })
+        return calls.join('  ')
+      }
+      if (choice.delta?.content) {
+        return choice.delta.content.trimEnd()
+      }
+      if (choice.finish_reason) {
+        return `▸ finish: ${choice.finish_reason}`
+      }
+    }
+  }
 
   // ── Ollama driver events ────────────────────────────────────────────────
   if (type === 'started') return '▸ started'
@@ -22,7 +86,10 @@ function formatEvent(ev: Record<string, unknown>): string {
     const text = typeof ev.text === 'string' ? ev.text : ''
     return text.trimEnd()
   }
-  if (type === 'completed') return '▸ completed'
+  if (type === 'completed') {
+    const resp = typeof ev.response === 'string' ? ev.response : ''
+    return resp ? `▸ completed: ${resp}` : '▸ completed'
+  }
   if (type === 'error') {
     const msg = typeof ev.message === 'string' ? ev.message : JSON.stringify(ev)
     return `✗ ${msg}`
@@ -187,11 +254,13 @@ export const useAgentsStore = defineStore('agents', () => {
     } else if (type === 'agent.progress') {
       const event = payload.event as Record<string, unknown> | undefined
       const raw = (payload.raw as string) ?? (payload.line as string) ?? ''
-      const formatted = event ? formatEvent(event) : raw
-      if (!progressLines.value.has(runId)) progressLines.value.set(runId, [])
-      const lines = progressLines.value.get(runId)!
-      lines.push(formatted)
-      if (lines.length > 200) lines.splice(0, lines.length - 200)
+      const formatted = event ? formatEvent(event) : formatRawProgressLine(raw)
+      if (formatted) {
+        if (!progressLines.value.has(runId)) progressLines.value.set(runId, [])
+        const lines = progressLines.value.get(runId)!
+        lines.push(formatted)
+        if (lines.length > 200) lines.splice(0, lines.length - 200)
+      }
     } else if (type === 'agent.permission') {
       const ev = payload as unknown as PermissionDecision
       if (!permissionEvents.value.has(runId)) permissionEvents.value.set(runId, [])
@@ -216,6 +285,7 @@ export const useAgentsStore = defineStore('agents', () => {
           observed_permission_mode: (payload.observed_permission_mode as string | null | undefined) ?? null,
           remediation: (payload.remediation as string[] | null | undefined) ?? null,
           denied_tool_calls: (payload.denied_tool_calls as import('@/types/api').DenialRecord[] | null | undefined) ?? null,
+          ttft_ms: typeof payload.ttft_ms === 'number' ? payload.ttft_ms : runs.value[idx].ttft_ms,
         }
       }
       // Cache the result payload if provided by the backend.
