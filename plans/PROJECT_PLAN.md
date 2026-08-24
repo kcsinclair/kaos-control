@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-08-25** — Milestone 3 — Agent Configuration & Launcher Updates ([[open-provider-support-4-fe]]): Add OpenAI-compatible driver support, provider selector, model picker, and max tool iterations config to agent editor and panels with emerald badge styling.
+
 - **2026-08-25** — Milestone 2 — Provider Settings View & Pinia Store ([[open-provider-support-4-fe]]): Create centralized Provider Settings view with presets, API key reveal toggle, header editor, connection testing, and Pinia provider store replacing OllamaSettingsView.
 
 - **2026-08-25** — Milestone 1 — TypeScript Types & Provider API Client ([[open-provider-support-4-fe]]): Define TypeScript interfaces for Provider records, model discovery, and agent configuration extensions; implement provider management and probing API client module in web/src/api/providers.ts.

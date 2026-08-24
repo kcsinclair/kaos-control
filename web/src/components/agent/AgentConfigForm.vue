@@ -3,14 +3,17 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useOllamaInstancesStore } from '@/stores/ollamaInstances'
+import { useProvidersStore } from '@/stores/providers'
 import type { AgentSummary, OllamaInstance } from '@/types/api'
 
 // The shape the form emits — mirrors the YAML agent config fields.
 export interface AgentFormData {
   name: string
   roles: string[]
-  driver: 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'ollama' | 'gemini' | 'gemini-cli'
+  driver: 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'ollama' | 'gemini' | 'gemini-cli' | 'openai-compatible'
   model: string
+  provider?: string
+  max_tool_iterations?: number
   ollama_instance: string
   ollama_endpoint: 'chat' | 'generate'
   allowed_write_paths: string[]
@@ -32,17 +35,20 @@ const emit = defineEmits<{
 }>()
 
 const ollamaStore = useOllamaInstancesStore()
+const providersStore = useProvidersStore()
 
 const isEdit = !!props.initial
 
 // ── Form state ─────────────────────────────────────────────────────────────
 const name = ref(props.initial?.name ?? '')
 const selectedRoles = ref<string[]>(props.initial?.roles ?? [])
-type DriverChoice = 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'ollama' | 'gemini' | 'gemini-cli'
+type DriverChoice = 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'ollama' | 'gemini' | 'gemini-cli' | 'openai-compatible'
 const driver = ref<DriverChoice>(
   (props.initial?.driver ?? 'claude-code-cli') as DriverChoice,
 )
 const model = ref(props.initial?.model ?? '')
+const provider = ref(props.initial?.provider ?? '')
+const maxToolIterations = ref<number | undefined>(props.initial?.max_tool_iterations)
 const ollamaInstance = ref(props.initial?.ollama_instance ?? '')
 const ollamaEndpoint = ref<'chat' | 'generate'>(
   (props.initial?.ollama_endpoint ?? 'chat') as 'chat' | 'generate',
@@ -77,6 +83,36 @@ function removeTemplateRole(role: string) {
 
 const errors = ref<Record<string, string>>({})
 
+// ── Provider model list ───────────────────────────────────────────────────
+const providerModels = computed(() => {
+  if (!provider.value) return []
+  return providersStore.models.get(provider.value) ?? []
+})
+
+const providerHealth = computed(() => {
+  if (!provider.value) return null
+  return providersStore.probeResults.get(provider.value) ?? null
+})
+
+const fetchingProviderModels = ref(false)
+
+async function loadProviderModels() {
+  if (!provider.value) return
+  fetchingProviderModels.value = true
+  try {
+    await providersStore.fetchModels(provider.value)
+  } finally {
+    fetchingProviderModels.value = false
+  }
+}
+
+watch(provider, (val) => {
+  if (val) loadProviderModels()
+  if (driver.value === 'openai-compatible' && !isEdit) {
+    model.value = ''
+  }
+})
+
 // ── Ollama model list ───────────────────────────────────────────────────────
 const instanceModels = computed(() => {
   if (!ollamaInstance.value) return []
@@ -106,12 +142,23 @@ watch(ollamaInstance, (val) => {
 })
 
 onMounted(async () => {
-  if (!ollamaStore.instances.length) {
-    await ollamaStore.fetchInstances()
-  }
-  await ollamaStore.checkAllHealth()
-  if (ollamaInstance.value) {
-    await loadModels()
+  try {
+    if (!ollamaStore.instances.length) {
+      await ollamaStore.fetchInstances().catch(() => {})
+    }
+    await ollamaStore.checkAllHealth().catch(() => {})
+    if (ollamaInstance.value) {
+      await loadModels().catch(() => {})
+    }
+
+    if (!providersStore.providers.length) {
+      await providersStore.fetchProviders().catch(() => {})
+    }
+    if (provider.value) {
+      await loadProviderModels().catch(() => {})
+    }
+  } catch {
+    // Non-fatal if stores fail to load on mount in test environment
   }
 })
 
@@ -122,7 +169,10 @@ function validate(): boolean {
   else if (!isEdit && props.existingNames?.includes(name.value.trim()))
     e.name = 'An agent with this name already exists.'
   if (!selectedRoles.value.length) e.roles = 'At least one role is required.'
-  if (driver.value === 'ollama') {
+  if (driver.value === 'openai-compatible') {
+    if (!provider.value) e.provider = 'Select a provider.'
+    if (!model.value.trim()) e.model = 'Model is required for OpenAI-compatible driver.'
+  } else if (driver.value === 'ollama') {
     if (!ollamaInstance.value) e.ollama_instance = 'Select an Ollama instance.'
     if (!model.value.trim()) e.model = 'Model is required for Ollama driver.'
   } else if (
@@ -144,6 +194,8 @@ function handleSubmit() {
     roles: selectedRoles.value,
     driver: driver.value,
     model: model.value.trim(),
+    provider: driver.value === 'openai-compatible' ? provider.value : undefined,
+    max_tool_iterations: maxToolIterations.value && !isNaN(maxToolIterations.value) && maxToolIterations.value > 0 ? maxToolIterations.value : undefined,
     ollama_instance: ollamaInstance.value,
     ollama_endpoint: ollamaEndpoint.value,
     allowed_write_paths: allowedWritePathsRaw.value
@@ -241,6 +293,10 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
         <label class="acf-radio-label">
           <input v-model="driver" type="radio" value="gemini-cli" />
           Gemini CLI (agy)
+        </label>
+        <label class="acf-radio-label">
+          <input v-model="driver" type="radio" value="openai-compatible" />
+          OpenAI-Compatible
         </label>
       </div>
     </div>
@@ -360,6 +416,87 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
             /api/generate
           </label>
         </div>
+      </div>
+    </template>
+
+    <!-- OpenAI-compatible provider + model + max iterations -->
+    <template v-if="driver === 'openai-compatible'">
+      <div class="acf-field">
+        <label class="acf-label" for="acf-provider">Provider</label>
+        <div class="acf-select-row">
+          <select
+            id="acf-provider"
+            v-model="provider"
+            class="acf-select"
+            :class="{ 'acf-input--error': errors.provider }"
+          >
+            <option value="">— select provider —</option>
+            <option v-for="p in providersStore.providers" :key="p.name" :value="p.name">
+              {{ p.name }} ({{ p.base_url }})
+            </option>
+          </select>
+          <span
+            v-if="provider"
+            class="health-dot"
+            :class="`health-dot--${providerHealth?.ok === true ? 'ok' : providerHealth?.ok === false ? 'error' : 'unknown'}`"
+            :title="providerHealth?.ok ? `Connected (${providerHealth.latency_ms ?? 0} ms)` : (providerHealth?.error ?? 'Unknown')"
+          />
+        </div>
+        <p v-if="errors.provider" class="acf-error">{{ errors.provider }}</p>
+        <div v-if="providersStore.providers.length === 0" class="acf-hint">
+          No providers registered. Add one in the <em>Providers</em> settings page.
+        </div>
+      </div>
+
+      <div class="acf-field">
+        <label class="acf-label" for="acf-provider-model">Model</label>
+        <div class="acf-select-row">
+          <select
+            v-if="providerModels.length"
+            id="acf-provider-model"
+            v-model="model"
+            class="acf-select"
+            :class="{ 'acf-input--error': errors.model }"
+          >
+            <option value="">— select model —</option>
+            <option v-for="m in providerModels" :key="m.id" :value="m.id">
+              {{ m.name && m.name !== m.id ? `${m.name} (${m.id})` : m.id }}
+            </option>
+          </select>
+          <input
+            v-else
+            id="acf-provider-model"
+            v-model="model"
+            class="acf-input"
+            :class="{ 'acf-input--error': errors.model }"
+            type="text"
+            placeholder="e.g. gemma-4-26B-A4B-it-UD-Q8_K_XL or qwen3-coder:30b"
+            autocomplete="off"
+          />
+          <button
+            type="button"
+            class="btn-refresh"
+            :disabled="!provider || fetchingProviderModels"
+            title="Refresh models from provider"
+            @click="loadProviderModels"
+          >{{ fetchingProviderModels ? '…' : '↻' }}</button>
+        </div>
+        <p v-if="errors.model" class="acf-error">{{ errors.model }}</p>
+      </div>
+
+      <div class="acf-field">
+        <label class="acf-label" for="acf-max-iterations">
+          Max Tool Iterations
+          <span class="acf-optional">(default: 25)</span>
+        </label>
+        <input
+          id="acf-max-iterations"
+          v-model.number="maxToolIterations"
+          class="acf-input acf-input--short"
+          type="number"
+          min="1"
+          placeholder="25"
+        />
       </div>
     </template>
 

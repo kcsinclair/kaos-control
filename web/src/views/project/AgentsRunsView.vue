@@ -34,6 +34,7 @@ function agentDriver(agentName: string, agents: AgentSummary[]): string {
   if (a.driver === 'codex-cli') return 'Codex'
   if (a.driver === 'gemini') return 'Gemini'
   if (a.driver === 'gemini-cli') return 'Gemini CLI'
+  if (a.driver === 'openai-compatible') return 'OpenAI Compatible'
   return a.driver
 }
 
@@ -106,6 +107,13 @@ async function handleAgentFormSubmit(data: AgentFormData) {
       else delete entry.ollama_instance
       if (data.ollama_endpoint !== 'chat') entry.ollama_endpoint = data.ollama_endpoint
       else delete entry.ollama_endpoint
+    }
+
+    if (data.driver === 'openai-compatible') {
+      if (data.provider) entry.provider = data.provider
+      else delete entry.provider
+      if (data.max_tool_iterations) entry.max_tool_iterations = data.max_tool_iterations
+      else delete entry.max_tool_iterations
     }
 
     if (data.allowed_write_paths.length) entry.allowed_write_paths = data.allowed_write_paths
@@ -631,6 +639,7 @@ onMounted(() => {
 .driver-badge[data-driver="codex-cli"] { background: #dcfce7; color: #166534; }
 .driver-badge[data-driver="gemini"] { background: #e0e7ff; color: #4338ca; }
 .driver-badge[data-driver="gemini-cli"] { background: #ccfbf1; color: #0f766e; }
+.driver-badge[data-driver="openai-compatible"] { background: #d1fae5; color: #065f46; }
 /* Queue pause banner */
 .queue-pause-banner {
   display: flex;

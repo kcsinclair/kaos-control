@@ -15,6 +15,8 @@ export const useProvidersStore = defineStore('providers', () => {
     loading.value = true
     try {
       providers.value = await providersApi.getProviders()
+    } catch {
+      providers.value = []
     } finally {
       loading.value = false
     }
@@ -49,12 +51,22 @@ export const useProvidersStore = defineStore('providers', () => {
   }
 
   async function probeProvider(name: string, model?: string): Promise<ProviderProbeResult> {
-    const result = await providersApi.testProvider(name, model)
-    probeResults.value = new Map(probeResults.value).set(name, result)
-    if (result.models && result.models.length > 0) {
-      models.value = new Map(models.value).set(name, result.models)
+    try {
+      const result = await providersApi.testProvider(name, model)
+      probeResults.value = new Map(probeResults.value).set(name, result)
+      if (result.models && result.models.length > 0) {
+        models.value = new Map(models.value).set(name, result.models)
+      }
+      return result
+    } catch (err: unknown) {
+      const fallback: ProviderProbeResult = {
+        ok: false,
+        error: err instanceof Error ? err.message : 'Probe failed',
+        models: [],
+      }
+      probeResults.value = new Map(probeResults.value).set(name, fallback)
+      return fallback
     }
-    return result
   }
 
   async function fetchModels(name: string): Promise<ProviderModel[]> {
@@ -68,7 +80,7 @@ export const useProvidersStore = defineStore('providers', () => {
   }
 
   async function probeAll(): Promise<void> {
-    await Promise.all(providers.value.map((p) => probeProvider(p.name)))
+    await Promise.all(providers.value.map((p) => probeProvider(p.name).catch(() => null)))
   }
 
   return {

@@ -33,6 +33,7 @@ function driverLabel(agent: AgentSummary): string {
   if (agent.driver === 'codex-cli') return 'Codex'
   if (agent.driver === 'gemini') return 'Gemini'
   if (agent.driver === 'gemini-cli') return 'Gemini CLI'
+  if (agent.driver === 'openai-compatible') return 'OpenAI Compatible'
   if (agent.driver === 'inline') return ''
   return agent.driver
 }
@@ -128,6 +129,7 @@ function runningCount(agent: AgentSummary): number {
         <span v-if="agent.observe_only" class="panel-observe-badge">observe</span>
       </div>
       <span v-if="agent.model" class="panel-model">{{ agent.model }}</span>
+      <span v-if="agent.driver === 'openai-compatible' && agent.provider" class="panel-model">{{ agent.provider }}</span>
       <span v-if="isOllama(agent) && agent.ollama_instance" class="panel-model">{{ agent.ollama_instance }}</span>
       <span v-if="isInline(agent)" class="panel-inline-label">Externally driven</span>
       <!-- Ready-count badge (only for agents with active_status) -->
@@ -317,6 +319,10 @@ function runningCount(agent: AgentSummary): number {
 .panel-driver[data-driver="gemini-cli"] {
   background: #ccfbf1;
   color: #0f766e;
+}
+.panel-driver[data-driver="openai-compatible"] {
+  background: #d1fae5;
+  color: #065f46;
 }
 .panel-driver-row {
   display: flex;
