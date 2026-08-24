@@ -5,13 +5,14 @@ status: draft
 lineage: openrouter-llm-integration
 created: "2026-05-09T17:47:34+10:00"
 priority: normal
+parent: lifecycle/ideas/frontend-lint-gap.md
 labels:
     - feature
     - integration
     - agent
     - backend
+    - open-provider-support
 release: KC-Release6
-parent: lifecycle/ideas/frontend-lint-gap.md
 ---
 
 # OpenRouter LLM Integration
