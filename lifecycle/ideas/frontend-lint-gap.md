@@ -5,6 +5,7 @@ status: blocked
 lineage: frontend-lint-gap
 created: "2026-07-14T19:34:44+10:00"
 priority: medium
+parent: lifecycle/ideas/architecture-overview-view.md
 labels:
     - frontend
     - tooling
@@ -13,7 +14,6 @@ release: KC-Release6
 assignees:
     - role: product-owner
       who: agent
-parent: lifecycle/ideas/architecture-overview-view.md
 ---
 
 # Frontend Lint Coverage Gap
@@ -163,14 +163,21 @@ improvement — and Stage 2 can be its own follow-up commit.
   recommended, or strict (`typescript-eslint/strict-type-checked`)?
   Strict catches more but requires more upfront cleanup; conservative
   catches the high-value classes only. Lean conservative for v1.
+
+> eslint:recommended + @vue/eslint-config-typescript
+
 - **Run on `tests/web/` too?** Pros: same correctness floor. Cons: test
   files need looser rules. Probably yes with an override block.
+
 - **Pre-commit hook?** Catches things earlier but slows the loop.
   Defer — `make lint` is already the contract.
+
 - **Biome alternative?** Faster (Rust), single binary, fewer plugins.
   But the Vue support story is weaker than `eslint-plugin-vue`'s, and
   we have a lot of `.vue` files. Stick with ESLint for now; revisit
   in 12 months.
+
 - **Prettier?** Out of scope for this idea. If we want format
   enforcement, file a separate `frontend-format-prettier` idea.
+
 - **Stylelint for `.vue` `<style>` blocks?** Probably overkill. Skip.
