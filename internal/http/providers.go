@@ -400,7 +400,7 @@ func (s *Server) handleProviderModels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &http.Client{Timeout: 15 * time.Second}
+	client := &http.Client{Timeout: 5 * time.Second}
 	modelsURL := prov.BaseURL + "/v1/models"
 	if strings.HasSuffix(prov.BaseURL, "/v1") {
 		modelsURL = prov.BaseURL + "/models"

@@ -345,6 +345,87 @@ func TestProviders_TestAndModels(t *testing.T) {
 		}
 	}
 
+	// Test GET /api/providers/{name}/health -> healthy: true
+	{
+		r := chi.NewRouter()
+		r.Get("/api/providers/{name}/health", s.handleProviderHealth)
+
+		req := authedRequest(http.MethodGet, "/api/providers/mock-prov/health", nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("GET /api/providers/mock-prov/health status %d: %s", w.Code, w.Body.String())
+		}
+		var healthResp map[string]any
+		_ = json.Unmarshal(w.Body.Bytes(), &healthResp)
+		if healthResp["healthy"] != true {
+			t.Errorf("expected healthy: true, got: %+v", healthResp)
+		}
+	}
+
+	// Test GET /api/providers/{name}/health -> healthy: false when down
+	{
+		s.appCfg.Providers = append(s.appCfg.Providers, config.Provider{
+			Name:    "down-prov",
+			BaseURL: "http://127.0.0.1:54321", // non-existent server
+			Driver:  "openai-compatible",
+		})
+
+		r := chi.NewRouter()
+		r.Get("/api/providers/{name}/health", s.handleProviderHealth)
+
+		req := authedRequest(http.MethodGet, "/api/providers/down-prov/health", nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("GET /api/providers/down-prov/health status %d: %s", w.Code, w.Body.String())
+		}
+		var healthResp map[string]any
+		_ = json.Unmarshal(w.Body.Bytes(), &healthResp)
+		if healthResp["healthy"] != false {
+			t.Errorf("expected healthy: false for down provider, got: %+v", healthResp)
+		}
+	}
+
+	// Test GET /api/providers/{name}/models with extra_headers
+	{
+		var receivedHeader string
+		tsWithHeader := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			receivedHeader = r.Header.Get("X-Custom-Header")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"data": []map[string]any{
+					{"id": "custom-model", "name": "Custom Model"},
+				},
+			})
+		}))
+		defer tsWithHeader.Close()
+
+		s.appCfg.Providers = append(s.appCfg.Providers, config.Provider{
+			Name:    "header-prov",
+			BaseURL: tsWithHeader.URL,
+			Driver:  "openai-compatible",
+			ExtraHeaders: map[string]string{
+				"X-Custom-Header": "custom-value",
+			},
+		})
+
+		r := chi.NewRouter()
+		r.Get("/api/providers/{name}/models", s.handleProviderModels)
+
+		req := authedRequest(http.MethodGet, "/api/providers/header-prov/models", nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("GET /api/providers/header-prov/models status %d: %s", w.Code, w.Body.String())
+		}
+		if receivedHeader != "custom-value" {
+			t.Errorf("expected X-Custom-Header to be 'custom-value', got %q", receivedHeader)
+		}
+	}
+
 	// Test GET /api/providers/{name}/models
 	{
 		r := chi.NewRouter()
