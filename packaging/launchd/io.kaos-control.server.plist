@@ -53,6 +53,17 @@
   <dict>
     <key>LOG_LEVEL</key>
     <string>info</string>
+    <!-- `zsh -lc` is a LOGIN but NON-interactive shell, so it does NOT source
+         ~/.zshrc — where `brew shellenv` / nvm setup usually live. The build
+         (go + pnpm + node) needs its toolchain dirs on PATH explicitly:
+           - /opt/homebrew/bin ............ go, git (Homebrew)
+           - ~/.nvm/.../node/<ver>/bin .... node, pnpm, npm (nvm)  ⚠ version-pinned
+           - ~/go/bin ..................... go tools (e.g. staticcheck for `make lint`)
+         macOS path_helper appends these to the system paths.
+         ⚠ The nvm path is pinned to a node version — update it after a node
+         upgrade (or make kaos-control-serve.sh source nvm instead; see below). -->
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/Users/keith/.nvm/versions/node/v24.14.0/bin:/Users/keith/go/bin:/Users/keith/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     <!-- <key>KC_BUILD_WEB</key><string>0</string>  uncomment to skip pnpm build -->
   </dict>
 

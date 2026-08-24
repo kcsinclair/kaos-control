@@ -17,6 +17,17 @@ CONFIG="${KC_CONFIG:-$HOME/.kaos-control/config.yaml}"
 BUILD_WEB="${KC_BUILD_WEB:-1}"          # set 0 to skip the (slow) pnpm SPA build
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 
+# node/pnpm are usually provided by nvm, which initialises in ~/.zshrc — NOT
+# sourced by this login-but-non-interactive shell. Source nvm and activate the
+# default node so the SPA build finds node/pnpm at whatever version is current
+# (avoids hard-pinning a node version in the plist PATH). Best-effort.
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  # shellcheck disable=SC1091
+  . "$NVM_DIR/nvm.sh" >/dev/null 2>&1 || true
+  nvm use default >/dev/null 2>&1 || true
+fi
+
 trap 'echo "=== kaos-control launchd: startup FAILED (see above); launchd will retry ==="' ERR
 
 cd "$REPO"
