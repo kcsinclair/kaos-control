@@ -1,7 +1,7 @@
 ---
 title: Architecture Wizard — first-class "Skip scaffolding" for already-set-up projects
 type: idea
-status: clarifying
+status: planning
 lineage: wizard-skip-scaffolding
 created: "2026-08-21T11:20:00+10:00"
 priority: normal
