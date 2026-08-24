@@ -119,6 +119,16 @@ func (s *Server) handleCreateRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if p.Git != nil {
+		authorName, authorEmail := p.Git.ResolveIdentity()
+		msg := fmt.Sprintf("create(releases): %s", rel.FilePath)
+		if _, err := p.Git.AddAndCommit([]string{rel.FilePath}, msg, authorName, authorEmail); err == nil {
+			if summary, err := p.Git.Status(); err == nil {
+				p.Hub.Broadcast(hub.Event{Type: "git.status", Payload: summary})
+			}
+		}
+	}
+
 	p.Hub.Broadcast(hub.Event{Type: "release.created", Payload: map[string]any{"release": rel}})
 	p.Hub.Broadcast(hub.Event{Type: "release.changed", Payload: map[string]any{"release": rel}})
 	writeJSON(w, http.StatusCreated, map[string]any{"release": rel})
@@ -186,6 +196,18 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	current, err := store.Get(p.Entry.Name, id)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+	if current == nil {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
+		return
+	}
+	oldSlug := current.Slug
+	oldFilePath := "lifecycle/releases/" + oldSlug + ".md"
+
 	var req updateReleaseRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
@@ -238,15 +260,6 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid updated_at: "+err.Error()))
 			return
 		}
-		current, err := store.Get(p.Entry.Name, id)
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-			return
-		}
-		if current == nil {
-			writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
-			return
-		}
 		if clientUpdatedAt.Before(current.UpdatedAt) {
 			writeJSON(w, http.StatusConflict, apiError("conflict", "release was modified"))
 			return
@@ -269,13 +282,32 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 
 	// If the name changed, propagate the rename to all assigned artifacts.
 	renamed := 0
-	if oldName != rel.Name && p.Git != nil {
-		n, propErr := release.PropagateRename(p.Entry.Path, oldName, rel.Name, p.Idx, p.Git, p.Hub)
-		if propErr != nil {
-			// Log but do not fail the request; the DB update succeeded.
-			_ = propErr
+	if oldName != rel.Name {
+		if p.Git != nil {
+			extraPaths := []string{rel.FilePath}
+			if oldSlug != rel.Slug {
+				extraPaths = append(extraPaths, oldFilePath)
+			}
+			n, propErr := release.PropagateRename(p.Entry.Path, oldName, rel.Name, p.Idx, p.Git, p.Hub, extraPaths...)
+			if propErr != nil {
+				// Log but do not fail the request; the DB update succeeded.
+				_ = propErr
+			}
+			renamed = n
+			if summary, err := p.Git.Status(); err == nil {
+				p.Hub.Broadcast(hub.Event{Type: "git.status", Payload: summary})
+			}
+		} else {
+			_ = rewriteReleaseField(p.Entry.Path, oldName, rel.Name, p.Idx, p.Hub)
 		}
-		renamed = n
+	} else if p.Git != nil {
+		authorName, authorEmail := p.Git.ResolveIdentity()
+		msg := fmt.Sprintf("update: %s", rel.FilePath)
+		if _, err := p.Git.AddAndCommit([]string{rel.FilePath}, msg, authorName, authorEmail); err == nil {
+			if summary, err := p.Git.Status(); err == nil {
+				p.Hub.Broadcast(hub.Event{Type: "git.status", Payload: summary})
+			}
+		}
 	}
 
 	p.Hub.Broadcast(hub.Event{Type: "release.updated", Payload: map[string]any{
@@ -313,6 +345,17 @@ func (s *Server) handleDeleteRelease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	current, err := store.Get(p.Entry.Name, id)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+		return
+	}
+	if current == nil {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
+		return
+	}
+	relFilePath := "lifecycle/releases/" + current.Slug + ".md"
+
 	// Optional: reassign artifacts to another release before deleting.
 	reassignTo := r.URL.Query().Get("reassign_to")
 	if reassignTo != "" {
@@ -335,17 +378,6 @@ func (s *Server) handleDeleteRelease(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Get current release name so we can find its artifacts.
-		current, err := store.Get(p.Entry.Name, id)
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-			return
-		}
-		if current == nil {
-			writeJSON(w, http.StatusNotFound, apiError("not_found", "release not found"))
-			return
-		}
-
 		// Propagate the rename from current.Name → target.Name on disk.
 		if p.Git != nil {
 			_, _ = release.PropagateRename(p.Entry.Path, current.Name, target.Name, p.Idx, p.Git, p.Hub)
@@ -363,6 +395,16 @@ func (s *Server) handleDeleteRelease(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
 		return
+	}
+
+	if p.Git != nil {
+		authorName, authorEmail := p.Git.ResolveIdentity()
+		msg := fmt.Sprintf("delete: %s", relFilePath)
+		if _, err := p.Git.AddAndCommit([]string{relFilePath}, msg, authorName, authorEmail); err == nil {
+			if summary, err := p.Git.Status(); err == nil {
+				p.Hub.Broadcast(hub.Event{Type: "git.status", Payload: summary})
+			}
+		}
 	}
 
 	p.Hub.Broadcast(hub.Event{Type: "release.deleted", Payload: map[string]any{
