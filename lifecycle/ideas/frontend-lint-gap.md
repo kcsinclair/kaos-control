@@ -174,6 +174,8 @@ improvement — and Stage 2 can be its own follow-up commit.
 - **Pre-commit hook?** Catches things earlier but slows the loop.
   Defer — `make lint` is already the contract.
 
+> Defer
+
 - **Biome alternative?** Faster (Rust), single binary, fewer plugins.
   But the Vue support story is weaker than `eslint-plugin-vue`'s, and
   we have a lot of `.vue` files. Stick with ESLint for now; revisit
