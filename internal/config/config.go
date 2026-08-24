@@ -16,17 +16,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Provider is one registered LLM provider shared across all projects.
-type Provider struct {
+// ProviderConfig is one registered LLM provider shared across all projects.
+type ProviderConfig struct {
 	Name         string            `yaml:"name" json:"name"`
 	BaseURL      string            `yaml:"base_url" json:"base_url"`
-	Driver       string            `yaml:"driver" json:"driver"` // "openai-compatible"
+	Driver       string            `yaml:"driver" json:"driver"` // defaults to "openai-compatible"
 	APIKey       string            `yaml:"api_key,omitempty" json:"api_key,omitempty"`
 	ExtraHeaders map[string]string `yaml:"extra_headers,omitempty" json:"extra_headers,omitempty"`
 }
 
+// Provider is an alias for ProviderConfig for backwards compatibility.
+type Provider = ProviderConfig
+
 // OllamaInstance is one registered Ollama server shared across all projects.
-// Deprecated: use Provider with driver="openai-compatible".
+// Deprecated: use ProviderConfig with driver="openai-compatible".
 type OllamaInstance struct {
 	Name    string `yaml:"name" json:"name"`
 	BaseURL string `yaml:"base_url" json:"base_url"`
@@ -40,7 +43,7 @@ type App struct {
 	ProjectsDir     string           `yaml:"projects_dir"`
 	Limits          LimitsConfig     `yaml:"limits"`
 	DataDir         string           `yaml:"data_dir"` // where app DBs live; defaults to projects_dir/../data
-	Providers       []Provider       `yaml:"providers,omitempty"`
+	Providers       []ProviderConfig `yaml:"providers,omitempty"`
 	OllamaInstances []OllamaInstance `yaml:"ollama_instances,omitempty"`
 	Agent           AppAgentConfig   `yaml:"agent"`
 }
@@ -104,6 +107,29 @@ func defaultApp() App {
 	}
 }
 
+// migrateLegacyOllamaInstances converts legacy ollama_instances to providers
+// with driver "openai-compatible" and persists the updated config to disk.
+func migrateLegacyOllamaInstances(cfg *App, path string) error {
+	if len(cfg.OllamaInstances) > 0 && len(cfg.Providers) == 0 {
+		for _, inst := range cfg.OllamaInstances {
+			cfg.Providers = append(cfg.Providers, ProviderConfig{
+				Name:    inst.Name,
+				BaseURL: inst.BaseURL,
+				Driver:  "openai-compatible",
+				APIKey:  inst.APIKey,
+			})
+		}
+		cfg.OllamaInstances = nil
+		if path != "" {
+			if err := SaveApp(path, *cfg); err != nil {
+				return fmt.Errorf("saving migrated app config to %s: %w", path, err)
+			}
+		}
+		slog.Info("app config: migrated legacy ollama instances to providers", "count", len(cfg.Providers))
+	}
+	return nil
+}
+
 // LoadApp reads the app-level config file, applying defaults for missing fields.
 // If the file does not exist it is created with the defaults before returning.
 func LoadApp(path string) (*App, error) {
@@ -116,6 +142,9 @@ func LoadApp(path string) (*App, error) {
 	if err == nil {
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
 			return nil, fmt.Errorf("parsing app config: %w", err)
+		}
+		if err := migrateLegacyOllamaInstances(&cfg, path); err != nil {
+			return nil, fmt.Errorf("migrating app config: %w", err)
 		}
 	} else {
 		// File does not exist: apply path-relative defaults and persist so the
@@ -159,13 +188,12 @@ type appRaw struct {
 	ProjectsDir     string           `yaml:"projects_dir"`
 	Limits          LimitsConfig     `yaml:"limits"`
 	DataDir         string           `yaml:"data_dir"`
-	Providers       []Provider       `yaml:"providers,omitempty"`
+	Providers       []ProviderConfig `yaml:"providers,omitempty"`
 	OllamaInstances []OllamaInstance `yaml:"ollama_instances,omitempty"`
 	Agent           AppAgentConfig   `yaml:"agent"`
 }
 
-// UnmarshalYAML implements yaml.Unmarshaler for App, migrating legacy
-// ollama_instances in-memory to equivalent Provider records.
+// UnmarshalYAML implements yaml.Unmarshaler for App.
 func (a *App) UnmarshalYAML(value *yaml.Node) error {
 	var raw appRaw
 	if err := value.Decode(&raw); err != nil {
@@ -179,20 +207,20 @@ func (a *App) UnmarshalYAML(value *yaml.Node) error {
 	a.Providers = raw.Providers
 	a.OllamaInstances = raw.OllamaInstances
 	a.Agent = raw.Agent
+	return nil
+}
 
-	seen := make(map[string]bool, len(a.Providers))
-	for _, p := range a.Providers {
-		seen[p.Name] = true
+// validateProviderSlug checks that name matches slug format (^[a-z0-9-]+$, 2–64 characters).
+func validateProviderSlug(name string) error {
+	if len(name) < 2 {
+		return fmt.Errorf("name must be at least 2 characters")
 	}
-	for _, inst := range a.OllamaInstances {
-		if !seen[inst.Name] {
-			a.Providers = append(a.Providers, Provider{
-				Name:    inst.Name,
-				BaseURL: inst.BaseURL,
-				Driver:  "openai-compatible",
-				APIKey:  inst.APIKey,
-			})
-			seen[inst.Name] = true
+	if len(name) > 64 {
+		return fmt.Errorf("name must be at most 64 characters")
+	}
+	for _, c := range name {
+		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+			return fmt.Errorf("name must contain only lowercase letters, digits, and hyphens")
 		}
 	}
 	return nil
@@ -256,7 +284,7 @@ func validateApp(cfg *App) error {
 	}
 	for _, inst := range cfg.OllamaInstances {
 		if !seenProviders[inst.Name] {
-			cfg.Providers = append(cfg.Providers, Provider{
+			cfg.Providers = append(cfg.Providers, ProviderConfig{
 				Name:    inst.Name,
 				BaseURL: inst.BaseURL,
 				Driver:  "openai-compatible",
@@ -271,6 +299,9 @@ func validateApp(cfg *App) error {
 		if p.Name == "" {
 			return fmt.Errorf("providers[%d]: name must not be empty", i)
 		}
+		if err := validateProviderSlug(p.Name); err != nil {
+			return fmt.Errorf("providers[%d] %q: %w", i, p.Name, err)
+		}
 		if seen[p.Name] {
 			return fmt.Errorf("providers: duplicate name %q", p.Name)
 		}
@@ -284,6 +315,9 @@ func validateApp(cfg *App) error {
 		}
 		if p.Driver == "" {
 			return fmt.Errorf("providers[%d] %q: driver must not be empty", i, p.Name)
+		}
+		if p.Driver != "openai-compatible" {
+			return fmt.Errorf("providers[%d] %q: unrecognized driver %q", i, p.Name, p.Driver)
 		}
 	}
 	return nil

@@ -1381,6 +1381,52 @@ providers:
 		}
 	})
 
+	t.Run("invalid slug name rejected (uppercase)", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: "Invalid_Name"
+    base_url: http://localhost:7442
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "lowercase letters, digits, and hyphens") {
+			t.Fatalf("expected slug format error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid slug name rejected (too short)", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: "a"
+    base_url: http://localhost:7442
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "at least 2 characters") {
+			t.Fatalf("expected length error, got: %v", err)
+		}
+	})
+
 	t.Run("empty base_url rejected", func(t *testing.T) {
 		dir := t.TempDir()
 		cfgPath := filepath.Join(dir, "config.yaml")
@@ -1478,6 +1524,19 @@ ollama_instances:
 	p := cfg.Providers[0]
 	if p.Name != "legacy-ollama" || p.BaseURL != "http://localhost:11434" || p.Driver != "openai-compatible" || p.APIKey != "secret-key" {
 		t.Errorf("migrated provider mismatch: %+v", p)
+	}
+
+	// Verify persistence to disk
+	diskBytes, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatalf("reading persisted config: %v", err)
+	}
+	diskStr := string(diskBytes)
+	if strings.Contains(diskStr, "ollama_instances") {
+		t.Errorf("persisted config should not contain ollama_instances: %s", diskStr)
+	}
+	if !strings.Contains(diskStr, "legacy-ollama") || !strings.Contains(diskStr, "openai-compatible") {
+		t.Errorf("persisted config missing provider data: %s", diskStr)
 	}
 }
 
