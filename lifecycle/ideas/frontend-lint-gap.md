@@ -181,6 +181,8 @@ improvement — and Stage 2 can be its own follow-up commit.
   we have a lot of `.vue` files. Stick with ESLint for now; revisit
   in 12 months.
 
+> Stick with ESLint for now; revisit in 12 months
+
 - **Prettier?** Out of scope for this idea. If we want format
   enforcement, file a separate `frontend-format-prettier` idea.
 
