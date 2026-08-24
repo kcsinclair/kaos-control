@@ -64,7 +64,6 @@ type OpenOptions struct {
 	MaxConcurrentSchedulerJobs int
 	SchedulerRunRetentionDays  int
 	Providers                  []config.Provider       // app-level LLM providers
-	OllamaInstances            []config.OllamaInstance // app-level Ollama servers for OllamaDriver (deprecated)
 	AgentCfg                   config.AppAgentConfig   // precheck timeout + bypass-permissions flag
 
 	// DevopsLogDir is the base directory for pipeline run logs.
@@ -202,16 +201,6 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	if len(cfg.Agents) > 0 {
 		runsLogDir := filepath.Join(dbDir, entry.Name, "runs")
 		providers := opts.Providers
-		if len(providers) == 0 && len(opts.OllamaInstances) > 0 {
-			for _, inst := range opts.OllamaInstances {
-				providers = append(providers, config.Provider{
-					Name:    inst.Name,
-					BaseURL: inst.BaseURL,
-					Driver:  "openai-compatible",
-					APIKey:  inst.APIKey,
-				})
-			}
-		}
 		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, wf, entry.Path, runsLogDir, providers, opts.AgentCfg)
 		if opts.HookServerAddr != "" {
 			agentMgr.ConfigureHookDriver(opts.HookServerAddr, opts.HookBinaryPath)

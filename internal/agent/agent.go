@@ -90,10 +90,7 @@ type Run struct {
 	// It is passed to the agent prompt via the {related_test} placeholder so
 	// the agent can reference the test in defect frontmatter (related_to field).
 	RelatedTestPath string
-	// Ollama-specific fields (only used when Driver == "ollama").
-	OllamaInstanceName string // resolved from AgentConfig.OllamaInstanceName
-	OllamaEndpoint     string // "chat" or "generate"
-	ShellCommand       string // shell-stub driver: command to run (empty = default stub behavior)
+	ShellCommand    string // shell-stub driver: command to run (empty = default stub behavior)
 	// claude-env driver fields (only used when Driver == "claude-env").
 	BaseURL   string // ANTHROPIC_BASE_URL override for the subprocess
 	AuthToken string // ANTHROPIC_AUTH_TOKEN override — secret, must never be logged or echoed
@@ -495,7 +492,6 @@ func New(
 		"claude-env":        &ClaudeEnvDriver{},
 		"codex-cli":         &CodexCLIDriver{},
 		"openai-compatible": openAIDriver,
-		"ollama":            openAIDriver, // route legacy ollama agent driver through openai-compatible
 		"gemini":            &GeminiDriver{},
 		"gemini-cli":        &GeminiCliDriver{},
 		"shell-stub":        &ShellStubDriver{},
@@ -599,7 +595,10 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		return "", fmt.Errorf("lineage %q is locked by %s (%s): %w", lineage, existing.Holder, existing.Kind, lock.ErrLocked)
 	}
 
-	// Fail fast: look up driver before acquiring any resources.
+	// Fail fast: reject removed ollama driver, and look up driver before acquiring any resources.
+	if ag.Driver == "ollama" {
+		return "", fmt.Errorf("driver \"ollama\" is no longer supported; please configure a provider with driver \"openai-compatible\" and reference it via provider: <name>")
+	}
 	drv, drvOK := m.drivers[ag.Driver]
 	if !drvOK {
 		return "", fmt.Errorf("unknown driver %q for agent %q", ag.Driver, agentName)
@@ -626,38 +625,33 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	}
 
 	providerName := ag.Provider
-	if providerName == "" && ag.OllamaInstanceName != "" {
-		providerName = ag.OllamaInstanceName
-	}
 
 	run := Run{
-		RunID:              runID,
-		AgentName:          agentName,
-		Role:               role,
-		Driver:             ag.Driver,
-		Model:              ag.Model,
-		PromptText:         prompt,
-		ProjectRoot:        m.root,
-		AllowedPaths:       ag.AllowedPaths,
-		GitIdentity:        identity,
-		LogPath:            m.LogPath(runID),
-		TargetPath:         targetPath,
-		ActiveStatus:       ag.ActiveStatus,
-		DoneOnSuccess:      ag.DoneOnSuccess,
-		TimeoutMinutes:     ag.TimeoutMinutes,
-		RelatedTestPath:    relatedTestPath,
-		ProviderName:       providerName,
-		MaxToolIterations:  ag.MaxToolIterations,
-		OllamaInstanceName: ag.OllamaInstanceName,
-		OllamaEndpoint:     ag.OllamaEndpoint,
-		ShellCommand:       ag.ShellCommand,
-		BaseURL:            ag.BaseURL,
-		AuthToken:          ag.AuthToken,
+		RunID:             runID,
+		AgentName:         agentName,
+		Role:              role,
+		Driver:            ag.Driver,
+		Model:             ag.Model,
+		PromptText:        prompt,
+		ProjectRoot:       m.root,
+		AllowedPaths:      ag.AllowedPaths,
+		GitIdentity:       identity,
+		LogPath:           m.LogPath(runID),
+		TargetPath:        targetPath,
+		ActiveStatus:      ag.ActiveStatus,
+		DoneOnSuccess:     ag.DoneOnSuccess,
+		TimeoutMinutes:    ag.TimeoutMinutes,
+		RelatedTestPath:   relatedTestPath,
+		ProviderName:      providerName,
+		MaxToolIterations: ag.MaxToolIterations,
+		ShellCommand:      ag.ShellCommand,
+		BaseURL:           ag.BaseURL,
+		AuthToken:         ag.AuthToken,
 	}
 
 	// Wire TTFT recording for streaming drivers. The callback is called from
 	// the stdout/stream goroutine; errors are logged but never abort the run.
-	if driverEmitsResultEvent(ag.Driver) || ag.Driver == "openai-compatible" || ag.Driver == "ollama" {
+	if driverEmitsResultEvent(ag.Driver) || ag.Driver == "openai-compatible" {
 		runIDCopy := runID
 		idx := m.idx
 		run.OnTTFT = func(ms int64) {
@@ -1940,4 +1934,25 @@ func extractMessageText(ev map[string]any) string {
 	first, _ := content[0].(map[string]any)
 	text, _ := first["text"].(string)
 	return text
+}
+
+// splitPrompt splits a prompt on the ---SYSTEM--- / ---USER--- delimiter
+// convention. If the delimiter is absent the entire text is the user prompt.
+func splitPrompt(text string) (system, user string) {
+	const delim = "---SYSTEM---"
+	const userDelim = "---USER---"
+
+	sysIdx := strings.Index(text, delim)
+	if sysIdx < 0 {
+		return "", text
+	}
+
+	after := text[sysIdx+len(delim):]
+	userIdx := strings.Index(after, userDelim)
+	if userIdx < 0 {
+		// Everything after ---SYSTEM--- is the system prompt; no user section.
+		return strings.TrimSpace(after), ""
+	}
+
+	return strings.TrimSpace(after[:userIdx]), strings.TrimSpace(after[userIdx+len(userDelim):])
 }

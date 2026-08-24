@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-08-25** — Milestone 3 — Outright Removal of Native Ollama Driver & Surface ([[provider-model-for-agents-3-be]]): Remove legacy native Ollama driver and tests, delete Ollama fields from Run and Project containers, and explicitly reject driver "ollama" with guidance to use openai-compatible providers.
+
 - **2026-08-25** — Milestone 2 — Agent Configuration Refactoring (`{provider, model}` Pair) ([[provider-model-for-agents-3-be]]): Refactor AgentConfig to support {provider, model} pairs, update project validation to require models on provider-backed agents, and default provider-backed agents to openai-compatible driver.
 
 - **2026-08-25** — Milestone 1 — Provider Entity Model, App Configuration & Startup Migration ([[provider-model-for-agents-3-be]]): Define ProviderConfig schema, attach Providers to App config with strict slug and URL validation, and implement automated startup migration from legacy ollama_instances to providers.

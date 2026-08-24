@@ -44,12 +44,33 @@ func TestManager_DriverMapComplete(t *testing.T) {
 
 	required := []string{
 		"claude-code-cli", "claude-mediated", "claude-env",
-		"codex-cli", "ollama", "openai-compatible", "gemini", "gemini-cli", "shell-stub",
+		"codex-cli", "openai-compatible", "gemini", "gemini-cli", "shell-stub",
 	}
 	for _, name := range required {
 		if _, ok := mgr.drivers[name]; !ok {
 			t.Errorf("driver %q missing from driver map", name)
 		}
+	}
+}
+
+// TestManager_OllamaDriverRejected verifies that StartRun with driver="ollama"
+// is explicitly rejected with a helpful deprecation error message.
+func TestManager_OllamaDriverRejected(t *testing.T) {
+	agents := []config.AgentConfig{
+		{
+			Name:            "legacy-agent",
+			Roles:           []string{"analyst"},
+			Driver:          "ollama",
+			Model:           "llama3",
+			PromptTemplates: map[string]string{"analyst": "test"},
+		},
+	}
+	mgr, cleanup := newMinimalManager(t, agents, 4)
+	defer cleanup()
+
+	_, err := mgr.StartRun(context.Background(), "legacy-agent", "lifecycle/ideas/test.md", "analyst", nil)
+	if err == nil || !strings.Contains(err.Error(), "no longer supported") {
+		t.Fatalf("expected 'no longer supported' error for driver ollama, got: %v", err)
 	}
 }
 

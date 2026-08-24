@@ -1117,17 +1117,7 @@ func validateProject(cfg *Project) error {
 			}
 		}
 		if a.Driver == "ollama" {
-			if a.OllamaInstanceName == "" {
-				return fmt.Errorf("project config: agent %q has driver=ollama but missing ollama_instance", a.Name)
-			}
-			if a.Model == "" {
-				return fmt.Errorf("project config: agent %q has driver=ollama but missing model", a.Name)
-			}
-			if a.OllamaEndpoint == "" {
-				a.OllamaEndpoint = "chat"
-			} else if a.OllamaEndpoint != "chat" && a.OllamaEndpoint != "generate" {
-				return fmt.Errorf("project config: agent %q ollama_endpoint must be \"chat\" or \"generate\", got %q", a.Name, a.OllamaEndpoint)
-			}
+			return fmt.Errorf("project config: agent %q uses deprecated driver \"ollama\"; please configure a provider with driver \"openai-compatible\" and reference it via provider: <name>", a.Name)
 		}
 		if a.Driver == "claude-mediated" {
 			if a.OnDenial == "" {

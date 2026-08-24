@@ -957,23 +957,19 @@ func TestValidateClaudeEnvAgent(t *testing.T) {
 		}
 	})
 
-	// NFR-2 regression: existing drivers must still validate correctly.
-	t.Run("regression ollama still validates", func(t *testing.T) {
+	// Driver "ollama" is removed and must be rejected.
+	t.Run("driver ollama is rejected", func(t *testing.T) {
 		dir := writeMinimalProjectConfig(t, `agents:
   - name: ollama-agent
     role: [analyst]
     driver: ollama
-    ollama_instance: local-ollama
     model: llama3
     prompt_templates:
       analyst: "x"
 `)
-		cfg, err := LoadProject(dir)
-		if err != nil {
-			t.Fatalf("ollama agent should validate: %v", err)
-		}
-		if cfg.Agents[0].Driver != "ollama" {
-			t.Errorf("driver: got %q", cfg.Agents[0].Driver)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "deprecated driver \"ollama\"") {
+			t.Fatalf("expected deprecated driver ollama error, got: %v", err)
 		}
 	})
 
