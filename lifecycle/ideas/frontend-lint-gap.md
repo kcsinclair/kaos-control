@@ -1,7 +1,7 @@
 ---
 title: Frontend Lint Coverage Gap
 type: idea
-status: blocked
+status: draft
 lineage: frontend-lint-gap
 created: "2026-07-14T19:34:44+10:00"
 priority: medium
@@ -157,7 +157,7 @@ Just Stage 1. One `Makefile` line; one re-run of `make lint`. If the
 codebase passes vue-tsc cleanly, Stage 1 alone is a meaningful
 improvement — and Stage 2 can be its own follow-up commit.
 
-## Open Questions
+## Resolved Questions
 
 - **Preset choice.** `eslint:recommended` + `@vue/eslint-config-typescript`
   recommended, or strict (`typescript-eslint/strict-type-checked`)?
@@ -189,3 +189,5 @@ improvement — and Stage 2 can be its own follow-up commit.
 > file a separate frontend-format-prettier idea
 
 - **Stylelint for `.vue` `<style>` blocks?** Probably overkill. Skip.
+
+> Skip
