@@ -13,7 +13,6 @@ labels:
     - ui
     - frontend
     - backend
-    - open-provider-support
 release: KC-Release6
 ---
 
