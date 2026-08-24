@@ -32,61 +32,89 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email,omitempty"`
 	}
 	type agentSummary struct {
-		Name               string            `json:"name"`
-		Roles              []string          `json:"roles"`
-		Driver             string            `json:"driver"`
-		Model              string            `json:"model,omitempty"`
-		Endpoint           string            `json:"endpoint,omitempty"`
-		ActiveStatus       string            `json:"active_status,omitempty"`
-		AllowedPaths       []string          `json:"allowed_write_paths,omitempty"`
-		TimeoutMinutes     int               `json:"timeout_minutes"` // 0 = unlimited, always emitted
-		GitIdentity        *agentGitIdentity `json:"git_identity,omitempty"`
-		PromptTemplates    map[string]string `json:"prompt_templates,omitempty"`
-		DoneOnSuccess      bool              `json:"done_on_success,omitempty"`
-		SourceTypes        []string          `json:"source_types,omitempty"`
-		OllamaInstanceName string            `json:"ollama_instance,omitempty"`
-		OllamaEndpoint     string            `json:"ollama_endpoint,omitempty"`
-		BashAllowlist      []string          `json:"bash_allowlist,omitempty"`
-		BashDenylist       []string          `json:"bash_denylist,omitempty"`
-		OnDenial           string            `json:"on_denial,omitempty"`
-		ObserveOnly        bool              `json:"observe_only,omitempty"`
-		ShellCommand       string            `json:"shell_command,omitempty"`
-		BaseURL            string            `json:"base_url,omitempty"` // claude-env: endpoint base URL (non-secret)
-		ReadyCount         int               `json:"ready_count"`
+		Name              string            `json:"name"`
+		Roles             []string          `json:"roles"`
+		Driver            string            `json:"driver"`
+		Provider          string            `json:"provider,omitempty"`
+		Model             string            `json:"model,omitempty"`
+		MaxToolIterations int               `json:"max_tool_iterations,omitempty"`
+		Endpoint          string            `json:"endpoint,omitempty"`
+		ActiveStatus      string            `json:"active_status,omitempty"`
+		AllowedPaths      []string          `json:"allowed_write_paths,omitempty"`
+		TimeoutMinutes    int               `json:"timeout_minutes"` // 0 = unlimited, always emitted
+		GitIdentity       *agentGitIdentity `json:"git_identity,omitempty"`
+		PromptTemplates   map[string]string `json:"prompt_templates,omitempty"`
+		DoneOnSuccess     bool              `json:"done_on_success,omitempty"`
+		SourceTypes       []string          `json:"source_types,omitempty"`
+		BashAllowlist     []string          `json:"bash_allowlist,omitempty"`
+		BashDenylist      []string          `json:"bash_denylist,omitempty"`
+		OnDenial          string            `json:"on_denial,omitempty"`
+		ObserveOnly       bool              `json:"observe_only,omitempty"`
+		ShellCommand      string            `json:"shell_command,omitempty"`
+		BaseURL           string            `json:"base_url,omitempty"` // claude-env: endpoint base URL (non-secret)
+		Configured        bool              `json:"configured"`
+		ReadyCount        int               `json:"ready_count"`
 	}
 	var out []agentSummary
 	for _, ag := range p.Agents.Agents() {
-		rc, err := agentReadyCount(p.Idx, ag)
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
-			return
+		driver := ag.Driver
+		configured := true
+
+		if ag.Provider != "" {
+			var foundProv *config.Provider
+			if s.appCfg != nil {
+				s.appCfgMu.RLock()
+				idx := findProvider(s.appCfg.Providers, ag.Provider)
+				if idx >= 0 {
+					pCopy := s.appCfg.Providers[idx]
+					foundProv = &pCopy
+				}
+				s.appCfgMu.RUnlock()
+			}
+			if foundProv == nil {
+				configured = false
+			} else if driver == "" {
+				driver = foundProv.Driver
+			}
 		}
+
+		rc := 0
+		if configured {
+			var err error
+			rc, err = agentReadyCount(p.Idx, ag)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, apiError("db_error", err.Error()))
+				return
+			}
+		}
+
 		var gitIdentity *agentGitIdentity
 		if ag.GitIdentity.Name != "" || ag.GitIdentity.Email != "" {
 			gitIdentity = &agentGitIdentity{Name: ag.GitIdentity.Name, Email: ag.GitIdentity.Email}
 		}
 		out = append(out, agentSummary{
-			Name:               ag.Name,
-			Roles:              ag.Roles,
-			Driver:             ag.Driver,
-			Model:              ag.Model,
-			Endpoint:           ag.Endpoint,
-			ActiveStatus:       ag.ActiveStatus,
-			AllowedPaths:       ag.AllowedPaths,
-			TimeoutMinutes:     ag.TimeoutMinutes,
-			GitIdentity:        gitIdentity,
-			PromptTemplates:    ag.PromptTemplates,
-			DoneOnSuccess:      ag.DoneOnSuccess,
-			SourceTypes:        ag.SourceTypes,
-			OllamaInstanceName: ag.OllamaInstanceName,
-			OllamaEndpoint:     ag.OllamaEndpoint,
-			BashAllowlist:      ag.BashAllowlist,
-			BashDenylist:       ag.BashDenylist,
-			OnDenial:           ag.OnDenial,
-			ObserveOnly:        ag.ObserveOnly,
-			ShellCommand:       ag.ShellCommand,
-			BaseURL:            ag.BaseURL,
-			ReadyCount:         rc,
+			Name:              ag.Name,
+			Roles:             ag.Roles,
+			Driver:            driver,
+			Provider:          ag.Provider,
+			Model:             ag.Model,
+			MaxToolIterations: ag.MaxToolIterations,
+			Endpoint:          ag.Endpoint,
+			ActiveStatus:      ag.ActiveStatus,
+			AllowedPaths:      ag.AllowedPaths,
+			TimeoutMinutes:    ag.TimeoutMinutes,
+			GitIdentity:       gitIdentity,
+			PromptTemplates:   ag.PromptTemplates,
+			DoneOnSuccess:     ag.DoneOnSuccess,
+			SourceTypes:       ag.SourceTypes,
+			BashAllowlist:     ag.BashAllowlist,
+			BashDenylist:      ag.BashDenylist,
+			OnDenial:          ag.OnDenial,
+			ObserveOnly:       ag.ObserveOnly,
+			ShellCommand:      ag.ShellCommand,
+			BaseURL:           ag.BaseURL,
+			Configured:        configured,
+			ReadyCount:        rc,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"agents": out})

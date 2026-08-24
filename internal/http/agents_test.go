@@ -167,18 +167,16 @@ func TestListAgents_ReturnsFullNonSecretConfig(t *testing.T) {
 		PromptTemplates: map[string]string{
 			"analyst": "analyse {target_path}",
 		},
-		ActiveStatus:       "in-development",
-		DoneOnSuccess:      true,
-		SourceTypes:        []string{"requirement"},
-		OllamaInstanceName: "local-ollama",
-		OllamaEndpoint:     "chat",
-		BashAllowlist:      []string{"go test *"},
-		BashDenylist:       []string{"rm *"},
-		OnDenial:           "abort",
-		ObserveOnly:        true,
-		ShellCommand:       "./run-agent.sh",
-		BaseURL:            "http://localhost:11434",
-		AuthToken:          token,
+		ActiveStatus:    "in-development",
+		DoneOnSuccess:   true,
+		SourceTypes:     []string{"requirement"},
+		BashAllowlist:   []string{"go test *"},
+		BashDenylist:    []string{"rm *"},
+		OnDenial:        "abort",
+		ObserveOnly:     true,
+		ShellCommand:    "./run-agent.sh",
+		BaseURL:         "http://localhost:11434",
+		AuthToken:       token,
 	}
 
 	p, cleanup := newTestProjectWithClaudeEnvAgent(t, ag)
@@ -203,6 +201,9 @@ func TestListAgents_ReturnsFullNonSecretConfig(t *testing.T) {
 	if strings.Contains(body, "auth_token") {
 		t.Errorf(`"auth_token" field found in response body:\n%s`, body)
 	}
+	if strings.Contains(body, "ollama_instance") {
+		t.Errorf(`"ollama_instance" field found in response body:\n%s`, body)
+	}
 
 	var resp struct {
 		Agents []struct {
@@ -218,17 +219,16 @@ func TestListAgents_ReturnsFullNonSecretConfig(t *testing.T) {
 				Name  string `json:"name"`
 				Email string `json:"email"`
 			} `json:"git_identity"`
-			PromptTemplates    map[string]string `json:"prompt_templates"`
-			DoneOnSuccess      bool              `json:"done_on_success"`
-			SourceTypes        []string          `json:"source_types"`
-			OllamaInstanceName string            `json:"ollama_instance"`
-			OllamaEndpoint     string            `json:"ollama_endpoint"`
-			BashAllowlist      []string          `json:"bash_allowlist"`
-			BashDenylist       []string          `json:"bash_denylist"`
-			OnDenial           string            `json:"on_denial"`
-			ObserveOnly        bool              `json:"observe_only"`
-			ShellCommand       string            `json:"shell_command"`
-			BaseURL            string            `json:"base_url"`
+			PromptTemplates map[string]string `json:"prompt_templates"`
+			DoneOnSuccess   bool              `json:"done_on_success"`
+			SourceTypes     []string          `json:"source_types"`
+			BashAllowlist   []string          `json:"bash_allowlist"`
+			BashDenylist    []string          `json:"bash_denylist"`
+			OnDenial        string            `json:"on_denial"`
+			ObserveOnly     bool              `json:"observe_only"`
+			ShellCommand    string            `json:"shell_command"`
+			BaseURL         string            `json:"base_url"`
+			Configured      bool              `json:"configured"`
 		} `json:"agents"`
 	}
 	if err := json.Unmarshal([]byte(body), &resp); err != nil {
@@ -278,12 +278,6 @@ func TestListAgents_ReturnsFullNonSecretConfig(t *testing.T) {
 	if len(got.SourceTypes) != 1 || got.SourceTypes[0] != ag.SourceTypes[0] {
 		t.Errorf("source_types: got %v, want %v", got.SourceTypes, ag.SourceTypes)
 	}
-	if got.OllamaInstanceName != ag.OllamaInstanceName {
-		t.Errorf("ollama_instance: got %q, want %q", got.OllamaInstanceName, ag.OllamaInstanceName)
-	}
-	if got.OllamaEndpoint != ag.OllamaEndpoint {
-		t.Errorf("ollama_endpoint: got %q, want %q", got.OllamaEndpoint, ag.OllamaEndpoint)
-	}
 	if len(got.BashAllowlist) != 1 || got.BashAllowlist[0] != ag.BashAllowlist[0] {
 		t.Errorf("bash_allowlist: got %v, want %v", got.BashAllowlist, ag.BashAllowlist)
 	}
@@ -301,5 +295,116 @@ func TestListAgents_ReturnsFullNonSecretConfig(t *testing.T) {
 	}
 	if got.BaseURL != ag.BaseURL {
 		t.Errorf("base_url: got %q, want %q", got.BaseURL, ag.BaseURL)
+	}
+	if !got.Configured {
+		t.Errorf("configured: got false, want true")
+	}
+}
+
+func TestHandleListAgents_ProviderConfigured(t *testing.T) {
+	ag := config.AgentConfig{
+		Name:     "provider-agent",
+		Roles:    []string{"analyst"},
+		Driver:   "openai-compatible",
+		Provider: "openrouter",
+		Model:    "anthropic/claude-3.5-sonnet",
+	}
+
+	p, cleanup := newTestProjectWithClaudeEnvAgent(t, ag)
+	defer cleanup()
+
+	s := &Server{
+		appCfg: &config.App{
+			Providers: []config.Provider{
+				{
+					Name:    "openrouter",
+					BaseURL: "https://openrouter.ai/api",
+					Driver:  "openai-compatible",
+				},
+			},
+		},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req = withProjectAndUser(req, p, "po@test")
+
+	w := httptest.NewRecorder()
+	s.handleListAgents(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Agents []struct {
+			Name       string `json:"name"`
+			Provider   string `json:"provider"`
+			Model      string `json:"model"`
+			Configured bool   `json:"configured"`
+			ReadyCount int    `json:"ready_count"`
+		} `json:"agents"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Agents) != 1 {
+		t.Fatalf("expected 1 agent, got %d", len(resp.Agents))
+	}
+	got := resp.Agents[0]
+	if got.Provider != "openrouter" || got.Model != "anthropic/claude-3.5-sonnet" {
+		t.Errorf("provider/model mismatch: %+v", got)
+	}
+	if !got.Configured {
+		t.Errorf("expected configured: true, got false")
+	}
+}
+
+func TestHandleListAgents_UnconfiguredProvider(t *testing.T) {
+	ag := config.AgentConfig{
+		Name:     "unconfigured-agent",
+		Roles:    []string{"analyst"},
+		Driver:   "openai-compatible",
+		Provider: "non-existent-provider",
+		Model:    "anthropic/claude-3.5-sonnet",
+	}
+
+	p, cleanup := newTestProjectWithClaudeEnvAgent(t, ag)
+	defer cleanup()
+
+	s := &Server{
+		appCfg: &config.App{
+			Providers: []config.Provider{}, // no providers registered
+		},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req = withProjectAndUser(req, p, "po@test")
+
+	w := httptest.NewRecorder()
+	s.handleListAgents(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d; body: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Agents []struct {
+			Name       string `json:"name"`
+			Provider   string `json:"provider"`
+			Model      string `json:"model"`
+			Configured bool   `json:"configured"`
+			ReadyCount int    `json:"ready_count"`
+		} `json:"agents"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Agents) != 1 {
+		t.Fatalf("expected 1 agent, got %d", len(resp.Agents))
+	}
+	got := resp.Agents[0]
+	if got.Configured {
+		t.Errorf("expected configured: false, got true")
+	}
+	if got.ReadyCount != 0 {
+		t.Errorf("expected ready_count: 0, got %d", got.ReadyCount)
 	}
 }

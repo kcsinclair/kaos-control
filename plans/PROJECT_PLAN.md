@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-08-25** — Milestone 6 — Agent Summary API & Project Agent Binding Integration ([[provider-model-for-agents-3-be]]): Update /api/p/{project}/agents serialization with provider, model, and configured flag, zeroing ready counts for unconfigured agents.
+
 - **2026-08-25** — Milestone 5 — Live Health Probing, Model Discovery & Extra Headers ([[provider-model-for-agents-3-be]]): Implement /health endpoint with 5-second timeout and latency tracking, wire /models discovery with extra headers and bearer token forwarding.
 
 - **2026-08-25** — Milestone 4 — Provider Management REST API (`/api/providers`) ([[provider-model-for-agents-3-be]]): Implement /api/providers REST endpoints for CRUD operations with masked secret hygiene, role authorization, and agent reference conflict protection.
