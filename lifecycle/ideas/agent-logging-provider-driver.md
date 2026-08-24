@@ -13,6 +13,8 @@ labels:
     - observability
     - runs
     - persistence
+release: KC-Release6
+parent: lifecycle/ideas/switch-provider.md
 ---
 
 # Agent Logging: Include Provider and Driver

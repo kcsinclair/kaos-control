@@ -4,6 +4,8 @@ type: defect
 status: raw
 lineage: inline-drivers-not-changeable
 priority: high
+release: KC-Release6
+parent: lifecycle/ideas/switch-provider.md
 ---
 
 ## Raw Idea
