@@ -1,7 +1,7 @@
 ---
 title: 'Agent Logging: Include Provider and Driver'
 type: idea
-status: approved
+status: clarifying
 lineage: agent-logging-provider-driver
 created: "2026-08-25T08:21:08+10:00"
 priority: normal
