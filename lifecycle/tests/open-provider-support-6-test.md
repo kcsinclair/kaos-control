@@ -2,7 +2,7 @@
 created: "2026-08-25T08:50:39+10:00"
 title: "OpenAI-Compatible Agent Driver & Provider Support — Test Suite"
 type: test
-status: approved
+status: in-qa
 lineage: open-provider-support
 parent: lifecycle/test-plans/open-provider-support-5-test.md
 ---
