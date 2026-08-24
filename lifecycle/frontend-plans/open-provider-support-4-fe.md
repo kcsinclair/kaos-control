@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: OpenAI-Compatible Agent Driver (Tool-Calling)"
 type: plan-frontend
-status: draft
+status: approved
 lineage: open-provider-support
 parent: lifecycle/requirements/open-provider-support-2.md
 created: "2026-08-25T07:10:33+10:00"
