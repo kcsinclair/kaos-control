@@ -1575,33 +1575,73 @@ func TestProjectConfig_OpenAICompatibleAgent(t *testing.T) {
 		}
 	})
 
-	t.Run("openai-compatible agent missing provider rejected", func(t *testing.T) {
+	t.Run("openrouter provider with anthropic/claude-3.5-sonnet parses correctly", func(t *testing.T) {
 		dir := writeMinimalProjectConfig(t, `agents:
-  - name: no-provider-agent
+  - name: openrouter-agent
     role: [analyst]
     driver: openai-compatible
-    model: gemma-4-26b
+    provider: openrouter
+    model: anthropic/claude-3.5-sonnet
     prompt_templates:
-      analyst: "x"
+      analyst: "Analyse {target_path}"
 `)
-		_, err := LoadProject(dir)
-		if err == nil || !strings.Contains(err.Error(), "missing provider") {
-			t.Fatalf("expected missing provider error, got: %v", err)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		var found *AgentConfig
+		for i := range cfg.Agents {
+			if cfg.Agents[i].Name == "openrouter-agent" {
+				found = &cfg.Agents[i]
+				break
+			}
+		}
+		if found == nil {
+			t.Fatal("openrouter-agent not found")
+		}
+		if found.Provider != "openrouter" || found.Model != "anthropic/claude-3.5-sonnet" {
+			t.Errorf("agent fields mismatch: %+v", found)
 		}
 	})
 
-	t.Run("openai-compatible agent missing model rejected", func(t *testing.T) {
+	t.Run("provider-backed agent with empty model rejected", func(t *testing.T) {
 		dir := writeMinimalProjectConfig(t, `agents:
-  - name: no-model-agent
+  - name: prov-agent
     role: [analyst]
-    driver: openai-compatible
-    provider: local-llama
+    provider: openrouter
     prompt_templates:
       analyst: "x"
 `)
 		_, err := LoadProject(dir)
 		if err == nil || !strings.Contains(err.Error(), "missing model") {
 			t.Fatalf("expected missing model error, got: %v", err)
+		}
+	})
+
+	t.Run("CLI agent parses and validates without provider", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: claude-cli-agent
+    role: [analyst]
+    driver: claude-code-cli
+    prompt_templates:
+      analyst: "x"
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		var found *AgentConfig
+		for i := range cfg.Agents {
+			if cfg.Agents[i].Name == "claude-cli-agent" {
+				found = &cfg.Agents[i]
+				break
+			}
+		}
+		if found == nil {
+			t.Fatal("claude-cli-agent not found")
+		}
+		if found.Provider != "" {
+			t.Errorf("expected empty provider, got %q", found.Provider)
 		}
 	})
 }

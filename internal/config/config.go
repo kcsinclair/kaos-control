@@ -1110,7 +1110,11 @@ func validateProject(cfg *Project) error {
 			return fmt.Errorf("project config: agent %q has no roles", a.Name)
 		}
 		if a.Driver == "" {
-			return fmt.Errorf("project config: agent %q missing driver", a.Name)
+			if a.Provider != "" {
+				a.Driver = "openai-compatible"
+			} else {
+				return fmt.Errorf("project config: agent %q missing driver", a.Name)
+			}
 		}
 		if a.Driver == "ollama" {
 			if a.OllamaInstanceName == "" {

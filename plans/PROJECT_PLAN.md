@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-08-25** — Milestone 2 — Agent Configuration Refactoring (`{provider, model}` Pair) ([[provider-model-for-agents-3-be]]): Refactor AgentConfig to support {provider, model} pairs, update project validation to require models on provider-backed agents, and default provider-backed agents to openai-compatible driver.
+
 - **2026-08-25** — Milestone 1 — Provider Entity Model, App Configuration & Startup Migration ([[provider-model-for-agents-3-be]]): Define ProviderConfig schema, attach Providers to App config with strict slug and URL validation, and implement automated startup migration from legacy ollama_instances to providers.
 
 - **2026-08-25** — Milestone 4 — Multi-turn Live Progress & Tool-Call Timeline ([[open-provider-support-4-fe]]): Implement multi-turn log parser, interactive turn timeline in RunDetailModal with collapsible tool arguments and outputs, FR-5a recovery badges, and TTFT display.
