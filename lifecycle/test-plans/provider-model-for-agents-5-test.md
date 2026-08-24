@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Provider Entity Model, Management API & Agent Integration"
 type: plan-test
-status: approved
+status: in-development
 lineage: provider-model-for-agents
 parent: lifecycle/requirements/provider-model-for-agents-2.md
 created: "2026-08-25T07:35:00+10:00"
