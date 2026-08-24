@@ -2,20 +2,17 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { useOllamaInstancesStore } from '@/stores/ollamaInstances'
 import { useProvidersStore } from '@/stores/providers'
-import type { AgentSummary, OllamaInstance } from '@/types/api'
+import type { AgentSummary } from '@/types/api'
 
 // The shape the form emits — mirrors the YAML agent config fields.
 export interface AgentFormData {
   name: string
   roles: string[]
-  driver: 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'ollama' | 'gemini' | 'gemini-cli' | 'openai-compatible'
+  driver: 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'openai-compatible'
   model: string
   provider?: string
   max_tool_iterations?: number
-  ollama_instance: string
-  ollama_endpoint: 'chat' | 'generate'
   allowed_write_paths: string[]
   timeout_minutes: number
   git_identity_name: string
@@ -34,7 +31,6 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const ollamaStore = useOllamaInstancesStore()
 const providersStore = useProvidersStore()
 
 const isEdit = !!props.initial
@@ -42,17 +38,13 @@ const isEdit = !!props.initial
 // ── Form state ─────────────────────────────────────────────────────────────
 const name = ref(props.initial?.name ?? '')
 const selectedRoles = ref<string[]>(props.initial?.roles ?? [])
-type DriverChoice = 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'ollama' | 'gemini' | 'gemini-cli' | 'openai-compatible'
+type DriverChoice = 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'openai-compatible'
 const driver = ref<DriverChoice>(
-  (props.initial?.driver ?? 'claude-code-cli') as DriverChoice,
+  (props.initial?.driver && props.initial.driver !== 'ollama' ? props.initial.driver : 'claude-code-cli') as DriverChoice,
 )
 const model = ref(props.initial?.model ?? '')
 const provider = ref(props.initial?.provider ?? '')
 const maxToolIterations = ref<number | undefined>(props.initial?.max_tool_iterations)
-const ollamaInstance = ref(props.initial?.ollama_instance ?? '')
-const ollamaEndpoint = ref<'chat' | 'generate'>(
-  (props.initial?.ollama_endpoint ?? 'chat') as 'chat' | 'generate',
-)
 const allowedWritePathsRaw = ref((props.initial?.allowed_write_paths ?? []).join('\n'))
 const timeoutMinutes = ref(props.initial?.timeout_minutes ?? 0)
 const gitIdentityName = ref(props.initial?.git_identity?.name ?? '')
@@ -91,7 +83,7 @@ const providerModels = computed(() => {
 
 const providerHealth = computed(() => {
   if (!provider.value) return null
-  return providersStore.probeResults.get(provider.value) ?? null
+  return providersStore.health.get(provider.value) ?? providersStore.probeResults.get(provider.value) ?? null
 })
 
 const fetchingProviderModels = ref(false)
@@ -113,44 +105,8 @@ watch(provider, (val) => {
   }
 })
 
-// ── Ollama model list ───────────────────────────────────────────────────────
-const instanceModels = computed(() => {
-  if (!ollamaInstance.value) return []
-  return ollamaStore.models.get(ollamaInstance.value) ?? []
-})
-
-const instanceHealth = computed(() => {
-  if (!ollamaInstance.value) return null
-  return ollamaStore.health.get(ollamaInstance.value) ?? null
-})
-
-const fetchingModels = ref(false)
-
-async function loadModels() {
-  if (!ollamaInstance.value) return
-  fetchingModels.value = true
-  try {
-    await ollamaStore.fetchModels(ollamaInstance.value)
-  } finally {
-    fetchingModels.value = false
-  }
-}
-
-watch(ollamaInstance, (val) => {
-  if (val) loadModels()
-  model.value = ''
-})
-
 onMounted(async () => {
   try {
-    if (!ollamaStore.instances.length) {
-      await ollamaStore.fetchInstances().catch(() => {})
-    }
-    await ollamaStore.checkAllHealth().catch(() => {})
-    if (ollamaInstance.value) {
-      await loadModels().catch(() => {})
-    }
-
     if (!providersStore.providers.length) {
       await providersStore.fetchProviders().catch(() => {})
     }
@@ -172,9 +128,6 @@ function validate(): boolean {
   if (driver.value === 'openai-compatible') {
     if (!provider.value) e.provider = 'Select a provider.'
     if (!model.value.trim()) e.model = 'Model is required for OpenAI-compatible driver.'
-  } else if (driver.value === 'ollama') {
-    if (!ollamaInstance.value) e.ollama_instance = 'Select an Ollama instance.'
-    if (!model.value.trim()) e.model = 'Model is required for Ollama driver.'
   } else if (
     driver.value === 'claude-code-cli' ||
     driver.value === 'claude-mediated' ||
@@ -196,8 +149,6 @@ function handleSubmit() {
     model: model.value.trim(),
     provider: driver.value === 'openai-compatible' ? provider.value : undefined,
     max_tool_iterations: maxToolIterations.value && !isNaN(maxToolIterations.value) && maxToolIterations.value > 0 ? maxToolIterations.value : undefined,
-    ollama_instance: ollamaInstance.value,
-    ollama_endpoint: ollamaEndpoint.value,
     allowed_write_paths: allowedWritePathsRaw.value
       .split('\n')
       .map((s) => s.trim())
@@ -223,12 +174,6 @@ function toggleRole(role: string) {
   const idx = selectedRoles.value.indexOf(role)
   if (idx >= 0) selectedRoles.value.splice(idx, 1)
   else selectedRoles.value.push(role)
-}
-
-function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
-  const h = ollamaStore.health.get(inst.name)
-  if (!h) return 'unknown'
-  return h.ok ? 'ok' : 'error'
 }
 </script>
 
@@ -283,10 +228,6 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
           Codex
         </label>
         <label class="acf-radio-label">
-          <input v-model="driver" type="radio" value="ollama" />
-          Ollama
-        </label>
-        <label class="acf-radio-label">
           <input v-model="driver" type="radio" value="gemini" />
           Gemini
         </label>
@@ -338,86 +279,6 @@ function healthDot(inst: OllamaInstance): 'ok' | 'error' | 'unknown' {
       <p v-if="errors.model" class="acf-error">{{ errors.model }}</p>
       <p class="acf-hint">Requires <code>GEMINI_API_KEY</code> to be set in the server environment.</p>
     </div>
-
-    <!-- Ollama instance + model -->
-    <template v-if="driver === 'ollama'">
-      <div class="acf-field">
-        <label class="acf-label" for="acf-ollama-instance">Ollama Instance</label>
-        <div class="acf-select-row">
-          <select
-            id="acf-ollama-instance"
-            v-model="ollamaInstance"
-            class="acf-select"
-            :class="{ 'acf-input--error': errors.ollama_instance }"
-          >
-            <option value="">— select instance —</option>
-            <option v-for="inst in ollamaStore.instances" :key="inst.name" :value="inst.name">
-              {{ inst.name }}
-              ({{ inst.base_url }})
-            </option>
-          </select>
-          <span
-            v-if="ollamaInstance"
-            class="health-dot"
-            :class="`health-dot--${instanceHealth?.ok === true ? 'ok' : instanceHealth?.ok === false ? 'error' : 'unknown'}`"
-            :title="instanceHealth?.ok ? 'Connected' : (instanceHealth?.error ?? 'Unknown')"
-          />
-        </div>
-        <p v-if="errors.ollama_instance" class="acf-error">{{ errors.ollama_instance }}</p>
-        <div v-if="ollamaStore.instances.length === 0" class="acf-hint">
-          No Ollama instances registered. Add one in the <em>Ollama</em> settings page.
-        </div>
-      </div>
-
-      <div class="acf-field">
-        <label class="acf-label" for="acf-ollama-model">Model</label>
-        <div class="acf-select-row">
-          <select
-            v-if="instanceModels.length"
-            id="acf-ollama-model"
-            v-model="model"
-            class="acf-select"
-            :class="{ 'acf-input--error': errors.model }"
-          >
-            <option value="">— select model —</option>
-            <option v-for="m in instanceModels" :key="m.name" :value="m.name">
-              {{ m.name }}
-            </option>
-          </select>
-          <input
-            v-else
-            id="acf-ollama-model"
-            v-model="model"
-            class="acf-input"
-            :class="{ 'acf-input--error': errors.model }"
-            type="text"
-            placeholder="e.g. llama3:8b"
-            autocomplete="off"
-          />
-          <button
-            type="button"
-            class="btn-refresh"
-            :disabled="!ollamaInstance || fetchingModels"
-            @click="loadModels"
-          >{{ fetchingModels ? '…' : '↻' }}</button>
-        </div>
-        <p v-if="errors.model" class="acf-error">{{ errors.model }}</p>
-      </div>
-
-      <div class="acf-field">
-        <div class="acf-label">Endpoint</div>
-        <div class="acf-radio-group">
-          <label class="acf-radio-label">
-            <input v-model="ollamaEndpoint" type="radio" value="chat" />
-            /api/chat (default)
-          </label>
-          <label class="acf-radio-label">
-            <input v-model="ollamaEndpoint" type="radio" value="generate" />
-            /api/generate
-          </label>
-        </div>
-      </div>
-    </template>
 
     <!-- OpenAI-compatible provider + model + max iterations -->
     <template v-if="driver === 'openai-compatible'">

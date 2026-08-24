@@ -22,12 +22,7 @@ function isInline(agent: AgentSummary): boolean {
   return agent.driver === 'inline'
 }
 
-function isOllama(agent: AgentSummary): boolean {
-  return agent.driver === 'ollama'
-}
-
 function driverLabel(agent: AgentSummary): string {
-  if (agent.driver === 'ollama') return 'Ollama'
   if (agent.driver === 'claude-code-cli') return 'Claude Code'
   if (agent.driver === 'claude-mediated') return 'Claude Mediated'
   if (agent.driver === 'codex-cli') return 'Codex'
@@ -130,7 +125,6 @@ function runningCount(agent: AgentSummary): number {
       </div>
       <span v-if="agent.model" class="panel-model">{{ agent.model }}</span>
       <span v-if="agent.driver === 'openai-compatible' && agent.provider" class="panel-model">{{ agent.provider }}</span>
-      <span v-if="isOllama(agent) && agent.ollama_instance" class="panel-model">{{ agent.ollama_instance }}</span>
       <span v-if="isInline(agent)" class="panel-inline-label">Externally driven</span>
       <!-- Ready-count badge (only for agents with active_status) -->
       <button

@@ -102,13 +102,6 @@ async function handleAgentFormSubmit(data: AgentFormData) {
 
     entry.timeout_minutes = data.timeout_minutes
 
-    if (data.driver === 'ollama') {
-      if (data.ollama_instance) entry.ollama_instance = data.ollama_instance
-      else delete entry.ollama_instance
-      if (data.ollama_endpoint !== 'chat') entry.ollama_endpoint = data.ollama_endpoint
-      else delete entry.ollama_endpoint
-    }
-
     if (data.driver === 'openai-compatible') {
       if (data.provider) entry.provider = data.provider
       else delete entry.provider
