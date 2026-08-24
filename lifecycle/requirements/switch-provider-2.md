@@ -1,7 +1,7 @@
 ---
 title: Dynamic Provider Switching and Failover
 type: requirement
-status: blocked
+status: draft
 lineage: switch-provider
 created: "2026-08-25T08:25:25+10:00"
 priority: high
@@ -267,10 +267,12 @@ The server exposes authenticated routes for inspecting and controlling provider 
 
 ---
 
-## Open Questions
+## Resolved Questions
 
 1. **Auto-switch vs User-Prompt Default:** `auto_switch: true` is chosen as default for 529 / overload errors because 529 is a transient server outage where autonomous pipelines should continue running. Operators can disable this globally or per-project via `provider_failover.auto_switch: false` if strict model consistency is required.
 
 > auto_switch should be disabled by default, but the documentation and feature information should ensure it is mentioned.
 
 2. **Batch Switching Granularity:** Batch switching (`switch-all`) targets all agents sharing a given `from_provider` rather than forcing every agent in the project to the same model, allowing role-specific model specializations (e.g. fast models for analysts, coder models for developers) to be preserved across providers.
+
+> Switching should be between templates, there should be pre-defined templates which the user has setup which use the combination of providers for the agents, the user then switches between hybrid, claude, gemini, local-ai, etc.
