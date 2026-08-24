@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Provider Settings View & Agent Editor Integration"
 type: plan-frontend
-status: approved
+status: in-development
 lineage: provider-model-for-agents
 parent: lifecycle/requirements/provider-model-for-agents-2.md
 created: "2026-08-25T07:35:00+10:00"
