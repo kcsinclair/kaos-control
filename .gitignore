@@ -17,3 +17,8 @@ tests/e2e/test-results/
 .pnpm-store/
 **/__debug_bin*
 tests/web/test-results/
+
+# Local secrets (API keys) — never commit
+.env
+.env.*
+!.env.example
