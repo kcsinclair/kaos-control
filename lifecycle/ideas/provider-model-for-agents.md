@@ -16,6 +16,7 @@ labels:
     - frontend
     - enhancement
     - medium-complexity
+    - open-provider-support
 release: KC-Release6
 rice_reach: 100
 rice_impact: 1
