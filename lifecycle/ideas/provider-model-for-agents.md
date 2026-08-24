@@ -1,7 +1,7 @@
 ---
 title: Provider Model for Agent API Endpoints
 type: idea
-status: planning
+status: done
 lineage: provider-model-for-agents
 parent: lifecycle/ideas/open-provider-support.md
 created: "2026-08-22T12:14:51+10:00"
