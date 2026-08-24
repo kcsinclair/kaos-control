@@ -1,7 +1,7 @@
 ---
 title: Frontend Lint Coverage Gap — ESLint & vue-tsc Integration
 type: requirement
-status: draft
+status: approved
 lineage: frontend-lint-gap
 created: "2026-08-24T18:35:00+10:00"
 priority: medium
