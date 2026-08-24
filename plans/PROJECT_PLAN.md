@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-08-25** — Milestone 2 — Sandboxed Local Tool Execution Engine ([[open-provider-support-3-be]]): Implement OpenAI tool definitions and sandboxed ToolExecutor for `read_file`, `write_file`, `list_dir`, and `grep`, scoping writes to `allowed_write_paths`.
+
 - **2026-08-25** — Milestone 1 — Provider & AgentConfig Data Model & Validation ([[open-provider-support-3-be]]): Extend App config with `Provider` records, update `AgentConfig` with `provider`, `model`, and `max_tool_iterations`, add validation and in-memory legacy `ollama_instances` migration.
 
 - **2026-08-25** — Author backend, frontend, and test plans for the OpenAI-Compatible Agent Driver ([[open-provider-support-3-be]], [[open-provider-support-4-fe]], [[open-provider-support-5-test]]) covering tool execution against sandbox resolver, native-format recovery parser (FR-5a), preflight capability verification (FR-5b), multi-turn agent loop, and Provider settings UI.
