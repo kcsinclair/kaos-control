@@ -71,19 +71,16 @@ interface Preset {
 }
 
 const presets: Preset[] = [
-  { label: 'llama.cpp Local', name: 'llama-cpp-local', base_url: 'http://127.0.0.1:8080', driver: 'openai-compatible' },
-  { label: 'llama.cpp Remote', name: 'llama-cpp', base_url: 'http://leia.packsin.com:7442', driver: 'openai-compatible' },
-  { label: 'Ollama', name: 'ollama', base_url: 'http://127.0.0.1:11434', driver: 'openai-compatible' },
+  { label: 'Ollama Local (http://localhost:11434)', name: 'ollama', base_url: 'http://localhost:11434', driver: 'openai-compatible' },
+  { label: 'llama.cpp (http://localhost:7442)', name: 'llama-cpp', base_url: 'http://localhost:7442', driver: 'openai-compatible' },
   {
-    label: 'OpenRouter',
+    label: 'OpenRouter (https://openrouter.ai/api/v1)',
     name: 'openrouter',
-    base_url: 'https://openrouter.ai/api',
+    base_url: 'https://openrouter.ai/api/v1',
     driver: 'openai-compatible',
     extra_headers: { 'HTTP-Referer': 'https://kaos-control.local', 'X-Title': 'kaos-control' },
   },
-  { label: 'OpenAI', name: 'openai', base_url: 'https://api.openai.com', driver: 'openai-compatible' },
-  { label: 'Groq', name: 'groq', base_url: 'https://api.groq.com/openai', driver: 'openai-compatible' },
-  { label: 'Together', name: 'together', base_url: 'https://api.together.xyz', driver: 'openai-compatible' },
+  { label: 'OpenAI (https://api.openai.com/v1)', name: 'openai', base_url: 'https://api.openai.com/v1', driver: 'openai-compatible' },
 ]
 
 function applyPreset(p: Preset) {
@@ -97,6 +94,10 @@ function applyPreset(p: Preset) {
   }
 }
 
+function isValidSlug(val: string): boolean {
+  return /^[a-z0-9-]+$/.test(val)
+}
+
 function isValidUrl(val: string): boolean {
   try {
     const u = new URL(val)
@@ -108,9 +109,12 @@ function isValidUrl(val: string): boolean {
 
 function validate(): boolean {
   const e: Record<string, string> = {}
-  if (!name.value.trim()) {
+  const trimmedName = name.value.trim()
+  if (!trimmedName) {
     e.name = 'Name is required.'
-  } else if (!isEdit && props.existingNames?.includes(name.value.trim())) {
+  } else if (!isValidSlug(trimmedName)) {
+    e.name = 'Name must contain only lowercase letters, numbers, and hyphens.'
+  } else if (!isEdit && props.existingNames?.includes(trimmedName)) {
     e.name = 'A provider with this name already exists.'
   }
   if (!base_url.value.trim()) {
@@ -243,7 +247,7 @@ function handleSubmit() {
           v-model="api_key"
           class="pvf-input"
           :type="showApiKey ? 'text' : 'password'"
-          placeholder="Leave blank if not required"
+          :placeholder="isEdit && (props.initial?.has_api_key || props.initial?.api_key) ? '••••••••' : 'Leave blank if not required'"
           autocomplete="new-password"
         />
         <button

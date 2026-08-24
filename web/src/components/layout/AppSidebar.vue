@@ -106,7 +106,7 @@ const navSections = computed((): NavSection[] => {
   // Parse Errors (which stays last as the health/diagnostics entry).
   const system: NavItem[] = [
     { label: 'Config', to: `/p/${p}/config`,          icon: Settings },
-    { label: 'Ollama', to: `/p/${p}/settings/ollama`, icon: Server },
+    { label: 'Providers', to: `/p/${p}/settings/providers`, icon: Server },
   ]
   if (hasDevOpsAccess) {
     system.push({ label: 'DevOps', to: `/p/${p}/devops`, icon: Layers })

@@ -145,7 +145,7 @@ function getModelCount(name: string): number {
 <template>
   <div class="psv">
     <div class="psv-header">
-      <h2 class="psv-title">Provider Settings</h2>
+      <h2 class="psv-title">Providers</h2>
       <div class="psv-header-actions">
         <button class="btn-secondary" :disabled="refreshing" @click="refresh">
           {{ refreshing ? 'Refreshing…' : 'Refresh' }}
@@ -156,7 +156,7 @@ function getModelCount(name: string): number {
 
     <div v-if="store.loading && !store.providers.length" class="psv-state">Loading…</div>
     <div v-else-if="!store.providers.length" class="psv-state">
-      No providers configured. Click <strong>Add Provider</strong> to register a local or cloud LLM provider.
+      No providers configured. Click <strong>Add Provider</strong> to register one.
     </div>
 
     <div v-else class="table-scroll">
