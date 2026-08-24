@@ -217,6 +217,14 @@ watch([showCompleted, () => ui.showCatalog], () => { resetSort(); setPage(1) })
 // Reset to page 1 after sort change
 watch([sortColumn, sortDirection], () => setPage(1))
 
+// Re-apply the lineage filter when the URL changes without a remount — e.g. a
+// wiki link ([[slug]] → /artifacts?lineage=slug) clicked while already on the
+// list. onMounted covers navigation from another route; this covers same-route.
+watch(() => route.query.lineage, (val) => {
+  lineageFilter.value = typeof val === 'string' ? val : ''
+  applyFilters()
+})
+
 function onToggleSort(col: string) {
   toggleSort(col)
 }
@@ -290,6 +298,7 @@ onMounted(async () => {
       type: selectedType.value || undefined,
       priority: selectedPriority.value || undefined,
       release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
+      lineage: lineageFilter.value || undefined,
       q: searchText.value || undefined,
       awaiting_answers: awaitingOnly.value || undefined,
       limit: 0,
