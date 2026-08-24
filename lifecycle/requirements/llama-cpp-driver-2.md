@@ -44,9 +44,12 @@ this one deliverable.
 
 Verification targets (both live and confirmed to serve `/v1/models`):
 
-- **llama.cpp** — `leia.packsin.com:7442`, `llama-server --jinja`
-  (`Dolphin3.0-Llama3.1-8B-Q4_K_M`); `--jinja` provides the chat template that
-  tool-calling depends on.
+- **llama.cpp** — `leia.packsin.com:7442`, `llama-server --jinja`, model
+  **`gemma-4-26B-A4B-it-UD-Q8_K_XL`** (verified 2026-08-24: tools injected,
+  clean `tool_calls`, full two-turn round-trip in 5 s). `gpt-oss-20b-Q8_0` is a
+  verified alternative (11 s). `--jinja` provides the chat template that
+  tool-calling depends on — but see FR-5b: the template must also *support*
+  tools, which is per-model.
 - **Ollama** — `leia.packsin.com:11434` (`qwen3-coder:30b`, `gemma3:12b`).
   Ollama answering `/v1/models` is precisely why the **native `ollama` driver is
   removed outright** rather than maintained alongside this one.
@@ -239,9 +242,12 @@ successful HTTP 200 means the model saw the tools.
   *with* `tools` against the same request *without* them. An **identical count
   means the server silently dropped the tools** and the run cannot be an agent
   run.
-- On a detected silent drop the run **fails fast** with a clear, actionable
-  terminal status naming the provider and model — never a hallucinated
-  "successful" answer.
+- On a detected silent drop the run **hard-fails** — it does not degrade to a
+  chat-only completion. The terminal status names the provider and model and
+  states that tool calling is unsupported, and **no artifacts are written**.
+  This is deliberate: the observed failure produced a fluent, confident,
+  entirely fabricated answer indistinguishable from success, so continuing
+  without tools risks writing hallucinated content into `lifecycle/`.
 - An explicit server rejection (e.g. Ollama's HTTP 400
   `"<model> does not support tools"`) is surfaced verbatim as the failure
   reason; it is the *desirable* failure mode and must not be retried.
@@ -385,6 +391,9 @@ Consequences for this driver:
 | Ollama · `gemma3:12b` | — | HTTP 400 `"gemma3:12b does not support tools"` | **B — explicit rejection (safest failure)** |
 | Ollama · `qwen3-coder:30b` | ✅ +269 tokens | clean native `tool_calls` → `read_file({"path":"lifecycle/config.yaml"})` | **C — clean success** |
 | Ollama · `gemma4:26b` | ✅ +40 tokens | clean native `tool_calls` | **C — clean success** |
+| llama.cpp · **`gemma-4-26B-A4B-it-UD-Q8_K_XL`** | ✅ +43 tokens | clean `tool_calls`; full 2-turn round-trip, correct answer, **5 s** | **C — clean success (documented target)** |
+| llama.cpp · `gpt-oss-20b-Q8_0` | ✅ +43 tokens | clean `tool_calls`; full round-trip, correct answer, 11 s | **C — clean success (verified alternative)** |
+| llama.cpp · `gemma-4-26B…heretic-Q4_K_M` | ✅ +43 tokens | clean `tool_calls` | **C — clean success** |
 | llama.cpp · Qwen3-Coder (per benchmark) | ✅ | native syntax passed through as `content` | **D — needs FR-5a recovery** |
 
 Two conclusions that shaped the requirements above:
@@ -393,11 +402,15 @@ Two conclusions that shaped the requirements above:
    stop`, and a fluent, entirely fabricated answer. Nothing in the response
    distinguishes it from success — which is why FR-5b makes the `prompt_tokens`
    delta a mandatory preflight rather than an optimisation.
-2. **Behaviour is per server+model, not per model.** Qwen3-Coder is mode D on
-   llama.cpp and mode C on Ollama. Capability must be *probed*, never inferred
-   from a model name — and the `:7442` llama.cpp deployment currently drops
-   `tools` despite `--jinja`, so it needs its template/router configuration
-   fixed before it can serve agent runs at all.
+2. **Behaviour is per server *and* model — probe, never infer.** Qwen3-Coder is
+   mode D on llama.cpp and mode C on Ollama, so one model differs by back end.
+   The converse also holds: on the *same* llama.cpp server, gemma-4-26B and
+   gpt-oss-20b inject tools cleanly while Dolphin-Llama3.1-8B drops them.
+   **The `:7442` server is correctly configured** — `--jinja` works; the silent
+   drop is a property of the Dolphin / Llama-3.1-8B chat template, which carries
+   no tool support (consistent with the benchmark, where Llama-3.1-8B scores
+   0/68). A model whose template lacks tools cannot be rescued by server flags,
+   which is why FR-5b probes per provider+model rather than per server.
 
 **OpenRouter probe (2026-08-24, this analysis):** `/v1/models` returns 419
 models, **83% advertising `tools` in `supported_parameters`** — so capability is
@@ -431,13 +444,23 @@ owner decisions, plus two answered by the dedup itself.
    gets); no interactive gate in v1. Routing through the
    [[adr-0006-mediated-agent-driver-permission-model]] mediation path (denial
    recording, queue pause, `on_denial`) is a deliberate follow-up, not v1.
-5. **Endpoint/flag compatibility — commit to a documented, tested
-   configuration.** `llama-server --jinja` (as running on
-   `leia.packsin.com:7442`) and Ollama's `/v1` endpoint are the supported,
-   tested baseline; other builds are best-effort/untested, mirroring how
-   [[ollama-claude-code-driver]] scoped its shim.
+5. **Endpoint/flag compatibility — committed, tested configuration.**
+   `llama-server --jinja` running **`gemma-4-26B-A4B-it-UD-Q8_K_XL`** is the
+   documented llama.cpp baseline (`gpt-oss-20b-Q8_0` a verified alternative),
+   and Ollama's `/v1` endpoint with `gemma4:26b` / `qwen3-coder:30b` the
+   documented Ollama baseline — all round-trip verified 2026-08-24. Other
+   server builds and models are best-effort/untested, mirroring how
+   [[ollama-claude-code-driver]] scoped its shim. **Model selection is part of
+   the supported configuration, not an operator detail**: a template without
+   tool support fails FR-5b regardless of server flags.
 6. **Frontend exposure — in scope, via Provider settings.** Moot as originally
    posed: there is no `llama-cpp` driver type to surface. Workstream 1 replaces
    `OllamaSettingsView` with provider settings (`ollama_instances` → `providers`,
    `/ollama/instances` → the provider API), so provider/model selection is part
    of the epic by definition.
+7. **Model without tool support — hard-fail, no degraded mode.** When FR-5b
+   detects a silent drop, or the server rejects `tools` outright, the run fails
+   with a clear reason and writes nothing. There is no "warn and continue"
+   fallback and no per-agent opt-out in v1: the failure this guards against
+   (Dolphin returning a confident hallucination at HTTP 200) is exactly the case
+   where continuing *looks* successful and corrupts artifacts.
