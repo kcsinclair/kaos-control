@@ -1,7 +1,7 @@
 ---
 title: Architecture Wizard — First-Class "Skip Scaffolding / Finish" for Retrofits
 type: requirement
-status: planning
+status: done
 lineage: wizard-skip-scaffolding
 created: "2026-08-22T13:30:00+10:00"
 parent: lifecycle/ideas/wizard-skip-scaffolding.md
