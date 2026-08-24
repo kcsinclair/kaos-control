@@ -86,14 +86,17 @@ describe('ScaffoldStep', () => {
     const wrapper = mount(ScaffoldStep, { props: { project: 'demo' } })
     await flushPromises()
 
-    const input = wrapper.find('input')
+    // Naming fields render only once the step's `selected` checkbox is on.
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+
+    const input = wrapper.find('input[type="text"]')
     expect((input.element as HTMLInputElement).value).toBe('demo-app')
 
     await wrapper.find('button.run-scaffold-btn').trigger('click')
     await flushPromises()
 
     expect(runScaffold).toHaveBeenCalledWith('demo', 'modular-monolith', 'go-vue', [
-      { step_key: 'config', values: { project_name: 'demo-app' }, use_defaults: true },
+      { step_key: 'config', values: { project_name: 'demo-app' }, use_defaults: true, selected: true },
     ])
     expect(wrapper.text()).toContain('lifecycle/config.yaml')
   })
@@ -118,12 +121,13 @@ describe('ScaffoldStep', () => {
     const wrapper = mount(ScaffoldStep, { props: { project: 'demo' } })
     await flushPromises()
 
-    await wrapper.find('input').setValue('custom-name')
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+    await wrapper.find('input[type="text"]').setValue('custom-name')
     await wrapper.find('button.run-scaffold-btn').trigger('click')
     await flushPromises()
 
     expect(runScaffold).toHaveBeenCalledWith('demo', 'modular-monolith', 'go-vue', [
-      { step_key: 'config', values: { project_name: 'custom-name' }, use_defaults: false },
+      { step_key: 'config', values: { project_name: 'custom-name' }, use_defaults: false, selected: true },
     ])
   })
 
@@ -147,15 +151,16 @@ describe('ScaffoldStep', () => {
     const wrapper = mount(ScaffoldStep, { props: { project: 'demo' } })
     await flushPromises()
 
-    await wrapper.find('input').setValue('custom-name')
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+    await wrapper.find('input[type="text"]').setValue('custom-name')
     await wrapper.find('button.decide-btn').trigger('click')
-    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('demo-app')
+    expect((wrapper.find('input[type="text"]').element as HTMLInputElement).value).toBe('demo-app')
 
     await wrapper.find('button.run-scaffold-btn').trigger('click')
     await flushPromises()
 
     expect(runScaffold).toHaveBeenCalledWith('demo', 'modular-monolith', 'go-vue', [
-      { step_key: 'config', values: { project_name: 'demo-app' }, use_defaults: true },
+      { step_key: 'config', values: { project_name: 'demo-app' }, use_defaults: true, selected: true },
     ])
   })
 })
