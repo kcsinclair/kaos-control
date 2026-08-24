@@ -1,7 +1,7 @@
 ---
 title: Open Provider Support
 type: idea
-status: in-development
+status: done
 lineage: open-provider-support
 created: "2026-08-24T18:36:36+10:00"
 priority: normal
