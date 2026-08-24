@@ -50,7 +50,7 @@ This requirement establishes the **Provider entity** as the architecture spine o
 
 ### Non-goals
 
-- Implementing the tool-calling loop, SSE parser, native tool-call recovery, or preflight capability checks of the `openai-compatible` driver itself. (This is specified in [[llama-cpp-driver]] / `requirements/llama-cpp-driver-2.md`).
+- Implementing the tool-calling loop, SSE parser, native tool-call recovery, or preflight capability checks of the `openai-compatible` driver itself. (This is specified in [[open-provider-support-2]]).
 - Dynamic provider failover or automatic error-driven provider switching. (This is specified in workstream 2: [[switch-provider]]).
 - Managing external inference server lifecycles (installing, starting, or provisioning Ollama, llama.cpp, or cloud accounts).
 - Modifying standalone CLI drivers (`claude-code-cli`, `codex-cli`, `gemini-cli`, `shell-stub`) that execute local CLI binaries rather than connecting to HTTP API providers.
@@ -251,6 +251,9 @@ The server mounts the following authenticated routes under `/api/providers` (req
 1. **Handling Missing Providers in Cloned Projects:**
    - When a project is cloned to a new machine where app-level `~/.kaos-control/config.yaml` does not have a provider named in `lifecycle/config.yaml`, should the agent status indicator flag "Provider missing" in the UI, and should `config.ValidateProject` treat this as a warning or a blocking error?
    - *Recommendation:* `config.ValidateProject` should log a warning and mark the agent as non-runnable (`ready_count: 0` / status `unconfigured`), while rendering a visual warning badge in the Agent panel pointing the operator to add the missing provider in Provider Settings.
+
+> Proceed with recommendation
+
 2. **Per-Provider Rate Limiting & Concurrency Caps:**
    - Should `ProviderConfig` optionally specify a `max_concurrent_requests` (e.g. for local servers with limited GPU VRAM or cloud accounts with low RPM tier limits)?
    - *Recommendation:* Defer per-provider concurrency caps to a follow-up enhancement; global `limits.max_concurrent_agents` and queue dispatching provide adequate protection for v1.
