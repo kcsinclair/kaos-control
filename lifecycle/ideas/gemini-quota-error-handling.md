@@ -1,7 +1,7 @@
 ---
 title: Handle Gemini Quota Errors Gracefully
 type: idea
-status: draft
+status: approved
 lineage: gemini-quota-error-handling
 created: "2026-08-25T09:53:37+10:00"
 priority: normal
