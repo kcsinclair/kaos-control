@@ -16,11 +16,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Provider is one registered LLM provider shared across all projects.
+type Provider struct {
+	Name         string            `yaml:"name" json:"name"`
+	BaseURL      string            `yaml:"base_url" json:"base_url"`
+	Driver       string            `yaml:"driver" json:"driver"` // "openai-compatible"
+	APIKey       string            `yaml:"api_key,omitempty" json:"api_key,omitempty"`
+	ExtraHeaders map[string]string `yaml:"extra_headers,omitempty" json:"extra_headers,omitempty"`
+}
+
 // OllamaInstance is one registered Ollama server shared across all projects.
+// Deprecated: use Provider with driver="openai-compatible".
 type OllamaInstance struct {
-	Name    string `yaml:"name"`
-	BaseURL string `yaml:"base_url"`
-	APIKey  string `yaml:"api_key,omitempty"`
+	Name    string `yaml:"name" json:"name"`
+	BaseURL string `yaml:"base_url" json:"base_url"`
+	APIKey  string `yaml:"api_key,omitempty" json:"api_key,omitempty"`
 }
 
 // App is the top-level application configuration (install-dir/config.yaml).
@@ -30,6 +40,7 @@ type App struct {
 	ProjectsDir     string           `yaml:"projects_dir"`
 	Limits          LimitsConfig     `yaml:"limits"`
 	DataDir         string           `yaml:"data_dir"` // where app DBs live; defaults to projects_dir/../data
+	Providers       []Provider       `yaml:"providers,omitempty"`
 	OllamaInstances []OllamaInstance `yaml:"ollama_instances,omitempty"`
 	Agent           AppAgentConfig   `yaml:"agent"`
 }
@@ -142,6 +153,51 @@ func LoadApp(path string) (*App, error) {
 	return &cfg, nil
 }
 
+type appRaw struct {
+	Server          ServerConfig     `yaml:"server"`
+	Auth            AuthConfig       `yaml:"auth"`
+	ProjectsDir     string           `yaml:"projects_dir"`
+	Limits          LimitsConfig     `yaml:"limits"`
+	DataDir         string           `yaml:"data_dir"`
+	Providers       []Provider       `yaml:"providers,omitempty"`
+	OllamaInstances []OllamaInstance `yaml:"ollama_instances,omitempty"`
+	Agent           AppAgentConfig   `yaml:"agent"`
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler for App, migrating legacy
+// ollama_instances in-memory to equivalent Provider records.
+func (a *App) UnmarshalYAML(value *yaml.Node) error {
+	var raw appRaw
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	a.Server = raw.Server
+	a.Auth = raw.Auth
+	a.ProjectsDir = raw.ProjectsDir
+	a.Limits = raw.Limits
+	a.DataDir = raw.DataDir
+	a.Providers = raw.Providers
+	a.OllamaInstances = raw.OllamaInstances
+	a.Agent = raw.Agent
+
+	seen := make(map[string]bool, len(a.Providers))
+	for _, p := range a.Providers {
+		seen[p.Name] = true
+	}
+	for _, inst := range a.OllamaInstances {
+		if !seen[inst.Name] {
+			a.Providers = append(a.Providers, Provider{
+				Name:    inst.Name,
+				BaseURL: inst.BaseURL,
+				Driver:  "openai-compatible",
+				APIKey:  inst.APIKey,
+			})
+			seen[inst.Name] = true
+		}
+	}
+	return nil
+}
+
 func validateApp(cfg *App) error {
 	if cfg.Server.Listen == "" {
 		return fmt.Errorf("server.listen must not be empty")
@@ -175,21 +231,59 @@ func validateApp(cfg *App) error {
 		cfg.Agent.RequireBypassPermissions = &v
 	}
 
-	seen := make(map[string]bool, len(cfg.OllamaInstances))
+	seenOllama := make(map[string]bool, len(cfg.OllamaInstances))
 	for i, inst := range cfg.OllamaInstances {
 		if inst.Name == "" {
 			return fmt.Errorf("ollama_instances[%d]: name must not be empty", i)
 		}
-		if seen[inst.Name] {
+		if seenOllama[inst.Name] {
 			return fmt.Errorf("ollama_instances: duplicate name %q", inst.Name)
 		}
-		seen[inst.Name] = true
+		seenOllama[inst.Name] = true
 		if inst.BaseURL == "" {
 			return fmt.Errorf("ollama_instances[%d] %q: base_url must not be empty", i, inst.Name)
 		}
 		u, err := url.ParseRequestURI(inst.BaseURL)
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
 			return fmt.Errorf("ollama_instances[%d] %q: base_url %q is not a valid http/https URL", i, inst.Name, inst.BaseURL)
+		}
+	}
+
+	// Migrate any OllamaInstances not already in Providers (for when App is created directly)
+	seenProviders := make(map[string]bool, len(cfg.Providers)+len(cfg.OllamaInstances))
+	for _, p := range cfg.Providers {
+		seenProviders[p.Name] = true
+	}
+	for _, inst := range cfg.OllamaInstances {
+		if !seenProviders[inst.Name] {
+			cfg.Providers = append(cfg.Providers, Provider{
+				Name:    inst.Name,
+				BaseURL: inst.BaseURL,
+				Driver:  "openai-compatible",
+				APIKey:  inst.APIKey,
+			})
+			seenProviders[inst.Name] = true
+		}
+	}
+
+	seen := make(map[string]bool, len(cfg.Providers))
+	for i, p := range cfg.Providers {
+		if p.Name == "" {
+			return fmt.Errorf("providers[%d]: name must not be empty", i)
+		}
+		if seen[p.Name] {
+			return fmt.Errorf("providers: duplicate name %q", p.Name)
+		}
+		seen[p.Name] = true
+		if p.BaseURL == "" {
+			return fmt.Errorf("providers[%d] %q: base_url must not be empty", i, p.Name)
+		}
+		u, err := url.ParseRequestURI(p.BaseURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			return fmt.Errorf("providers[%d] %q: base_url %q is not a valid http/https URL", i, p.Name, p.BaseURL)
+		}
+		if p.Driver == "" {
+			return fmt.Errorf("providers[%d] %q: driver must not be empty", i, p.Name)
 		}
 	}
 	return nil
@@ -444,15 +538,17 @@ type GitConfig struct {
 
 // AgentConfig is one configured agent binding.
 type AgentConfig struct {
-	Name            string            `yaml:"name"`
-	Roles           []string          `yaml:"-"` // populated by UnmarshalYAML from "role" or "roles"
-	Driver          string            `yaml:"driver"`
-	Model           string            `yaml:"model,omitempty"`
-	Endpoint        string            `yaml:"endpoint,omitempty"`
-	AllowedPaths    []string          `yaml:"allowed_write_paths,omitempty"`
-	TimeoutMinutes  int               `yaml:"timeout_minutes,omitempty"` // 0 = no timeout
-	GitIdentity     GitIdentity       `yaml:"git_identity"`
-	PromptTemplates map[string]string `yaml:"prompt_templates,omitempty"` // role -> template
+	Name              string            `yaml:"name"`
+	Roles             []string          `yaml:"-"` // populated by UnmarshalYAML from "role" or "roles"
+	Driver            string            `yaml:"driver"`
+	Provider          string            `yaml:"provider,omitempty"`
+	Model             string            `yaml:"model,omitempty"`
+	MaxToolIterations int               `yaml:"max_tool_iterations,omitempty"`
+	Endpoint          string            `yaml:"endpoint,omitempty"`
+	AllowedPaths      []string          `yaml:"allowed_write_paths,omitempty"`
+	TimeoutMinutes    int               `yaml:"timeout_minutes,omitempty"` // 0 = no timeout
+	GitIdentity       GitIdentity       `yaml:"git_identity"`
+	PromptTemplates   map[string]string `yaml:"prompt_templates,omitempty"` // role -> template
 	// Status lifecycle: set target artifact status at run start/end.
 	ActiveStatus  string `yaml:"active_status,omitempty"`   // status to set when run starts (empty = no change)
 	DoneOnSuccess bool   `yaml:"done_on_success,omitempty"` // if true, set status=done when run completes successfully
@@ -492,7 +588,9 @@ type agentConfigRaw struct {
 	Role               []string          `yaml:"role"`
 	Roles              []string          `yaml:"roles"`
 	Driver             string            `yaml:"driver"`
+	Provider           string            `yaml:"provider,omitempty"`
 	Model              string            `yaml:"model,omitempty"`
+	MaxToolIterations  int               `yaml:"max_tool_iterations,omitempty"`
 	Endpoint           string            `yaml:"endpoint,omitempty"`
 	AllowedPaths       []string          `yaml:"allowed_write_paths,omitempty"`
 	TimeoutMinutes     int               `yaml:"timeout_minutes,omitempty"`
@@ -522,7 +620,9 @@ func (a *AgentConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 	a.Name = raw.Name
 	a.Driver = raw.Driver
+	a.Provider = raw.Provider
 	a.Model = raw.Model
+	a.MaxToolIterations = raw.MaxToolIterations
 	a.Endpoint = raw.Endpoint
 	a.AllowedPaths = raw.AllowedPaths
 	a.TimeoutMinutes = raw.TimeoutMinutes
@@ -1016,6 +1116,18 @@ func validateProject(cfg *Project) error {
 			}
 			if a.Model == "" {
 				return fmt.Errorf("project config: agent %q has driver=claude-env but missing model", a.Name)
+			}
+		}
+		if a.Driver == "openai-compatible" {
+			if a.Provider == "" {
+				return fmt.Errorf("project config: agent %q has driver=openai-compatible but missing provider", a.Name)
+			}
+			if a.Model == "" {
+				return fmt.Errorf("project config: agent %q has driver=openai-compatible but missing model", a.Name)
+			}
+		} else if a.Provider != "" {
+			if a.Model == "" {
+				return fmt.Errorf("project config: agent %q has provider %q but missing model", a.Name, a.Provider)
 			}
 		}
 	}

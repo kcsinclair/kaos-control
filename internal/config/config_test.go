@@ -1290,3 +1290,260 @@ func writeMinimalProjectConfig(t *testing.T, extraYAML string) string {
 	}
 	return dir
 }
+
+// ---------------------------------------------------------------------------
+// Milestone 1 — Provider & openai-compatible AgentConfig tests
+// ---------------------------------------------------------------------------
+
+func TestProviderConfig_Validation(t *testing.T) {
+	t.Run("valid provider loads cleanly", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: local-llama
+    base_url: http://localhost:7442
+    driver: openai-compatible
+    api_key: secret-token
+    extra_headers:
+      X-Title: InnovationMaker
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := LoadApp(cfgPath)
+		if err != nil {
+			t.Fatalf("LoadApp: %v", err)
+		}
+		if len(cfg.Providers) != 1 {
+			t.Fatalf("len(Providers) = %d, want 1", len(cfg.Providers))
+		}
+		p := cfg.Providers[0]
+		if p.Name != "local-llama" || p.BaseURL != "http://localhost:7442" || p.Driver != "openai-compatible" {
+			t.Errorf("unexpected provider: %+v", p)
+		}
+		if p.APIKey != "secret-token" || p.ExtraHeaders["X-Title"] != "InnovationMaker" {
+			t.Errorf("unexpected provider fields: %+v", p)
+		}
+	})
+
+	t.Run("empty provider name rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: ""
+    base_url: http://localhost:7442
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "name must not be empty") {
+			t.Fatalf("expected empty name error, got: %v", err)
+		}
+	})
+
+	t.Run("duplicate provider name rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: dup-prov
+    base_url: http://localhost:7442
+    driver: openai-compatible
+  - name: dup-prov
+    base_url: http://localhost:7443
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "duplicate name") {
+			t.Fatalf("expected duplicate name error, got: %v", err)
+		}
+	})
+
+	t.Run("empty base_url rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: prov
+    base_url: ""
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "base_url must not be empty") {
+			t.Fatalf("expected empty base_url error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid base_url rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: prov
+    base_url: "ftp://invalid-url"
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "not a valid http/https URL") {
+			t.Fatalf("expected invalid url error, got: %v", err)
+		}
+	})
+
+	t.Run("empty driver rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: prov
+    base_url: "http://localhost:7442"
+    driver: ""
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "driver must not be empty") {
+			t.Fatalf("expected empty driver error, got: %v", err)
+		}
+	})
+}
+
+func TestProviderConfig_OllamaMigration(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+ollama_instances:
+  - name: legacy-ollama
+    base_url: http://localhost:11434
+    api_key: secret-key
+`
+	if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadApp(cfgPath)
+	if err != nil {
+		t.Fatalf("LoadApp: %v", err)
+	}
+	if len(cfg.Providers) != 1 {
+		t.Fatalf("expected 1 migrated provider, got %d", len(cfg.Providers))
+	}
+	p := cfg.Providers[0]
+	if p.Name != "legacy-ollama" || p.BaseURL != "http://localhost:11434" || p.Driver != "openai-compatible" || p.APIKey != "secret-key" {
+		t.Errorf("migrated provider mismatch: %+v", p)
+	}
+}
+
+func TestProjectConfig_OpenAICompatibleAgent(t *testing.T) {
+	t.Run("valid openai-compatible agent loads cleanly", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: local-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: local-llama
+    model: gemma-4-26b
+    max_tool_iterations: 15
+    allowed_write_paths: [lifecycle/requirements]
+    git_identity:
+      name: Local Agent
+      email: local@test.local
+    prompt_templates:
+      analyst: "Analyse {target_path}"
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		var found *AgentConfig
+		for i := range cfg.Agents {
+			if cfg.Agents[i].Name == "local-agent" {
+				found = &cfg.Agents[i]
+				break
+			}
+		}
+		if found == nil {
+			t.Fatal("local-agent not found")
+		}
+		if found.Driver != "openai-compatible" || found.Provider != "local-llama" || found.Model != "gemma-4-26b" || found.MaxToolIterations != 15 {
+			t.Errorf("agent fields mismatch: %+v", found)
+		}
+	})
+
+	t.Run("openai-compatible agent missing provider rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: no-provider-agent
+    role: [analyst]
+    driver: openai-compatible
+    model: gemma-4-26b
+    prompt_templates:
+      analyst: "x"
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "missing provider") {
+			t.Fatalf("expected missing provider error, got: %v", err)
+		}
+	})
+
+	t.Run("openai-compatible agent missing model rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: no-model-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: local-llama
+    prompt_templates:
+      analyst: "x"
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "missing model") {
+			t.Fatalf("expected missing model error, got: %v", err)
+		}
+	})
+}
+
