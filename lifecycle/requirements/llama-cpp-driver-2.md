@@ -37,8 +37,8 @@ The functional requirements below are unchanged in substance — the multi-turn
 tool-call loop, sandbox/`allowed_write_paths` scoping, and the
 ProgressEvent/TTFT contract are the hard part and apply identically to every
 target. What changes is that llama.cpp is now a **verification target, not the
-subject**. The same driver serves OpenAI, OpenRouter (via `extra_headers`),
-Ollama, Groq, Together and Azure, so [[openai-api-integration]],
+subject**. The same driver serves OpenAI, OpenRouter, Ollama, Groq,
+Together and Azure, so [[openai-api-integration]],
 [[openrouter-llm-integration]] and [[llama-cpp-driver]] are all satisfied by
 this one deliverable.
 
@@ -108,8 +108,9 @@ cloud-backed providers. This is the same "local models can talk but cannot
   contract is "advertise tools, execute what the model calls, loop"; whether a
   given model reliably emits well-formed tool calls is the model's concern and a
   documentation/recommendation matter, not a correctness requirement.
-- A frontend driver-picker or instance-management UI. v1 is config-file driven;
-  UI surfacing is an open question.
+- A *driver*-picker UI. Provider/model selection **is** in scope, but as the
+  Provider settings surface delivered by the epic (`OllamaSettingsView` →
+  provider settings) — not a per-driver picker. See Resolved Question 6.
 - Streaming partial tool-call arguments token-by-token to the UI. Assembling a
   complete tool call before executing it is sufficient for v1.
 
@@ -195,6 +196,33 @@ agent is a `{provider, model}` pair (see [[provider-model-for-agents]]).
   overridable per agent via `max_tool_iterations` — see Resolved Questions 3).
   Hitting the cap ends the run with a clear terminal status and a logged reason
   rather than looping unbounded.
+
+#### FR-5a: Native-format tool-call recovery
+
+Some models emit tool calls in their **own syntax** and llama.cpp passes the
+text through as plain `content` instead of parsing it into `tool_calls`.
+Qwen3-Coder does exactly this. A driver that only reads `message.tool_calls`
+silently scores zero on those models — they appear to "not call tools" when in
+fact the server did not parse them.
+
+- When a turn returns **no `tool_calls` but non-empty `content`**, the driver
+  attempts a fallback parse for the known native encodings before treating the
+  turn as a final answer:
+  - `<function=NAME><parameter=KEY>VALUE</parameter></function>`
+  - `<tool_call>{json}</tool_call>`
+- Recovered calls are normalised to the OpenAI `tool_calls` shape and executed
+  through the same path, but are **counted and logged separately** from native
+  OpenAI-shaped calls — an off-the-shelf agent would not see them, so conflating
+  the two would measure the server rather than the model.
+- A turn with neither `tool_calls`, recoverable native calls, nor content is a
+  terminal condition, not a retry.
+- Gateways that normalise across vendors (OpenRouter) are expected to yield
+  **zero** recovered calls; a non-zero count there is a finding worth logging,
+  not something to paper over silently.
+
+Reference implementation: `benchmark/run_agent.py` in
+[`~/Code/agent-benchmark`](../ideas/llama-cpp-driver.md) (`parse_native_calls`,
+`NATIVE_FN` / `TOOL_CALL_JSON`).
 
 #### FR-6: Streaming, progress, and TTFT
 
@@ -288,6 +316,49 @@ agent is a `{provider, model}` pair (see [[provider-model-for-agents]]).
       backend/frontend/test plans) link via `parent:` correctly, and related
       work [[ollama-claude-code-driver]], [[ollama-agent-support]], and
       [[ollama-agents-need-execution-layer]] is referenced without duplication.
+
+## Prior art and measured evidence
+
+`~/Code/agent-benchmark` already measures the exact risk this requirement
+carries — whether a model can drive a `write_file` tool loop — across 13 local
+models on the same five coding problems, with a working OpenAI-compatible
+reference loop in `benchmark/run_agent.py`.
+
+**Agent-track results (score out of 68 checks):**
+
+| band | models | reading |
+|---|---|---|
+| 65–68 | gemma-4-26B, gpt-oss-120b, gpt-oss-20b Q8, Qwen3.6-27B/35B, gemma-4-31B | fully agent-capable |
+| 37–57 | Qwen3-Coder-30B (57), Qwen3VL-8B (41), gpt-oss-20b **Q4** (37) | usable, degraded |
+| 0–28 | Muse-Glimmer-30B (28), Hermes-4-14B (8), Llama-3-14B (0), Llama-3.1-8B (0) | not agent-capable |
+
+Consequences for this driver:
+
+- **Capability is not a given.** Llama-3-14B called a tool *zero* times and
+  answered in prose; Llama-3.1-8B called tools but wrote the wrong files. Both
+  are terminal outcomes the driver must report clearly rather than retry.
+- **Quantisation matters as much as model choice** — gpt-oss-20b scores 68/68 at
+  Q8 and 37/68 at Q4. Model recommendations must state the quant.
+- **Per-turn token ceiling is a real failure mode.** Muse-Glimmer recorded
+  exactly 8192 completion tokens (the per-turn cap) on three of five problems
+  with zero tool calls — it never finished reasoning, so it never called a tool.
+  That is a token ceiling, not an inability to drive an agent, so `max_tokens`
+  must be configurable per agent and truncation must be logged distinctly.
+- **Empirical loop bound.** The benchmark harness defaults to `max_turns: 12`
+  with `max_tokens: 8192` and completed the suite. The 25 default set in
+  Resolved Question 3 is therefore comfortably above the observed need; 12 is
+  evidence that 25 is a safety cap rather than a working limit.
+
+**OpenRouter probe (2026-08-24, this analysis):** `/v1/models` returns 419
+models, **83% advertising `tools` in `supported_parameters`** — so capability is
+discoverable up front and the driver can reject an unsuitable model before a run
+rather than failing mid-loop. A full tool-call round-trip
+(`read_file` → tool result → final answer) succeeded natively, confirming
+gateways normalise tool calls. Two caveats observed: `HTTP-Referer`/`X-Title`
+are **optional** (both present and absent returned 200 — `extra_headers` is
+attribution, not a functional requirement), and several catalogued model IDs
+returned **404 on `/v1/chat/completions`**, so "listed" does not imply
+"routable".
 
 ## Resolved Questions
 
