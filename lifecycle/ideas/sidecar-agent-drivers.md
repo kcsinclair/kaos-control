@@ -176,3 +176,12 @@ feels right before we invest in the Python runner properly.
 - Distribution: embed `kaos_langchain_runner.py` via `embed.FS`, or
   publish to PyPI as `kaos-control-langchain-runner` so it updates
   independently of the Go binary?
+
+## Deferred alternative (open-provider-support dedup)
+
+Reviewed against the [[open-provider-support]] epic as a competing approach to a
+first-party Go driver. Decision: **deferred, not rejected.** The first-party
+OpenAI-compatible driver is the primary path (single binary, no external
+runtime); this stays a future extensibility route for third-party agent
+frameworks (LangChain, Aider, Goose). The provider ADR should record it as a
+considered-and-deferred option.
