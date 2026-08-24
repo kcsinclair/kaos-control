@@ -12,6 +12,9 @@ labels:
     - editor
     - backend
 release: KC-Release6
+assignees:
+    - role: backend-developer
+      who: agent
 ---
 
 # Release Artifact Not Automatically Committed to Git After Edit
