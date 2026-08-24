@@ -1,7 +1,7 @@
 ---
 title: Local-Model Operability
 type: idea
-status: approved
+status: clarifying
 lineage: local-model-operability
 parent: lifecycle/ideas/open-provider-support.md
 created: "2026-05-09T17:45:45+10:00"
