@@ -36,11 +36,24 @@ assignees:
 
 ## Expected Behaviour
 
-There is a first-class way to **upgrade an existing project's `config.yaml` to
-the current schema** — persisting the built-in defaults for any
-missing/empty sections and templates while preserving the project's existing
-customisations. After running it, the warnings stop and the on-disk file
-matches what the server expects.
+A first-class **config upgrade** flow that:
+
+1. **Tells the user in the GUI** that the project's config is behind (which
+   sections/templates would be filled) and offers an explicit "Upgrade config"
+   action to proceed. The existing `ConfigHealthBanner` — backed by
+   `GET …/config/health`, which already returns the self-repair `RepairNote`s —
+   is the natural home.
+2. On proceed, **backs up the existing `config.yaml`** (timestamped, e.g.
+   `config.yaml.bak-<RFC3339>`) and **writes the upgraded config** — persisting
+   built-in defaults for missing/empty sections while preserving customisations.
+3. **Applies without a manual restart.** Writing `config.yaml` already triggers
+   the watcher-driven `project.ReloadConfig()` and a `config.reloaded` WS
+   broadcast, so the running server picks it up live and the GUI can confirm the
+   reload. (A "Reload config now" button — an explicit `POST …/config/reload` —
+   is a nice fallback, but the auto-reload already covers the common case.)
+
+After upgrading, the self-repair WARNs stop and the on-disk file matches the
+expected schema.
 
 ## Actual Behaviour
 
@@ -59,19 +72,24 @@ equivalent for `config.yaml`**.
 
 ## Fix guidance
 
-Add a **`kaos-control migrate-config`** (or `upgrade-config`) CLI command, and
-ideally a matching UI action, that:
+Most of the plumbing already exists — this is largely wiring it together:
 
-- loads the project config, runs the same `ValidateAndRepair` pass, and **writes
-  the repaired config back to disk**, persisting the built-in defaults for any
-  missing sections/templates;
-- **preserves existing customisations** — only fills what's missing/empty, never
-  clobbers hand-tuned values;
-- follows the `migrate-directives` UX: show a **diff / dry-run** and require
-  confirmation (or `--force`) before writing, so the user sees exactly what
-  changes;
-- reports the applied `RepairNote`s (the `ConfigHealthResponse` shape already
-  models these).
+- **Persist path.** Add `POST …/config/upgrade` (and a `kaos-control
+  migrate-config` CLI) that runs the same `ValidateAndRepair` pass and writes
+  the result back to disk, **after copying the current file to a timestamped
+  backup** (`config.yaml.bak-<RFC3339>`). Only fill missing/empty sections;
+  never clobber hand-tuned values. Show a **diff / dry-run** and require
+  confirmation (or `--force`), mirroring `migrate-directives`.
+- **GUI.** Extend `ConfigHealthBanner.vue` (already renders the pending
+  `RepairNote`s from `GET …/config/health`) with an **"Upgrade config"** button
+  that calls the endpoint, then reflects the resulting `config.reloaded` event.
+- **Reload (already exists).** Reuse the watcher → `project.ReloadConfig()` →
+  `config.reloaded` WS path (`internal/project/project.go`). **Verify a reload
+  fully re-derives agents / stages / kanban from the new config** — some of
+  those may be captured at `project.Open` and not refreshed by `ReloadConfig`;
+  if so, either re-wire them on reload or prompt for a restart only for those
+  specific changes. Optionally add an explicit `POST …/config/reload` +
+  "Reload config now" button for manual control.
 
 ## Notes
 
