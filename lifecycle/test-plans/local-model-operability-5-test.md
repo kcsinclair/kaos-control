@@ -1,7 +1,7 @@
 ---
 title: "Test Plan: Local-Model Operability and UI Error Surfacing"
 type: plan-test
-status: draft
+status: approved
 lineage: local-model-operability
 parent: lifecycle/requirements/local-model-operability-2.md
 created: "2026-08-25T08:49:06+10:00"
