@@ -17,6 +17,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/kaos-control/kaos-control/internal/agent"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/config"
 	kaoshttp "github.com/kaos-control/kaos-control/internal/http"
@@ -363,4 +364,23 @@ func waitForRunCompletion(t *testing.T, env *testEnv, runID string) map[string]a
 	}
 	t.Fatal("timed out waiting for run to complete")
 	return nil
+}
+
+func collectEvents(t *testing.T, proc agent.Process, timeout time.Duration) []agent.ProgressEvent {
+	t.Helper()
+	var events []agent.ProgressEvent
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
+	for {
+		select {
+		case ev, ok := <-proc.Progress():
+			if !ok {
+				return events
+			}
+			events = append(events, ev)
+		case <-deadline.C:
+			t.Errorf("timed out collecting events after %v; got %d so far", timeout, len(events))
+			return events
+		}
+	}
 }

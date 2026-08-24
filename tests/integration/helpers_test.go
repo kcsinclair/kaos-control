@@ -477,3 +477,29 @@ func requireStatus(t *testing.T, resp *http.Response, want int) {
 		t.Fatalf("expected status %d, got %d: %s", want, resp.StatusCode, string(b))
 	}
 }
+
+// writeAppCfgFile writes a YAML string to a temp file and returns its path.
+func writeAppCfgFile(t *testing.T, yaml string) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(path, []byte(yaml), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// makeProjectRoot creates a minimal project directory structure with the given
+// lifecycle/config.yaml content and returns the project root path.
+func makeProjectRoot(t *testing.T, cfgYAML string) string {
+	t.Helper()
+	root := t.TempDir()
+	lcDir := filepath.Join(root, "lifecycle")
+	if err := os.MkdirAll(lcDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lcDir, "config.yaml"), []byte(cfgYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
