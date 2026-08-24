@@ -80,13 +80,19 @@ empirical proof that one driver covers both:
 | Endpoint | Server | Evidence |
 |---|---|---|
 | `leia.packsin.com:11434` | **Ollama** (registered as `Loki`) | serves `/v1/models` *and* native `/api/tags`; models incl. `qwen3-coder:30b`, `gemma3:12b`, `glm-5.2:cloud` |
-| `leia.packsin.com:7442` | **llama.cpp** | `/v1/models` → `owned_by: "llamacpp"`; `llama-server` launched with `--jinja` (tool-call templating), model `Dolphin3.0-Llama3.1-8B-Q4_K_M`, lazy-loaded |
+| `leia.packsin.com:7442` | **llama.cpp** | `/v1/models` → `owned_by: "llamacpp"`; `llama-server --jinja`; **documented target `gemma-4-26B-A4B-it-UD-Q8_K_XL`** — tools injected, clean `tool_calls`, full 2-turn round-trip in 5 s |
 
 That Ollama answers `/v1/models` is exactly why the native `ollama` driver can
 be removed: the openai-compatible driver reaches the same server and the same
-models. And `--jinja` on the llama.cpp side is the template support the
-tool-calling loop depends on, so agent-mode can be verified against a real local
-server rather than in theory.
+models.
+
+**Tool support is per model, not per server.** On that same llama.cpp server,
+`gemma-4-26B` and `gpt-oss-20b-Q8_0` inject tools cleanly, while
+`Dolphin3.0-Llama3.1-8B-Q4_K_M` **silently drops** them and answers with a
+confident fabrication at HTTP 200 — the failure mode FR-5b's preflight exists to
+catch. `--jinja` is necessary but not sufficient: the model's chat template must
+itself carry tool support. Full matrix and consequences in
+[[open-provider-support-2]].
 
 ## Workstreams
 
@@ -95,7 +101,7 @@ This lineage is the parent for three requirements:
 1. **Provider abstraction + OpenAI-compatible agent driver** — the Provider
    entity (config, API, UI) plus the tool-calling driver. Absorbs the ideas
    below. The tool-loop specification already exists in detail as
-   `requirements/llama-cpp-driver-2.md` and is being generalised rather than
+   `requirements/open-provider-support-2.md` and is being generalised rather than
    rewritten.
 2. **Provider failover** ([[switch-provider]]) — depends on 1. Cheaper than it
    looks: rate-limit/529 detection already ships

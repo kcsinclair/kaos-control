@@ -7,7 +7,7 @@ created: "2026-08-20T12:21:00+10:00"
 parent: lifecycle/backend-plans/architectural-artefacts-3-be.md
 labels:
     - defect
-release: KC-Release5
+release: KC-Release6
 assignees:
     - role: product-owner
       who: agent

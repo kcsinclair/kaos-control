@@ -35,7 +35,7 @@ llama.cpp speaks the same OpenAI-compatible `/v1/chat/completions` endpoint as
 every other target, so it needs no dedicated driver.
 
 **Its requirement is being generalised, not discarded.**
-`requirements/llama-cpp-driver-2.md` is the most developed specification of the
+`requirements/open-provider-support-2.md` is the most developed specification of the
 genuinely hard part — the bounded multi-turn tool-call loop, sandbox and
 `allowed_write_paths` scoping for tool execution, and the ProgressEvent/TTFT
 contract. That content becomes the driver requirement under the epic lineage,

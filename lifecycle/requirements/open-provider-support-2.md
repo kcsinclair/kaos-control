@@ -2,7 +2,7 @@
 title: OpenAI-Compatible Agent Driver (Tool-Calling)
 type: requirement
 status: planning
-lineage: llama-cpp-driver
+lineage: open-provider-support
 created: "2026-08-11T18:15:34+10:00"
 priority: normal
 parent: lifecycle/ideas/open-provider-support.md

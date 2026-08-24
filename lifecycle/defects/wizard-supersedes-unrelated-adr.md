@@ -10,7 +10,7 @@ labels:
     - architecture
     - wizard
     - adr
-release: KC-Release5
+release: KC-Release6
 assignees:
     - role: backend-developer
       who: agent

@@ -2,19 +2,19 @@
 title: "Frontend Plan: OpenAI-Compatible Agent Driver (Tool-Calling)"
 type: plan-frontend
 status: draft
-lineage: llama-cpp-driver
-parent: lifecycle/requirements/llama-cpp-driver-2.md
+lineage: open-provider-support
+parent: lifecycle/requirements/open-provider-support-2.md
 created: "2026-08-25T07:10:33+10:00"
 ---
 
 # Frontend Plan: OpenAI-Compatible Agent Driver (Tool-Calling)
 
-Parent: [[llama-cpp-driver-2]].
+Parent: [[open-provider-support-2]].
 
 This plan covers the Vue 3 / TypeScript frontend implementation for the
 [[llama-cpp-driver]] requirement and the provider settings surface delivered by
 the [[open-provider-support]] epic. Backend implementation is in
-[[llama-cpp-driver-3-be]] and test coverage in [[llama-cpp-driver-5-test]].
+[[open-provider-support-3-be]] and test coverage in [[open-provider-support-5-test]].
 
 ---
 

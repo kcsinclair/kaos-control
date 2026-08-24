@@ -2,20 +2,20 @@
 title: "Test Plan: OpenAI-Compatible Agent Driver (Tool-Calling)"
 type: plan-test
 status: draft
-lineage: llama-cpp-driver
-parent: lifecycle/requirements/llama-cpp-driver-2.md
+lineage: open-provider-support
+parent: lifecycle/requirements/open-provider-support-2.md
 created: "2026-08-25T07:10:33+10:00"
 ---
 
 # Test Plan: OpenAI-Compatible Agent Driver (Tool-Calling)
 
-Parent: [[llama-cpp-driver-2]].
+Parent: [[open-provider-support-2]].
 
 This plan defines unit tests, integration tests, and verification targets for
 all acceptance criteria and non-functional requirements of the
 [[llama-cpp-driver]] requirement. Backend implementation is in
-[[llama-cpp-driver-3-be]] and frontend implementation is in
-[[llama-cpp-driver-4-fe]].
+[[open-provider-support-3-be]] and frontend implementation is in
+[[open-provider-support-4-fe]].
 
 ---
 

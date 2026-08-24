@@ -10,6 +10,7 @@ labels:
     - agent
     - workflow
     - lifecycle
+release: KC-Release6
 ---
 
 # Agent Emits 'Open Questions' Header With No Questions, Triggering False Workflow Block

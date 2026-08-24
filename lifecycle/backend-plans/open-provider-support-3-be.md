@@ -2,19 +2,19 @@
 title: "Backend Plan: OpenAI-Compatible Agent Driver (Tool-Calling)"
 type: plan-backend
 status: draft
-lineage: llama-cpp-driver
-parent: lifecycle/requirements/llama-cpp-driver-2.md
+lineage: open-provider-support
+parent: lifecycle/requirements/open-provider-support-2.md
 created: "2026-08-25T07:10:33+10:00"
 ---
 
 # Backend Plan: OpenAI-Compatible Agent Driver (Tool-Calling)
 
-Parent: [[llama-cpp-driver-2]].
+Parent: [[open-provider-support-2]].
 
 This plan covers the Go backend implementation for FR-1 through FR-8 and NFR-1
 through NFR-4 of the [[llama-cpp-driver]] requirement (Workstream 1 of the
 [[open-provider-support]] epic). Frontend changes are defined in
-[[llama-cpp-driver-4-fe]] and test coverage in [[llama-cpp-driver-5-test]].
+[[open-provider-support-4-fe]] and test coverage in [[open-provider-support-5-test]].
 
 ---
 
