@@ -124,7 +124,7 @@ function runningCount(agent: AgentSummary): number {
         <span v-if="agent.observe_only" class="panel-observe-badge">observe</span>
       </div>
       <span v-if="agent.model" class="panel-model">{{ agent.model }}</span>
-      <span v-if="agent.driver === 'openai-compatible' && agent.provider" class="panel-model">{{ agent.provider }}</span>
+      <span v-if="agent.driver === 'openai-compatible' && agent.provider" class="panel-provider-badge">{{ agent.provider }}</span>
       <span v-if="isInline(agent)" class="panel-inline-label">Externally driven</span>
       <!-- Ready-count badge (only for agents with active_status) -->
       <button
@@ -278,6 +278,19 @@ function runningCount(agent: AgentSummary): number {
   font-size: 11px;
   color: var(--color-text-muted);
   font-family: monospace;
+}
+
+.panel-provider-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  font-family: monospace;
+  align-self: flex-start;
 }
 
 .panel-driver {

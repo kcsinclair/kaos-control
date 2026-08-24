@@ -188,7 +188,7 @@ function toggleRole(role: string) {
         class="acf-input"
         :class="{ 'acf-input--error': errors.name }"
         type="text"
-        placeholder="e.g. my-ollama-agent"
+        placeholder="e.g. coder-agent"
         :disabled="isEdit"
         autocomplete="off"
       />
