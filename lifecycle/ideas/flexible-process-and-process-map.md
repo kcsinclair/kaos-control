@@ -1,9 +1,9 @@
 ---
-created: "2026-06-26T18:18:32+10:00"
 title: Flexible Process and Process Map
 type: idea
 status: draft
 lineage: flexible-process-and-process-map
+created: "2026-06-26T18:18:32+10:00"
 priority: normal
 parent: lifecycle/ideas/devops-pipeline-run-history.md
 labels:
@@ -13,7 +13,7 @@ labels:
     - ux
     - feature
     - frontend
-release: KC-Release6
+release: KC-Release7
 ---
 
 # flexible process and process map

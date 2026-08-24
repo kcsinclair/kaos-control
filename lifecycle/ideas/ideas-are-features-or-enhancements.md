@@ -1,16 +1,16 @@
 ---
-created: "2026-07-14T19:34:44+10:00"
 title: Ideas are Features or Enhancements
 type: idea
 status: clarifying
 lineage: ideas-are-features-or-enhancements
+created: "2026-07-14T19:34:44+10:00"
 priority: normal
 parent: lifecycle/ideas/inherit-priority-and-release.md
 labels:
     - workflow
     - artefacts
     - feature
-release: KC-Release6
+release: KC-Release7
 ---
 
 # ideas are features or enhancements

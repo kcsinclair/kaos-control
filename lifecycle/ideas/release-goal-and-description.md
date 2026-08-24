@@ -12,6 +12,8 @@ labels:
     - ui
     - frontend
     - backend
+release: KC-Release6
+parent: lifecycle/ideas/frontend-lint-gap.md
 ---
 
 # Release Goal and Description Fields

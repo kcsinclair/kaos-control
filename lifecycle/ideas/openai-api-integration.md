@@ -10,7 +10,8 @@ labels:
     - integration
     - agent
     - backend
-release: KC-MoreLLMS
+release: KC-Release6
+parent: lifecycle/ideas/frontend-lint-gap.md
 ---
 
 # Add Support for OpenAI-Compatible LLM API

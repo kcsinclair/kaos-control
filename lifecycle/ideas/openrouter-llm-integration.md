@@ -10,7 +10,8 @@ labels:
     - integration
     - agent
     - backend
-release: KC-MoreLLMS
+release: KC-Release6
+parent: lifecycle/ideas/frontend-lint-gap.md
 ---
 
 # OpenRouter LLM Integration
