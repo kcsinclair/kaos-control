@@ -1,7 +1,7 @@
 ---
 title: "Backend Plan — Dynamic Provider Switching, Automated Failover & Recovery"
 type: plan-backend
-status: approved
+status: in-development
 lineage: switch-provider
 parent: lifecycle/requirements/switch-provider-2.md
 created: "2026-08-25T08:50:00+10:00"
