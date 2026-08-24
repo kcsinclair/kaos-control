@@ -169,6 +169,8 @@ improvement — and Stage 2 can be its own follow-up commit.
 - **Run on `tests/web/` too?** Pros: same correctness floor. Cons: test
   files need looser rules. Probably yes with an override block.
 
+> yes with an override block
+
 - **Pre-commit hook?** Catches things earlier but slows the loop.
   Defer — `make lint` is already the contract.
 
