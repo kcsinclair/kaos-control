@@ -5,6 +5,7 @@ status: draft
 lineage: release-goal-and-description
 created: "2026-08-24T18:24:34+10:00"
 priority: normal
+parent: lifecycle/ideas/frontend-lint-gap.md
 labels:
     - releases
     - feature
@@ -12,8 +13,8 @@ labels:
     - ui
     - frontend
     - backend
+    - open-provider-support
 release: KC-Release6
-parent: lifecycle/ideas/frontend-lint-gap.md
 ---
 
 # Release Goal and Description Fields
