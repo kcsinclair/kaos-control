@@ -11,6 +11,7 @@ labels:
     - backend
     - enhancement
     - operability
+    - open-provider-support
 release: KC-Release6
 ---
 
