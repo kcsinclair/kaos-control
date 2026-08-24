@@ -1,7 +1,7 @@
 ---
 title: Dynamic Provider Switching and Failover
 type: requirement
-status: approved
+status: planning
 lineage: switch-provider
 created: "2026-08-25T08:25:25+10:00"
 priority: high
