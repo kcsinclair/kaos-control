@@ -1,11 +1,11 @@
 ---
-title: llama.cpp Agent Driver for Local Models
+title: OpenAI-Compatible Agent Driver (Tool-Calling)
 type: requirement
-status: blocked
+status: draft
 lineage: llama-cpp-driver
 created: "2026-08-11T18:15:34+10:00"
 priority: normal
-parent: lifecycle/ideas/llama-cpp-driver.md
+parent: lifecycle/ideas/open-provider-support.md
 labels:
     - driver
     - agent
@@ -14,13 +14,42 @@ labels:
     - go
     - portability
     - feature
+    - provider
+    - open-provider-support
 release: KC-Release6
 assignees:
     - role: product-owner
       who: agent
 ---
 
-# llama.cpp Agent Driver for Local Models
+# OpenAI-Compatible Agent Driver (Tool-Calling)
+
+## Scope (generalised from the llama.cpp requirement)
+
+This requirement was originally scoped to a `llama-cpp` driver. It is now the
+**workstream 1 driver requirement** of the [[open-provider-support]] epic:
+a single first-party driver that speaks the OpenAI-compatible
+`/v1/chat/completions` endpoint with a tool-calling agent loop, reached through
+a configured **Provider** record (`{name, base_url, api_key, driver,
+extra_headers}`) rather than a per-vendor driver name.
+
+The functional requirements below are unchanged in substance — the multi-turn
+tool-call loop, sandbox/`allowed_write_paths` scoping, and the
+ProgressEvent/TTFT contract are the hard part and apply identically to every
+target. What changes is that llama.cpp is now a **verification target, not the
+subject**. The same driver serves OpenAI, OpenRouter (via `extra_headers`),
+Ollama, Groq, Together and Azure, so [[openai-api-integration]],
+[[openrouter-llm-integration]] and [[llama-cpp-driver]] are all satisfied by
+this one deliverable.
+
+Verification targets (both live and confirmed to serve `/v1/models`):
+
+- **llama.cpp** — `leia.packsin.com:7442`, `llama-server --jinja`
+  (`Dolphin3.0-Llama3.1-8B-Q4_K_M`); `--jinja` provides the chat template that
+  tool-calling depends on.
+- **Ollama** — `leia.packsin.com:11434` (`qwen3-coder:30b`, `gemma3:12b`).
+  Ollama answering `/v1/models` is precisely why the **native `ollama` driver is
+  removed outright** rather than maintained alongside this one.
 
 ## Problem
 
@@ -48,7 +77,7 @@ cloud-backed providers. This is the same "local models can talk but cannot
 
 ### Goals
 
-- Add a new first-party agent driver (`driver: llama-cpp`) that drives a
+- Add a new first-party agent driver (`driver: openai-compatible`) that drives a
   llama.cpp server over its OpenAI-compatible `/v1/chat/completions` endpoint.
 - Support **agent mode**: a bounded multi-turn loop that advertises tool
   definitions, receives `tool_calls` from the model, executes them locally, and
@@ -91,7 +120,7 @@ cloud-backed providers. This is the same "local models can talk but cannot
 #### FR-1: Driver registration and selection
 
 - A new driver is registered in the agent `Manager`'s driver map under the
-  stable name **`llama-cpp`**, selected purely on the `AgentConfig.driver`
+  stable name **`openai-compatible`**, selected purely on the `AgentConfig.driver`
   field, identical to how `ollama`/`gemini`/`codex-cli` are selected. Unknown
   driver names are rejected as today.
 - The driver satisfies the existing `agent.Driver` interface
@@ -100,23 +129,37 @@ cloud-backed providers. This is the same "local models can talk but cannot
 
 #### FR-2: Configuration fields
 
-- `AgentConfig` gains fields used only when `driver: llama-cpp`:
-  - `base_url` (string, **required**) — the llama.cpp server root, e.g.
-    `http://localhost:8080`. The driver targets `<base_url>/v1/chat/completions`.
-  - `model` (string, **required**) — the model identifier passed as the request
-    `model` field. (llama.cpp typically serves one model; the value is still
-    sent for compatibility and logging.)
-  - `api_key` / `auth_token` (string, **optional**) — sent as
-    `Authorization: Bearer <token>` when non-empty, for servers started with
-    `--api-key`.
-- Field naming reuses existing conventions (`base_url` already exists on
-  `OllamaInstance`; secret masking mirrors `ollama_instances.api_key`).
+Connection identity lives on the **Provider record**, not on the agent — an
+agent is a `{provider, model}` pair (see [[provider-model-for-agents]]).
+
+- A **Provider** (app-level, generalising today's `ollama_instances` → `providers`):
+  - `name` (string, **required**) — unique; how agents reference it.
+  - `base_url` (string, **required**) — server root, e.g.
+    `http://leia.packsin.com:7442`. The driver targets
+    `<base_url>/v1/chat/completions`.
+  - `driver` (string, **required**) — `openai-compatible` for this requirement.
+  - `api_key` (string, **optional**) — sent as `Authorization: Bearer <token>`
+    when non-empty (e.g. `llama-server --api-key`, OpenRouter, OpenAI).
+  - `extra_headers` (map, **optional**) — arbitrary request headers; this is
+    what makes [[openrouter-llm-integration]] pure configuration
+    (`HTTP-Referer`, `X-Title`).
+- `AgentConfig` gains:
+  - `provider` (string, **required**) — the name of a configured Provider.
+  - `model` (string, **required**) — the model identifier sent as the request
+    `model` field (e.g. `qwen3-coder:30b`, `Dolphin3.0-Llama3.1-8B-Q4_K_M`).
+  - `max_tool_iterations` (int, **optional**) — per-agent override of the
+    default tool-call cap (see FR-5).
+- Field naming reuses existing conventions (`base_url`/`api_key` already exist on
+  `OllamaInstance`, which the Provider record replaces; secret masking carries
+  over — `api_key` must never be logged or returned by the agents API).
 
 #### FR-3: Config validation
 
-- `config.Validate` rejects a `llama-cpp` agent when `base_url` is empty, when
-  `base_url` is not a valid `http`/`https` URL, or when `model` is empty. Each
-  failure message names the offending agent.
+- `config.Validate` rejects a Provider with an empty `name`, a duplicate `name`,
+  an empty `base_url`, or a `base_url` that is not a valid `http`/`https` URL.
+- `config.Validate` rejects an agent whose `provider` names no configured
+  Provider, or whose `model` is empty. Each failure message names the offending
+  agent or provider.
 - Existing per-driver validation for other drivers is unchanged.
 
 #### FR-4: Request construction
@@ -135,7 +178,7 @@ cloud-backed providers. This is the same "local models can talk but cannot
 - The driver advertises a defined set of tool functions to the model via the
   `tools` parameter (OpenAI function-calling schema). The v1 tool set MUST be
   sufficient to create and edit lifecycle artifacts; the concrete set (e.g.
-  `read_file`, `write_file`, `list_dir`, and optionally a shell/patch tool) is
+  `read_file`, `write_file`, `list_dir`, `grep` — no shell tool in v1) is
   an Open Question, but at minimum a file-read and a file-write tool are
   required.
 - When the model response has `finish_reason: tool_calls`, the driver executes
@@ -148,9 +191,10 @@ cloud-backed providers. This is the same "local models can talk but cannot
   agent's configured `allowed_write_paths`. A write outside the allowed paths is
   refused and reported back to the model as a tool error (it does not crash the
   run or write outside scope).
-- The loop is bounded by a configurable maximum iteration count (default TBD,
-  see Open Questions). Hitting the cap ends the run with a clear terminal
-  status and a logged reason rather than looping unbounded.
+- The loop is bounded by a configurable maximum iteration count (default **25**,
+  overridable per agent via `max_tool_iterations` — see Resolved Questions 3).
+  Hitting the cap ends the run with a clear terminal status and a logged reason
+  rather than looping unbounded.
 
 #### FR-6: Streaming, progress, and TTFT
 
@@ -165,7 +209,7 @@ cloud-backed providers. This is the same "local models can talk but cannot
 #### FR-7: Run logging
 
 - When `Run.LogPath` is set, the driver writes a per-run log with a header
-  (`run id`, `agent`, `role`, `driver=llama-cpp`, `base_url`, `model`, start
+  (`run id`, `agent`, `role`, `driver=openai-compatible`, `base_url`, `model`, start
   time), the system/user prompts, each turn's tool calls and tool results, the
   final assistant message, and a footer with the finish time — consistent in
   shape with the `ollama` driver's log format.
@@ -189,7 +233,7 @@ cloud-backed providers. This is the same "local models can talk but cannot
 
 #### NFR-2: No regression
 
-- All existing driver unit tests continue to pass. Adding `llama-cpp` to the
+- All existing driver unit tests continue to pass. Adding `openai-compatible` to the
   driver map does not alter result-event or progress behaviour for any other
   driver.
 
@@ -208,9 +252,9 @@ cloud-backed providers. This is the same "local models can talk but cannot
 
 ## Acceptance Criteria
 
-- [ ] An agent declared with `driver: llama-cpp`, a valid `base_url`, and
+- [ ] An agent declared with `driver: openai-compatible`, a valid `base_url`, and
       `model` loads and validates without error; a configured token is accepted.
-- [ ] Config validation rejects a `llama-cpp` agent missing `base_url`, with a
+- [ ] Config validation rejects an `openai-compatible` agent missing `base_url`, with a
       malformed `base_url`, or missing `model`, with a message naming the agent.
 - [ ] Starting a run POSTs to `<base_url>/v1/chat/completions` with `model`,
       `messages` (system+user derived from the prompt), a non-empty `tools`
@@ -245,29 +289,34 @@ cloud-backed providers. This is the same "local models can talk but cannot
       work [[ollama-claude-code-driver]], [[ollama-agent-support]], and
       [[ollama-agents-need-execution-layer]] is referenced without duplication.
 
-## Open Questions
+## Resolved Questions
 
-1. **Tool-execution layer ownership.** Does this driver implement its own
-   local tool executor (file read/write/list against the sandbox), or should it
-   consume a shared execution layer proposed in
-   [[ollama-agents-need-execution-layer]]? If the shared layer lands first, this
-   driver should depend on it rather than duplicate it. Which sequences first?
-2. **v1 tool set.** Minimum viable is `read_file` + `write_file`. Do we also
-   ship `list_dir`, a `grep`/search tool, and/or a constrained `bash` tool in
-   v1, or defer those? A broader tool set improves capability but widens the
-   sandbox/security surface.
-3. **Maximum loop iterations.** What default cap on tool-call rounds balances
-   real multi-step tasks against runaway loops (e.g. 10, 25, 50), and should it
-   be a per-agent config field?
-4. **Permission model.** Should tool calls be auto-approved (like
-   `claude-code-cli` bypass) or routed through the mediation/precheck path used
-   by `claude-mediated`? v1 baseline is auto-approve within
-   `allowed_write_paths`; confirm.
-5. **Endpoint/flag compatibility scope.** llama.cpp tool calling depends on
-   server flags and model chat templates (`--jinja`, grammar/tool-call parsing).
-   Do we commit to a documented, tested `llama-server` configuration and treat
-   other builds as "best effort, untested" (as [[ollama-claude-code-driver]]
-   scoped the Ollama shim)?
-6. **Frontend exposure.** Is config-file-only acceptable for v1, or must the
-   agent create/edit UI offer `llama-cpp` as a driver type with
-   base-url/model/token fields?
+Resolved 2026-08-24 during the [[open-provider-support]] epic dedup — product
+owner decisions, plus two answered by the dedup itself.
+
+1. **Tool-execution layer ownership — driver owns it.**
+   [[ollama-agents-need-execution-layer]] is abandoned, so no shared execution
+   layer is landing. This driver implements its own local tool executor against
+   the sandbox resolver.
+2. **v1 tool set — `read_file`, `write_file`, `list_dir`, and a `grep`/search
+   tool.** Search is included because "find where X is defined" is a real
+   multi-step need; **no `bash` tool in v1** — shell execution is the widest
+   surface and small local models are the least trustworthy with it.
+3. **Maximum loop iterations — default 25, per-agent overridable.** Enough for
+   genuine multi-step artifact work, low enough to catch runaway loops; exposed
+   as a per-agent config field so slower/cheaper local models can be tuned.
+4. **Permission model — auto-approve within `allowed_write_paths`.** Writes stay
+   hard-scoped by the sandbox resolver (the same guarantee every other agent
+   gets); no interactive gate in v1. Routing through the
+   [[adr-0006-mediated-agent-driver-permission-model]] mediation path (denial
+   recording, queue pause, `on_denial`) is a deliberate follow-up, not v1.
+5. **Endpoint/flag compatibility — commit to a documented, tested
+   configuration.** `llama-server --jinja` (as running on
+   `leia.packsin.com:7442`) and Ollama's `/v1` endpoint are the supported,
+   tested baseline; other builds are best-effort/untested, mirroring how
+   [[ollama-claude-code-driver]] scoped its shim.
+6. **Frontend exposure — in scope, via Provider settings.** Moot as originally
+   posed: there is no `llama-cpp` driver type to surface. Workstream 1 replaces
+   `OllamaSettingsView` with provider settings (`ollama_instances` → `providers`,
+   `/ollama/instances` → the provider API), so provider/model selection is part
+   of the epic by definition.
