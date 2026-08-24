@@ -210,8 +210,8 @@ func (a *App) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// validateProviderSlug checks that name matches slug format (^[a-z0-9-]+$, 2–64 characters).
-func validateProviderSlug(name string) error {
+// ValidateProviderSlug checks that name matches slug format (^[a-z0-9-]+$, 2–64 characters).
+func ValidateProviderSlug(name string) error {
 	if len(name) < 2 {
 		return fmt.Errorf("name must be at least 2 characters")
 	}
@@ -299,7 +299,7 @@ func validateApp(cfg *App) error {
 		if p.Name == "" {
 			return fmt.Errorf("providers[%d]: name must not be empty", i)
 		}
-		if err := validateProviderSlug(p.Name); err != nil {
+		if err := ValidateProviderSlug(p.Name); err != nil {
 			return fmt.Errorf("providers[%d] %q: %w", i, p.Name, err)
 		}
 		if seen[p.Name] {

@@ -47,16 +47,20 @@ func findProvider(providers []config.Provider, name string) int {
 	return -1
 }
 
-// isProviderReferencedByProjects checks whether any project agent uses the named provider.
-func (s *Server) isProviderReferencedByProjects(name string) bool {
-	for _, p := range s.projects {
+// findProviderReferences checks whether any project agent uses the named provider,
+// returning formatted reference strings.
+func (s *Server) findProviderReferences(name string) []string {
+	var refs []string
+	s.projectsMu.RLock()
+	defer s.projectsMu.RUnlock()
+	for pName, p := range s.projects {
 		for _, ag := range p.Config().Agents {
-			if ag.Provider == name || ag.OllamaInstanceName == name {
-				return true
+			if ag.Provider == name {
+				refs = append(refs, fmt.Sprintf("project %q (agent %q)", pName, ag.Name))
 			}
 		}
 	}
-	return false
+	return refs
 }
 
 // ----- CRUD Handlers -----
@@ -73,6 +77,16 @@ func (s *Server) handleListProviders(w http.ResponseWriter, r *http.Request) {
 	s.appCfgMu.RUnlock()
 
 	writeJSON(w, http.StatusOK, map[string]any{"providers": maskedProviders(providers)})
+}
+
+// handleGetProvider returns a single registered provider with secret fields masked (NFR-1).
+func (s *Server) handleGetProvider(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	prov, ok := s.resolveProvider(w, name)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"provider": maskedProviders([]config.Provider{prov})[0]})
 }
 
 // handleCreateProvider registers a new provider in app config.
@@ -100,6 +114,10 @@ func (s *Server) handleCreateProvider(w http.ResponseWriter, r *http.Request) {
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "name is required"))
+		return
+	}
+	if err := config.ValidateProviderSlug(req.Name); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError("bad_request", fmt.Sprintf("invalid provider name %q: %v", req.Name, err)))
 		return
 	}
 	if req.BaseURL == "" {
@@ -197,7 +215,9 @@ func (s *Server) handleUpdateProvider(w http.ResponseWriter, r *http.Request) {
 	old := s.appCfg.Providers[idx]
 	apiKey := old.APIKey
 	if req.APIKey != nil {
-		apiKey = *req.APIKey
+		if *req.APIKey != "***" {
+			apiKey = *req.APIKey
+		}
 	}
 
 	updated := config.Provider{
@@ -230,8 +250,8 @@ func (s *Server) handleDeleteProvider(w http.ResponseWriter, r *http.Request) {
 
 	name := chi.URLParam(r, "name")
 
-	if s.isProviderReferencedByProjects(name) {
-		writeJSON(w, http.StatusConflict, apiError("conflict", fmt.Sprintf("provider %q is referenced by one or more project agents", name)))
+	if refs := s.findProviderReferences(name); len(refs) > 0 {
+		writeJSON(w, http.StatusConflict, apiError("conflict", fmt.Sprintf("cannot delete provider %q: in use by %s", name, strings.Join(refs, ", "))))
 		return
 	}
 
@@ -253,7 +273,7 @@ func (s *Server) handleDeleteProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deleted": name})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ----- Connectivity & Models -----
@@ -316,6 +336,60 @@ func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 		"ok":         true,
 		"latency_ms": latency,
 		"message":    fmt.Sprintf("Successfully connected and verified tool support on %s with model %s", prov.Name, model),
+	})
+}
+
+// handleProviderHealth checks connectivity to the provider with a 5s timeout.
+func (s *Server) handleProviderHealth(w http.ResponseWriter, r *http.Request) {
+	prov, ok := s.resolveProvider(w, chi.URLParam(r, "name"))
+	if !ok {
+		return
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	modelsURL := prov.BaseURL + "/v1/models"
+	if strings.HasSuffix(prov.BaseURL, "/v1") {
+		modelsURL = prov.BaseURL + "/models"
+	}
+
+	httpReq, err := http.NewRequestWithContext(r.Context(), http.MethodGet, modelsURL, nil)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"healthy": false, "error": err.Error(), "latency_ms": 0})
+		return
+	}
+	if prov.APIKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+prov.APIKey)
+	}
+	for k, v := range prov.ExtraHeaders {
+		httpReq.Header.Set(k, v)
+	}
+
+	start := time.Now()
+	resp, err := client.Do(httpReq)
+	latency := time.Since(start).Milliseconds()
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"healthy":    false,
+			"error":      err.Error(),
+			"latency_ms": latency,
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		writeJSON(w, http.StatusOK, map[string]any{
+			"healthy":    false,
+			"error":      fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body)),
+			"latency_ms": latency,
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"healthy":    true,
+		"latency_ms": latency,
 	})
 }
 

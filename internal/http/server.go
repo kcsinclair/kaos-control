@@ -190,24 +190,18 @@ func (s *Server) buildRouter() chi.Router {
 			r.Post("/queue/pause", s.handlePauseQueue)
 			r.Post("/queue/resume", s.handleResumeQueue)
 
-			// Ollama instance management (app-level, not project-scoped)
-			r.Route("/ollama/instances", func(r chi.Router) {
-				r.Get("/", s.handleListOllamaInstances)
-				r.Post("/", s.handleCreateOllamaInstance)
-				r.Put("/{name}", s.handleUpdateOllamaInstance)
-				r.Delete("/{name}", s.handleDeleteOllamaInstance)
-				r.Get("/{name}/health", s.handleOllamaHealth)
-				r.Get("/{name}/models", s.handleOllamaModels)
-			})
-
 			// Provider management (app-level, not project-scoped)
 			r.Route("/providers", func(r chi.Router) {
 				r.Get("/", s.handleListProviders)
 				r.Post("/", s.handleCreateProvider)
 				r.Post("/test", s.handleTestProvider)
-				r.Put("/{name}", s.handleUpdateProvider)
-				r.Delete("/{name}", s.handleDeleteProvider)
-				r.Get("/{name}/models", s.handleProviderModels)
+				r.Route("/{name}", func(r chi.Router) {
+					r.Get("/", s.handleGetProvider)
+					r.Put("/", s.handleUpdateProvider)
+					r.Delete("/", s.handleDeleteProvider)
+					r.Get("/health", s.handleProviderHealth)
+					r.Get("/models", s.handleProviderModels)
+				})
 			})
 
 			// Per-project routes

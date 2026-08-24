@@ -142,7 +142,28 @@ func TestProviders_CRUD(t *testing.T) {
 		}
 	}
 
-	// 3. POST /api/providers duplicate -> 409 Conflict
+	// 3. GET /api/providers/{name} -> returns single provider masked
+	{
+		r := chi.NewRouter()
+		r.Get("/api/providers/{name}", s.handleGetProvider)
+
+		req := authedRequest(http.MethodGet, "/api/providers/openrouter", nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("GET /api/providers/openrouter status %d: %s", w.Code, w.Body.String())
+		}
+		var resp struct {
+			Provider map[string]any `json:"provider"`
+		}
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
+		if resp.Provider["name"] != "openrouter" || resp.Provider["api_key"] != "***" {
+			t.Errorf("unexpected GET provider response: %+v", resp.Provider)
+		}
+	}
+
+	// 4. POST /api/providers duplicate -> 409 Conflict
 	{
 		r := chi.NewRouter()
 		r.Post("/api/providers", s.handleCreateProvider)
@@ -160,14 +181,16 @@ func TestProviders_CRUD(t *testing.T) {
 		}
 	}
 
-	// 4. PUT /api/providers/{name} -> update provider
+	// 5. PUT /api/providers/{name} with "***" -> preserves existing secret
 	{
 		r := chi.NewRouter()
 		r.Put("/api/providers/{name}", s.handleUpdateProvider)
 
+		starKey := "***"
 		updateBody := map[string]any{
 			"base_url": "https://openrouter.ai/api/v2",
 			"driver":   "openai-compatible",
+			"api_key":  starKey,
 		}
 		req := authedRequest(http.MethodPut, "/api/providers/openrouter", updateBody)
 		w := httptest.NewRecorder()
@@ -187,7 +210,32 @@ func TestProviders_CRUD(t *testing.T) {
 		}
 	}
 
-	// 5. DELETE /api/providers/{name}
+	// 6. PUT /api/providers/{name} with "" -> clears secret
+	{
+		r := chi.NewRouter()
+		r.Put("/api/providers/{name}", s.handleUpdateProvider)
+
+		emptyKey := ""
+		updateBody := map[string]any{
+			"base_url": "https://openrouter.ai/api/v2",
+			"driver":   "openai-compatible",
+			"api_key":  emptyKey,
+		}
+		req := authedRequest(http.MethodPut, "/api/providers/openrouter", updateBody)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("PUT /api/providers/openrouter status %d: %s", w.Code, w.Body.String())
+		}
+
+		savedCfg, _ := config.LoadApp(cfgPath)
+		if savedCfg.Providers[1].APIKey != "" {
+			t.Errorf("APIKey was not cleared: %s", savedCfg.Providers[1].APIKey)
+		}
+	}
+
+	// 7. DELETE /api/providers/{name} -> 204 No Content
 	{
 		r := chi.NewRouter()
 		r.Delete("/api/providers/{name}", s.handleDeleteProvider)
@@ -196,7 +244,7 @@ func TestProviders_CRUD(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
-		if w.Code != http.StatusOK {
+		if w.Code != http.StatusNoContent {
 			t.Fatalf("DELETE /api/providers/openrouter status %d: %s", w.Code, w.Body.String())
 		}
 
