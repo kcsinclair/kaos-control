@@ -129,9 +129,14 @@ const router = createRouter({
           component: () => import('@/views/project/ProjectConfigView.vue'),
         },
         {
+          path: 'settings/providers',
+          name: 'provider-settings',
+          component: () => import('@/views/project/ProviderSettingsView.vue'),
+        },
+        {
           path: 'settings/ollama',
           name: 'ollama-settings',
-          component: () => import('@/views/project/OllamaSettingsView.vue'),
+          redirect: (to) => `/p/${to.params.project}/settings/providers`,
         },
         {
           path: 'reports',
