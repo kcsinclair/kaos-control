@@ -12,6 +12,8 @@ labels:
     - open-provider-support
     - architecture
     - backend
+release: KC-Release6
+parent: lifecycle/ideas/local-model-operability.md
 ---
 
 # Inline Driver Provider Abstraction
