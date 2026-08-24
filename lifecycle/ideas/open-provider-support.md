@@ -109,7 +109,7 @@ This lineage is the parent for three requirements:
    looks: rate-limit/529 detection already ships
    ([[rate-limit-event-detection]], `extractRateLimitText` →
    `queue.rate_limit`), so this only needs to *act* on an existing signal.
-3. **Local-model operability** ([[ollama-support-improvements]]) — prompt
+3. **Local-model operability** ([[local-model-operability]]) — prompt
    templates tuned to local models, model availability checks, error surfacing.
    Partly dissolves into 1 once the shared driver owns request logging.
 
@@ -128,7 +128,7 @@ configuration plus one driver:
 
 - [[provider-model-for-agents]] — the architecture spine for workstream 1.
 - [[switch-provider]] — workstream 2.
-- [[ollama-support-improvements]] — workstream 3.
+- [[local-model-operability]] — workstream 3.
 - [[sidecar-agent-drivers]] — deferred alternative (see decision 3).
 - [[agent-cost-basis-and-savings]] — becomes materially more useful once cost
   varies per provider/model.
