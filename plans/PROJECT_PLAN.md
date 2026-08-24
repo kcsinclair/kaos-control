@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-08-25** — Milestone 3 — Native-Format Tool-Call Recovery Parser ([[open-provider-support-3-be]]): Implement fallback parser for XML and JSON tool call formats emitted by models through servers that do not structure tool calls natively (FR-5a).
+
 - **2026-08-25** — Milestone 2 — Sandboxed Local Tool Execution Engine ([[open-provider-support-3-be]]): Implement OpenAI tool definitions and sandboxed ToolExecutor for `read_file`, `write_file`, `list_dir`, and `grep`, scoping writes to `allowed_write_paths`.
 
 - **2026-08-25** — Milestone 1 — Provider & AgentConfig Data Model & Validation ([[open-provider-support-3-be]]): Extend App config with `Provider` records, update `AgentConfig` with `provider`, `model`, and `max_tool_iterations`, add validation and in-memory legacy `ollama_instances` migration.

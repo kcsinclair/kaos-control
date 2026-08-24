@@ -28,6 +28,20 @@ type OpenAIFunctionDesc struct {
 	Parameters  map[string]any `json:"parameters,omitempty"`
 }
 
+// ToolCall represents an OpenAI function tool call.
+type ToolCall struct {
+	Index    *int             `json:"index,omitempty"`
+	ID       string           `json:"id"`
+	Type     string           `json:"type"` // "function"
+	Function FunctionCallInfo `json:"function"`
+}
+
+// FunctionCallInfo contains the function name and JSON arguments string.
+type FunctionCallInfo struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
 // DefaultOpenAITools returns the standard v1 OpenAI tool schemas.
 func DefaultOpenAITools() []OpenAITool {
 	return []OpenAITool{
