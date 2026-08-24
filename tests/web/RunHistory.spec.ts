@@ -330,9 +330,15 @@ describe('PipelineCard.vue (F7 — latest-run summary badge)', () => {
   it('shows failed badge class when the latest run failed', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
-    // Latest run is FAILED_ROW (index 0 = newest) — drive via the mock so
-    // RunHistory.vue's onMounted fetchPipelineHistory populates the store.
-    mockListPipelineRuns.mockResolvedValue({ runs: [FAILED_ROW, PASSED_ROW] })
+    // Latest run is a FAILED run — drive via the mock so onMounted's
+    // fetchPipelineHistory populates the store. It must genuinely be the newest
+    // by started_at (history is sorted by recency, not array order), so give the
+    // failed run a more-recent timestamp than PASSED_ROW.
+    const latestFailed: RunHistoryRow = {
+      ...FAILED_ROW,
+      started_at: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
+    }
+    mockListPipelineRuns.mockResolvedValue({ runs: [latestFailed, PASSED_ROW] })
 
     const wrapper = mount(PipelineCard, {
       props: { pipeline: TEST_PIPELINE, project: 'testproject' },

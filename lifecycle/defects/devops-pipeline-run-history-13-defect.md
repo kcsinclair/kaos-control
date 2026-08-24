@@ -1,7 +1,7 @@
 ---
 title: Pipeline card latest-run summary badge still not visible after run completion (recurrence of -10)
 type: defect
-status: in-development
+status: done
 lineage: devops-pipeline-run-history
 parent: lifecycle/tests/devops-pipeline-run-history-8-test.md
 labels:
@@ -67,3 +67,22 @@ Suspected root cause (from code reading, not yet confirmed with a debug run): a 
 ## Fix guidance
 
 Verify the suspected race (e.g. add a temporary log/breakpoint around both `pipelineHistory.value.set` call sites, or run with network throttling on the `GET .../runs` request). If confirmed, make the two writers order-safe — e.g. have `fetchPipelineHistory` merge/de-dupe by `run_id` instead of blind-overwriting, or have it no-op if a WS-driven update for that slug happened more recently. If the race isn't the cause, re-open the investigation from `devops-pipeline-run-history-10-defect.md`.
+
+## Resolution (done) — verified
+
+Two fixes were needed:
+1. **Clobbering race (frontend-developer, `999e0390`)** — `fetchPipelineHistory`
+   and `handleRunCompleted` now merge into `pipelineHistory` by `run_id` instead
+   of blind-overwriting, so a stale mount GET can't erase a WS-completed run.
+2. **Resurrection race (root cause of the residual flake)** — a *fast* pipeline
+   emits its WS `run.completed` before `runPipeline`'s POST resolves, so the
+   optimistic `activeRuns.set(slug, {running})` landed AFTER completion and
+   reverted the card to "Running" (button disabled), blocking the badge even
+   though the history row was `passed`. Fixed with a `completedRunIds` guard:
+   `runPipeline` and `handleRunStarted` refuse to resurrect a run that has
+   already reached a terminal status; `handleRunCompleted` re-sets the map entry
+   with a fresh object for reliable reactivity.
+
+Verified: the previously-failing E2E spec passes **16/16** (`run-history.spec.ts`
+badge test, `--repeat-each`), full `run-history.spec.ts` green ×3, and
+`tests/web` (1548) + `vue-tsc` clean.

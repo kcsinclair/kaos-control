@@ -59,6 +59,10 @@ export const useDevOpsStore = defineStore('devops', () => {
 
   // slug → ActiveRun
   const activeRuns = ref(new Map<string, ActiveRun>())
+  // Run IDs that have already reached a terminal status. Guards against a
+  // late writer (the optimistic set in runPipeline, or an out-of-order
+  // run.started) resurrecting a completed run back to 'running'.
+  const completedRunIds = ref(new Set<string>())
 
   // Ordered list of run history (most recent last), capped at 50
   const runHistory = ref<RunHistoryEntry[]>([])
@@ -146,6 +150,10 @@ export const useDevOpsStore = defineStore('devops', () => {
 
   async function runPipeline(project: string, slug: string): Promise<string> {
     const res = await devopsApi.runPipeline(project, slug)
+    // A fast pipeline can emit its WS run.completed before this POST resolves;
+    // don't resurrect an already-completed run to 'running' (the completion
+    // handlers already hold the correct terminal state + history row).
+    if (completedRunIds.value.has(res.run_id)) return res.run_id
     const pipeline = pipelines.value.find((p) => p.slug === slug)
     activeRuns.value.set(slug, {
       runId: res.run_id,
@@ -205,6 +213,7 @@ export const useDevOpsStore = defineStore('devops', () => {
     const slug = payload['pipeline_slug'] as string
     const runId = payload['run_id'] as string
     if (!slug || !runId) return
+    if (completedRunIds.value.has(runId)) return // already completed; don't resurrect
     const pipeline = pipelines.value.find((p) => p.slug === slug)
     activeRuns.value.set(slug, {
       runId,
@@ -297,7 +306,15 @@ export const useDevOpsStore = defineStore('devops', () => {
     const run = activeRuns.value.get(slug)
     if (!run) return
     const finalStatus = status ?? 'passed'
-    run.overallStatus = finalStatus
+    completedRunIds.value.add(run.runId) // mark terminal so no later writer resurrects it
+    // Re-set the map entry with a NEW object rather than mutating the existing
+    // one in place. A nested-property mutation on a value held in a ref<Map>
+    // does not reliably re-trigger the `activeRuns.get(slug)` dependency, so
+    // `isActive` (activeRun.overallStatus === 'running') could stay true after
+    // completion — leaving the card stuck showing "Running" and the latest-run
+    // badge never rendering (the residual run-history flake). A tracked
+    // Map.set of a fresh object flips it deterministically.
+    activeRuns.value.set(slug, { ...run, overallStatus: finalStatus })
     // Update history entry
     const entry = runHistory.value.findLast((e) => e.runId === run.runId)
     if (entry) {
