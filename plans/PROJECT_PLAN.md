@@ -10,6 +10,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 Rolling log — add a dated bullet per commit.
 
+- **2026-08-25** — Milestone 4 — Preflight Capability Verification & Token Delta Probing ([[open-provider-support-3-be]]): Implement preflight capability probe comparing prompt token deltas to hard-fail silent tool drops (Mode A), handle explicit 400 errors (Mode B), and check OpenRouter model parameter metadata (FR-5b).
+
 - **2026-08-25** — Milestone 3 — Native-Format Tool-Call Recovery Parser ([[open-provider-support-3-be]]): Implement fallback parser for XML and JSON tool call formats emitted by models through servers that do not structure tool calls natively (FR-5a).
 
 - **2026-08-25** — Milestone 2 — Sandboxed Local Tool Execution Engine ([[open-provider-support-3-be]]): Implement OpenAI tool definitions and sandboxed ToolExecutor for `read_file`, `write_file`, `list_dir`, and `grep`, scoping writes to `allowed_write_paths`.
