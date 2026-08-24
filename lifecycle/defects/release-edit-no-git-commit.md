@@ -11,6 +11,7 @@ labels:
     - git
     - editor
     - backend
+release: KC-Release6
 ---
 
 # Release Artifact Not Automatically Committed to Git After Edit
