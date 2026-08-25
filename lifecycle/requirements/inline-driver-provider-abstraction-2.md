@@ -326,6 +326,9 @@ aligned with the [[provider-model-for-agents]] Provider spine.
    `idea-capture` flow stream tokens for responsiveness, or is blocking
    acceptable until a later UX pass? *Recommendation:* blocking in v1, matching
    current behaviour.
+
+> Proceed with recommendation
+
 2. **Shared HTTP client with the async driver.** The async `openai-compatible`
    driver already has a `/v1/chat/completions` client (with tool-calling,
    streaming, preflight). Should the inline completer **reuse** a shared,
@@ -333,16 +336,19 @@ aligned with the [[provider-model-for-agents]] Provider spine.
    small standalone client to avoid dragging in the agent-loop machinery?
    *Recommendation:* extract a minimal shared request builder if it is clean;
    otherwise keep the inline client small and separate.
+
 3. **Explicit CLI sentinel vs. empty provider.** Is "no `provider`" a sufficient
    signal for the Claude CLI default, or should there be an explicit provider
    entry (e.g. `driver: claude-cli`) so the CLI path is visible and selectable in
    config like any other? *Recommendation:* keep empty-`provider` = CLI default
    for zero-config compatibility, and consider a named CLI provider as a later
    nicety.
+
 4. **Failover participation.** Should inline calls honour provider failover
    ([[switch-provider]]) on a transient upstream error, or is a single attempt
    with a clear error sufficient for these short, interactive calls?
    *Recommendation:* single attempt in v1; revisit with [[switch-provider]].
+
 5. **Run recording for inline calls.** Inline calls are not async runs and today
    produce no `agent_runs` row or provider/driver record
    ([[agent-logging-provider-driver]]). Should inline conversational/generation
