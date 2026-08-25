@@ -9,6 +9,20 @@ const props = defineProps<{
   driverAvailable: boolean
 }>()
 
+// Claude Code can emit subtype:"success" together with is_error:true — e.g.
+// "API Error: Connection closed mid-response" still carries the success
+// subtype. Rendering `subtype` alone therefore labelled genuinely failed runs
+// "Success" while the run row correctly said "failed". is_error wins.
+const isError = computed(() => props.result?.is_error === true)
+const outcomeLabel = computed(() =>
+  isError.value ? 'Error' : (props.result?.subtype ?? ''),
+)
+// The terminal message is the only place the reason survives: a killed process
+// leaves stderr_tail empty, so without this the failure is unexplained.
+const errorMessage = computed(() =>
+  isError.value ? (props.result?.result ?? '').trim() : '',
+)
+
 function formatMs(ms: number): string {
   if (ms < 1000) return `${ms}ms`
   const totalSeconds = Math.floor(ms / 1000)
@@ -81,13 +95,17 @@ function fmtTokens(n: number): string {
 
   <!-- Full summary card -->
   <div v-else-if="result" class="rsc-card">
-    <!-- Header row: subtype, cost, duration, turns -->
+    <!-- Header row: outcome, cost, duration, turns -->
     <div class="rsc-header">
-      <span class="rsc-subtype-badge">{{ result.subtype }}</span>
+      <span class="rsc-subtype-badge" :class="{ 'rsc-badge-error': isError }">{{ outcomeLabel }}</span>
       <span class="rsc-metric"><span class="rsc-metric-label">Cost</span> {{ formattedCost }}</span>
       <span class="rsc-metric"><span class="rsc-metric-label">Duration</span> {{ formattedDuration }}</span>
       <span class="rsc-metric"><span class="rsc-metric-label">Turns</span> {{ result.num_turns }}</span>
     </div>
+
+    <!-- Failure reason: the only surviving explanation when the process was
+         killed and stderr_tail is empty. -->
+    <p v-if="errorMessage" class="rsc-error-msg">{{ errorMessage }}</p>
 
     <!-- Token usage table -->
     <div class="table-scroll">
@@ -188,6 +206,17 @@ function fmtTokens(n: number): string {
   background: var(--badge-done-bg);
   color: var(--badge-done-text);
   text-transform: capitalize;
+}
+.rsc-subtype-badge.rsc-badge-error {
+  background: var(--badge-rejected-bg, #7f1d1d);
+  color: var(--badge-rejected-text, #fecaca);
+}
+.rsc-error-msg {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-error, #f87171);
+  word-break: break-word;
 }
 
 .rsc-metric {

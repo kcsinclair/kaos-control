@@ -640,6 +640,12 @@ export interface RunResultUsage {
 
 export interface RunResult {
   subtype: string
+  /** Authoritative success/failure flag. Claude Code emits subtype:"success"
+   *  alongside is_error:true (e.g. a mid-response API error), so UI must prefer
+   *  this over `subtype` — see RunSummaryCard. */
+  is_error?: boolean
+  /** Terminal message; carries the reason when is_error is true. */
+  result?: string
   total_cost_usd: number
   duration_ms: number
   duration_api_ms: number
