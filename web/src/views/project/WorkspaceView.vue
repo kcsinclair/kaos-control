@@ -35,6 +35,7 @@ const PROVIDER_SWITCH_EVENTS = new Set(['provider.switched', 'provider.restored'
 let wsUnsub: (() => void) | null = null
 let _readyCountDebounce: ReturnType<typeof setTimeout> | null = null
 let _awaitingCountDebounce: ReturnType<typeof setTimeout> | null = null
+let _agentsRefreshDebounce: ReturnType<typeof setTimeout> | null = null
 
 function getProject() { return route.params.project as string }
 
@@ -64,6 +65,17 @@ function scheduleAwaitingCountRefresh(project: string) {
   }, 500)
 }
 
+// AgentSummary carries fallback_provider/fallback_model/is_failover
+// (agentSummary in internal/http/agents.go); refresh it after config.reloaded
+// so AgentPanelRow's failover badge stays live without a manual reload.
+function scheduleAgentsRefresh(project: string) {
+  if (_agentsRefreshDebounce !== null) clearTimeout(_agentsRefreshDebounce)
+  _agentsRefreshDebounce = setTimeout(() => {
+    _agentsRefreshDebounce = null
+    void agentsStore.fetchAgents(project)
+  }, 500)
+}
+
 function subscribeWs(project: string) {
   wsUnsub?.()
   const ws = getProjectWs(project)
@@ -76,6 +88,7 @@ function subscribeWs(project: string) {
       schedulerStore.onWsEvent(e.type, e.payload as Record<string, unknown>)
     } else if (PROVIDER_SWITCH_EVENTS.has(e.type)) {
       providerSwitchStore.onWsEvent(project, e.type, e.payload as Record<string, unknown>)
+      if (e.type === 'config.reloaded') scheduleAgentsRefresh(project)
     } else if (e.type === 'artifact.indexed') {
       scheduleReadyCountRefresh(project)
       scheduleAwaitingCountRefresh(project)
@@ -100,6 +113,7 @@ onUnmounted(() => {
   wsUnsub?.()
   if (_readyCountDebounce !== null) clearTimeout(_readyCountDebounce)
   if (_awaitingCountDebounce !== null) clearTimeout(_awaitingCountDebounce)
+  if (_agentsRefreshDebounce !== null) clearTimeout(_agentsRefreshDebounce)
 })
 </script>
 

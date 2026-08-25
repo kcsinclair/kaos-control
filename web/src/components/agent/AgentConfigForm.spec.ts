@@ -120,4 +120,79 @@ describe('AgentConfigForm', () => {
     expect(emitted.model).toBe('anthropic/claude-3.5-sonnet')
     expect(emitted.max_tool_iterations).toBe(30)
   })
+
+  // Frontend plan: lifecycle/frontend-plans/switch-provider-4-fe.md — Milestone 4
+
+  it('renders fallback provider and model inputs', async () => {
+    const store = useProvidersStore()
+    store.providers = [
+      { name: 'anthropic-cloud', base_url: 'https://api.anthropic.com', driver: 'openai-compatible' },
+      { name: 'gemini-cloud', base_url: 'https://generativelanguage.googleapis.com', driver: 'openai-compatible' },
+    ]
+
+    const wrapper = mount(AgentConfigForm, {
+      props: { availableRoles: ['analyst'] },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('#acf-fallback-provider').exists()).toBe(true)
+    expect(wrapper.find('#acf-fallback-model').exists()).toBe(false)
+
+    await wrapper.find('#acf-fallback-provider').setValue('gemini-cloud')
+    expect(wrapper.find('#acf-fallback-model').exists()).toBe(true)
+  })
+
+  it('preserves and saves fallback provider/model fields on submit', async () => {
+    const store = useProvidersStore()
+    store.providers = [
+      { name: 'gemini-cloud', base_url: 'https://generativelanguage.googleapis.com', driver: 'openai-compatible' },
+    ]
+
+    const wrapper = mount(AgentConfigForm, {
+      props: {
+        availableRoles: ['analyst'],
+        initial: {
+          name: 'requirements-analyst',
+          roles: ['analyst'],
+          driver: 'claude-code-cli',
+          model: 'sonnet',
+          fallback_provider: 'gemini-cloud',
+          fallback_model: 'gemini-2.5-flash',
+        },
+      },
+    })
+    await flushPromises()
+
+    expect((wrapper.find('#acf-fallback-provider').element as HTMLSelectElement).value).toBe('gemini-cloud')
+    expect((wrapper.find('#acf-fallback-model').element as HTMLInputElement).value).toBe('gemini-2.5-flash')
+
+    await wrapper.find('form').trigger('submit.prevent')
+
+    expect(wrapper.emitted('submit')).toBeTruthy()
+    const emitted = wrapper.emitted('submit')![0][0] as any
+    expect(emitted.fallback_provider).toBe('gemini-cloud')
+    expect(emitted.fallback_model).toBe('gemini-2.5-flash')
+  })
+
+  it('rejects a fallback provider with no fallback model', async () => {
+    const store = useProvidersStore()
+    store.providers = [
+      { name: 'gemini-cloud', base_url: 'https://generativelanguage.googleapis.com', driver: 'openai-compatible' },
+    ]
+
+    const wrapper = mount(AgentConfigForm, {
+      props: { availableRoles: ['analyst'] },
+    })
+    await flushPromises()
+
+    await wrapper.find('#acf-name').setValue('my-agent')
+    await wrapper.find('.acf-role-chip').trigger('click')
+    await wrapper.find('#acf-model-cc').setValue('sonnet')
+    await wrapper.find('#acf-fallback-provider').setValue('gemini-cloud')
+
+    await wrapper.find('form').trigger('submit.prevent')
+
+    expect(wrapper.emitted('submit')).toBeFalsy()
+    expect(wrapper.text()).toContain('Fallback model is required when a fallback provider is set.')
+  })
 })

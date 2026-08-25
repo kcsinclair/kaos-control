@@ -13,6 +13,8 @@ import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import AgentPanelRow from '@/components/agent/AgentPanelRow.vue'
 import AgentLaunchModal from '@/components/agent/AgentLaunchModal.vue'
 import AgentConfigForm from '@/components/agent/AgentConfigForm.vue'
+import SwitchProviderModal from '@/components/agent/SwitchProviderModal.vue'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import RunFailureBanner from '@/components/agent/RunFailureBanner.vue'
 import RunSummaryCard from '@/components/agent/RunSummaryCard.vue'
 import RunDenialSummary from '@/components/agent/RunDenialSummary.vue'
@@ -60,6 +62,7 @@ const store = useAgentsStore()
 const ui = useUiStore()
 const configStore = useProjectConfigStore()
 const queueStore = useQueueStore()
+const providerSwitchStore = useProviderSwitchStore()
 const project = route.params.project as string
 
 const showRunDialog = ref(false)
@@ -83,6 +86,18 @@ function openEditAgent(agent: AgentSummary) {
 function closeAgentForm() {
   showAgentForm.value = false
   editAgent.value = null
+}
+
+// Switch-provider modal state (opened from an AgentPanelRow card).
+const switchProviderAgent = ref<string | null>(null)
+
+async function handleRestoreProvider(agent: AgentSummary) {
+  try {
+    await providerSwitchStore.restoreAgent(project, agent.name)
+    ui.success(`${agent.name} restored to primary provider`)
+  } catch (e: unknown) {
+    ui.error(e instanceof Error ? e.message : 'Failed to restore primary provider')
+  }
 }
 
 // Fields the editor form manages. Every other key on an existing entry
@@ -133,6 +148,14 @@ async function handleAgentFormSubmit(data: AgentFormData) {
 
     if (Object.keys(data.prompt_templates).length) entry.prompt_templates = data.prompt_templates
     else delete entry.prompt_templates
+
+    if (data.fallback_provider) {
+      entry.fallback_provider = data.fallback_provider
+      entry.fallback_model = data.fallback_model
+    } else {
+      delete entry.fallback_provider
+      delete entry.fallback_model
+    }
 
     if (idx >= 0) {
       agents[idx] = entry
@@ -269,6 +292,8 @@ onMounted(() => {
           :agents="store.agents"
           @select="selectedAgent = $event"
           @edit="openEditAgent($event)"
+          @switch-provider="switchProviderAgent = $event.name"
+          @restore-provider="handleRestoreProvider"
         />
 
         <div v-if="store.loading" class="state-msg">Loading…</div>
@@ -457,6 +482,14 @@ onMounted(() => {
       :project="project"
       @started="selectedAgent = null; store.fetchRuns(project)"
       @cancel="selectedAgent = null"
+    />
+
+    <SwitchProviderModal
+      v-if="switchProviderAgent"
+      :project="project"
+      :agent-name="switchProviderAgent"
+      @switched="switchProviderAgent = null"
+      @cancel="switchProviderAgent = null"
     />
 
     <!-- Full-height log viewer — same component the artefact-screen

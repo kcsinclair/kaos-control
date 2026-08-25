@@ -253,6 +253,11 @@ export interface AgentSummary {
   bash_allowlist?: string[]
   bash_denylist?: string[]
   on_denial?: string
+  fallback_provider?: string
+  fallback_model?: string
+  primary_provider?: string
+  primary_model?: string
+  is_failover?: boolean
 }
 
 export interface DenialRecord {

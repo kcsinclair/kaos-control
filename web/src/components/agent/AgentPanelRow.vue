@@ -12,6 +12,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [agent: AgentSummary]
   edit: [agent: AgentSummary]
+  'switch-provider': [agent: AgentSummary]
+  'restore-provider': [agent: AgentSummary]
 }>()
 
 const route = useRoute()
@@ -111,6 +113,12 @@ function runningCount(agent: AgentSummary): number {
             {{ runningCount(agent) }}
           </span>
           <button
+            v-if="agent.is_failover"
+            class="panel-switch-btn"
+            title="Switch provider"
+            @click.stop="emit('switch-provider', agent)"
+          >⇄</button>
+          <button
             v-if="!isInline(agent)"
             class="panel-edit-btn"
             title="Edit agent"
@@ -126,6 +134,14 @@ function runningCount(agent: AgentSummary): number {
       <span v-if="agent.model" class="panel-model">{{ agent.model }}</span>
       <span v-if="agent.driver === 'openai-compatible' && agent.provider" class="panel-provider-badge">{{ agent.provider }}</span>
       <span v-if="isInline(agent)" class="panel-inline-label">Externally driven</span>
+      <!-- Failover state: fallback badge + restore action -->
+      <div v-if="agent.is_failover" class="panel-fallback-block">
+        <span
+          class="panel-fallback-badge"
+          :title="`Fallback for ${agent.primary_provider}/${agent.primary_model}`"
+        >Active: {{ agent.model }} (Fallback for {{ agent.primary_model }})</span>
+        <button class="panel-restore-btn" @click.stop="emit('restore-provider', agent)">Restore Primary</button>
+      </div>
       <!-- Ready-count badge (only for agents with active_status) -->
       <button
         v-if="agent.active_status"
@@ -250,6 +266,24 @@ function runningCount(agent: AgentSummary): number {
   }
 }
 
+.panel-switch-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.agent-panel:hover .panel-switch-btn {
+  opacity: 1;
+}
+.panel-switch-btn:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
 .panel-edit-btn {
   background: none;
   border: none;
@@ -354,6 +388,35 @@ function runningCount(agent: AgentSummary): number {
   font-style: italic;
   margin-top: var(--space-1);
 }
+
+/* Failover state */
+.panel-fallback-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+.panel-fallback-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.panel-restore-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.panel-restore-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
 
 /* Ready-count badge */
 .panel-ready-badge {

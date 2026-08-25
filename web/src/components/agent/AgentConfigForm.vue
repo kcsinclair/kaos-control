@@ -18,6 +18,8 @@ export interface AgentFormData {
   git_identity_name: string
   git_identity_email: string
   prompt_templates: Record<string, string>
+  fallback_provider?: string
+  fallback_model?: string
 }
 
 const props = defineProps<{
@@ -49,6 +51,8 @@ const allowedWritePathsRaw = ref((props.initial?.allowed_write_paths ?? []).join
 const timeoutMinutes = ref(props.initial?.timeout_minutes ?? 0)
 const gitIdentityName = ref(props.initial?.git_identity?.name ?? '')
 const gitIdentityEmail = ref(props.initial?.git_identity?.email ?? '')
+const fallbackProvider = ref(props.initial?.fallback_provider ?? '')
+const fallbackModel = ref(props.initial?.fallback_model ?? '')
 
 // Prompt templates: one labelled textarea per role, so multi-role template
 // maps (e.g. idea-capture's 3 templates) round-trip losslessly instead of
@@ -136,6 +140,11 @@ function validate(): boolean {
     // codex-cli and gemini-cli use the binary's default model when none is given.
     if (!model.value.trim()) e.model = 'Model is required.'
   }
+  if (fallbackProvider.value) {
+    if (fallbackProvider.value === (driver.value === 'openai-compatible' ? provider.value : undefined))
+      e.fallbackProvider = 'Fallback provider must differ from the primary provider.'
+    if (!fallbackModel.value.trim()) e.fallbackModel = 'Fallback model is required when a fallback provider is set.'
+  }
   errors.value = e
   return Object.keys(e).length === 0
 }
@@ -156,6 +165,8 @@ function handleSubmit() {
     timeout_minutes: timeoutMinutes.value,
     git_identity_name: gitIdentityName.value.trim(),
     git_identity_email: gitIdentityEmail.value.trim(),
+    fallback_provider: fallbackProvider.value || undefined,
+    fallback_model: fallbackProvider.value ? fallbackModel.value.trim() : undefined,
     prompt_templates: collectPromptTemplates(),
   })
 }
@@ -361,6 +372,41 @@ function toggleRole(role: string) {
       </div>
     </template>
 
+    <!-- Failover configuration -->
+    <div class="acf-section">
+      <div class="acf-label">Failover Configuration</div>
+      <p class="acf-hint">
+        When the primary provider encounters HTTP 529 or rate limits, the runner
+        can automatically failover to this provider.
+      </p>
+      <div class="acf-field">
+        <label class="acf-label" for="acf-fallback-provider">Fallback Provider <span class="acf-optional">(optional)</span></label>
+        <select
+          id="acf-fallback-provider"
+          v-model="fallbackProvider"
+          class="acf-select"
+          :class="{ 'acf-input--error': errors.fallbackProvider }"
+        >
+          <option value="">— none —</option>
+          <option v-for="p in providersStore.providers" :key="p.name" :value="p.name">{{ p.name }}</option>
+        </select>
+        <p v-if="errors.fallbackProvider" class="acf-error">{{ errors.fallbackProvider }}</p>
+      </div>
+      <div v-if="fallbackProvider" class="acf-field">
+        <label class="acf-label" for="acf-fallback-model">Fallback Model</label>
+        <input
+          id="acf-fallback-model"
+          v-model="fallbackModel"
+          class="acf-input"
+          :class="{ 'acf-input--error': errors.fallbackModel }"
+          type="text"
+          placeholder="e.g. gemini-2.5-flash"
+          autocomplete="off"
+        />
+        <p v-if="errors.fallbackModel" class="acf-error">{{ errors.fallbackModel }}</p>
+      </div>
+    </div>
+
     <!-- Allowed write paths -->
     <div class="acf-field">
       <label class="acf-label" for="acf-paths">
@@ -470,6 +516,14 @@ function toggleRole(role: string) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
+}
+.acf-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 .acf-label {
   font-size: var(--text-sm);
