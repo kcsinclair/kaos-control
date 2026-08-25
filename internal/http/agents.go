@@ -462,7 +462,16 @@ func (s *Server) handleGetAgentRunResult(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	result, err := agent.ParseResultLine(string(data))
+	// Resolve the run's driver so agy (gemini-cli) NDJSON is parsed with its
+	// own result shape rather than Claude's. If the agent config is gone
+	// (renamed/removed since the run), fall back to the Claude parser —
+	// preserves today's behaviour for the common case.
+	driver := ""
+	if ag, ok := p.Agents.GetAgent(run.AgentName); ok {
+		driver = ag.Driver
+	}
+
+	result, err := agent.ParseRunResult(driver, string(data))
 	if err != nil {
 		writeJSON(w, http.StatusOK, map[string]any{"result": nil, "reason": err.Error()})
 		return

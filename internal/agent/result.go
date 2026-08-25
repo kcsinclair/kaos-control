@@ -112,6 +112,19 @@ func ParseResultLine(logContent string) (*RunResult, error) {
 	return nil, errNoResultLine
 }
 
+// ParseRunResult dispatches to the result parser matching the driver's
+// stream-json shape: ParseAgyResultLine for gemini-cli (agy's event/result
+// NDJSON), ParseResultLine for every other driver (Claude's type/result
+// NDJSON). Keeps the two call sites (supervisor post-run parse in this
+// package, the on-demand result endpoint in internal/http) on one dispatch
+// rule.
+func ParseRunResult(driver, logContent string) (*RunResult, error) {
+	if driver == "gemini-cli" {
+		return ParseAgyResultLine(logContent)
+	}
+	return ParseResultLine(logContent)
+}
+
 // dominantModel returns the run's primary model: the entry in modelUsage with
 // the most output tokens (tie-break: higher cost, then lexicographically first
 // name for determinism). Returns "" for an empty/nil map.

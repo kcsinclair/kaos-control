@@ -1340,7 +1340,7 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	var runResult any
 	if run.LogPath != "" {
 		if logData, readErr := os.ReadFile(run.LogPath); readErr == nil {
-			if parsed, parseErr := ParseResultLine(string(logData)); parseErr == nil {
+			if parsed, parseErr := ParseRunResult(run.Driver, string(logData)); parseErr == nil {
 				runResult = parsed
 				metrics := index.AgentRunMetrics{
 					Model:               parsed.Model,
