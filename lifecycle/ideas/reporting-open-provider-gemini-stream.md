@@ -1,7 +1,7 @@
 ---
 title: Reporting for Open Provider Support and Gemini JSON Stream
 type: idea
-status: draft
+status: approved
 lineage: reporting-open-provider-gemini-stream
 created: "2026-08-25T18:23:28+10:00"
 priority: normal
