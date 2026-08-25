@@ -511,6 +511,7 @@ func (s *Server) RegisterProject(entry *config.ProjectEntry) error {
 	p.StartLockReaper(pCtx)
 	p.StartSessionReaper(pCtx)
 	p.StartScheduler(pCtx)
+	p.StartRecoveryProber(pCtx)
 
 	// Wire queue pause callback so denied tool calls pause the queue.
 	if q != nil && p.Agents != nil {

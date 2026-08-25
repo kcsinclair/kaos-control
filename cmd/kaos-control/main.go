@@ -257,6 +257,7 @@ func run() error {
 		p.StartLockReaper(pCtx)
 		p.StartSessionReaper(pCtx)
 		p.StartScheduler(pCtx)
+		p.StartRecoveryProber(pCtx)
 	}
 
 	// Open the queue database (app-level, shared across all projects).

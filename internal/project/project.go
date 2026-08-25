@@ -58,9 +58,22 @@ type Project struct {
 	TriageMgr      *triage.Manager      // auto-triage of raw idea artifacts
 	ReleaseSync    *release.DiskSync    // disk sync for release markdown files
 
+	// Providers is the app-level LLM provider list (snapshotted from
+	// OpenOptions.Providers at Open time), used by RecoveryProber to resolve
+	// a primary_provider name to its base_url for health probing.
+	Providers []config.Provider
+
+	// RecoveryProber watches for agents in failover and announces when their
+	// primary provider becomes reachable again. Not started until
+	// StartRecoveryProber is called.
+	RecoveryProber *RecoveryProber
+
 	// watcherDone is closed when the watcher goroutine exits.
 	// Close() waits on this before closing the index DB.
 	watcherDone <-chan struct{}
+	// recoveryProberDone is closed when the recovery prober goroutine exits.
+	// Close() waits on this before closing the index DB.
+	recoveryProberDone <-chan struct{}
 }
 
 // OpenOptions configures optional parameters for Open.
@@ -330,7 +343,9 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		SchedulerStore: schedulerStore,
 		TriageMgr:      triageMgr,
 		ReleaseSync:    releaseSync,
+		Providers:      opts.Providers,
 	}
+	p.RecoveryProber = newRecoveryProber(p)
 
 	// Wire the config-reload callback so watcher-driven changes to
 	// lifecycle/config.yaml (including external edits, e.g. Obsidian sync)
@@ -398,6 +413,13 @@ func (p *Project) StartScheduler(ctx context.Context) {
 	p.Scheduler.Start(ctx)
 }
 
+// StartRecoveryProber launches the background primary-provider recovery
+// prober goroutine. It returns immediately; the goroutine runs until ctx is
+// cancelled. Close() waits for it to fully exit before closing the index.
+func (p *Project) StartRecoveryProber(ctx context.Context) {
+	p.recoveryProberDone = p.RecoveryProber.Start(ctx)
+}
+
 // Close releases resources held by the project.
 // It waits for the watcher goroutine to fully stop before closing the index
 // so that in-flight debounce callbacks cannot touch the DB after it is closed.
@@ -417,6 +439,13 @@ func (p *Project) Close() error {
 		case <-p.watcherDone:
 		case <-time.After(5 * time.Second):
 			slog.Warn("project: timed out waiting for watcher to stop", "name", p.Entry.Name)
+		}
+	}
+	if p.recoveryProberDone != nil {
+		select {
+		case <-p.recoveryProberDone:
+		case <-time.After(5 * time.Second):
+			slog.Warn("project: timed out waiting for recovery prober to stop", "name", p.Entry.Name)
 		}
 	}
 	return p.Idx.Close()
