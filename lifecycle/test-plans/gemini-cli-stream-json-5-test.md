@@ -1,10 +1,11 @@
 ---
-title: "Test plan — gemini-cli agy stream-json telemetry"
+title: Test plan — gemini-cli agy stream-json telemetry
 type: plan-test
 status: approved
 lineage: gemini-cli-stream-json
-parent: lifecycle/requirements/gemini-cli-stream-json-2.md
 created: "2026-08-25T14:00:00+10:00"
+parent: lifecycle/requirements/gemini-cli-stream-json-2.md
+release: KC-Release6
 ---
 
 # Test plan — gemini-cli agy stream-json telemetry
