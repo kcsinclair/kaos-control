@@ -9,6 +9,7 @@ import { useAgentsStore } from '@/stores/agents'
 import { useSchedulerStore } from '@/stores/scheduler'
 import { useAppStore } from '@/stores/app'
 import { useOpenQuestionsStore } from '@/stores/openQuestions'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import { getProjectWs } from '@/api/ws'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
@@ -23,10 +24,12 @@ const agentsStore = useAgentsStore()
 const schedulerStore = useSchedulerStore()
 const appStore = useAppStore()
 const openQuestionsStore = useOpenQuestionsStore()
+const providerSwitchStore = useProviderSwitchStore()
 
 const AGENT_EVENTS     = new Set(['agent.started', 'agent.progress', 'agent.status', 'agent.finished', 'agent.failed', 'agent.permission', 'agent.quota_status'])
 const LOCK_EVENTS      = new Set(['lock.acquired', 'lock.released'])
 const SCHEDULER_EVENTS = new Set(['scheduler.job.started', 'scheduler.job.completed'])
+const PROVIDER_SWITCH_EVENTS = new Set(['provider.switched', 'provider.restored', 'provider.primary_recovered', 'config.reloaded'])
 
 let wsUnsub: (() => void) | null = null
 let _readyCountDebounce: ReturnType<typeof setTimeout> | null = null
@@ -40,6 +43,7 @@ async function syncProject() {
   projectStore.setCurrent(name)
   await projectStore.checkInitRequired(name)
   void openQuestionsStore.fetchAwaitingAnswersCount(name)
+  void providerSwitchStore.fetchStatus(name)
 }
 
 function scheduleReadyCountRefresh(project: string) {
@@ -68,6 +72,8 @@ function subscribeWs(project: string) {
       locksStore.applyEvent(e.type, e.payload as Record<string, unknown>)
     } else if (SCHEDULER_EVENTS.has(e.type)) {
       schedulerStore.onWsEvent(e.type, e.payload as Record<string, unknown>)
+    } else if (PROVIDER_SWITCH_EVENTS.has(e.type)) {
+      providerSwitchStore.onWsEvent(project, e.type, e.payload as Record<string, unknown>)
     } else if (e.type === 'artifact.indexed') {
       scheduleReadyCountRefresh(project)
       scheduleAwaitingCountRefresh(project)

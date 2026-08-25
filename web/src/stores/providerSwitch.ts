@@ -15,6 +15,11 @@ export const useProviderSwitchStore = defineStore('providerSwitch', () => {
   // Providers a recovery probe has confirmed reachable while at least one
   // agent is still failed over to them (project/recovery_prober.go).
   const recoveredProviders = ref<string[]>([])
+  // Whether the global ProviderFailoverModal drawer is open — toggled by the
+  // AppHeader badge, read by WorkspaceView (which hosts the modal).
+  const modalOpen = ref(false)
+  function openModal(): void { modalOpen.value = true }
+  function closeModal(): void { modalOpen.value = false }
 
   const isFailoverActive = computed(() => status.value.failover_active)
   const failoverAgents = computed(() => status.value.agents.filter((a) => a.is_failover))
@@ -180,6 +185,9 @@ export const useProviderSwitchStore = defineStore('providerSwitch', () => {
     loading,
     error,
     recoveredProviders,
+    modalOpen,
+    openModal,
+    closeModal,
     isFailoverActive,
     failoverAgents,
     failoverCount,

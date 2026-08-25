@@ -9,8 +9,9 @@ import { useThemeStore } from '@/stores/theme'
 import { useAgentsStore } from '@/stores/agents'
 import { useQueueStore } from '@/stores/queue'
 import { useOpenQuestionsStore } from '@/stores/openQuestions'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import { ApiError } from '@/api/client'
-import { Menu } from 'lucide-vue-next'
+import { Menu, AlertTriangle } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
@@ -20,6 +21,7 @@ const theme = useThemeStore()
 const agentsStore = useAgentsStore()
 const queueStore = useQueueStore()
 const openQuestionsStore = useOpenQuestionsStore()
+const providerSwitchStore = useProviderSwitchStore()
 
 const project = computed(() => route.params.project as string | undefined)
 const activeCount = computed(() => agentsStore.activeRuns.length)
@@ -35,6 +37,12 @@ const queueBadgeTooltip = computed(() => {
   const n = queueStore.pendingCount
   return `Queue: ${n} pending`
 })
+const failoverBadgeLabel = computed(() => `Failover Active (${providerSwitchStore.failoverCount})`)
+const failoverBadgeTooltip = computed(() =>
+  providerSwitchStore.hasRecoveredPrimary
+    ? 'Primary provider recovered — click to restore'
+    : `${failoverBadgeLabel.value} — click to view`,
+)
 
 async function handleLogout() {
   try {
@@ -87,6 +95,22 @@ async function handleLogout() {
         <span v-else class="queue-count">{{ queueStore.pendingCount }}</span>
         <span class="queue-label"> pending</span>
       </RouterLink>
+      <button
+        v-if="project && providerSwitchStore.isFailoverActive"
+        type="button"
+        class="header-failover-badge"
+        :aria-label="failoverBadgeTooltip"
+        :title="failoverBadgeTooltip"
+        @click="providerSwitchStore.openModal()"
+      >
+        <AlertTriangle :size="14" />
+        <span class="failover-label">{{ failoverBadgeLabel }}</span>
+        <span
+          v-if="providerSwitchStore.hasRecoveredPrimary"
+          class="failover-recovered-dot"
+          aria-hidden="true"
+        />
+      </button>
       <RouterLink
         v-if="project && awaitingAnswersCount > 0"
         :to="`/p/${project}/artifacts?status=blocked&awaiting=1`"
@@ -258,6 +282,42 @@ async function handleLogout() {
 .queue-count { font-weight: 600; }
 @media (max-width: 768px) {
   .queue-label { display: none; }
+}
+
+.header-failover-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.header-failover-badge:hover {
+  color: #fff;
+  border-color: #fbbf24;
+  background: rgba(245, 158, 11, 0.25);
+}
+.failover-recovered-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .failover-recovered-dot {
+    animation: none;
+  }
+}
+@media (max-width: 768px) {
+  .failover-label { display: none; }
 }
 
 .header-awaiting-badge {
