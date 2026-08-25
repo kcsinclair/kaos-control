@@ -38,6 +38,11 @@ type Project struct {
 	Cfg   *config.Project
 	cfgMu sync.RWMutex
 
+	// configWriteMu serialises AST-based lifecycle/config.yaml mutations
+	// (provider switch/restore/template-apply) so concurrent callers cannot
+	// race a read-patch-write cycle against each other and corrupt the file.
+	configWriteMu sync.Mutex
+
 	Idx            *index.Index
 	Git            *kgit.Repo // nil if the project directory is not a git repo
 	Hub            *hub.Hub
