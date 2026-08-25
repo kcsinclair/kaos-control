@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -15,10 +16,17 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/kaos-control/kaos-control/internal/config"
 )
+
+// ErrModelLoadTimeout indicates the model did not produce a first token
+// within the dedicated loading timeout, most likely because it is still
+// lazy-loading weights into memory (local-model-operability Milestone 3).
+var ErrModelLoadTimeout = errors.New("model did not respond within the loading timeout")
 
 // OpenAICompatibleDriver implements Driver by communicating with an OpenAI-compatible
 // /v1/chat/completions endpoint using a multi-turn tool calling agent loop.
@@ -37,7 +45,7 @@ type openAIProcess struct {
 
 func (p *openAIProcess) Wait() error                    { return <-p.done }
 func (p *openAIProcess) Progress() <-chan ProgressEvent { return p.progress }
-func (p *openAIProcess) StderrTail() string              { return p.stderr.String() }
+func (p *openAIProcess) StderrTail() string             { return p.stderr.String() }
 func (p *openAIProcess) Kill() error {
 	p.cancel()
 	return nil
@@ -192,12 +200,99 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 		}
 
 		startTime := time.Now()
-		ttftRecorded := false
+		var ttftRecorded atomic.Bool
+		var loadTimedOut atomic.Bool
 		recordTTFT := func() {
-			if !ttftRecorded && run.OnTTFT != nil {
-				ttftRecorded = true
-				run.OnTTFT(time.Since(startTime).Milliseconds())
+			if ttftRecorded.CompareAndSwap(false, true) {
+				if run.OnTTFT != nil {
+					run.OnTTFT(time.Since(startTime).Milliseconds())
+				}
+				select {
+				case progressCh <- ProgressEvent{
+					Raw: "generating",
+					Event: map[string]any{
+						"type":  "status",
+						"stage": "generating",
+					},
+				}:
+				default:
+				}
 			}
+		}
+
+		// Warmup detection (Milestone 3): local inference servers often
+		// lazy-load multi-gigabyte weights on the first request, pausing
+		// 30-120s with no visible progress. The warmup watcher surfaces that
+		// to the UI once 5s elapse without a token; the load-timeout watcher
+		// bounds the wait with a dedicated, configurable timeout (default
+		// 60s) distinct from the overall run timeout, so a stuck load fails
+		// clearly instead of silently consuming the whole run budget.
+		//
+		// Both watchers run in their own goroutine and race their timer
+		// against stopTimers, which the deferred cleanup below closes (and
+		// waits on) before progressCh is closed — without that, a watcher
+		// could still be sending on progressCh after this goroutine closes
+		// it, which panics.
+		loadTimeout := run.ModelLoadingTimeout
+		if loadTimeout <= 0 {
+			loadTimeout = 60 * time.Second
+		}
+		stopTimers := make(chan struct{})
+		var timersWG sync.WaitGroup
+
+		timersWG.Add(1)
+		go func() {
+			defer timersWG.Done()
+			select {
+			case <-time.After(5 * time.Second):
+			case <-stopTimers:
+				return
+			}
+			if ttftRecorded.Load() {
+				return
+			}
+			select {
+			case progressCh <- ProgressEvent{
+				Raw: "warming_up",
+				Event: map[string]any{
+					"type":    "status",
+					"stage":   "warming_up",
+					"message": "Awaiting first token (model may be warming up)...",
+				},
+			}:
+			case <-stopTimers:
+			}
+		}()
+
+		timersWG.Add(1)
+		go func() {
+			defer timersWG.Done()
+			select {
+			case <-time.After(loadTimeout):
+			case <-stopTimers:
+				return
+			}
+			if ttftRecorded.Load() {
+				return
+			}
+			loadTimedOut.Store(true)
+			cancel()
+		}()
+
+		defer func() {
+			close(stopTimers)
+			timersWG.Wait()
+		}()
+
+		// wrapLoadTimeout replaces a context-cancellation error with a clear
+		// ErrModelLoadTimeout when the cancellation was caused by the
+		// load-timeout watcher (rather than a user Kill or the overall run
+		// timeout).
+		wrapLoadTimeout := func(err error) error {
+			if loadTimedOut.Load() && !ttftRecorded.Load() {
+				return fmt.Errorf("%w after %s", ErrModelLoadTimeout, loadTimeout)
+			}
+			return err
 		}
 
 		endpointURL := buildEndpointURL(prov.BaseURL, "v1/chat/completions")
@@ -206,6 +301,7 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 
 		for turn := 1; turn <= maxIterations; turn++ {
 			if err := runCtx.Err(); err != nil {
+				err = wrapLoadTimeout(err)
 				rb.Write([]byte(mask(err.Error())))
 				writeLog("# error: " + err.Error())
 				doneCh <- err
@@ -241,6 +337,7 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 
 			resp, err := client.Do(httpReq)
 			if err != nil {
+				err = wrapLoadTimeout(err)
 				rb.Write([]byte(mask(err.Error())))
 				writeLog("# error: " + err.Error())
 				doneCh <- wrapHTTPError(err, 0)
@@ -327,7 +424,19 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 
 			scanErr := sc.Err()
 			resp.Body.Close()
-			if scanErr != nil && runCtx.Err() == nil {
+			if scanErr != nil {
+				// A cancelled runCtx (load timeout, overall run timeout, or a
+				// user Kill) is what actually explains the scan error; report
+				// that cancellation instead of falling through to "no tool
+				// calls" below, which would otherwise record an empty
+				// response as a successful completion.
+				if ctxErr := runCtx.Err(); ctxErr != nil {
+					err := wrapLoadTimeout(ctxErr)
+					rb.Write([]byte(mask(err.Error())))
+					writeLog("# error: " + err.Error())
+					doneCh <- err
+					return
+				}
 				rb.Write([]byte(mask(scanErr.Error())))
 				writeLog("# error: " + scanErr.Error())
 				doneCh <- scanErr

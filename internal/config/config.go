@@ -83,6 +83,13 @@ type AppAgentConfig struct {
 	// Defaults to true. Set to false to allow runs in any permission mode (escape
 	// hatch for environments where bypass mode cannot be enabled).
 	RequireBypassPermissions *bool `yaml:"require_bypass_permissions,omitempty"`
+
+	// ModelLoadingTimeoutSeconds bounds how long the openai-compatible driver
+	// waits for the first streamed content token before aborting the turn as
+	// a load timeout. Local inference servers can take 30-120s to lazy-load
+	// multi-gigabyte weights on the first request; this timeout is dedicated
+	// to that wait and is independent of the per-run timeout_minutes. Default: 60.
+	ModelLoadingTimeoutSeconds int `yaml:"model_loading_timeout_seconds,omitempty"`
 }
 
 func defaultApp() App {
@@ -101,8 +108,9 @@ func defaultApp() App {
 			SchedulerRunRetentionDays:  90,
 		},
 		Agent: AppAgentConfig{
-			InitEventTimeoutSeconds:  10,
-			RequireBypassPermissions: &requireBypass,
+			InitEventTimeoutSeconds:    10,
+			RequireBypassPermissions:   &requireBypass,
+			ModelLoadingTimeoutSeconds: 60,
 		},
 	}
 }
@@ -257,6 +265,9 @@ func validateApp(cfg *App) error {
 	if cfg.Agent.RequireBypassPermissions == nil {
 		v := true
 		cfg.Agent.RequireBypassPermissions = &v
+	}
+	if cfg.Agent.ModelLoadingTimeoutSeconds <= 0 {
+		cfg.Agent.ModelLoadingTimeoutSeconds = 60
 	}
 
 	seenOllama := make(map[string]bool, len(cfg.OllamaInstances))

@@ -97,6 +97,10 @@ type Run struct {
 	// OpenAI-compatible driver fields.
 	ProviderName      string // resolved from AgentConfig.Provider
 	MaxToolIterations int    // per-agent override; 0 = default (25)
+	// ModelLoadingTimeout bounds how long the openai-compatible driver waits
+	// for the first streamed content token before aborting as a load timeout
+	// (local-model-operability Milestone 3). 0 = driver default (60s).
+	ModelLoadingTimeout time.Duration
 	// OnTTFT, when non-nil, is called once with the wall-clock milliseconds
 	// between process start and the first streamed content token. Set by the
 	// Manager for streaming drivers; nil for batch-mode drivers.
@@ -433,6 +437,11 @@ type Manager struct {
 	initEventTimeout   time.Duration // how long to wait for the system/init event
 	requireBypassPerms bool          // whether to reject non-bypassPermissions runs
 	killer             processKiller // injectable for tests
+
+	// modelLoadingTimeout bounds how long the openai-compatible driver waits
+	// for the first streamed token before aborting as a load timeout
+	// (local-model-operability Milestone 3). Default 60s.
+	modelLoadingTimeout time.Duration
 }
 
 // New creates an agent Manager. maxConcurrent caps parallel runs across the project.
@@ -465,25 +474,30 @@ func New(
 	if agentCfg.RequireBypassPermissions != nil {
 		requireBypass = *agentCfg.RequireBypassPermissions
 	}
+	modelLoadingTimeout := time.Duration(agentCfg.ModelLoadingTimeoutSeconds) * time.Second
+	if modelLoadingTimeout <= 0 {
+		modelLoadingTimeout = 60 * time.Second
+	}
 	m := &Manager{
-		agents:             agents,
-		sem:                make(chan struct{}, maxConcurrent),
-		active:             make(map[string]*activeRun),
-		runSecrets:         make(map[string]string),
-		runPolicies:        make(map[string]*PolicyConfig),
-		deniedCalls:        make(map[string][]DenialRecord),
-		runQuota:           make(map[string]RateLimitInfo),
-		idx:                idx,
-		git:                git,
-		hub:                h,
-		locks:              locks,
-		wf:                 wf,
-		root:               root,
-		logsDir:            logsDir,
-		providers:          providers,
-		initEventTimeout:   timeout,
-		requireBypassPerms: requireBypass,
-		killer:             defaultProcessKiller{},
+		agents:              agents,
+		sem:                 make(chan struct{}, maxConcurrent),
+		active:              make(map[string]*activeRun),
+		runSecrets:          make(map[string]string),
+		runPolicies:         make(map[string]*PolicyConfig),
+		deniedCalls:         make(map[string][]DenialRecord),
+		runQuota:            make(map[string]RateLimitInfo),
+		idx:                 idx,
+		git:                 git,
+		hub:                 h,
+		locks:               locks,
+		wf:                  wf,
+		root:                root,
+		logsDir:             logsDir,
+		providers:           providers,
+		initEventTimeout:    timeout,
+		requireBypassPerms:  requireBypass,
+		killer:              defaultProcessKiller{},
+		modelLoadingTimeout: modelLoadingTimeout,
 	}
 
 	// Build hook driver with a StoreSecret callback into this Manager.
@@ -651,26 +665,27 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	providerName := ag.Provider
 
 	run := Run{
-		RunID:             runID,
-		AgentName:         agentName,
-		Role:              role,
-		Driver:            ag.Driver,
-		Model:             ag.Model,
-		PromptText:        prompt,
-		ProjectRoot:       m.root,
-		AllowedPaths:      ag.AllowedPaths,
-		GitIdentity:       identity,
-		LogPath:           m.LogPath(runID),
-		TargetPath:        targetPath,
-		ActiveStatus:      ag.ActiveStatus,
-		DoneOnSuccess:     ag.DoneOnSuccess,
-		TimeoutMinutes:    ag.TimeoutMinutes,
-		RelatedTestPath:   relatedTestPath,
-		ProviderName:      providerName,
-		MaxToolIterations: ag.MaxToolIterations,
-		ShellCommand:      ag.ShellCommand,
-		BaseURL:           ag.BaseURL,
-		AuthToken:         ag.AuthToken,
+		RunID:               runID,
+		AgentName:           agentName,
+		Role:                role,
+		Driver:              ag.Driver,
+		Model:               ag.Model,
+		PromptText:          prompt,
+		ProjectRoot:         m.root,
+		AllowedPaths:        ag.AllowedPaths,
+		GitIdentity:         identity,
+		LogPath:             m.LogPath(runID),
+		TargetPath:          targetPath,
+		ActiveStatus:        ag.ActiveStatus,
+		DoneOnSuccess:       ag.DoneOnSuccess,
+		TimeoutMinutes:      ag.TimeoutMinutes,
+		RelatedTestPath:     relatedTestPath,
+		ProviderName:        providerName,
+		MaxToolIterations:   ag.MaxToolIterations,
+		ShellCommand:        ag.ShellCommand,
+		BaseURL:             ag.BaseURL,
+		AuthToken:           ag.AuthToken,
+		ModelLoadingTimeout: m.modelLoadingTimeout,
 	}
 
 	// Wire TTFT recording for streaming drivers. The callback is called from
