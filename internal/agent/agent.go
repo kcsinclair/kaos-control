@@ -565,6 +565,12 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	}
 	promptTpl, ok := ag.PromptTemplates[role]
 	if !ok {
+		// Local-model-tuned fallback (local-model-operability Milestone 1):
+		// agents that omit a prompt_templates entry for the active role still
+		// get a concise, deterministic brief instead of a hard failure.
+		promptTpl, ok = LocalModelPromptDefaults[agentName]
+	}
+	if !ok {
 		return "", fmt.Errorf("agent %q has no prompt template for role %q", agentName, role)
 	}
 	prompt := strings.NewReplacer(
