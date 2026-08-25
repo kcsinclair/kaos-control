@@ -1,7 +1,7 @@
 ---
 title: "Backend & DevOps Plan: Frontend Lint Coverage Integration"
 type: plan-backend
-status: draft
+status: approved
 lineage: frontend-lint-gap
 parent: lifecycle/requirements/frontend-lint-gap-2.md
 created: "2026-08-24T19:30:00+10:00"
