@@ -220,9 +220,13 @@ standards. No new ADR required.
    `provider` acceptable in the UI/report, or should CLI runs display a synthetic
    label (e.g. the driver id) in the provider column? *Recommendation:* leave
    `provider` empty and let the UI fall back to `driver` for display.
+
+> Proceed with recommendation.
+
 2. **Analytics breakdown.** Should [[agent-usage-analytics-report]] gain
    per-provider / per-driver series and totals once the data is captured?
    Proposed as a follow-up, out of scope here.
+
 3. **Header value when provider is empty.** Emit `provider=` (empty token) for
    every driver for grep-consistency, or omit the token entirely for CLI
    drivers? *Recommendation:* always emit `provider=` so the header shape is
