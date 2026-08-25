@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Dynamic Provider Switching, Automated Failover & UI Controls"
 type: plan-test
-status: in-development
+status: done
 lineage: switch-provider
 parent: lifecycle/requirements/switch-provider-2.md
 created: "2026-08-25T08:50:00+10:00"
