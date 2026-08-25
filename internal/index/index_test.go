@@ -543,6 +543,78 @@ func TestSetAgentRunTTFT_RecordedOnce(t *testing.T) {
 	}
 }
 
+// TestAgentRunRow_FailureClassificationRoundTrip verifies that
+// FailureReason, Remediation, and ErrorDetails survive an UpdateAgentRun +
+// GetAgentRun round trip (local-model-operability Milestone 4).
+func TestAgentRunRow_FailureClassificationRoundTrip(t *testing.T) {
+	idx := openTestIndex(t)
+
+	now := time.Now()
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID: "classify-run-1", AgentName: "backend-developer", Role: "backend-developer",
+		StartedAt: now, Status: "running",
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+
+	reason := "model_not_found"
+	finishedAt := now.Add(2 * time.Second)
+	exitCode := -1
+	if err := idx.UpdateAgentRun(&AgentRunRow{
+		RunID:         "classify-run-1",
+		Status:        "failed",
+		FinishedAt:    &finishedAt,
+		ExitCode:      &exitCode,
+		StderrTail:    "model \"gemma-4-26b\" not found on provider \"local\"",
+		FailureReason: &reason,
+		Remediation:   []string{"step one", "step two"},
+		ErrorDetails:  map[string]any{"message": "model not found", "stderr_excerpt": "..."},
+	}); err != nil {
+		t.Fatalf("UpdateAgentRun: %v", err)
+	}
+
+	got, err := idx.GetAgentRun("classify-run-1")
+	if err != nil {
+		t.Fatalf("GetAgentRun: %v", err)
+	}
+	if got == nil {
+		t.Fatal("GetAgentRun returned nil")
+	}
+	if got.FailureReason == nil || *got.FailureReason != reason {
+		t.Errorf("FailureReason: got %v, want %q", got.FailureReason, reason)
+	}
+	if len(got.Remediation) != 2 || got.Remediation[0] != "step one" || got.Remediation[1] != "step two" {
+		t.Errorf("Remediation: got %v", got.Remediation)
+	}
+	if got.ErrorDetails["message"] != "model not found" {
+		t.Errorf("ErrorDetails[message]: got %v", got.ErrorDetails["message"])
+	}
+
+	// A run with no failure classification must round-trip as nil/empty,
+	// not as empty-but-non-nil JSON artifacts.
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID: "classify-run-2", AgentName: "backend-developer", Role: "backend-developer",
+		StartedAt: now, Status: "running",
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+	if err := idx.UpdateAgentRun(&AgentRunRow{
+		RunID: "classify-run-2", Status: "done", FinishedAt: &finishedAt,
+	}); err != nil {
+		t.Fatalf("UpdateAgentRun: %v", err)
+	}
+	got2, err := idx.GetAgentRun("classify-run-2")
+	if err != nil {
+		t.Fatalf("GetAgentRun: %v", err)
+	}
+	if got2.FailureReason != nil {
+		t.Errorf("expected nil FailureReason for a successful run, got %v", *got2.FailureReason)
+	}
+	if len(got2.Remediation) != 0 || len(got2.ErrorDetails) != 0 {
+		t.Errorf("expected empty Remediation/ErrorDetails for a successful run, got %v / %v", got2.Remediation, got2.ErrorDetails)
+	}
+}
+
 // TestUpdateAgentRunMetrics_UnknownRunID verifies that calling
 // UpdateAgentRunMetrics on a non-existent run ID does not panic.
 // SQLite's UPDATE returns no error for zero-rows-affected.

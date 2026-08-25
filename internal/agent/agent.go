@@ -847,10 +847,10 @@ func (m *Manager) preflightModelAvailability(ctx context.Context, ag *config.Age
 
 	status, err := probeModelAvailability(ctx, nil, *prov, ag.Model)
 	if err != nil {
-		reason := "endpoint_unreachable"
+		reason := FailureReasonEndpointUnreachable
 		remediation := endpointUnreachableRemediation
 		if errors.Is(err, ErrModelNotFound) {
-			reason = "model_not_found"
+			reason = FailureReasonModelNotFound
 			remediation = modelNotFoundRemediation
 		}
 		m.recordPreflightFailure(agentName, targetPath, role, reason, remediation, err)
@@ -898,8 +898,10 @@ func (m *Manager) recordPreflightFailure(agentName, targetPath, role, reason str
 	row.FinishedAt = &finishedAt
 	row.ExitCode = &exitCode
 	row.FailureReason = &reason
+	row.Remediation = remediation
 	if cause != nil {
 		row.StderrTail = cause.Error()
+		row.ErrorDetails = map[string]any{"message": maskSecretsInText(cause.Error())}
 	}
 	if err := m.idx.UpdateAgentRun(row); err != nil {
 		slog.Warn("agent: updating preflight-failure run record", "run_id", runID, "err", err)
@@ -914,6 +916,7 @@ func (m *Manager) recordPreflightFailure(agentName, targetPath, role, reason str
 			"target_path":    targetPath,
 			"failure_reason": reason,
 			"remediation":    remediation,
+			"error_details":  row.ErrorDetails,
 		},
 	})
 
@@ -1143,7 +1146,7 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	// status to failed so the run is not incorrectly recorded as successful.
 	if authErrKilled && status == "done" {
 		status = "failed"
-		failureReason = "auth_error"
+		failureReason = FailureReasonAuthError
 	}
 
 	// Truncated-stream detection (claude-code-cli / claude-mediated only).
@@ -1296,8 +1299,25 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	}
 	row.StderrTail = proc.StderrTail()
 	row.ArtifactsProduced = produced
+
+	// Structured error taxonomy (local-model-operability FR-3/NFR-2): when
+	// nothing above already classified the failure (auth_error,
+	// truncated_stream), try to classify it from the driver error and
+	// captured stderr. Skip a plain user Kill — that's an intentional
+	// action, not a failure to explain.
+	var remediation []string
+	if failureReason == "" && (status == "failed" || status == "killed-timeout") {
+		var classified string
+		classified, remediation, row.ErrorDetails = ClassifyRunError(waitErr, row.StderrTail, nil)
+		if classified != "" {
+			failureReason = classified
+		}
+	} else if failureReason == FailureReasonAuthError {
+		remediation = authErrorFailureRemediation
+	}
 	if failureReason != "" {
 		row.FailureReason = &failureReason
+		row.Remediation = remediation
 	}
 	_ = m.idx.UpdateAgentRun(row)
 
@@ -1351,6 +1371,12 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	}
 	if failureReason != "" {
 		failedPayload["failure_reason"] = failureReason
+		if len(row.Remediation) > 0 {
+			failedPayload["remediation"] = row.Remediation
+		}
+		if len(row.ErrorDetails) > 0 {
+			failedPayload["error_details"] = row.ErrorDetails
+		}
 	}
 	m.hub.Broadcast(hub.Event{
 		Type:    eventType,
@@ -1436,12 +1462,17 @@ func (m *Manager) killAndFail(
 	row.FinishedAt = &finishedAt
 	row.ExitCode = &code
 	row.StderrTail = fmt.Sprintf("precheck failed: %s (observed_permission_mode=%q)", reason, observedMode)
+	row.FailureReason = &reason
+	row.Remediation = remediation
+	row.ErrorDetails = map[string]any{"observed_permission_mode": observedMode}
 	_ = m.idx.UpdateAgentRun(row)
 
 	// Release lineage lock.
 	_ = m.locks.Release(lineage)
 
-	// Broadcast agent.failed with structured precheck payload.
+	// Broadcast agent.failed with structured precheck payload. "reason" is
+	// kept for backwards compatibility with existing consumers;
+	// "failure_reason" mirrors the rest of the FR-3 taxonomy payloads.
 	m.hub.Broadcast(hub.Event{
 		Type: "agent.failed",
 		Payload: map[string]any{
@@ -1450,8 +1481,10 @@ func (m *Manager) killAndFail(
 			"lineage":                  lineage,
 			"status":                   "failed",
 			"reason":                   reason,
+			"failure_reason":           reason,
 			"observed_permission_mode": observedMode,
 			"remediation":              remediation,
+			"error_details":            row.ErrorDetails,
 			"target_path":              row.TargetPath,
 		},
 	})

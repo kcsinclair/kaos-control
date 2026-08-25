@@ -1324,6 +1324,13 @@ type AgentRunRow struct {
 	// classifiable reason. Nil when the run succeeded or the failure wasn't
 	// classified (local-model-operability FR-2/FR-3).
 	FailureReason *string `json:"failure_reason,omitempty"`
+	// Remediation is an ordered list of human-readable steps to resolve
+	// FailureReason. Empty when FailureReason is unset.
+	Remediation []string `json:"remediation,omitempty"`
+	// ErrorDetails holds structured, secret-masked context about the
+	// failure (e.g. the classified error message, a stderr excerpt).
+	// Empty when FailureReason is unset (local-model-operability FR-3).
+	ErrorDetails map[string]any `json:"error_details,omitempty"`
 }
 
 // LockRow is a record in the lineage_locks table.
@@ -1357,10 +1364,19 @@ func (idx *Index) UpdateAgentRun(r *AgentRunRow) error {
 		v := r.FinishedAt.Unix()
 		finishedAt = &v
 	}
+	var remediation, errorDetails string
+	if len(r.Remediation) > 0 {
+		b, _ := json.Marshal(r.Remediation)
+		remediation = string(b)
+	}
+	if len(r.ErrorDetails) > 0 {
+		b, _ := json.Marshal(r.ErrorDetails)
+		errorDetails = string(b)
+	}
 	_, err := idx.db.Exec(
-		`UPDATE agent_runs SET status=?, finished_at=?, exit_code=?, stderr_tail=?, artifacts_produced_json=?, denied_tool_calls_json=?, failure_reason=?
+		`UPDATE agent_runs SET status=?, finished_at=?, exit_code=?, stderr_tail=?, artifacts_produced_json=?, denied_tool_calls_json=?, failure_reason=?, remediation_json=NULLIF(?, ''), error_details_json=NULLIF(?, '')
 		 WHERE run_id=?`,
-		r.Status, finishedAt, r.ExitCode, r.StderrTail, string(produced), string(denied), r.FailureReason, r.RunID,
+		r.Status, finishedAt, r.ExitCode, r.StderrTail, string(produced), string(denied), r.FailureReason, remediation, errorDetails, r.RunID,
 	)
 	return err
 }
@@ -1369,7 +1385,7 @@ func (idx *Index) UpdateAgentRun(r *AgentRunRow) error {
 func (idx *Index) GetAgentRun(runID string) (*AgentRunRow, error) {
 	row := idx.db.QueryRow(
 		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]'),
-		        model, total_cost_usd, duration_api_ms, num_turns, input_tokens, cache_creation_tokens, cache_read_tokens, output_tokens, ttft_ms, COALESCE(metrics_available, 0), failure_reason
+		        model, total_cost_usd, duration_api_ms, num_turns, input_tokens, cache_creation_tokens, cache_read_tokens, output_tokens, ttft_ms, COALESCE(metrics_available, 0), failure_reason, remediation_json, error_details_json
 		 FROM agent_runs WHERE run_id = ?`, runID,
 	)
 	return scanAgentRun(row)
@@ -1379,7 +1395,7 @@ func (idx *Index) GetAgentRun(runID string) (*AgentRunRow, error) {
 // When limit <= 0 all matching runs are returned (no server-side truncation).
 func (idx *Index) ListAgentRuns(status string, limit int) ([]*AgentRunRow, error) {
 	const sel = `SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]'),
-			        model, total_cost_usd, duration_api_ms, num_turns, input_tokens, cache_creation_tokens, cache_read_tokens, output_tokens, ttft_ms, COALESCE(metrics_available, 0), failure_reason
+			        model, total_cost_usd, duration_api_ms, num_turns, input_tokens, cache_creation_tokens, cache_read_tokens, output_tokens, ttft_ms, COALESCE(metrics_available, 0), failure_reason, remediation_json, error_details_json
 			 FROM agent_runs`
 	var rows *sql.Rows
 	var err error
@@ -1415,7 +1431,7 @@ func (idx *Index) ListAgentRuns(status string, limit int) ([]*AgentRunRow, error
 func (idx *Index) ListAgentRunsByTargetPath(targetPath string) ([]*AgentRunRow, error) {
 	rows, err := idx.db.Query(
 		`SELECT run_id, agent_name, role, target_path, started_at, finished_at, status, exit_code, stderr_tail, artifacts_produced_json, COALESCE(denied_tool_calls_json, '[]'),
-		        model, total_cost_usd, duration_api_ms, num_turns, input_tokens, cache_creation_tokens, cache_read_tokens, output_tokens, ttft_ms, COALESCE(metrics_available, 0), failure_reason
+		        model, total_cost_usd, duration_api_ms, num_turns, input_tokens, cache_creation_tokens, cache_read_tokens, output_tokens, ttft_ms, COALESCE(metrics_available, 0), failure_reason, remediation_json, error_details_json
 		 FROM agent_runs WHERE target_path = ? ORDER BY started_at DESC`, targetPath,
 	)
 	if err != nil {
@@ -1517,13 +1533,15 @@ func scanAgentRun(row *sql.Row) (*AgentRunRow, error) {
 	var outputTokens sql.NullInt64
 	var ttftMs sql.NullInt64
 	var failureReason sql.NullString
+	var remediationJSON sql.NullString
+	var errorDetailsJSON sql.NullString
 	err := row.Scan(
 		&r.RunID, &r.AgentName, &r.Role, &r.TargetPath,
 		&startedAt, &finishedAt, &r.Status, &exitCode,
 		&r.StderrTail, &producedJSON, &deniedJSON,
 		&model, &totalCostUSD, &durationApiMs, &numTurns,
 		&inputTokens, &cacheCreationTokens, &cacheReadTokens, &outputTokens,
-		&ttftMs, &r.MetricsAvailable, &failureReason,
+		&ttftMs, &r.MetricsAvailable, &failureReason, &remediationJSON, &errorDetailsJSON,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -1572,6 +1590,12 @@ func scanAgentRun(row *sql.Row) (*AgentRunRow, error) {
 	if failureReason.Valid {
 		r.FailureReason = &failureReason.String
 	}
+	if remediationJSON.Valid {
+		_ = json.Unmarshal([]byte(remediationJSON.String), &r.Remediation)
+	}
+	if errorDetailsJSON.Valid {
+		_ = json.Unmarshal([]byte(errorDetailsJSON.String), &r.ErrorDetails)
+	}
 	return &r, nil
 }
 
@@ -1592,13 +1616,15 @@ func scanAgentRunRow(rows *sql.Rows) (*AgentRunRow, error) {
 	var outputTokens sql.NullInt64
 	var ttftMs sql.NullInt64
 	var failureReason sql.NullString
+	var remediationJSON sql.NullString
+	var errorDetailsJSON sql.NullString
 	err := rows.Scan(
 		&r.RunID, &r.AgentName, &r.Role, &r.TargetPath,
 		&startedAt, &finishedAt, &r.Status, &exitCode,
 		&r.StderrTail, &producedJSON, &deniedJSON,
 		&model, &totalCostUSD, &durationApiMs, &numTurns,
 		&inputTokens, &cacheCreationTokens, &cacheReadTokens, &outputTokens,
-		&ttftMs, &r.MetricsAvailable, &failureReason,
+		&ttftMs, &r.MetricsAvailable, &failureReason, &remediationJSON, &errorDetailsJSON,
 	)
 	if err != nil {
 		return nil, err
@@ -1643,6 +1669,12 @@ func scanAgentRunRow(rows *sql.Rows) (*AgentRunRow, error) {
 	}
 	if failureReason.Valid {
 		r.FailureReason = &failureReason.String
+	}
+	if remediationJSON.Valid {
+		_ = json.Unmarshal([]byte(remediationJSON.String), &r.Remediation)
+	}
+	if errorDetailsJSON.Valid {
+		_ = json.Unmarshal([]byte(errorDetailsJSON.String), &r.ErrorDetails)
 	}
 	return &r, nil
 }
@@ -1839,8 +1871,10 @@ func (idx *Index) ensureAgentRunsTable() error {
 	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN output_tokens INTEGER`)
 	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN ttft_ms INTEGER`)
 	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN metrics_available INTEGER NOT NULL DEFAULT 0`)
-	// local-model-operability Milestone 2: structured failure classification.
+	// local-model-operability Milestone 2/4: structured failure classification.
 	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN failure_reason TEXT`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN remediation_json TEXT`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN error_details_json TEXT`)
 	// Covering indexes for the report's primary filter dimensions.
 	_, _ = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_started_at ON agent_runs(started_at)`)
 	_, _ = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_agent_name ON agent_runs(agent_name)`)

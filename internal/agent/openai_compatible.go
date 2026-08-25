@@ -539,7 +539,7 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 		}
 
 		// Turn loop cap exceeded
-		capErr := fmt.Errorf("max tool iterations cap (%d) reached without finish_reason: stop", maxIterations)
+		capErr := fmt.Errorf("max tool iterations cap (%d) reached without finish_reason: stop: %w", maxIterations, ErrMaxIterationsReached)
 		rb.Write([]byte(mask(capErr.Error())))
 		writeLog("# error: " + capErr.Error())
 		doneCh <- capErr
