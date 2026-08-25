@@ -180,9 +180,10 @@ func TestExtractRateLimitText(t *testing.T) {
 
 // TestDriverEmitsResultEvent locks the driver allow-list for truncated-stream
 // detection. claude-code-cli and claude-mediated guarantee a terminal result
-// event per the stream-json contract, so a missing result on a clean exit
-// can be classified as a truncated stream. Other drivers (gemini-cli,
-// codex-cli, shell-stub) don't carry the same contract and must not be
+// event per the stream-json contract, and gemini-cli guarantees one per agy's
+// stream-json contract (gemini-cli-stream-json FR-4), so a missing result on
+// a clean exit can be classified as a truncated stream. Other drivers
+// (codex-cli, shell-stub) don't carry the same contract and must not be
 // flagged.
 func TestDriverEmitsResultEvent(t *testing.T) {
 	cases := []struct {
@@ -192,9 +193,9 @@ func TestDriverEmitsResultEvent(t *testing.T) {
 		{"claude-code-cli", true},
 		{"claude-mediated", true},
 		{"claude-env", true},
+		{"gemini-cli", true},
 		{"codex-cli", false},
 		{"gemini", false},
-		{"gemini-cli", false},
 		{"shell-stub", false},
 		{"", false},
 		{"unknown", false},

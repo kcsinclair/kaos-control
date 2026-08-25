@@ -2050,15 +2050,15 @@ func extractAuthError(payload map[string]any) bool {
 	return false
 }
 
-// driverEmitsResultEvent reports whether the given driver follows the Claude
-// stream-json contract of emitting a terminal `{"type":"result",...}` event
-// when the agent task completes. Drivers that do (claude-code-cli,
-// claude-mediated) can have their runs validated for stream truncation: a
-// clean exit without a result event means the stream was cut mid-run and the
-// task didn't actually complete.
+// driverEmitsResultEvent reports whether the given driver emits a terminal
+// result event (Claude's `{"type":"result",...}` or agy's
+// `{"event":"result",...}`) when the agent task completes. Drivers that do
+// can have their runs validated for stream truncation: a clean exit without
+// a result event means the stream was cut mid-run and the task didn't
+// actually complete.
 func driverEmitsResultEvent(driver string) bool {
 	switch driver {
-	case "claude-code-cli", "claude-mediated", "claude-env":
+	case "claude-code-cli", "claude-mediated", "claude-env", "gemini-cli":
 		return true
 	default:
 		return false
@@ -2081,23 +2081,37 @@ func progressPayload(runID string, ev ProgressEvent) map[string]any {
 }
 
 // isResultEvent reports whether the decoded agent.progress payload's `event`
-// field is a Claude stream-json terminal `result` event.
+// field is a terminal result event, in either the Claude stream-json shape
+// (`{"type":"result",...}`) or agy's (`{"event":"result",...}` — agy's
+// discriminator is the "event" key, not "type").
 func isResultEvent(payload map[string]any) bool {
 	ev, _ := payload["event"].(map[string]any)
 	if ev == nil {
 		return false
 	}
-	t, _ := ev["type"].(string)
-	return t == "result"
+	if t, _ := ev["type"].(string); t == "result" {
+		return true
+	}
+	if e, _ := ev["event"].(string); e == "result" {
+		return true
+	}
+	return false
 }
 
-// resultEventIsError reports whether a terminal stream-json result event carries
-// is_error:true. Only meaningful when isResultEvent(payload) is true.
+// resultEventIsError reports whether a terminal result event signals failure:
+// Claude's is_error:true, or agy's nested result.status != "SUCCESS". Only
+// meaningful when isResultEvent(payload) is true.
 func resultEventIsError(payload map[string]any) bool {
 	ev, _ := payload["event"].(map[string]any)
 	if ev == nil {
 		return false
 	}
+	// agy shape: {"event":"result","result":{"status":"SUCCESS",...}}.
+	if result, ok := ev["result"].(map[string]any); ok {
+		status, _ := result["status"].(string)
+		return status != "SUCCESS"
+	}
+	// Claude shape: {"type":"result","is_error":bool,...}.
 	isErr, _ := ev["is_error"].(bool)
 	return isErr
 }
