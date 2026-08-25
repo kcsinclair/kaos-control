@@ -5,6 +5,7 @@ import { ref, computed } from 'vue'
 import * as queueApi from '@/api/queue'
 import type { QueueSnapshot, QueueJob } from '@/api/queue'
 import { getAppWs } from '@/api/ws'
+import { useAgentsStore } from '@/stores/agents'
 
 const MAX_RECENT = 10
 
@@ -21,6 +22,24 @@ export const useQueueStore = defineStore('queue', () => {
   const snapshot = ref<QueueSnapshot>(emptySnapshot())
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  // This store's own WS (getAppWs, /api/ws) only carries queue.* events — it
+  // never sees agent.status / agent.progress, which are broadcast on the
+  // per-project hub (/api/p/:project/ws) that agentsStore subscribes to.
+  // Derive the running job's live warmup state from there instead of trying
+  // to track it locally (local-model-operability FR-5).
+  const agentsStore = useAgentsStore()
+  const runningWarmup = computed(() => {
+    const running = snapshot.value.running
+    if (!running) return null
+    const run = agentsStore.runs.find(
+      (r) => r.status === 'running' && r.agent_name === running.agent_name && r.target_path === running.artifact_path,
+    )
+    if (!run?.warmup_state || run.warmup_state === 'generating') return null
+    return { state: run.warmup_state, message: run.warmup_message ?? null }
+  })
+  const isWarmingUp = computed(() => runningWarmup.value != null)
+  const warmupMessage = computed(() => runningWarmup.value?.message ?? null)
 
   // Subscribe to the app-level WS exactly once.
   let _subscribed = false
@@ -195,6 +214,8 @@ export const useQueueStore = defineStore('queue', () => {
     pendingCount,
     isPaused,
     pausedUntilDate,
+    isWarmingUp,
+    warmupMessage,
     fetch,
     enqueue,
     cancel,

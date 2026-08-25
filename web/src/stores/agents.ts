@@ -3,7 +3,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as agentsApi from '@/api/agents'
-import type { AgentRunRow, AgentSummary, RunResult, PermissionDecision, QuotaStatusPayload } from '@/types/api'
+import type { AgentRunRow, AgentSummary, RunResult, PermissionDecision, QuotaStatusPayload, WarmupState } from '@/types/api'
 
 function formatRawProgressLine(raw: string): string {
   const trimmed = raw.trim()
@@ -162,6 +162,11 @@ export const useAgentsStore = defineStore('agents', () => {
   // Per-run progress lines (live stdout), capped at 200 lines each.
   const progressLines = ref(new Map<string, string[]>())
 
+  // agent.status model_loading events broadcast before agent.started (during
+  // preflight, before a run_id exists) — keyed by target_path and applied to
+  // the run row once agent.started creates it (local-model-operability FR-2).
+  const pendingWarmup = ref(new Map<string, { state: WarmupState; details?: string }>())
+
   // Per-artifact run list (for the artifact detail modal).
   const artifactRuns = ref<AgentRunRow[]>([])
   const artifactRunsPath = ref<string>('')
@@ -235,11 +240,31 @@ export const useAgentsStore = defineStore('agents', () => {
   }
 
   function onWsEvent(type: string, payload: Record<string, unknown>): void {
+    // agent.status (model_loading) is broadcast during preflight, before the
+    // run has a run_id — match on target_path instead, and stash it for
+    // agent.started to pick up if the run row doesn't exist yet.
+    if (type === 'agent.status') {
+      const targetPath = payload.target_path as string | undefined
+      const state = payload.state as string | undefined
+      if (!targetPath || state !== 'model_loading') return
+      const details = payload.details as string | undefined
+      const idx = runs.value.findIndex((r) => r.target_path === targetPath && r.status === 'running')
+      if (idx >= 0) {
+        runs.value[idx] = { ...runs.value[idx], warmup_state: 'model_loading', warmup_message: details ?? null }
+      } else {
+        pendingWarmup.value.set(targetPath, { state: 'model_loading', details })
+      }
+      return
+    }
+
     const runId = payload.run_id as string | undefined
     if (!runId) return
 
     if (type === 'agent.started') {
       if (!runs.value.find((r) => r.run_id === runId)) {
+        const targetPath = (payload.target_path as string) ?? ''
+        const pending = pendingWarmup.value.get(targetPath)
+        if (pending) pendingWarmup.value.delete(targetPath)
         runs.value.unshift({
           run_id: runId,
           agent_name: (payload.agent as string) ?? '',
@@ -249,6 +274,8 @@ export const useAgentsStore = defineStore('agents', () => {
           status: 'running',
           stderr_tail: '',
           artifacts_produced: [],
+          warmup_state: pending?.state ?? null,
+          warmup_message: pending?.details ?? null,
         })
       }
     } else if (type === 'agent.progress') {
@@ -260,6 +287,20 @@ export const useAgentsStore = defineStore('agents', () => {
         const lines = progressLines.value.get(runId)!
         lines.push(formatted)
         if (lines.length > 200) lines.splice(0, lines.length - 200)
+      }
+      // Warmup / TTFT stage transitions emitted by the openai-compatible
+      // driver (local-model-operability FR-2/FR-5): "warming_up" once 5s
+      // elapse without a token, "generating" on the first token received.
+      const stage = event?.stage as string | undefined
+      if (stage === 'warming_up' || stage === 'generating') {
+        const idx = runs.value.findIndex((r) => r.run_id === runId)
+        if (idx >= 0) {
+          runs.value[idx] = {
+            ...runs.value[idx],
+            warmup_state: stage as import('@/types/api').WarmupState,
+            warmup_message: (event?.message as string | undefined) ?? null,
+          }
+        }
       }
     } else if (type === 'agent.permission') {
       const ev = payload as unknown as PermissionDecision
@@ -284,8 +325,11 @@ export const useAgentsStore = defineStore('agents', () => {
           failure_reason: (payload.failure_reason as string | null | undefined) ?? null,
           observed_permission_mode: (payload.observed_permission_mode as string | null | undefined) ?? null,
           remediation: (payload.remediation as string[] | null | undefined) ?? null,
+          error_details: (payload.error_details as Record<string, unknown> | null | undefined) ?? null,
           denied_tool_calls: (payload.denied_tool_calls as import('@/types/api').DenialRecord[] | null | undefined) ?? null,
           ttft_ms: typeof payload.ttft_ms === 'number' ? payload.ttft_ms : runs.value[idx].ttft_ms,
+          warmup_state: null,
+          warmup_message: null,
         }
       }
       // Cache the result payload if provided by the backend.

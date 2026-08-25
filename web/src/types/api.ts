@@ -281,6 +281,30 @@ export interface RunSummary {
   elapsed: number
 }
 
+/**
+ * Structured failure-reason codes (mirrors internal/agent.FailureReason* and
+ * the precheck-specific codes recorded by killAndFail). Loosely typed
+ * (`| string`) so an unclassified/future backend code still type-checks
+ * instead of narrowing the whole union.
+ */
+export type FailureReason =
+  | 'tools_unsupported'
+  | 'model_not_found'
+  | 'model_unloaded'
+  | 'endpoint_unreachable'
+  | 'context_window_exceeded'
+  | 'turn_token_ceiling'
+  | 'max_iterations_reached'
+  | 'auth_error'
+  | 'timeout'
+  | 'permission_mode_default'
+  | 'precheck_timeout'
+  | 'precheck_unknown'
+  | (string & {})
+
+/** Live model-loading/generation phase surfaced by warmup WS events (local-model-operability FR-5). */
+export type WarmupState = 'model_loading' | 'warming_up' | 'generating'
+
 export interface AgentRunRow {
   run_id: string
   agent_name: string
@@ -293,17 +317,26 @@ export interface AgentRunRow {
   stderr_tail: string
   artifacts_produced: string[]
   /** Stable reason code on failure; null on success / pending. */
-  failure_reason?: 'permission_mode_default' | 'precheck_timeout' | string | null
+  failure_reason?: FailureReason | null
   /** Set when failure_reason === 'permission_mode_default'. */
   observed_permission_mode?: string | null
   /** Set on precheck-related failures; up to ~5 short remediation lines. */
   remediation?: string[] | null
+  /** Contextual failure details (already secret-masked server-side); shape varies by failure_reason. */
+  error_details?: Record<string, unknown> | null
   /** Tool calls denied by the mediated driver permission hooks. */
   denied_tool_calls?: DenialRecord[] | null
   /** Populated for test-runner agent runs. */
   run_summary?: RunSummary
   /** Time to first token in milliseconds (recorded for streaming drivers). */
   ttft_ms?: number | null
+  /**
+   * Live warmup/loading phase, populated client-side from agent.status /
+   * agent.progress WS events (never persisted server-side — cleared once the
+   * run reaches a terminal status).
+   */
+  warmup_state?: WarmupState | null
+  warmup_message?: string | null
 }
 
 export interface ToolCallRecord {
@@ -456,6 +489,19 @@ export interface GitStatusResponse {
   head_when?: string
 }
 
+/**
+ * Payload for the `agent.status` WS event (mirrors
+ * Manager.preflightModelAvailability's broadcast verbatim — local-model-
+ * operability FR-2). Broadcast before the run's `agent.started` event, so it
+ * carries `target_path` rather than `run_id`; consumers match on that.
+ */
+export interface AgentStatusEvent {
+  agent: string
+  target_path: string
+  state: 'model_loading'
+  details?: string
+}
+
 export interface PermissionDecision {
   run_id: string
   tool_name: string
@@ -477,6 +523,7 @@ export type WsEventType =
   | 'lock.released'
   | 'agent.started'
   | 'agent.progress'
+  | 'agent.status'
   | 'agent.finished'
   | 'agent.failed'
   | 'agent.permission'
