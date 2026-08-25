@@ -133,6 +133,34 @@ function agentHasTokenMetrics(agentName: string): boolean {
   return driver === 'claude-code-cli' || driver === 'claude-mediated'
 }
 
+function providerNameFor(agentName: string): string | undefined {
+  return agentsStore.agents.find((agent) => agent.name === agentName)?.provider
+}
+
+// Human labels for the known error_details keys (ClassifyRunError /
+// recordPreflightFailure); anything else falls back to its raw key so a
+// future backend field still renders instead of being silently dropped.
+const DETAIL_LABELS: Record<string, string> = {
+  message: 'Error message',
+  stderr_excerpt: 'Stderr excerpt',
+  observed_permission_mode: 'Observed permission mode',
+  provider: 'Provider',
+  model: 'Model',
+  base_url: 'Endpoint',
+  status_code: 'HTTP status',
+}
+
+function detailLabel(key: string): string {
+  return DETAIL_LABELS[key] ?? key
+}
+
+function diagnosticEntries(details: Record<string, unknown> | null | undefined): Array<[string, string]> {
+  if (!details) return []
+  return Object.entries(details)
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => [detailLabel(k), typeof v === 'string' ? v : JSON.stringify(v)])
+}
+
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     emit('close')
@@ -237,6 +265,25 @@ function handleKeydown(e: KeyboardEvent) {
             <div class="rdm-field-value">{{ run.ttft_ms }} ms</div>
           </div>
 
+          <!-- Failure banner with structured diagnostics and remediation -->
+          <RunFailureBanner
+            v-if="run.status === 'failed' && run.failure_reason"
+            :failure-reason="run.failure_reason"
+            :observed-mode="run.observed_permission_mode"
+            :remediation="run.remediation"
+            :error-details="run.error_details"
+            :provider-name="providerNameFor(run.agent_name)"
+          />
+          <!-- Collapsible diagnostic info: whatever error_details the backend sent -->
+          <details v-if="diagnosticEntries(run.error_details).length" class="rdm-field rdm-diagnostics">
+            <summary class="rdm-diagnostics-summary">Diagnostic Info</summary>
+            <dl class="rdm-diagnostics-list">
+              <template v-for="[label, value] in diagnosticEntries(run.error_details)" :key="label">
+                <dt class="rdm-diagnostics-key">{{ label }}</dt>
+                <dd class="rdm-diagnostics-value">{{ value }}</dd>
+              </template>
+            </dl>
+          </details>
           <!-- Denial notice for done runs with denials (on_denial: continue) -->
           <RunFailureBanner
             v-if="run.status === 'done' && run.denied_tool_calls?.length"
@@ -520,6 +567,38 @@ function handleKeydown(e: KeyboardEvent) {
 }
 .rdm-artifact-link:hover {
   text-decoration: underline;
+}
+
+.rdm-diagnostics {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+.rdm-diagnostics-summary {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--color-text);
+}
+.rdm-diagnostics-list {
+  margin: var(--space-2) 0 0 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+}
+.rdm-diagnostics-key {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+.rdm-diagnostics-value {
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--color-text);
+  word-break: break-word;
+  margin: 0;
 }
 
 /* Status chip — matches AgentsRunsView */

@@ -24,6 +24,16 @@ import type { AgentFormData } from '@/components/agent/AgentConfigForm.vue'
 import { useProjectConfigStore } from '@/stores/projectConfig'
 import { useQueueStore } from '@/stores/queue'
 import ProjectQueuePanel from '@/components/agent/ProjectQueuePanel.vue'
+import { getFailureReasonInfo } from '@/lib/failureReasons'
+
+const LEGACY_FAILURE_LABELS: Record<string, string> = {
+  permission_mode_default: 'Claude Code is in default permission mode',
+  precheck_timeout: 'Claude Code did not start within the expected time',
+}
+
+function failureBadgeTitle(reason: string): string {
+  return getFailureReasonInfo(reason)?.heading ?? LEGACY_FAILURE_LABELS[reason] ?? `Run failed: ${reason}`
+}
 
 function agentDriver(agentName: string, agents: AgentSummary[]): string {
   const a = agents.find((ag) => ag.name === agentName)
@@ -298,6 +308,11 @@ onMounted(() => {
                 </td>
                 <td>
                   <span class="status-chip" :data-status="run.status">{{ run.status }}</span>
+                  <span
+                    v-if="run.status === 'failed' && run.failure_reason"
+                    class="failure-badge"
+                    :title="failureBadgeTitle(run.failure_reason)"
+                  >{{ run.failure_reason }}</span>
                 </td>
                 <td class="cell-muted">{{ new Date(run.started_at).toLocaleString() }}</td>
                 <td class="cell-muted">{{ elapsed(run) }}</td>
@@ -318,6 +333,8 @@ onMounted(() => {
                     :failure-reason="run.failure_reason"
                     :observed-mode="run.observed_permission_mode"
                     :remediation="run.remediation"
+                    :error-details="run.error_details"
+                    :provider-name="store.agents.find(a => a.name === run.agent_name)?.provider"
                   />
                   <!-- Denial notice for done runs that had denials (on_denial: continue) -->
                   <RunFailureBanner
@@ -577,6 +594,19 @@ onMounted(() => {
 .status-chip[data-status="failed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
 .status-chip[data-status="killed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
 .status-chip[data-status="killed-timeout"] { background: var(--badge-in-progress-bg);  color: var(--badge-in-progress-text); }
+.failure-badge {
+  display: inline-block;
+  margin-left: var(--space-1);
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: monospace;
+  background: var(--badge-blocked-bg);
+  color: var(--badge-blocked-text);
+  border: 1px solid var(--color-error, #dc2626);
+  cursor: help;
+}
 .run-detail { background: var(--color-surface); }
 .detail-cell { padding: var(--space-4) var(--space-6) !important; }
 .detail-section { margin-bottom: var(--space-3); }
