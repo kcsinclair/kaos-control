@@ -547,6 +547,10 @@ export type WsEventType =
   | 'queue.paused'
   | 'queue.resumed'
   | 'agent.quota_status'
+  | 'provider.switched'
+  | 'provider.restored'
+  | 'provider.primary_recovered'
+  | 'config.reloaded'
 
 /** Payload for the `agent.quota_status` WS event (mirrors the backend wire shape verbatim). */
 export interface QuotaStatusPayload {
