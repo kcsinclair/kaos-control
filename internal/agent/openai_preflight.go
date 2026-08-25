@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/kaos-control/kaos-control/internal/config"
 )
@@ -20,7 +21,113 @@ var (
 	ErrToolsSilentlyDropped = errors.New("tools parameter silently dropped by server/chat-template")
 	// ErrToolsUnsupported indicates the model or provider explicitly does not support tools.
 	ErrToolsUnsupported = errors.New("model does not support tools")
+	// ErrModelNotFound indicates the requested model is absent from the
+	// provider's /v1/models listing.
+	ErrModelNotFound = errors.New("model not found on provider")
+	// ErrEndpointUnreachable indicates the provider's /v1/models endpoint
+	// could not be reached (connection refused, DNS failure, timeout, or a
+	// 5xx response).
+	ErrEndpointUnreachable = errors.New("provider endpoint unreachable")
 )
+
+// modelAvailabilityTimeout bounds the /v1/models preflight probe (NFR-1: the
+// run must fail within 3 seconds when the model or endpoint is unavailable).
+const modelAvailabilityTimeout = 3 * time.Second
+
+// modelNotFoundRemediation is returned when the preflight model-availability
+// probe confirms the provider is reachable but does not list the configured
+// model.
+var modelNotFoundRemediation = []string{
+	"The configured model was not found in the provider's /v1/models listing.",
+	"Verify the 'model:' value in this agent's config matches an ID the provider serves.",
+	"If using Ollama or llama.cpp, confirm the model has been pulled/downloaded on the server.",
+}
+
+// endpointUnreachableRemediation is returned when the preflight
+// model-availability probe cannot reach the provider's /v1/models endpoint.
+var endpointUnreachableRemediation = []string{
+	"The provider's /v1/models endpoint could not be reached within 3 seconds.",
+	"Verify the provider's 'base_url' is correct and the server is running.",
+	"Check network connectivity between kaos-control and the provider host.",
+}
+
+// openAIModelsListResponse is the standard OpenAI-compatible /v1/models
+// listing shape. State is a best-effort llama.cpp extension: some servers
+// report per-model load state ("unloaded"/"loading"/"loaded") alongside the
+// id; it is absent on providers that don't support lazy loading.
+type openAIModelsListResponse struct {
+	Data []struct {
+		ID    string `json:"id"`
+		State string `json:"state,omitempty"`
+	} `json:"data"`
+}
+
+// ModelAvailabilityStatus is the result of a successful /v1/models probe.
+type ModelAvailabilityStatus struct {
+	Available bool
+	// LoadState is the provider-reported load state for the model, when the
+	// provider exposes one (e.g. llama.cpp "unloaded"/"loading"/"loaded").
+	// Empty when the provider doesn't report it.
+	LoadState string
+}
+
+// probeModelAvailability issues a GET <base_url>/v1/models with a 3-second
+// timeout and checks whether model is present in the listing. It is the
+// shared implementation behind CheckModelAvailability (FR-2) and the
+// warmup/lazy-load state extraction (FR-2/FR-5, Milestone 3).
+func probeModelAvailability(ctx context.Context, client *http.Client, provider config.Provider, model string) (ModelAvailabilityStatus, error) {
+	if client == nil {
+		client = http.DefaultClient
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, modelAvailabilityTimeout)
+	defer cancel()
+
+	url := buildEndpointURL(provider.BaseURL, "v1/models")
+	req, err := http.NewRequestWithContext(probeCtx, http.MethodGet, url, nil)
+	if err != nil {
+		return ModelAvailabilityStatus{}, fmt.Errorf("%w: building request to %q: %v", ErrEndpointUnreachable, provider.Name, err)
+	}
+	applyProviderHeaders(req, provider)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return ModelAvailabilityStatus{}, fmt.Errorf("%w: %s: %v", ErrEndpointUnreachable, provider.Name, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ModelAvailabilityStatus{}, fmt.Errorf("%w: reading /v1/models response from %q: %v", ErrEndpointUnreachable, provider.Name, err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return ModelAvailabilityStatus{}, fmt.Errorf("%w: provider %q /v1/models returned HTTP %d: %s",
+			ErrEndpointUnreachable, provider.Name, resp.StatusCode, extractErrorMessage(body))
+	}
+
+	var listing openAIModelsListResponse
+	if err := json.Unmarshal(body, &listing); err != nil {
+		return ModelAvailabilityStatus{}, fmt.Errorf("%w: parsing /v1/models response from %q: %v", ErrEndpointUnreachable, provider.Name, err)
+	}
+
+	for _, m := range listing.Data {
+		if m.ID == model {
+			return ModelAvailabilityStatus{Available: true, LoadState: m.State}, nil
+		}
+	}
+
+	return ModelAvailabilityStatus{}, fmt.Errorf("%w: model %q not found on provider %q", ErrModelNotFound, model, provider.Name)
+}
+
+// CheckModelAvailability verifies that model exists in provider's /v1/models
+// listing within a 3-second timeout. It returns (true, nil) when found;
+// otherwise the returned error wraps ErrModelNotFound (model absent from a
+// reachable provider) or ErrEndpointUnreachable (connection failure, timeout,
+// or a non-2xx /v1/models response).
+func CheckModelAvailability(ctx context.Context, client *http.Client, provider config.Provider, model string) (bool, error) {
+	status, err := probeModelAvailability(ctx, client, provider, model)
+	return status.Available, err
+}
 
 type openAIUsage struct {
 	PromptTokens     int `json:"prompt_tokens"`

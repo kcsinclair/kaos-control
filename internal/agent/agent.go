@@ -423,6 +423,12 @@ type Manager struct {
 	root    string
 	logsDir string // per-run log files go in <logsDir>/<run_id>.log
 
+	// providers is the app-level list of registered LLM providers, used by
+	// the model-availability preflight (local-model-operability FR-2) to
+	// resolve an openai-compatible agent's provider config before starting
+	// its run.
+	providers []config.Provider
+
 	// Precheck configuration (from AppAgentConfig).
 	initEventTimeout   time.Duration // how long to wait for the system/init event
 	requireBypassPerms bool          // whether to reject non-bypassPermissions runs
@@ -474,6 +480,7 @@ func New(
 		wf:                 wf,
 		root:               root,
 		logsDir:            logsDir,
+		providers:          providers,
 		initEventTimeout:   timeout,
 		requireBypassPerms: requireBypass,
 		killer:             defaultProcessKiller{},
@@ -608,6 +615,17 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	drv, drvOK := m.drivers[ag.Driver]
 	if !drvOK {
 		return "", fmt.Errorf("unknown driver %q for agent %q", ag.Driver, agentName)
+	}
+
+	// Proactive model-availability preflight (local-model-operability
+	// Milestone 2): for provider-backed agents, confirm the model is present
+	// on the provider before acquiring any resources (semaphore or lineage
+	// lock). A missing model or unreachable endpoint fails fast (<3s) with a
+	// classified run record instead of hanging or corrupting artifact state.
+	if ag.Driver == "openai-compatible" {
+		if err := m.preflightModelAvailability(ctx, ag, agentName, targetPath, role); err != nil {
+			return "", err
+		}
 	}
 
 	// Try semaphore (non-blocking).
@@ -784,6 +802,116 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	go m.supervise(runCtx, cancel, run, runRow, lineage)
 
 	return runID, nil
+}
+
+// preflightModelAvailability resolves ag's provider and checks that ag.Model
+// is present on it, before any resource (semaphore, lineage lock) is
+// acquired (local-model-operability FR-2, NFR-1, NFR-3). On a classifiable
+// failure (model missing, endpoint unreachable) it records a failed run row
+// and broadcasts agent.failed so the failure is visible in the UI, then
+// returns an error so the caller aborts the run — without ever touching
+// locks or artifact status. When the model is present but the provider
+// reports it as not yet resident in memory (llama.cpp-style lazy loading),
+// it broadcasts an informational agent.status model_loading event and lets
+// the run proceed normally.
+func (m *Manager) preflightModelAvailability(ctx context.Context, ag *config.AgentConfig, agentName, targetPath, role string) error {
+	if ag.Model == "" {
+		return nil
+	}
+
+	var prov *config.Provider
+	for i := range m.providers {
+		if m.providers[i].Name == ag.Provider {
+			prov = &m.providers[i]
+			break
+		}
+	}
+	if prov == nil {
+		return fmt.Errorf("provider %q not found for agent %q", ag.Provider, agentName)
+	}
+
+	status, err := probeModelAvailability(ctx, nil, *prov, ag.Model)
+	if err != nil {
+		reason := "endpoint_unreachable"
+		remediation := endpointUnreachableRemediation
+		if errors.Is(err, ErrModelNotFound) {
+			reason = "model_not_found"
+			remediation = modelNotFoundRemediation
+		}
+		m.recordPreflightFailure(agentName, targetPath, role, reason, remediation, err)
+		return fmt.Errorf("preflight: %s: %w", reason, err)
+	}
+
+	if status.LoadState == "unloaded" || status.LoadState == "loading" {
+		m.hub.Broadcast(hub.Event{
+			Type: "agent.status",
+			Payload: map[string]any{
+				"agent":       agentName,
+				"target_path": targetPath,
+				"state":       "model_loading",
+				"details":     "Loading model weights into memory...",
+			},
+		})
+	}
+
+	return nil
+}
+
+// recordPreflightFailure creates and immediately fails a run record for a
+// preflight rejection, so the failure is visible in run history and the
+// live feed exactly like any other agent.failed run — without a process
+// ever having started, and without acquiring the semaphore or lineage lock.
+func (m *Manager) recordPreflightFailure(agentName, targetPath, role, reason string, remediation []string, cause error) {
+	runID := randomHex(8)
+	now := time.Now()
+	row := &index.AgentRunRow{
+		RunID:      runID,
+		AgentName:  agentName,
+		Role:       role,
+		TargetPath: targetPath,
+		StartedAt:  now,
+		Status:     "running",
+	}
+	if err := m.idx.InsertAgentRun(row); err != nil {
+		slog.Warn("agent: inserting preflight-failure run record", "run_id", runID, "err", err)
+		return
+	}
+
+	finishedAt := time.Now()
+	exitCode := -1
+	row.Status = "failed"
+	row.FinishedAt = &finishedAt
+	row.ExitCode = &exitCode
+	row.FailureReason = &reason
+	if cause != nil {
+		row.StderrTail = cause.Error()
+	}
+	if err := m.idx.UpdateAgentRun(row); err != nil {
+		slog.Warn("agent: updating preflight-failure run record", "run_id", runID, "err", err)
+	}
+
+	m.hub.Broadcast(hub.Event{
+		Type: "agent.failed",
+		Payload: map[string]any{
+			"run_id":         runID,
+			"agent":          agentName,
+			"status":         "failed",
+			"target_path":    targetPath,
+			"failure_reason": reason,
+			"remediation":    remediation,
+		},
+	})
+
+	feedEvent := &index.EventRow{
+		EventType: "agent_failed",
+		Timestamp: now.Unix(),
+		Actor:     agentName,
+		RunID:     &runID,
+		Summary:   fmt.Sprintf("Agent %s preflight failed: %s", agentName, reason),
+	}
+	if err := m.idx.InsertEvent(feedEvent); err == nil {
+		m.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+	}
 }
 
 func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run Run, row *index.AgentRunRow, lineage string) {
@@ -1153,6 +1281,9 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	}
 	row.StderrTail = proc.StderrTail()
 	row.ArtifactsProduced = produced
+	if failureReason != "" {
+		row.FailureReason = &failureReason
+	}
 	_ = m.idx.UpdateAgentRun(row)
 
 	// Pause queue if there were denials (FR16).
