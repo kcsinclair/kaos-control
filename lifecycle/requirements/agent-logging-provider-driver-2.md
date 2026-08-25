@@ -227,6 +227,8 @@ standards. No new ADR required.
    per-provider / per-driver series and totals once the data is captured?
    Proposed as a follow-up, out of scope here.
 
+> Out of scope here.  Will raise enhancement to handle.
+
 3. **Header value when provider is empty.** Emit `provider=` (empty token) for
    every driver for grep-consistency, or omit the token entirely for CLI
    drivers? *Recommendation:* always emit `provider=` so the header shape is
