@@ -1,7 +1,7 @@
 ---
 title: Record Provider and Driver on Every Agent Run
 type: requirement
-status: approved
+status: planning
 lineage: agent-logging-provider-driver
 created: "2026-08-25T10:05:00+10:00"
 priority: normal
