@@ -664,6 +664,42 @@ export interface RunResult {
   session_id: string
 }
 
+// agy (gemini-cli) stream-json progress events, discriminated by `event`
+// (not `type`), with the payload nested under a key matching the event
+// name. See the verified event schema in gemini-cli-stream-json-2.
+export interface AgyInitEvent {
+  event: 'init'
+  conversation_id?: string
+  init?: { cwd?: string; tools?: unknown[] }
+}
+
+export interface AgyStepUpdateEvent {
+  event: 'step_update'
+  step_update?: {
+    conversation_id?: string
+    step_index?: number
+    step_type?: string
+    state?: string
+    text_delta?: string
+    duration_seconds?: number
+    usage?: Record<string, number>
+  }
+}
+
+export interface AgyResultEvent {
+  event: 'result'
+  result?: {
+    conversation_id?: string
+    status?: string
+    response?: string
+    num_turns?: number
+    duration_seconds?: number
+    usage?: Record<string, number>
+  }
+}
+
+export type AgyProgressEvent = AgyInitEvent | AgyStepUpdateEvent | AgyResultEvent
+
 export interface AgentUsageBucketPoint {
   bucket_start: string
   run_count: number

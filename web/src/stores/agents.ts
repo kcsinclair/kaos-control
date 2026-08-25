@@ -3,7 +3,15 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as agentsApi from '@/api/agents'
-import type { AgentRunRow, AgentSummary, RunResult, PermissionDecision, QuotaStatusPayload, WarmupState } from '@/types/api'
+import type {
+  AgentRunRow,
+  AgentSummary,
+  RunResult,
+  PermissionDecision,
+  QuotaStatusPayload,
+  WarmupState,
+  AgyProgressEvent,
+} from '@/types/api'
 
 function formatRawProgressLine(raw: string): string {
   const trimmed = raw.trim()
@@ -146,6 +154,31 @@ function formatEvent(ev: Record<string, unknown>): string {
     const subtype = (ev.subtype as string) ?? ''
     return `▸ result: ${subtype}`
   }
+
+  // ── agy (gemini-cli) stream-json events ─────────────────────────────────
+  // Discriminated by `event`, not `type` (agy events carry no `type` field,
+  // so this branch is naturally disjoint from the ones above), with each
+  // payload nested under a key matching the event name.
+  if (typeof ev.event === 'string') {
+    const agy = ev as unknown as AgyProgressEvent
+    if (agy.event === 'init') {
+      const cwd = agy.init?.cwd
+      return cwd ? `▸ session started (${cwd})` : '▸ session started'
+    }
+    if (agy.event === 'step_update') {
+      const step = agy.step_update
+      const textDelta = step?.text_delta?.trim()
+      if (textDelta) return textDelta
+      const stepType = step?.step_type ?? 'step'
+      const state = step?.state
+      return `▸ ${stepType}${state ? `: ${state}` : ''}`
+    }
+    if (agy.event === 'result') {
+      const status = agy.result?.status ?? ''
+      return `▸ result: ${status.toLowerCase()}`
+    }
+  }
+
   return JSON.stringify(ev)
 }
 

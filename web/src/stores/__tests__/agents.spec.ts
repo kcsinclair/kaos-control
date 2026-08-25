@@ -84,3 +84,65 @@ describe('agents store — agent.quota_status caching', () => {
     warnSpy.mockRestore()
   })
 })
+
+// Frontend plan: lifecycle/frontend-plans/gemini-cli-stream-json-4-fe.md
+// Milestone 1 — normalize agy (gemini-cli) stream-json progress events,
+// discriminated by `event` rather than `type`.
+describe('agents store — agy (gemini-cli) progress event formatting', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('renders a concise line for an init event', () => {
+    const store = useAgentsStore()
+    store.onWsEvent('agent.progress', {
+      run_id: 'run-1',
+      event: { event: 'init', conversation_id: 'c1', init: { cwd: '/repo' } },
+    })
+
+    expect(store.progressLines.get('run-1')).toEqual(['▸ session started (/repo)'])
+  })
+
+  it('renders text_delta for a step_update carrying it', () => {
+    const store = useAgentsStore()
+    store.onWsEvent('agent.progress', {
+      run_id: 'run-1',
+      event: {
+        event: 'step_update',
+        step_update: { step_index: 1, step_type: 'assistant', state: 'running', text_delta: '  hello world  ' },
+      },
+    })
+
+    expect(store.progressLines.get('run-1')).toEqual(['hello world'])
+  })
+
+  it('renders a status line for a step_update with no text_delta', () => {
+    const store = useAgentsStore()
+    store.onWsEvent('agent.progress', {
+      run_id: 'run-1',
+      event: { event: 'step_update', step_update: { step_type: 'tool_call', state: 'running' } },
+    })
+
+    expect(store.progressLines.get('run-1')).toEqual(['▸ tool_call: running'])
+  })
+
+  it('renders a terminal line for a result event', () => {
+    const store = useAgentsStore()
+    store.onWsEvent('agent.progress', {
+      run_id: 'run-1',
+      event: { event: 'result', result: { status: 'SUCCESS', response: 'OK\n', num_turns: 1 } },
+    })
+
+    expect(store.progressLines.get('run-1')).toEqual(['▸ result: success'])
+  })
+
+  it('does not regress Claude Code progress rendering', () => {
+    const store = useAgentsStore()
+    store.onWsEvent('agent.progress', {
+      run_id: 'run-1',
+      event: { type: 'system', subtype: 'init' },
+    })
+
+    expect(store.progressLines.get('run-1')).toEqual(['▸ session started'])
+  })
+})
