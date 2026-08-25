@@ -1,7 +1,7 @@
 ---
 title: Inline Conversational Driver Provider Abstraction
 type: requirement
-status: draft
+status: approved
 lineage: inline-driver-provider-abstraction
 created: "2026-08-25T14:00:00+10:00"
 priority: normal
