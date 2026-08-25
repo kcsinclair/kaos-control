@@ -1,7 +1,7 @@
 ---
 title: Agent run wall-clock far exceeds the CLI's self-reported duration (16m unexplained)
 type: defect
-status: draft
+status: approved
 lineage: agent-run-wall-clock-exceeds-reported-duration
 created: "2026-08-25T12:10:00+10:00"
 priority: normal
