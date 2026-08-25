@@ -16,6 +16,7 @@ import AppSidebar from '@/components/layout/AppSidebar.vue'
 import InitRequiredBanner from '@/components/project/InitRequiredBanner.vue'
 import ConfigHealthBanner from '@/components/project/ConfigHealthBanner.vue'
 import DirectiveMigrationBanner from '@/components/project/DirectiveMigrationBanner.vue'
+import ProviderFailoverModal from '@/components/provider/ProviderFailoverModal.vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -44,6 +45,7 @@ async function syncProject() {
   await projectStore.checkInitRequired(name)
   void openQuestionsStore.fetchAwaitingAnswersCount(name)
   void providerSwitchStore.fetchStatus(name)
+  void providerSwitchStore.fetchTemplates(name)
 }
 
 function scheduleReadyCountRefresh(project: string) {
@@ -121,6 +123,11 @@ onUnmounted(() => {
         </template>
       </main>
     </div>
+    <ProviderFailoverModal
+      v-if="providerSwitchStore.modalOpen"
+      :project="getProject()"
+      @close="providerSwitchStore.closeModal()"
+    />
   </div>
 </template>
 
