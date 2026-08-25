@@ -19,7 +19,7 @@ import (
 func init() {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") == "1" {
 		fmt.Println("Starting mock agy run")
-		fmt.Println(`{"type":"output","text":"json line\n"}`)
+		fmt.Println(`{"event":"step_update","step_update":{"text_delta":"json line"}}`)
 		fmt.Println("Final raw text output from mock agy")
 		os.Exit(0)
 	}
@@ -161,12 +161,16 @@ func TestGeminiCliDriver_Start(t *testing.T) {
 		t.Errorf("expected 2nd event to be wrapped, got %v", events[1].Event)
 	}
 
-	// 3rd event: JSON string -> parsed successfully
-	if events[2].Raw != `{"type":"output","text":"json line\n"}` {
-		t.Errorf("expected 3rd event raw: %q, got: %q", `{"type":"output","text":"json line\n"}`, events[2].Raw)
+	// 3rd event: agy step_update JSON -> parsed and forwarded as-is
+	wantLine := `{"event":"step_update","step_update":{"text_delta":"json line"}}`
+	if events[2].Raw != wantLine {
+		t.Errorf("expected 3rd event raw: %q, got: %q", wantLine, events[2].Raw)
 	}
-	if events[2].Event["type"] != "output" || events[2].Event["text"] != "json line\n" {
-		t.Errorf("expected 3rd event parsed successfully, got %v", events[2].Event)
+	if events[2].Event["event"] != "step_update" {
+		t.Errorf("expected 3rd event to be parsed as an agy step_update, got %v", events[2].Event)
+	}
+	if step, _ := events[2].Event["step_update"].(map[string]any); step == nil || step["text_delta"] != "json line" {
+		t.Errorf("expected 3rd event step_update.text_delta %q, got %v", "json line", events[2].Event["step_update"])
 	}
 
 	// 4th event: raw text line -> "type": "output"
