@@ -613,6 +613,16 @@ type AgentConfig struct {
 	// claude-env driver fields (only used when Driver == "claude-env").
 	BaseURL   string `yaml:"base_url,omitempty"`
 	AuthToken string `yaml:"auth_token,omitempty"` // secret — must never be logged or echoed
+
+	// Provider failover fields (switch-provider-3-be). FallbackProvider/Model
+	// name the provider+model to switch to on a transient upstream failure.
+	// PrimaryProvider/Model are populated automatically when a failover takes
+	// the agent off its configured Provider/Model, so it can be restored later;
+	// they are empty when the agent is on its normal (primary) provider.
+	FallbackProvider string `yaml:"fallback_provider,omitempty" json:"fallback_provider,omitempty"`
+	FallbackModel    string `yaml:"fallback_model,omitempty" json:"fallback_model,omitempty"`
+	PrimaryProvider  string `yaml:"primary_provider,omitempty" json:"primary_provider,omitempty"`
+	PrimaryModel     string `yaml:"primary_model,omitempty" json:"primary_model,omitempty"`
 }
 
 // agentConfigRaw is used internally to unmarshal AgentConfig and accept both
@@ -642,6 +652,10 @@ type agentConfigRaw struct {
 	ShellCommand       string            `yaml:"shell_command,omitempty"`
 	BaseURL            string            `yaml:"base_url,omitempty"`
 	AuthToken          string            `yaml:"auth_token,omitempty"`
+	FallbackProvider   string            `yaml:"fallback_provider,omitempty" json:"fallback_provider,omitempty"`
+	FallbackModel      string            `yaml:"fallback_model,omitempty" json:"fallback_model,omitempty"`
+	PrimaryProvider    string            `yaml:"primary_provider,omitempty" json:"primary_provider,omitempty"`
+	PrimaryModel       string            `yaml:"primary_model,omitempty" json:"primary_model,omitempty"`
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler so that AgentConfig accepts both
@@ -674,6 +688,10 @@ func (a *AgentConfig) UnmarshalYAML(value *yaml.Node) error {
 	a.ShellCommand = raw.ShellCommand
 	a.BaseURL = raw.BaseURL
 	a.AuthToken = raw.AuthToken
+	a.FallbackProvider = raw.FallbackProvider
+	a.FallbackModel = raw.FallbackModel
+	a.PrimaryProvider = raw.PrimaryProvider
+	a.PrimaryModel = raw.PrimaryModel
 
 	// Merge "role" and "roles" entries, preserving order and deduplicating.
 	seen := make(map[string]bool)
@@ -789,9 +807,97 @@ type Project struct {
 
 	ArchitectureWizard ArchitectureWizardConfig `yaml:"architecture_wizard,omitempty" json:"architecture_wizard,omitempty"`
 
+	// ProviderFailover is the project-level automated-failover policy.
+	ProviderFailover ProviderFailoverConfig `yaml:"provider_failover,omitempty" json:"provider_failover,omitempty"`
+	// ProviderTemplates is a catalog of named multi-agent provider presets.
+	ProviderTemplates []ProviderTemplate `yaml:"provider_templates,omitempty" json:"provider_templates,omitempty"`
+
 	// RepairNotes records the generation-template self-repairs applied by
 	// ValidateAndRepair when this config was loaded. Not persisted to disk.
 	RepairNotes []RepairNote `yaml:"-" json:"-"`
+}
+
+// ProviderFailoverConfig defines project-level automated provider failover
+// behaviour: whether failover is enabled at all, whether it engages
+// automatically on a transient upstream failure, which failure kinds trigger
+// it, and how many times it may fire within a single run.
+type ProviderFailoverConfig struct {
+	// Enabled gates the whole failover subsystem (manual switch/restore API
+	// still works when false; only automated engagement is gated). Defaults
+	// to true.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled"`
+	// AutoSwitch, when true, lets the dispatcher automatically switch an
+	// agent to its configured fallback provider on a matching failure.
+	// Defaults to false — automated failover is opt-in per project.
+	AutoSwitch *bool `yaml:"auto_switch,omitempty" json:"auto_switch"`
+	// SwitchOnKinds lists the failure kinds that trigger auto-switch:
+	// "overloaded", "rate_limit", "unreachable". Defaults to all three.
+	SwitchOnKinds []string `yaml:"switch_on_kinds,omitempty" json:"switch_on_kinds"`
+	// MaxFailoversPerRun bounds cascading switches for a single queued job.
+	// Defaults to 1.
+	MaxFailoversPerRun int `yaml:"max_failovers_per_run,omitempty" json:"max_failovers_per_run"`
+	// ProbeIntervalSeconds is how often the recovery prober re-checks a
+	// primary provider that is currently bypassed by failover. Defaults to 60.
+	ProbeIntervalSeconds int `yaml:"probe_interval_seconds,omitempty" json:"probe_interval_seconds"`
+}
+
+// validSwitchOnKinds enumerates the accepted ProviderFailoverConfig.SwitchOnKinds values.
+var validSwitchOnKinds = map[string]bool{
+	"overloaded":  true,
+	"rate_limit":  true,
+	"unreachable": true,
+}
+
+// defaultSwitchOnKinds is the default value of ProviderFailoverConfig.SwitchOnKinds.
+var defaultSwitchOnKinds = []string{"overloaded", "rate_limit", "unreachable"}
+
+// EffectiveFailoverConfig returns the project's provider-failover policy with
+// all defaults applied: Enabled=true, AutoSwitch=false,
+// SwitchOnKinds=["overloaded","rate_limit","unreachable"],
+// MaxFailoversPerRun=1, ProbeIntervalSeconds=60.
+func (p *Project) EffectiveFailoverConfig() ProviderFailoverConfig {
+	c := p.ProviderFailover
+	enabled := true
+	if c.Enabled != nil {
+		enabled = *c.Enabled
+	}
+	autoSwitch := false
+	if c.AutoSwitch != nil {
+		autoSwitch = *c.AutoSwitch
+	}
+	switchOnKinds := c.SwitchOnKinds
+	if len(switchOnKinds) == 0 {
+		switchOnKinds = defaultSwitchOnKinds
+	}
+	maxFailovers := c.MaxFailoversPerRun
+	if maxFailovers <= 0 {
+		maxFailovers = 1
+	}
+	probeInterval := c.ProbeIntervalSeconds
+	if probeInterval <= 0 {
+		probeInterval = 60
+	}
+	return ProviderFailoverConfig{
+		Enabled:              &enabled,
+		AutoSwitch:           &autoSwitch,
+		SwitchOnKinds:        switchOnKinds,
+		MaxFailoversPerRun:   maxFailovers,
+		ProbeIntervalSeconds: probeInterval,
+	}
+}
+
+// ProviderTemplateAgentBinding pins one agent to a provider+model within a ProviderTemplate.
+type ProviderTemplateAgentBinding struct {
+	Provider string `yaml:"provider" json:"provider"`
+	Model    string `yaml:"model" json:"model"`
+}
+
+// ProviderTemplate is a named, multi-agent provider preset (e.g. "local-ai")
+// that can be applied in one operation via ApplyProviderTemplate.
+type ProviderTemplate struct {
+	Name        string                                  `yaml:"name" json:"name"`
+	Description string                                  `yaml:"description,omitempty" json:"description,omitempty"`
+	Agents      map[string]ProviderTemplateAgentBinding `yaml:"agents" json:"agents"`
 }
 
 // architectureWizardMaxQuestions caps the guided questionnaire (FR-7).
@@ -1157,6 +1263,32 @@ func validateProject(cfg *Project) error {
 			if a.Model == "" {
 				return fmt.Errorf("project config: agent %q has provider %q but missing model", a.Name, a.Provider)
 			}
+		}
+		if a.FallbackProvider != "" {
+			if a.FallbackProvider == a.Provider {
+				return fmt.Errorf("project config: agent %q fallback_provider must differ from provider %q", a.Name, a.Provider)
+			}
+			if a.FallbackModel == "" {
+				return fmt.Errorf("project config: agent %q has fallback_provider but missing fallback_model", a.Name)
+			}
+		}
+	}
+	for _, kind := range cfg.ProviderFailover.SwitchOnKinds {
+		if !validSwitchOnKinds[kind] {
+			return fmt.Errorf("project config: provider_failover.switch_on_kinds: unrecognized kind %q (accepted: overloaded, rate_limit, unreachable)", kind)
+		}
+	}
+	seenTemplateNames := make(map[string]bool, len(cfg.ProviderTemplates))
+	for i, t := range cfg.ProviderTemplates {
+		if t.Name == "" {
+			return fmt.Errorf("project config: provider_templates[%d]: name must not be empty", i)
+		}
+		if seenTemplateNames[t.Name] {
+			return fmt.Errorf("project config: provider_templates: duplicate name %q", t.Name)
+		}
+		seenTemplateNames[t.Name] = true
+		if len(t.Agents) == 0 {
+			return fmt.Errorf("project config: provider_templates %q: agents must not be empty", t.Name)
 		}
 	}
 	seenLinuxUser := make(map[string]bool)

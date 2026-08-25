@@ -1642,3 +1642,194 @@ func TestProjectConfig_OpenAICompatibleAgent(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// switch-provider-3-be Milestone 1 — fallback config, failover policy,
+// provider templates
+// ---------------------------------------------------------------------------
+
+func TestAgentConfig_FallbackFieldsRoundTrip(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: analyst-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
+    fallback_provider: gemini-cloud
+    fallback_model: gemini-2.5-flash
+    primary_provider: anthropic-cloud
+    primary_model: claude-3-7-sonnet
+    prompt_templates:
+      analyst: "x"
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	ag := cfg.Agents[0]
+	if ag.FallbackProvider != "gemini-cloud" {
+		t.Errorf("fallback_provider: got %q", ag.FallbackProvider)
+	}
+	if ag.FallbackModel != "gemini-2.5-flash" {
+		t.Errorf("fallback_model: got %q", ag.FallbackModel)
+	}
+	if ag.PrimaryProvider != "anthropic-cloud" {
+		t.Errorf("primary_provider: got %q", ag.PrimaryProvider)
+	}
+	if ag.PrimaryModel != "claude-3-7-sonnet" {
+		t.Errorf("primary_model: got %q", ag.PrimaryModel)
+	}
+}
+
+func TestValidateProject_FallbackProviderSameAsProvider(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: analyst-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
+    fallback_provider: anthropic-cloud
+    fallback_model: claude-3-7-sonnet
+    prompt_templates:
+      analyst: "x"
+`)
+	_, err := LoadProject(dir)
+	if err == nil || !strings.Contains(err.Error(), "fallback_provider must differ from provider") {
+		t.Fatalf("expected fallback_provider==provider error, got: %v", err)
+	}
+}
+
+func TestValidateProject_FallbackProviderMissingModel(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: analyst-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
+    fallback_provider: gemini-cloud
+    prompt_templates:
+      analyst: "x"
+`)
+	_, err := LoadProject(dir)
+	if err == nil || !strings.Contains(err.Error(), "missing fallback_model") {
+		t.Fatalf("expected missing fallback_model error, got: %v", err)
+	}
+}
+
+func TestEffectiveFailoverConfig_Defaults(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, "")
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveFailoverConfig()
+	if eff.Enabled == nil || !*eff.Enabled {
+		t.Errorf("expected Enabled=true by default")
+	}
+	if eff.AutoSwitch == nil || *eff.AutoSwitch {
+		t.Errorf("expected AutoSwitch=false by default")
+	}
+	if len(eff.SwitchOnKinds) != 3 {
+		t.Errorf("expected 3 default switch_on_kinds, got %v", eff.SwitchOnKinds)
+	}
+	if eff.MaxFailoversPerRun != 1 {
+		t.Errorf("expected MaxFailoversPerRun=1, got %d", eff.MaxFailoversPerRun)
+	}
+	if eff.ProbeIntervalSeconds != 60 {
+		t.Errorf("expected ProbeIntervalSeconds=60, got %d", eff.ProbeIntervalSeconds)
+	}
+}
+
+func TestEffectiveFailoverConfig_Overrides(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `provider_failover:
+  enabled: true
+  auto_switch: true
+  switch_on_kinds: [overloaded]
+  max_failovers_per_run: 3
+  probe_interval_seconds: 30
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveFailoverConfig()
+	if eff.AutoSwitch == nil || !*eff.AutoSwitch {
+		t.Errorf("expected AutoSwitch=true override")
+	}
+	if len(eff.SwitchOnKinds) != 1 || eff.SwitchOnKinds[0] != "overloaded" {
+		t.Errorf("expected switch_on_kinds override, got %v", eff.SwitchOnKinds)
+	}
+	if eff.MaxFailoversPerRun != 3 {
+		t.Errorf("expected MaxFailoversPerRun=3 override, got %d", eff.MaxFailoversPerRun)
+	}
+	if eff.ProbeIntervalSeconds != 30 {
+		t.Errorf("expected ProbeIntervalSeconds=30 override, got %d", eff.ProbeIntervalSeconds)
+	}
+}
+
+func TestValidateProject_InvalidSwitchOnKind(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `provider_failover:
+  switch_on_kinds: [bogus]
+`)
+	_, err := LoadProject(dir)
+	if err == nil || !strings.Contains(err.Error(), "unrecognized kind") {
+		t.Fatalf("expected unrecognized kind error, got: %v", err)
+	}
+}
+
+func TestProviderTemplates_ParseAndValidate(t *testing.T) {
+	t.Run("valid template parses", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_templates:
+  - name: local-ai
+    description: Route everything to local Ollama
+    agents:
+      analyst-agent:
+        provider: local-ollama
+        model: llama3
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if len(cfg.ProviderTemplates) != 1 {
+			t.Fatalf("expected 1 template, got %d", len(cfg.ProviderTemplates))
+		}
+		tpl := cfg.ProviderTemplates[0]
+		if tpl.Name != "local-ai" {
+			t.Errorf("name: got %q", tpl.Name)
+		}
+		binding, ok := tpl.Agents["analyst-agent"]
+		if !ok {
+			t.Fatal("expected binding for analyst-agent")
+		}
+		if binding.Provider != "local-ollama" || binding.Model != "llama3" {
+			t.Errorf("binding: got %+v", binding)
+		}
+	})
+
+	t.Run("duplicate template name rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_templates:
+  - name: local-ai
+    agents:
+      analyst-agent: {provider: local-ollama, model: llama3}
+  - name: local-ai
+    agents:
+      analyst-agent: {provider: local-ollama, model: llama3}
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "duplicate name") {
+			t.Fatalf("expected duplicate name error, got: %v", err)
+		}
+	})
+
+	t.Run("empty agents map rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_templates:
+  - name: empty-template
+    agents: {}
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "agents must not be empty") {
+			t.Fatalf("expected empty agents error, got: %v", err)
+		}
+	})
+}
+
