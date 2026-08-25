@@ -1,7 +1,7 @@
 ---
 title: "\"stdout readers did not drain within grace\" warns on every run over 5 seconds"
 type: defect
-status: draft
+status: approved
 lineage: agent-runner-spurious-drain-warning
 created: "2026-08-25T12:10:00+10:00"
 priority: low
