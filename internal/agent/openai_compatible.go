@@ -243,7 +243,7 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 			if err != nil {
 				rb.Write([]byte(mask(err.Error())))
 				writeLog("# error: " + err.Error())
-				doneCh <- err
+				doneCh <- wrapHTTPError(err, 0)
 				return
 			}
 
@@ -253,7 +253,7 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 				errMsg := fmt.Sprintf("provider %q returned HTTP %d: %s", prov.Name, resp.StatusCode, extractErrorMessage(respBody))
 				rb.Write([]byte(mask(errMsg)))
 				writeLog("# error: " + errMsg)
-				doneCh <- fmt.Errorf("%s", errMsg)
+				doneCh <- wrapHTTPError(fmt.Errorf("%s", errMsg), resp.StatusCode)
 				return
 			}
 

@@ -5,7 +5,9 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 
@@ -90,6 +92,42 @@ type ProjectAccess struct {
 	// Hub is the project's WebSocket hub; used to subscribe for run-completion
 	// events (agent.finished / agent.failed).
 	Hub *hub.Hub
+
+	// ---- automated provider failover (switch-provider-3-be Milestone 3) ----
+	// All four fields below are optional; a nil field disables auto-failover
+	// for this project (the dispatcher falls back to its standard rate-limit
+	// pause), so callers that don't wire failover (e.g. tests) are unaffected.
+
+	// FailoverPolicy returns the project's effective provider-failover policy.
+	FailoverPolicy func() FailoverPolicy
+	// AgentFailoverInfo returns the named agent's configured fallback
+	// provider/model, or ok=false when the agent is unknown or has none.
+	AgentFailoverInfo func(agentName string) (AgentFailoverInfo, bool)
+	// ProbeProviderHealth performs a fast, bounded reachability check of the
+	// named provider, honouring ctx's deadline.
+	ProbeProviderHealth func(ctx context.Context, providerName string) bool
+	// SwitchAgentProvider switches agentName to provider/model. isFailover
+	// distinguishes an automated failover from a manual operator switch (it
+	// controls whether the current provider is stashed as "primary" for
+	// later restore).
+	SwitchAgentProvider func(agentName, provider, model, reason string, isFailover bool) error
+}
+
+// FailoverPolicy is the subset of config.ProviderFailoverConfig the
+// dispatcher needs, decoupled from the config package so this package has no
+// dependency on it.
+type FailoverPolicy struct {
+	Enabled            bool
+	AutoSwitch         bool
+	SwitchOnKinds      []string
+	MaxFailoversPerRun int
+}
+
+// AgentFailoverInfo is the subset of config.AgentConfig the dispatcher needs
+// to evaluate automated failover for one agent.
+type AgentFailoverInfo struct {
+	FallbackProvider string
+	FallbackModel    string
 }
 
 // ProjectLookup maps a project name to its runtime access handle.
@@ -306,6 +344,9 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 		_ = d.store.MarkTerminal(job.ID, StateCompleted, "")
 		d.broadcastJobEvent("queue.finished", job, "completed")
 	case "rate_limit":
+		if d.tryFailover(ctx, job, pa, result) {
+			return
+		}
 		d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
 	case "auth_error":
 		d.handleAuthError(job)
@@ -425,6 +466,93 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 			}
 		}
 	}
+}
+
+// tryFailover attempts automated provider failover for a rate_limit /
+// overloaded / unreachable job failure (switch-provider-3-be Milestone 3).
+// When engaged it marks the job failed with reason "failover_triggered",
+// immediately re-enqueues it at the head of the queue (bypassing the queue
+// pause entirely — the whole point of failover is to keep the queue moving),
+// and returns true so the caller skips handleRateLimit. It returns false
+// (falling through to the standard rate-limit pause) when: the project
+// doesn't wire failover support, the policy is disabled/manual, the failure
+// kind isn't configured to trigger it, the agent has no fallback provider,
+// the run has already exhausted max_failovers_per_run, or the fallback
+// provider fails its pre-switch health probe.
+func (d *Dispatcher) tryFailover(ctx context.Context, job *Job, pa ProjectAccess, result runResult) bool {
+	if pa.FailoverPolicy == nil || pa.AgentFailoverInfo == nil || pa.ProbeProviderHealth == nil || pa.SwitchAgentProvider == nil {
+		return false
+	}
+
+	kind := result.rlKind
+	if kind == "" {
+		kind = "rate_limit"
+	}
+
+	policy := pa.FailoverPolicy()
+	if !policy.Enabled || !policy.AutoSwitch {
+		return false
+	}
+	if !slices.Contains(policy.SwitchOnKinds, kind) {
+		return false
+	}
+
+	info, ok := pa.AgentFailoverInfo(job.AgentName)
+	if !ok || info.FallbackProvider == "" {
+		return false
+	}
+
+	if job.Attempts > policy.MaxFailoversPerRun {
+		slog.Info("queue: max_failovers_per_run exceeded; falling back to standard pause",
+			"job_id", job.ID, "agent", job.AgentName, "attempts", job.Attempts, "max", policy.MaxFailoversPerRun)
+		return false
+	}
+
+	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	if !pa.ProbeProviderHealth(probeCtx, info.FallbackProvider) {
+		slog.Warn("queue: fallback provider failed pre-switch health probe; falling back to standard pause",
+			"job_id", job.ID, "agent", job.AgentName, "fallback_provider", info.FallbackProvider)
+		return false
+	}
+
+	reason := result.rawText
+	if reason == "" {
+		reason = fmt.Sprintf("failure kind=%s", kind)
+	}
+	if err := pa.SwitchAgentProvider(job.AgentName, info.FallbackProvider, info.FallbackModel, reason, true); err != nil {
+		slog.Error("queue: automated provider switch failed; falling back to standard pause",
+			"job_id", job.ID, "agent", job.AgentName, "err", err)
+		return false
+	}
+
+	now := d.cfg.clock()
+
+	// 1. Mark current job failed.
+	_ = d.store.MarkTerminal(job.ID, StateFailed, "failover_triggered")
+	d.broadcastJobEvent("queue.finished", job, "failed")
+
+	// 2. Immediately re-enqueue at head — do NOT pause the queue.
+	requeue := *job
+	requeue.ID = newID()
+	requeue.State = StatePending
+	requeue.Attempts = job.Attempts + 1
+	requeue.Position = d.store.MinPosition() - 1
+	requeue.EnqueuedAt = now
+	if err := d.store.EnqueueDirect(requeue); err != nil {
+		slog.Error("queue: re-enqueue after failover failed", "err", err)
+	} else {
+		d.broadcast("queue.added", map[string]any{
+			"id":       requeue.ID,
+			"position": requeue.Position,
+			"attempts": requeue.Attempts,
+			"reason":   "failover_retry",
+		})
+	}
+
+	slog.Info("queue: automated failover engaged; re-enqueued without pausing",
+		"job_id", job.ID, "agent", job.AgentName, "fallback_provider", info.FallbackProvider, "attempts", requeue.Attempts)
+	return true
 }
 
 // handleRateLimit processes a rate-limit / overloaded failure: marks the job

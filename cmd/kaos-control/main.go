@@ -13,10 +13,12 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/authcmd"
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/devopscmd"
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/hookcmd"
+	"github.com/kaos-control/kaos-control/internal/agent"
 	"github.com/kaos-control/kaos-control/internal/architecture"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/backfillcmd"
@@ -341,6 +343,33 @@ func run() error {
 					return row.Status
 				},
 				Hub: p.Hub,
+				FailoverPolicy: func() queue.FailoverPolicy {
+					eff := p.Config().EffectiveFailoverConfig()
+					return queue.FailoverPolicy{
+						Enabled:            eff.Enabled != nil && *eff.Enabled,
+						AutoSwitch:         eff.AutoSwitch != nil && *eff.AutoSwitch,
+						SwitchOnKinds:      eff.SwitchOnKinds,
+						MaxFailoversPerRun: eff.MaxFailoversPerRun,
+					}
+				},
+				AgentFailoverInfo: func(agentName string) (queue.AgentFailoverInfo, bool) {
+					ag, ok := p.Agents.GetAgent(agentName)
+					if !ok || ag.FallbackProvider == "" {
+						return queue.AgentFailoverInfo{}, false
+					}
+					return queue.AgentFailoverInfo{FallbackProvider: ag.FallbackProvider, FallbackModel: ag.FallbackModel}, true
+				},
+				ProbeProviderHealth: func(probeCtx context.Context, providerName string) bool {
+					for i := range appCfg.Providers {
+						if appCfg.Providers[i].Name == providerName {
+							return agent.ProbeProviderHealth(probeCtx, nil, appCfg.Providers[i], 2*time.Second)
+						}
+					}
+					return false
+				},
+				SwitchAgentProvider: func(agentName, provider, model, reason string, isFailover bool) error {
+					return p.SwitchAgentProvider(agentName, provider, model, reason, isFailover)
+				},
 			}, true
 		}
 		queueDispatcher = queue.New(queueStore, projectLookup, appHub, queue.Config{})

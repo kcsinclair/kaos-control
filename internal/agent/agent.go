@@ -930,6 +930,26 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	waitErr := proc.Wait()
 	finishedAt := time.Now()
 
+	// Transient-failure classification (switch-provider-3-be Milestone 3): the
+	// openai-compatible driver wraps HTTP 529/429/gateway-unreachable failures
+	// in a *RunError (Claude drivers detect these mid-stream instead — see
+	// extractRateLimitText). Re-broadcast as queue.rate_limit, the same signal
+	// the dispatcher already reacts to, so failover/pause logic is uniform
+	// across drivers.
+	if waitErr != nil {
+		var rerr *RunError
+		if errors.As(waitErr, &rerr) && rerr.Kind != "" {
+			m.hub.Broadcast(hub.Event{
+				Type: "queue.rate_limit",
+				Payload: map[string]any{
+					"run_id":   run.RunID,
+					"raw_text": rerr.Error(),
+					"kind":     string(rerr.Kind),
+				},
+			})
+		}
+	}
+
 	m.mu.Lock()
 	_, wasActive := m.active[run.RunID]
 	delete(m.active, run.RunID)
@@ -1611,6 +1631,11 @@ type RateLimitKind string
 const (
 	RateLimitKindRateLimit  RateLimitKind = "rate_limit"
 	RateLimitKindOverloaded RateLimitKind = "overloaded"
+	// RateLimitKindUnreachable classifies a connection-level failure
+	// (refused/DNS/timeout) or a gateway error (502/503/504) from an
+	// openai-compatible provider — the upstream itself is unreachable,
+	// distinct from a throttling response. See classifyHTTPFailure.
+	RateLimitKindUnreachable RateLimitKind = "unreachable"
 )
 
 // extractRateLimitText inspects a decoded agent.progress event payload and
