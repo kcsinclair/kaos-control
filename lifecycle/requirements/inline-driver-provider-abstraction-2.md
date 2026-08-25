@@ -346,6 +346,8 @@ aligned with the [[provider-model-for-agents]] Provider spine.
    for zero-config compatibility, and consider a named CLI provider as a later
    nicety.
 
+> Proceed with recommendation
+
 4. **Failover participation.** Should inline calls honour provider failover
    ([[switch-provider]]) on a transient upstream error, or is a single attempt
    with a clear error sufficient for these short, interactive calls?
