@@ -1,7 +1,7 @@
 ---
 title: gemini-cli driver — consume agy stream-json for run telemetry
 type: requirement
-status: approved
+status: planning
 lineage: gemini-cli-stream-json
 parent: lifecycle/ideas/gemini-cli-stream-json.md
 created: "2026-08-25T12:45:00+10:00"
