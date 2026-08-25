@@ -1355,6 +1355,15 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 				if err := m.idx.UpdateAgentRunMetrics(run.RunID, metrics); err != nil {
 					slog.Warn("agent: persisting run metrics", "run_id", run.RunID, "err", err)
 				}
+			} else if run.Driver == "gemini-cli" {
+				// NFR-2 degradation visibility: a gemini-cli run with no
+				// parseable agy result line means agy fell back to plain text
+				// (e.g. rejected --output-format stream-json) or crashed
+				// before emitting one. The run still completed and logged its
+				// output (M4/M5 handle that); surface the gap explicitly
+				// rather than silently reporting result:null.
+				slog.Warn("agent: gemini-cli run finished with no parseable agy result event",
+					"run_id", run.RunID, "agent", run.AgentName, "err", parseErr)
 			}
 		}
 	}
