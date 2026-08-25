@@ -1,7 +1,7 @@
 ---
 title: 'Test Plan: Frontend Lint Coverage Integration'
 type: plan-test
-status: blocked
+status: in-development
 lineage: frontend-lint-gap
 created: "2026-08-24T19:30:00+10:00"
 parent: lifecycle/requirements/frontend-lint-gap-2.md
@@ -153,61 +153,8 @@ Following implementation of the test suite, the `test-developer` agent will auth
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-Both plans this test plan depends on are `status: blocked` with zero code committed:
-
-- [[frontend-lint-gap-3-be]] — Backend & DevOps plan. Blocked because every "Files to
-  change" target (`Makefile`, `lifecycle/devops/*.yaml`, `lifecycle/architecture/go-vue.md`,
-  `lifecycle/config.yaml`) falls outside the `backend-developer` write scope
-  (`internal/**`, `cmd/**`).
-- [[frontend-lint-gap-4-fe]] — Frontend plan. Blocked because Milestone 1
-  (`web/eslint.config.js`, `web/package.json`) falls outside the `frontend-developer`
-  write scope (`web/src/**`), and Milestones 3–5 cannot run without that config existing.
-
-I independently verified the resulting gap in the current tree before starting this plan:
-
-- `Makefile` has no `lint-go` or `lint-frontend` target — only the original Go-only `lint`
-  target (`go vet`, `staticcheck`, `govulncheck`, `gosec`, `gitleaks`).
-- `web/eslint.config.js` does not exist.
-- `web/package.json` has no `"lint"` script.
-- `lifecycle/devops/all-tests.yaml` and `lifecycle/devops/test-lint.yaml` still describe the
-  `Lint` step as `go vet + staticcheck` only — not updated for frontend checks.
-
-Every milestone in this test plan exercises infrastructure that does not exist yet:
-
-1. **Milestone 1** asserts `make lint-frontend` / `make lint-go` behaviour — neither target
-   exists.
-2. **Milestone 2** runs ESLint against fixtures using rules declared in
-   `web/eslint.config.js` — the file doesn't exist, so there is no rule set to assert
-   against.
-3. **Milestone 3** verifies the `tests/web/` override block inside the same nonexistent
-   config.
-4. **Milestone 4** asserts the devops `Lint` step output includes "both Go and frontend
-   lint diagnostics" — the pipeline YAML hasn't been updated to run anything but `make
-   lint` (Go-only).
-5. **Milestone 5** benchmarks `make lint-frontend` execution time and asserts a clean
-   `make lint` baseline — again, the target and the zero-warning baseline don't exist to
-   measure.
-
-I cannot write meaningful integration tests against commands, files, and rule
-configurations that don't exist without guessing at their exact shape (flag names, output
-format, exit-code conventions) — and doing so risks tests that pass against my own guessed
-fixtures but fail (or worse, silently no-op) once the real implementation lands with a
-different shape. Per my instructions, I'm stopping rather than guessing.
-
-Blocking questions for product-owner:
-
-1. Should this test plan wait until [[frontend-lint-gap-3-be]] and [[frontend-lint-gap-4-fe]]
-   are unblocked and implemented (i.e. should it be resequenced to run *after* those two,
-   not in parallel)?
-2. Once unblocked, will the resulting `make lint-frontend` / `make lint-go` output format
-   (plain text vs. structured/JSON) and exit-code semantics be specified anywhere I can
-   reference, or should I derive assertions directly from whatever the backend/frontend
-   agents actually implement at that time?
-3. Is there any part of this test plan that's safe to scaffold now against a mocked/fake
-   `make lint-frontend` (e.g. a fixture Makefile) purely to validate my test harness
-   approach, while the real integration remains blocked — or should all five milestones
-   wait together?
-
-No test code has been committed for this plan; stopping here pending direction.
+1. **Execution Resequencing**: The prerequisite plans [[frontend-lint-gap-3-be]] (Backend & DevOps) and [[frontend-lint-gap-4-fe]] (Frontend) have been unblocked (`status: approved`) and granted necessary path permissions. In the execution lifecycle, BE and FE plans will land first. Once `make lint-frontend` and `web/eslint.config.js` exist in the repo, this test plan will execute all 5 milestones.
+2. **Output Format & Exit Code Semantics**: Standard Unix exit codes MUST be asserted (0 on success, non-zero on lint/type errors or failure). Output diagnostics will follow default ESLint/`vue-tsc` human-readable formatting (`<file>:<line>:<col> <rule-name>`).
+3. **No Mock Scaffolding**: All 5 milestones will wait for the BE and FE implementation tasks to land so that integration tests are written directly against the live, authoritative targets and configuration files.
