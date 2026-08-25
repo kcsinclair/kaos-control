@@ -34,7 +34,7 @@ import { ref, nextTick } from 'vue'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import AppHeader from '../../web/src/components/layout/AppHeader.vue'
-import { makeRunningRun, createMockAgentsStore } from './helpers/mockAgentsStore'
+import { makeRunningRun } from './helpers/mockAgentsStore'
 import type { AgentRunRow } from '../../web/src/types/api'
 
 // ---------------------------------------------------------------------------
@@ -62,14 +62,6 @@ vi.mock('@/api/ws', () => ({
 
 vi.mock('@/stores/agents', () => ({
   useAgentsStore: () => {
-    const { useMockAgentsStore } = createMockAgentsStore(_runsRef.value)
-    // We need to return an object that proxies the reactive runsRef
-    // Instead, we return a live computed object
-    const activeRuns = {
-      get value() {
-        return _runsRef.value.filter((r) => r.status === 'running')
-      },
-    }
     return {
       get activeRuns() {
         return _runsRef.value.filter((r) => r.status === 'running')
@@ -111,7 +103,7 @@ function makeRouter(path = '/p/my-project') {
       { path: '/:pathMatch(.*)*', component: { template: '<div/>' } },
     ],
   })
-  router.push(path)
+  void router.push(path)
   return router
 }
 

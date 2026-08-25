@@ -25,7 +25,7 @@
  *   - ARIA attributes are verified via wrapper.attributes().
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import GanttChart from '../../web/src/components/releases/GanttChart.vue'
 import type { Release } from '../../web/src/types/release'

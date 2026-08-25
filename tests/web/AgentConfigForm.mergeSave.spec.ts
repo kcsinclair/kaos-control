@@ -55,7 +55,6 @@ vi.mock('@/api/config', async (importOriginal) => {
   }
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import * as configApi from '../../web/src/api/config'
 
 // ---------------------------------------------------------------------------

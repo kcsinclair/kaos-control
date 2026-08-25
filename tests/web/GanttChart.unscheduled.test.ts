@@ -20,7 +20,7 @@
  *     by asserting the col-header--unscheduled class.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import GanttChart from '../../web/src/components/releases/GanttChart.vue'
 import type { Release, ReleaseDetail } from '../../web/src/types/release'

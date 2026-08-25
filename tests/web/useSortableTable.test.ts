@@ -14,7 +14,7 @@
  * where SortType = 'string' | 'date' | 'number' | 'text'
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { ref, nextTick } from 'vue'
 import { useSortableTable } from '../../web/src/composables/useSortableTable'
 

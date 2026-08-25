@@ -31,7 +31,7 @@ import { api } from '@/api/client'
 import * as artifactsApi from '@/api/artifacts'
 import { useKanbanBoard } from '@/composables/useKanbanBoard'
 import type { KanbanConfig } from '@/composables/useKanbanBoard'
-import { makeArtifactRow, makeArtifactsForAllStatuses } from '../helpers/seed_artifacts'
+import { makeArtifactsForAllStatuses } from '../helpers/seed_artifacts'
 
 // ---------------------------------------------------------------------------
 // Fixtures
