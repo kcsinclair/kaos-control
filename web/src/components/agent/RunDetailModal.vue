@@ -137,6 +137,14 @@ function providerNameFor(agentName: string): string | undefined {
   return agentsStore.agents.find((agent) => agent.name === agentName)?.provider
 }
 
+// Warmup state lives only on the agentsStore's live (WS-updated) copy of the
+// run, never on the snapshot this modal fetched once via GET /runs/:id.
+const liveWarmup = computed(() => agentsStore.runs.find((r) => r.run_id === props.runId)?.warmup_state ?? null)
+const isWarmingUp = computed(() =>
+  run.value?.status === 'running' && (liveWarmup.value === 'model_loading' || liveWarmup.value === 'warming_up'),
+)
+const warmupDetail = computed(() => agentsStore.runs.find((r) => r.run_id === props.runId)?.warmup_message ?? null)
+
 // Human labels for the known error_details keys (ClassifyRunError /
 // recordPreflightFailure); anything else falls back to its raw key so a
 // future backend field still renders instead of being silently dropped.
@@ -311,6 +319,12 @@ function handleKeydown(e: KeyboardEvent) {
             v-if="run.run_summary"
             :summary="run.run_summary"
           />
+
+          <!-- Warmup indicator — shown before any turn has streamed a token -->
+          <div v-if="isWarmingUp" class="rdm-warmup" role="status" aria-live="polite">
+            <span class="rdm-warmup-dot" aria-hidden="true"></span>
+            <span>Warming up model weights in memory...<template v-if="warmupDetail"> {{ warmupDetail }}</template></span>
+          </div>
 
           <!-- Multi-turn timeline -->
           <div v-if="parsedTurns.length" class="rdm-field">
@@ -567,6 +581,38 @@ function handleKeydown(e: KeyboardEvent) {
 }
 .rdm-artifact-link:hover {
   text-decoration: underline;
+}
+
+.rdm-warmup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+@media (prefers-color-scheme: dark) {
+  .rdm-warmup {
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.15);
+    border-color: #d97706;
+  }
+}
+.rdm-warmup-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22d3ee;
+  flex-shrink: 0;
+  animation: rdm-warmup-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rdm-warmup-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
 }
 
 .rdm-diagnostics {

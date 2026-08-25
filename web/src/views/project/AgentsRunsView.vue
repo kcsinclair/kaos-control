@@ -313,6 +313,15 @@ onMounted(() => {
                     class="failure-badge"
                     :title="failureBadgeTitle(run.failure_reason)"
                   >{{ run.failure_reason }}</span>
+                  <span
+                    v-if="run.status === 'running' && (run.warmup_state === 'model_loading' || run.warmup_state === 'warming_up')"
+                    class="warmup-badge"
+                    role="status"
+                    :title="run.warmup_message ?? 'Warming up model weights...'"
+                  >
+                    <span class="warmup-dot" aria-hidden="true"></span>
+                    Warming up…
+                  </span>
                 </td>
                 <td class="cell-muted">{{ new Date(run.started_at).toLocaleString() }}</td>
                 <td class="cell-muted">{{ elapsed(run) }}</td>
@@ -606,6 +615,33 @@ onMounted(() => {
   color: var(--badge-blocked-text);
   border: 1px solid var(--color-error, #dc2626);
   cursor: help;
+}
+.warmup-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: var(--space-1);
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  white-space: nowrap;
+  cursor: help;
+}
+.warmup-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22d3ee;
+  flex-shrink: 0;
+  animation: warmup-pulse 1.4s ease-in-out infinite;
+}
+@keyframes warmup-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
 }
 .run-detail { background: var(--color-surface); }
 .detail-cell { padding: var(--space-4) var(--space-6) !important; }

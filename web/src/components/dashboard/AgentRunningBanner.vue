@@ -21,6 +21,8 @@ const pendingCount = computed(
   () => queueStore.snapshot.pending.filter((j) => j.project === props.project).length,
 )
 
+const warmupLabel = computed(() => queueStore.warmupMessage ?? 'Warming up model weights...')
+
 const elapsedLabel = computed(() => {
   if (!runningJob.value?.started_at) return '…'
   const startMs = new Date(runningJob.value.started_at).getTime()
@@ -48,6 +50,16 @@ const elapsedLabel = computed(() => {
         :to="`/p/${encodeURIComponent(runningJob.project)}/artifacts/${runningJob.artifact_path}`"
       >{{ runningJob.artifact_path }}</RouterLink>
       <span class="elapsed">({{ elapsedLabel }})</span>
+    </span>
+    <span
+      v-if="queueStore.isWarmingUp"
+      class="warmup-badge"
+      role="status"
+      aria-live="polite"
+      :title="warmupLabel"
+    >
+      <span class="warmup-dot" aria-hidden="true"></span>
+      {{ warmupLabel }}
     </span>
     <span v-if="pendingCount > 0" class="queue-badge" :aria-label="`${pendingCount} more jobs queued`">
       +{{ pendingCount }} queued
@@ -119,6 +131,38 @@ const elapsedLabel = computed(() => {
 .elapsed {
   font-family: monospace;
   color: var(--color-text-muted);
+}
+
+.warmup-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  .warmup-badge {
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.15);
+    border-color: #d97706;
+  }
+}
+
+.warmup-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22d3ee;
+  flex-shrink: 0;
+  animation: pulse 1.4s ease-in-out infinite;
 }
 
 .queue-badge {
