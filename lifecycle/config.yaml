@@ -205,8 +205,8 @@ agents:
   - name: requirements-analyst
     role:
       - analyst
-    driver: gemini-cli
-    model: gemini-3.7-flash
+    driver: claude-mediated
+    model: opus
     active_status: clarifying
     source_types:
       - idea
@@ -282,8 +282,8 @@ agents:
   - name: planning-analyst
     role:
       - analyst
-    driver: gemini-cli
-    model: gemini-3.7-flash
+    driver: claude-code-cli
+    model: opus
     active_status: planning
     source_types:
       - requirement
@@ -343,8 +343,8 @@ agents:
   - name: backend-developer
     role:
       - backend-developer
-    driver: gemini-cli
-    model: gemini-3.1-flash-lite
+    driver: claude-code-cli
+    model: sonnet
     active_status: in-development
     done_on_success: true
     source_types:
@@ -353,8 +353,11 @@ agents:
     allowed_write_paths:
       - internal
       - cmd
+      - Makefile
       - lifecycle/backend-plans
-      - lifecycle/architecture/decisions
+      - lifecycle/devops
+      - lifecycle/architecture
+      - lifecycle/config.yaml
     git_identity:
       name: Backend Developer Agent
       email: backend-developer@kaos-control.local
@@ -397,15 +400,16 @@ agents:
   - name: frontend-developer
     role:
       - frontend-developer
-    driver: gemini-cli
-    model: gemini-3.1-flash-lite
+    driver: claude-code-cli
+    model: sonnet
     active_status: in-development
     done_on_success: true
     source_types:
       - plan-frontend
     timeout_minutes: 0
     allowed_write_paths:
-      - web/src
+      - web
+      - tests/web
       - lifecycle/frontend-plans
       - lifecycle/architecture/decisions
     git_identity:
@@ -431,9 +435,10 @@ agents:
         stuck (see below).
 
         After each milestone, run these from the web/ directory:
+          - pnpm run lint
           - pnpm exec vue-tsc --noEmit
           - pnpm build
-        Both must pass before the milestone is considered complete.
+        All three must pass before the milestone is considered complete.
 
         Commit each milestone as its own git commit with a message that
         references the plan's milestone heading.
@@ -451,8 +456,8 @@ agents:
   - name: test-developer
     role:
       - test-developer
-    driver: gemini-cli
-    model: gemini-3.1-flash-lite
+    driver: claude-code-cli
+    model: sonnet
     active_status: in-development
     done_on_success: true
     source_types:
@@ -510,8 +515,8 @@ agents:
   - name: qa
     role:
       - qa
-    driver: gemini-cli
-    model: gemini-2.5-flash
+    driver: claude-code-cli
+    model: sonnet
     active_status: in-qa
     source_types:
       - test
@@ -565,8 +570,8 @@ agents:
   - name: tech-writer
     role:
       - tech-writer
-    driver: gemini-cli
-    model: gemini-3.5-flash
+    driver: claude-code-cli
+    model: sonnet
     active_status: in-development
     done_on_success: true
     source_types:
@@ -621,8 +626,8 @@ agents:
   - name: test-runner
     role:
       - qa
-    driver: gemini-cli
-    model: gemini-2.5-flash
+    driver: claude-code-cli
+    model: sonnet
     active_status: ""
     source_types: []
     timeout_minutes: 45
@@ -807,8 +812,8 @@ agents:
   - name: docs-capture
     role:
       - product-owner
-    driver: gemini-cli
-    model: gemini-3.5-flash
+    driver: inline
+    model: claude-sonnet-4-6
     allowed_write_paths:
       - lifecycle/docs
     prompt_templates:
