@@ -1,15 +1,18 @@
 ---
-title: "Frontend Plan: ESLint Flat Config & Baseline Remediation"
+title: 'Frontend Plan: ESLint Flat Config & Baseline Remediation'
 type: plan-frontend
-status: in-development
+status: blocked
 lineage: frontend-lint-gap
-parent: lifecycle/requirements/frontend-lint-gap-2.md
 created: "2026-08-24T19:30:00+10:00"
+parent: lifecycle/requirements/frontend-lint-gap-2.md
 labels:
     - frontend
     - tooling
     - quality
 release: KC-Release6
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Frontend Plan: ESLint Flat Config & Baseline Remediation
@@ -153,3 +156,47 @@ Verify that the frontend lint suite satisfies all non-functional requirements:
 - [ ] `cd web && pnpm run lint` completes in under 5 seconds.
 - [ ] Synthetic warning triggers a non-zero exit code.
 - [ ] Output diagnostics include file, line, column, and rule identifier.
+
+---
+
+## Open Questions
+
+This plan was assigned to the frontend-developer role with a write scope limited to
+`web/src/**` and (only for a proposed ADR) `lifecycle/architecture/decisions/`
+(per this run's prompt and the `allowed_write_paths` for `frontend-developer` in
+`lifecycle/config.yaml`). Most of this plan's "Files to change" fall outside that scope:
+
+- **Milestone 1** — `web/package.json` and `web/eslint.config.js` (new). Neither path is
+  under `web/src/`; `web/eslint.config.js` sits at the `web/` package root alongside
+  `package.json`, `vite.config.ts`, etc.
+- **Milestone 2** — further edits to `web/eslint.config.js` (same out-of-scope file).
+- **Milestone 4** — `tests/web/**/*.ts`, which is test code owned by the test-developer
+  role, not frontend-developer.
+
+Milestone 3 (`web/src/**/*.{ts,vue}` remediation) is the only milestone whose file list is
+inside my write scope, but it cannot be executed independently: its acceptance criteria
+require `pnpm run lint` and `pnpm run type-check` to run against a `web/eslint.config.js`
+and a `"lint"` script that don't exist yet and that I'm not permitted to create. Milestone 5
+is verification-only and depends on the same missing config.
+
+I also note the sibling plan [[frontend-lint-gap-3-be]] (backend & DevOps) hit the identical
+structural issue — its "Files to change" (`Makefile`, `lifecycle/devops/**`,
+`lifecycle/architecture/go-vue.md`, `lifecycle/config.yaml`) fall outside the
+backend-developer write scope too, and it is already `status: blocked` pending
+product-owner direction.
+
+Blocking questions for product-owner:
+
+1. Should `web/eslint.config.js` and the `web/package.json` devDependency/script changes
+   (Milestone 1) be reassigned to a different role (e.g. `devops`, or folded into the
+   backend/DevOps plan [[frontend-lint-gap-3-be]]) since they sit outside
+   `web/src/**`? Or should the frontend-developer `allowed_write_paths` be widened for this
+   plan to include the `web/` package root (config + manifest files, not just `web/src/`)?
+2. If the config/manifest work happens elsewhere first, should this plan be split so
+   Milestones 3 (my in-scope remediation work) run as a separate, later plan/run once
+   Milestones 1–2 have landed and `pnpm run lint` actually exists?
+3. Milestone 4 (`tests/web/**`) — should this milestone be removed from this frontend plan
+   and handled instead by a test-developer-scoped plan, consistent with the stated role
+   boundaries?
+
+No code has been committed for this plan; stopping here pending direction.
