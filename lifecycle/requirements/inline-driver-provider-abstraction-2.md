@@ -1,7 +1,7 @@
 ---
 title: Inline Conversational Driver Provider Abstraction
 type: requirement
-status: blocked
+status: draft
 lineage: inline-driver-provider-abstraction
 created: "2026-08-25T14:00:00+10:00"
 priority: normal
@@ -318,7 +318,7 @@ aligned with the [[provider-model-for-agents]] Provider spine.
 - [ ] An inline agent pointed at a local provider completes capture/generation
       offline. ([[local-model-operability]])
 
-## Open Questions
+## Resolved Questions
 
 1. **Streaming vs. blocking for conversational capture.** The current CLI path
    is blocking (`exec … .Output()`) and the endpoints return a full string, so a
@@ -361,3 +361,5 @@ aligned with the [[provider-model-for-agents]] Provider spine.
    calls gain lightweight provider/driver attribution for observability, or
    remain unrecorded? *Recommendation:* out of scope here; raise separately if
    attribution is wanted.
+
+> Out of scope.
