@@ -1,7 +1,7 @@
 ---
 title: Record Provider and Driver on Every Agent Run
 type: requirement
-status: blocked
+status: draft
 lineage: agent-logging-provider-driver
 created: "2026-08-25T10:05:00+10:00"
 priority: normal
@@ -213,7 +213,7 @@ standards. No new ADR required.
       CLI-driver run (empty provider), header presence for each driver, and
       immutability across a metrics update.
 
-## Open Questions
+## Resolved Questions
 
 1. **Provider name vs. driver+base_url for CLI drivers.** CLI drivers have no
    provider binding, so `provider` will be empty for them. Is an empty
@@ -233,3 +233,5 @@ standards. No new ADR required.
    every driver for grep-consistency, or omit the token entirely for CLI
    drivers? *Recommendation:* always emit `provider=` so the header shape is
    uniform and greppable.
+
+> Proceed with recommendation.
