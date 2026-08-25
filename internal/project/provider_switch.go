@@ -188,6 +188,100 @@ func (p *Project) ApplyProviderTemplate(templateName string) (int, error) {
 	return len(patches), nil
 }
 
+// SwitchAllAgentProviders batch-switches every agent currently configured
+// with provider fromProvider to toProvider/toModel, applying all patches
+// atomically in a single config write. Returns the number of agents
+// switched (0 when no agent matches fromProvider — not an error).
+func (p *Project) SwitchAllAgentProviders(fromProvider, toProvider, toModel, reason string) (int, error) {
+	p.configWriteMu.Lock()
+	defer p.configWriteMu.Unlock()
+
+	cfg := p.Config()
+	var patches []config.AgentProviderPatch
+	for _, ag := range cfg.Agents {
+		if ag.Provider != fromProvider {
+			continue
+		}
+		patches = append(patches, config.AgentProviderPatch{
+			AgentName: ag.Name,
+			Provider:  toProvider,
+			Model:     toModel,
+		})
+	}
+	if len(patches) == 0 {
+		return 0, nil
+	}
+
+	if err := config.PatchAgentProviders(p.Entry.Path, patches); err != nil {
+		return 0, fmt.Errorf("switching all agent providers: %w", err)
+	}
+	if err := p.ReloadConfig(); err != nil {
+		return 0, fmt.Errorf("reloading config after switch-all: %w", err)
+	}
+
+	p.commitConfigChange(fmt.Sprintf("switch(agent): %d agent(s) %s -> %s/%s (reason: %s)", len(patches), fromProvider, toProvider, toModel, reason))
+	p.insertFeedEvent("provider_switched", fmt.Sprintf("Switched %d agent(s) from %s to %s/%s (reason: %s)", len(patches), fromProvider, toProvider, toModel, reason))
+	p.Hub.Broadcast(hub.Event{
+		Type: "provider.switched",
+		Payload: map[string]any{
+			"from_provider": fromProvider,
+			"to_provider":   toProvider,
+			"to_model":      toModel,
+			"reason":        reason,
+			"count":         len(patches),
+		},
+	})
+	return len(patches), nil
+}
+
+// RestoreAllAgentProviders restores every agent currently in a failover
+// state (primary_provider set) back to its primary provider/model, applying
+// all patches atomically in a single config write. Returns the number of
+// agents restored (0 when no agent is in failover — not an error).
+func (p *Project) RestoreAllAgentProviders() (int, error) {
+	p.configWriteMu.Lock()
+	defer p.configWriteMu.Unlock()
+
+	cfg := p.Config()
+	empty := ""
+	var patches []config.AgentProviderPatch
+	var restoredNames []string
+	for _, ag := range cfg.Agents {
+		if ag.PrimaryProvider == "" {
+			continue
+		}
+		patches = append(patches, config.AgentProviderPatch{
+			AgentName:       ag.Name,
+			Provider:        ag.PrimaryProvider,
+			Model:           ag.PrimaryModel,
+			PrimaryProvider: &empty,
+			PrimaryModel:    &empty,
+		})
+		restoredNames = append(restoredNames, ag.Name)
+	}
+	if len(patches) == 0 {
+		return 0, nil
+	}
+
+	if err := config.PatchAgentProviders(p.Entry.Path, patches); err != nil {
+		return 0, fmt.Errorf("restoring all agent providers: %w", err)
+	}
+	if err := p.ReloadConfig(); err != nil {
+		return 0, fmt.Errorf("reloading config after restore-all: %w", err)
+	}
+
+	p.commitConfigChange(fmt.Sprintf("restore(agent): restored %d agent(s) to primary", len(patches)))
+	p.insertFeedEvent("provider_restored", fmt.Sprintf("Restored %d agent(s) to primary provider", len(patches)))
+	p.Hub.Broadcast(hub.Event{
+		Type: "provider.restored",
+		Payload: map[string]any{
+			"agents": restoredNames,
+			"count":  len(patches),
+		},
+	})
+	return len(patches), nil
+}
+
 // commitConfigChange commits the current lifecycle/config.yaml under the
 // fixed bot identity, when the project is backed by a git repo. Failures are
 // logged, not returned — the config mutation itself has already succeeded

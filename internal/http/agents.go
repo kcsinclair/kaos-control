@@ -54,6 +54,11 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 		BaseURL           string            `json:"base_url,omitempty"` // claude-env: endpoint base URL (non-secret)
 		Configured        bool              `json:"configured"`
 		ReadyCount        int               `json:"ready_count"`
+		FallbackProvider  string            `json:"fallback_provider,omitempty"`
+		FallbackModel     string            `json:"fallback_model,omitempty"`
+		PrimaryProvider   string            `json:"primary_provider,omitempty"`
+		PrimaryModel      string            `json:"primary_model,omitempty"`
+		IsFailover        bool              `json:"is_failover,omitempty"`
 	}
 	var out []agentSummary
 	for _, ag := range p.Agents.Agents() {
@@ -115,6 +120,11 @@ func (s *Server) handleListAgents(w http.ResponseWriter, r *http.Request) {
 			BaseURL:           ag.BaseURL,
 			Configured:        configured,
 			ReadyCount:        rc,
+			FallbackProvider:  ag.FallbackProvider,
+			FallbackModel:     ag.FallbackModel,
+			PrimaryProvider:   ag.PrimaryProvider,
+			PrimaryModel:      ag.PrimaryModel,
+			IsFailover:        ag.PrimaryProvider != "",
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"agents": out})
