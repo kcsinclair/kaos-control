@@ -1,16 +1,19 @@
 ---
-title: "Backend & DevOps Plan: Frontend Lint Coverage Integration"
+title: 'Backend & DevOps Plan: Frontend Lint Coverage Integration'
 type: plan-backend
-status: in-development
+status: blocked
 lineage: frontend-lint-gap
-parent: lifecycle/requirements/frontend-lint-gap-2.md
 created: "2026-08-24T19:30:00+10:00"
+parent: lifecycle/requirements/frontend-lint-gap-2.md
 labels:
     - backend
     - devops
     - tooling
     - quality
 release: KC-Release6
+assignees:
+    - role: product-owner
+      who: agent
 ---
 
 # Backend & DevOps Plan: Frontend Lint Coverage Integration
@@ -90,3 +93,39 @@ Update the Go + Vue tech-stack profile in `lifecycle/architecture/go-vue.md` and
 - [ ] `lifecycle/architecture/go-vue.md` and `lifecycle/architecture/tech-stacks/go-vue.md` declare `lint: cd web && pnpm run lint && pnpm exec vue-tsc --noEmit` under `frontend-developer`.
 - [ ] `lifecycle/config.yaml` prompt template for `frontend-developer` includes running `pnpm run lint` alongside `vue-tsc` and `pnpm build`.
 - [ ] `internal/directives` tests (if applicable) parse the updated stack profile without error.
+
+---
+
+## Open Questions
+
+This plan was assigned to the backend-developer role with a write scope limited to
+`internal/**`, `cmd/**`, and (only for a proposed ADR) `lifecycle/architecture/decisions/`.
+All three milestones' "Files to change" fall entirely outside that scope:
+
+- **Milestone 1** — `Makefile` (repo root, not under `internal/**` or `cmd/**`).
+- **Milestone 2** — `lifecycle/devops/all-tests.yaml`, `lifecycle/devops/test-lint.yaml`
+  (lifecycle artifacts outside `lifecycle/architecture/decisions/`).
+- **Milestone 3** — `lifecycle/architecture/go-vue.md`, `lifecycle/architecture/tech-stacks/go-vue.md`,
+  and `lifecycle/config.yaml` (also outside the permitted lifecycle path; these are not ADRs).
+
+I confirmed there is no Go source change hiding behind Milestone 3: `internal/directives/config_patch.go`
+reads the `frontend-developer.lint` command generically from the stack-profile YAML frontmatter and
+writes it into `lifecycle/config.yaml` — it does not hardcode the lint command, so no code change is
+required there once the profile data is updated elsewhere.
+
+In short, this plan contains zero implementation work for a backend-developer agent under the given
+write-scope restriction; every acceptance criterion is Makefile/DevOps/config/architecture-catalog
+editing. Blocking questions for product-owner:
+
+1. Should this plan be reassigned to a `devops`-scoped agent (labels already include `devops`,
+   `tooling`) instead of `backend-developer`, since none of the target files are Go source?
+2. If it should stay assigned to backend-developer, should the write-scope restriction for this run
+   be widened to include `Makefile`, `lifecycle/devops/**`, and `lifecycle/architecture/go-vue.md` /
+   `lifecycle/architecture/tech-stacks/go-vue.md` / `lifecycle/config.yaml`? If so, please confirm
+   explicitly — I will not expand scope without direction, since those paths are stated as belonging
+   to other agents.
+3. Is `internal/directives` (config_patch.go) meant to gain new behavior in this plan (e.g. validating
+   or generating the lint command block), or is the Milestone 3 acceptance criterion referencing it
+   purely a "verify existing tests still pass" check with no code change?
+
+No code has been committed for this plan; stopping here pending direction.
