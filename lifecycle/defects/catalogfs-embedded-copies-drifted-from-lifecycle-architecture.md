@@ -1,7 +1,7 @@
 ---
 title: catalogfs embedded architecture catalog has drifted from lifecycle/architecture/ source files
 type: defect
-status: draft
+status: approved
 lineage: architectural-artefacts
 created: "2026-08-20T12:21:00+10:00"
 parent: lifecycle/backend-plans/architectural-artefacts-3-be.md
