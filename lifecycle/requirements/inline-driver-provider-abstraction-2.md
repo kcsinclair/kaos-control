@@ -337,6 +337,8 @@ aligned with the [[provider-model-for-agents]] Provider spine.
    *Recommendation:* extract a minimal shared request builder if it is clean;
    otherwise keep the inline client small and separate.
 
+> Proceed with recommendation
+
 3. **Explicit CLI sentinel vs. empty provider.** Is "no `provider`" a sufficient
    signal for the Claude CLI default, or should there be an explicit provider
    entry (e.g. `driver: claude-cli`) so the CLI path is visible and selectable in
