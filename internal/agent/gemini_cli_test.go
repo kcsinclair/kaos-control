@@ -38,6 +38,7 @@ func TestGeminiCliDriver_BuildArgs(t *testing.T) {
 
 		expectedArgs := []string{
 			"--dangerously-skip-permissions",
+			"--output-format", "stream-json",
 			"--add-dir", "/Users/keith/Code/kaos-control",
 			"--print-timeout", "24h",
 			"--prompt", "Hello Gemini",
@@ -63,6 +64,7 @@ func TestGeminiCliDriver_BuildArgs(t *testing.T) {
 
 		expectedArgs := []string{
 			"--dangerously-skip-permissions",
+			"--output-format", "stream-json",
 			"--add-dir", "/tmp/proj",
 			"--print-timeout", "30m",
 			"--prompt", "Hello Gemini",
@@ -86,6 +88,7 @@ func TestGeminiCliDriver_BuildArgs(t *testing.T) {
 
 		expectedArgs := []string{
 			"--dangerously-skip-permissions",
+			"--output-format", "stream-json",
 			"--print-timeout", "24h",
 			"--prompt", "Hello Gemini",
 		}

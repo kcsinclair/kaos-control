@@ -26,6 +26,10 @@ type GeminiCliDriver struct {
 func (d *GeminiCliDriver) buildArgs(run Run) []string {
 	args := []string{
 		"--dangerously-skip-permissions",
+		// stream-json gives us structured init/step_update/result events instead
+		// of agy's default plain text, so the driver can parse a RunResult,
+		// stream progress, and record TTFT (gemini-cli-stream-json FR-1).
+		"--output-format", "stream-json",
 	}
 	// agy ignores cmd.Dir for its workspace context and defaults to
 	// ~/.gemini/antigravity-cli/scratch, so the agent spends the whole run
