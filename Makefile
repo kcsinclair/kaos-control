@@ -12,7 +12,7 @@ RELEASE_LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION) -X $(MODULE)/inter
 GOBIN := $(shell go env GOPATH)/bin
 export PATH := $(GOBIN):$(PATH)
 
-.PHONY: all build build-web release package test test-unit test-integration lint clean run
+.PHONY: all build build-web release package test test-unit test-integration lint lint-go lint-frontend clean run
 
 all: build-web build
 
@@ -64,7 +64,10 @@ test-e2e: build
 test-all: test-unit test-integration test-e2e
 	cd tests/web && pnpm test
 
-## lint: run go vet, staticcheck, govulncheck, gosec, and gitleaks
+## lint: run lint-go then lint-frontend; halts on the first failure
+lint: lint-go lint-frontend
+
+## lint-go: run go vet, staticcheck, govulncheck, gosec, and gitleaks
 ##       Go security tooling requires GOBIN on PATH (handled by the
 ##       `export PATH` near the top of this file).
 ##
@@ -85,7 +88,7 @@ test-all: test-unit test-integration test-e2e
 ##               operator-configured base URL + model + API key, not user input
 ##         G705  XSS via taint — only flagged site is NDJSON output
 ##               (Content-Type: application/x-ndjson), not HTML
-lint:
+lint-go:
 	go vet ./...
 	@if [ -x "$(GOBIN)/staticcheck" ]; then \
 	  "$(GOBIN)/staticcheck" ./...; \
@@ -118,6 +121,10 @@ lint:
 	else \
 	  echo "gitleaks not installed; install with: brew install gitleaks"; \
 	fi
+
+## lint-frontend: run ESLint and vue-tsc type checks in web/
+lint-frontend:
+	cd web && pnpm run lint && pnpm exec vue-tsc --noEmit
 
 ## clean: remove build artefacts
 clean:
