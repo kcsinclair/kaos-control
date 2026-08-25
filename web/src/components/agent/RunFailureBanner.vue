@@ -2,6 +2,8 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { getFailureReasonInfo } from '@/lib/failureReasons'
 
 const props = defineProps<{
   failureReason?: string
@@ -9,9 +11,19 @@ const props = defineProps<{
   remediation?: string[] | null
   /** When set, shows a denial-count notice instead of a failure reason. */
   denialCount?: number
+  /** Contextual details from AgentRunRow.error_details (already secret-masked server-side). */
+  errorDetails?: Record<string, unknown> | null
+  /** Configured provider name for the failing agent, if known. */
+  providerName?: string
 }>()
 
+const route = useRoute()
 const disclosureOpen = ref(false)
+
+// Structured taxonomy codes (local-model-operability FR-3/FR-4) resolve rich
+// diagnostic copy; the two legacy Claude Code precheck codes below keep
+// their own hand-written copy for backward compatibility.
+const reasonInfo = computed(() => getFailureReasonInfo(props.failureReason))
 
 const heading = computed(() => {
   if (props.denialCount != null) {
@@ -23,6 +35,7 @@ const heading = computed(() => {
   if (props.failureReason === 'precheck_timeout') {
     return 'Claude Code did not start within the expected time'
   }
+  if (reasonInfo.value) return reasonInfo.value.heading
   return `Run failed: ${props.failureReason ?? 'unknown'}`
 })
 
@@ -35,8 +48,28 @@ const bodyText = computed(() => {
   if (props.failureReason === 'precheck_timeout') {
     return 'The agent process did not emit a startup event within the allowed window. Check that Claude Code is installed and the agent configuration is correct.'
   }
+  if (reasonInfo.value) return reasonInfo.value.explanation(props.errorDetails, props.providerName)
   return null
 })
+
+// Backend-computed remediation (ClassifyRunError) wins when present; the
+// static per-code list is only a fallback for runs that predate it or that
+// the backend couldn't classify with steps of its own.
+const remediationSteps = computed(() => {
+  if (props.remediation?.length) return props.remediation
+  return reasonInfo.value?.remediation ?? null
+})
+
+// Provider/model-related codes link out to Provider Settings and Agent
+// Config so the operator can act immediately (FR-4).
+const showSettingsLinks = computed(() => reasonInfo.value != null && props.denialCount == null)
+const projectParam = computed(() => route.params.project as string | undefined)
+const providerSettingsPath = computed(() =>
+  projectParam.value ? `/p/${encodeURIComponent(projectParam.value)}/settings/providers` : null,
+)
+const agentConfigPath = computed(() =>
+  projectParam.value ? `/p/${encodeURIComponent(projectParam.value)}/agents` : null,
+)
 
 /**
  * Split a remediation string into segments so that backtick-delimited spans
@@ -62,8 +95,8 @@ function parseRemediationSegments(text: string): Array<{ code: boolean; text: st
       </template>
     </p>
 
-    <ol v-if="remediation && remediation.length" class="failure-banner__steps">
-      <li v-for="(step, idx) in remediation" :key="idx" class="failure-banner__step">
+    <ol v-if="remediationSteps && remediationSteps.length" class="failure-banner__steps">
+      <li v-for="(step, idx) in remediationSteps" :key="idx" class="failure-banner__step">
         <span class="failure-banner__step-num">{{ idx + 1 }}</span>
         <span class="failure-banner__step-text">
           <template v-for="(seg, i) in parseRemediationSegments(step)" :key="i">
@@ -74,7 +107,20 @@ function parseRemediationSegments(text: string): Array<{ code: boolean; text: st
       </li>
     </ol>
 
-    <details v-if="!props.denialCount" class="failure-banner__disclosure" @toggle="disclosureOpen = ($event.target as HTMLDetailsElement).open">
+    <div v-if="showSettingsLinks && (providerSettingsPath || agentConfigPath)" class="failure-banner__links">
+      <router-link
+        v-if="providerSettingsPath"
+        class="failure-banner__link"
+        :to="providerSettingsPath"
+      >Open Provider Settings</router-link>
+      <router-link
+        v-if="agentConfigPath"
+        class="failure-banner__link"
+        :to="agentConfigPath"
+      >Open Agent Config</router-link>
+    </div>
+
+    <details v-if="!props.denialCount && !reasonInfo" class="failure-banner__disclosure" @toggle="disclosureOpen = ($event.target as HTMLDetailsElement).open">
       <summary class="failure-banner__summary">What does this mean?</summary>
       <p class="failure-banner__disclosure-body">
         kaos-control launches Claude Code agents with the
@@ -166,6 +212,31 @@ function parseRemediationSegments(text: string): Array<{ code: boolean; text: st
   font-size: 0.85em;
   background: rgba(0, 0, 0, 0.08);
   padding: 1px 4px;
+  border-radius: var(--radius-sm);
+}
+
+.failure-banner__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.failure-banner__link {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-error);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.failure-banner__link:hover {
+  opacity: 0.85;
+}
+
+.failure-banner__link:focus-visible {
+  outline: 2px solid var(--color-error);
+  outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
