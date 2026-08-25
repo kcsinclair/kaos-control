@@ -11,6 +11,8 @@ labels:
     - queue
     - reliability
     - driver
+release: KC-Release6
+parent: lifecycle/ideas/agent-logging-provider-driver.md
 ---
 
 # Handle Gemini Quota Errors Gracefully
