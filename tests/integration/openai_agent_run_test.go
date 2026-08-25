@@ -95,6 +95,20 @@ agents:
       email: claude-analyst@test.local
     prompt_templates:
       analyst: "Analyse with Claude {target_path}"
+
+  # No prompt_templates entry for its role: exercises the local-model-tuned
+  # fallback (local-model-operability Milestone 1/4) — the agent name matches
+  # a LocalModelPromptDefaults key, so Manager.StartRun substitutes
+  # PromptDefaultBackendDeveloper instead of failing.
+  - name: backend-developer
+    role: [backend-developer]
+    driver: openai-compatible
+    provider: test-provider
+    model: test-model
+    allowed_write_paths: [lifecycle/requirements]
+    git_identity:
+      name: Fallback Backend Developer Agent
+      email: fallback-backend-developer@test.local
 `
 
 type openAIAgentTestEnv struct {
