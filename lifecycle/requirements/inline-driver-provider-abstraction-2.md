@@ -353,6 +353,8 @@ aligned with the [[provider-model-for-agents]] Provider spine.
    with a clear error sufficient for these short, interactive calls?
    *Recommendation:* single attempt in v1; revisit with [[switch-provider]].
 
+> Switch provider will be a manual step at this time, will investigate automated switching later.
+
 5. **Run recording for inline calls.** Inline calls are not async runs and today
    produce no `agent_runs` row or provider/driver record
    ([[agent-logging-provider-driver]]). Should inline conversational/generation
