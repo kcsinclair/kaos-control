@@ -1,7 +1,7 @@
 ---
 title: Frontend plan — render agy stream-json progress & summary for gemini-cli runs
 type: plan-frontend
-status: in-development
+status: done
 lineage: gemini-cli-stream-json
 created: "2026-08-25T14:00:00+10:00"
 parent: lifecycle/requirements/gemini-cli-stream-json-2.md
