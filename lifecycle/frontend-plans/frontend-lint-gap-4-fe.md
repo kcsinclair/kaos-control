@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan: ESLint Flat Config & Baseline Remediation"
 type: plan-frontend
-status: draft
+status: approved
 lineage: frontend-lint-gap
 parent: lifecycle/requirements/frontend-lint-gap-2.md
 created: "2026-08-24T19:30:00+10:00"
