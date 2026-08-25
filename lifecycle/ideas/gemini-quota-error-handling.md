@@ -5,6 +5,7 @@ status: approved
 lineage: gemini-quota-error-handling
 created: "2026-08-25T09:53:37+10:00"
 priority: normal
+parent: lifecycle/ideas/agent-logging-provider-driver.md
 labels:
     - agent-runner
     - provider
@@ -12,7 +13,6 @@ labels:
     - reliability
     - driver
 release: KC-Release6
-parent: lifecycle/ideas/agent-logging-provider-driver.md
 ---
 
 # Handle Gemini Quota Errors Gracefully
@@ -22,3 +22,5 @@ Google Gemini returns a distinct error message when an individual quota is reach
 The driver should detect this specific error pattern (and similar Gemini quota messages) and translate it into a structured quota-exceeded signal. When this signal is raised, the run queue should pause automatically for the provider, surfacing the reset time where available, rather than retrying immediately or failing the run outright.
 
 This mirrors any existing quota-pause logic for other providers (e.g. Ollama rate limits) and ensures Gemini quota exhaustion is handled as a first-class, recoverable condition rather than an unexpected crash.
+
+This needs to work with the new JSON stream in [[gemini-cli-stream-json]]
