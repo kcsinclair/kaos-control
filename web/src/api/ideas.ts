@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { api, ApiError } from './client'
+import { api } from './client'
 
 export interface TriageResponse {
   run_id: string

@@ -21,7 +21,7 @@ async function submit() {
   try {
     await auth.login(email.value, password.value)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/projects'
-    router.push(redirect)
+    void router.push(redirect)
   } catch (err) {
     if (err instanceof ApiError) {
       errorMsg.value = err.message

@@ -60,13 +60,13 @@ async function load() {
 }
 
 function openArtifact(artifact: ArtifactRow) {
-  router.push(`/p/${encodeURIComponent(props.project)}/artifacts/${artifact.path}`)
+  void router.push(`/p/${encodeURIComponent(props.project)}/artifacts/${artifact.path}`)
   emit('close')
 }
 
 function openFile() {
   if (detail.value?.file_path) {
-    router.push(`/p/${encodeURIComponent(props.project)}/artifacts/${detail.value.file_path}`)
+    void router.push(`/p/${encodeURIComponent(props.project)}/artifacts/${detail.value.file_path}`)
     emit('close')
   }
 }

@@ -37,14 +37,14 @@ export function useArchitectureMap(project: string) {
   }
 
   useWebSocket(project, 'artifact.indexed', () => {
-    reload()
+    void reload()
   })
   useWebSocket(project, 'file.changed', () => {
-    reload()
+    void reload()
   })
 
   onMounted(() => {
-    reload()
+    void reload()
   })
 
   return { nodes, edges, loading, error, selectedArchId, showStacks, reload }

@@ -17,7 +17,6 @@ export const useRoadmapSettingsStore = defineStore('roadmapSettings', () => {
     if (defaultPeriodModeLoaded.value) return
     try {
       const { raw } = await getConfig(project)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const config = parseConfigYaml(raw) as any
       const defaultMode = config?.roadmap?.default_period_mode as string | undefined
       const fixedPeriods: FixedPeriod[] = ['month', 'quarter', 'half-year', 'year']

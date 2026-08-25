@@ -103,7 +103,7 @@ async function loadProviderModels() {
 }
 
 watch(provider, (val) => {
-  if (val) loadProviderModels()
+  if (val) void loadProviderModels()
   if (driver.value === 'openai-compatible' && !isEdit) {
     model.value = ''
   }

@@ -73,7 +73,7 @@ function onTransitioned(newStatus: string) {
 
 function onRunStarted() {
   showRunAgent.value = false
-  router.push(`/p/${props.project}/agents`)
+  void router.push(`/p/${props.project}/agents`)
   emit('close')
 }
 
@@ -106,7 +106,7 @@ watch(
 
 function openEditor() {
   if (!props.node) return
-  router.push(`/p/${props.project}/artifacts/${props.node.id}`)
+  void router.push(`/p/${props.project}/artifacts/${props.node.id}`)
   emit('close')
 }
 

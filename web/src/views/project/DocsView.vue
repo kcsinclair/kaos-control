@@ -27,11 +27,11 @@ watch(localQuery, (val) => {
 })
 
 onMounted(() => {
-  docsStore.fetch(project)
+  void docsStore.fetch(project)
 })
 
 useWebSocket(project, 'doc.changed', (_e: WsEvent) => {
-  docsStore.applyDocChanged(project)
+  void docsStore.applyDocChanged(project)
 })
 
 const groupedDocs = computed(() => docsStore.groupedDocs)
@@ -39,7 +39,7 @@ const totalDocs = computed(() => docsStore.docs.length)
 const filteredTotal = computed(() => docsStore.filteredDocs.length)
 
 function openDoc(doc: DocEntry): void {
-  router.push({
+  void router.push({
     name: 'docs-editor',
     params: { project, pathMatch: doc.path.split('/') },
   })

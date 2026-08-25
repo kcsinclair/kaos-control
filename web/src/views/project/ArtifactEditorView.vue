@@ -76,7 +76,7 @@ function openDocsModal() {
 
 function onDocsCreated(path: string) {
   showDocsModal.value = false
-  router.push(`/p/${project.value}/artifacts/${path}`)
+  void router.push(`/p/${project.value}/artifacts/${path}`)
 }
 
 // ── run test (single execution) ──────────────────────────────────────────────
@@ -162,7 +162,7 @@ function scrollToOpenQuestions() {
   }
 }
 
-const { acquired: lockAcquired, conflictLock, acquire: acquireLock, release: releaseLock } = useLock(
+const { conflictLock, acquire: acquireLock, release: releaseLock } = useLock(
   project.value,
   () => artifact.value?.lineage ?? '',
 )
@@ -183,7 +183,7 @@ async function autoRefresh() {
 const { hasExternalChange, markSaved, acknowledge } = useExternalChange(
   project.value,
   artifactPath.value,
-  { isDirty: () => editing.value, onAutoRefresh: autoRefresh },
+  { isDirty: () => editing.value, onAutoRefresh: () => void autoRefresh() },
 )
 
 // ── enter / exit edit mode ──────────────────────────────────────────────────
@@ -260,30 +260,32 @@ async function reloadFromDisk() {
 // ── WS: re-index by agent or external tool ───────────────────────────────────
 // load() also re-fetches the open-questions list, so the resolve banner
 // appears/disappears atomically with the status badge without a manual refresh.
-useWebSocket(project.value, 'artifact.indexed', async (e: WsEvent) => {
-  if (e.payload?.path !== artifactPath.value || editing.value) return
-  // Skip if auto-refresh already handled this change (file.changed + re-fetch)
-  if (Date.now() - lastAutoRefreshMs < AUTO_REFRESH_GRACE_MS) return
-  const prevStatus = artifact.value?.status
-  store.invalidate(artifactPath.value)
-  await load()
-  const newStatus = artifact.value?.status
-  if (newStatus !== prevStatus) {
-    if (newStatus === 'blocked') {
-      ui.info('Status changed to blocked — open questions detected.')
-    } else if (prevStatus === 'blocked') {
-      ui.info('Blocked status cleared — open questions resolved.')
-    } else if (newStatus === 'in-qa') {
-      ui.info('QA run started — artifact is now in-qa')
-    } else if (prevStatus === 'in-qa' && newStatus === 'approved') {
-      isStale.value = false
-      ui.success('QA run completed — artifact returned to approved')
+useWebSocket(project.value, 'artifact.indexed', (e: WsEvent) => {
+  void (async () => {
+    if (e.payload?.path !== artifactPath.value || editing.value) return
+    // Skip if auto-refresh already handled this change (file.changed + re-fetch)
+    if (Date.now() - lastAutoRefreshMs < AUTO_REFRESH_GRACE_MS) return
+    const prevStatus = artifact.value?.status
+    store.invalidate(artifactPath.value)
+    await load()
+    const newStatus = artifact.value?.status
+    if (newStatus !== prevStatus) {
+      if (newStatus === 'blocked') {
+        ui.info('Status changed to blocked — open questions detected.')
+      } else if (prevStatus === 'blocked') {
+        ui.info('Blocked status cleared — open questions resolved.')
+      } else if (newStatus === 'in-qa') {
+        ui.info('QA run started — artifact is now in-qa')
+      } else if (prevStatus === 'in-qa' && newStatus === 'approved') {
+        isStale.value = false
+        ui.success('QA run completed — artifact returned to approved')
+      }
     }
-  }
-  // Clear stale warning whenever artifact leaves in-qa
-  if (prevStatus === 'in-qa' && newStatus !== 'in-qa') {
-    isStale.value = false
-  }
+    // Clear stale warning whenever artifact leaves in-qa
+    if (prevStatus === 'in-qa' && newStatus !== 'in-qa') {
+      isStale.value = false
+    }
+  })()
 })
 
 function onTriageStarted(_runId: string) {
@@ -292,12 +294,12 @@ function onTriageStarted(_runId: string) {
 
 watch(artifactPath, () => {
   showPostResolutionPrompt.value = false
-  load()
+  void load()
 }, { immediate: false })
 onMounted(async () => {
   await load()
   if (graphStore.rawEdges.length === 0) {
-    graphStore.fetchGraph(project.value)
+    void graphStore.fetchGraph(project.value)
   }
   // Ensure queue and agents are initialised so QueueWorkButton has data.
   // Always fetch agents for the current project — the store doesn't track which

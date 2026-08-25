@@ -13,7 +13,6 @@ export interface LayoutConfig {
   /** Default options merged into the layout call */
   options: Record<string, unknown>
   /** Optional async import that registers a Cytoscape plugin */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   plugin?: () => Promise<any>
 }
 

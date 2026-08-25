@@ -29,7 +29,7 @@ function formatTime(iso: string): string {
 }
 
 onMounted(() => {
-  store.fetchRunsByTargetPath(props.project, props.targetPath)
+  void store.fetchRunsByTargetPath(props.project, props.targetPath)
 })
 </script>
 

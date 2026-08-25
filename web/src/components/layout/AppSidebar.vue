@@ -63,21 +63,21 @@ async function fetchParseErrors(project: string) {
 
 onMounted(() => {
   const p = projectName()
-  fetchParseErrors(p)
-  testingStore.fetchApprovedCount(p)
+  void fetchParseErrors(p)
+  void testingStore.fetchApprovedCount(p)
 })
 
 watch(() => route.params.project, (p) => {
   if (p) {
-    fetchParseErrors(p as string)
-    testingStore.fetchApprovedCount(p as string)
+    void fetchParseErrors(p as string)
+    void testingStore.fetchApprovedCount(p as string)
   }
 })
 
 // Re-check when artifacts are re-indexed (a re-index may fix or introduce errors)
 useWebSocket(projectName(), 'artifact.indexed', (_e: WsEvent) => {
-  fetchParseErrors(projectName())
-  testingStore.fetchApprovedCount(projectName())
+  void fetchParseErrors(projectName())
+  void testingStore.fetchApprovedCount(projectName())
 })
 
 interface NavItem {

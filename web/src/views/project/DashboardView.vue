@@ -30,13 +30,13 @@ function openBrainDump(type: 'idea' | 'defect' | 'doc', el: HTMLButtonElement) {
 
 function onBrainDumpClose() {
   showBrainDump.value = false
-  nextTick(() => triggerButtonEl.value?.focus())
+  void nextTick(() => triggerButtonEl.value?.focus())
 }
 
 function onBrainDumpCreated(path: string) {
   showBrainDump.value = false
   ui.success('Artifact created!')
-  router.push(`/p/${project.value}/artifacts/${path}`)
+  void router.push(`/p/${project.value}/artifacts/${path}`)
 }
 </script>
 

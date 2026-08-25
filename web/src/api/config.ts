@@ -23,13 +23,11 @@ export function getRoles(project: string) {
 }
 
 // Parse the raw config YAML and return the typed object.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function parseConfigYaml(raw: string): any {
   return yaml.load(raw) ?? {}
 }
 
 // Serialise a config object back to YAML string.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function dumpConfigYaml(obj: any): string {
   return yaml.dump(obj, { lineWidth: -1, quotingType: '"' })
 }

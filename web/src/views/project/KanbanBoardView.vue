@@ -71,7 +71,7 @@ watch(selectedRelease, (val) => {
   } else {
     delete query.release
   }
-  router.replace({ query })
+  void router.replace({ query })
 })
 
 function onFilterChange() {
@@ -141,7 +141,7 @@ useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
   if (refreshDebounce) clearTimeout(refreshDebounce)
   refreshDebounce = setTimeout(() => {
     refreshDebounce = null
-    refresh()
+    void refresh()
   }, 500)
 })
 

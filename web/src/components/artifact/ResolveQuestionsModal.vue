@@ -33,7 +33,7 @@ const allAnswered = computed(() =>
 )
 
 function focusTextarea() {
-  nextTick(() => textareaEl.value?.focus())
+  void nextTick(() => textareaEl.value?.focus())
 }
 
 async function trySave(): Promise<boolean> {
@@ -78,9 +78,9 @@ function onTextareaKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault()
     if (isLast.value) {
-      if (allAnswered.value) handleFinish()
+      if (allAnswered.value) void handleFinish()
     } else {
-      goNext()
+      void goNext()
     }
   }
 }
@@ -108,7 +108,7 @@ function trapFocus(e: KeyboardEvent) {
 
 function onPanelKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
-    handleClose()
+    void handleClose()
     return
   }
   if (e.key === 'Tab') trapFocus(e)

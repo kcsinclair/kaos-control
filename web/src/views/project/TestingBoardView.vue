@@ -82,22 +82,22 @@ function onCheckboxKeydown(e: KeyboardEvent, path: string) {
 
 // ── batch execution ───────────────────────────────────────────────────────────
 function runSelected() {
-  store.startBatch(project)
+  void store.startBatch(project)
 }
 
 function runAllApproved() {
   store.selectAll()
-  store.startBatch(project)
+  void store.startBatch(project)
 }
 
 // ── navigation ────────────────────────────────────────────────────────────────
 function openArtifact(artifact: ArtifactRow) {
-  router.push(`/p/${project}/artifacts/${artifact.path}`)
+  void router.push(`/p/${project}/artifacts/${artifact.path}`)
 }
 
 // ── WS refresh ────────────────────────────────────────────────────────────────
 useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
-  store.fetchTests(project)
+  void store.fetchTests(project)
 })
 
 onMounted(async () => {

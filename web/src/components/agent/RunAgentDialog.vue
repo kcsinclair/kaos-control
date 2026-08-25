@@ -56,7 +56,7 @@ async function start() {
 }
 
 onMounted(() => {
-  if (!store.agents.length) store.fetchAgents(props.project)
+  if (!store.agents.length) void store.fetchAgents(props.project)
 })
 </script>
 

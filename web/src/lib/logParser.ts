@@ -17,9 +17,9 @@ export function parseLogTurns(logContent: string): RunTurn[] {
   let readingUser = false
   let readingCompleted = false
 
-  let systemPromptLines: string[] = []
-  let userPromptLines: string[] = []
-  let completedLines: string[] = []
+  const systemPromptLines: string[] = []
+  const userPromptLines: string[] = []
+  const completedLines: string[] = []
 
   let currentTurn: RunTurn | null = null
   let currentToolCall: ToolCallRecord | null = null

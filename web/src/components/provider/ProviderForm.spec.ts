@@ -43,8 +43,8 @@ describe('ProviderForm', () => {
     const addHeaderBtn = wrapper.find('.btn-add-header')
     await addHeaderBtn.trigger('click')
 
-    let keyInputs = wrapper.findAll('.pvf-header-key')
-    let valInputs = wrapper.findAll('.pvf-header-val')
+    const keyInputs = wrapper.findAll('.pvf-header-key')
+    const valInputs = wrapper.findAll('.pvf-header-val')
     await keyInputs[0].setValue('X-Custom-Header')
     await valInputs[0].setValue('HeaderValue')
 

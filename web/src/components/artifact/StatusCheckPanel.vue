@@ -117,7 +117,7 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleRefresh() {
   if (debounceTimer) clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
-    fetchResults()
+    void fetchResults()
   }, 500)
 }
 

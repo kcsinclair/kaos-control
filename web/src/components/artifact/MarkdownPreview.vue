@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 
@@ -24,7 +24,7 @@ function onLinkClick(e: MouseEvent) {
   const href = a.getAttribute('href') ?? ''
   if (href.startsWith('/')) {
     e.preventDefault()
-    router.push(href)
+    void router.push(href)
   }
 }
 
@@ -66,6 +66,7 @@ const rendered = computed(() => {
 </script>
 
 <template>
+  <!-- eslint-disable-next-line vue/no-v-html -- rendered is markdown-it output, not user-controlled raw HTML -->
   <div class="md-preview" v-html="rendered" @click="onLinkClick" />
 </template>
 

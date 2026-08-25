@@ -3,7 +3,7 @@
 <script setup lang="ts">
 import type { AgentUsageSummary } from '@/types/api'
 
-const props = defineProps<{ summary: AgentUsageSummary }>()
+defineProps<{ summary: AgentUsageSummary }>()
 
 function fmt(n: number | null | undefined, decimals: number, suffix = ''): string {
   if (n == null) return '—'
@@ -24,7 +24,7 @@ function fmtDuration(ms: number | null | undefined): string {
   return `${m}m ${s}s`
 }
 
-function successRate(s: typeof props.summary.overall): string {
+function successRate(s: AgentUsageSummary['overall']): string {
   if (s.run_count === 0) return '—'
   return ((s.success_count / s.run_count) * 100).toFixed(1) + '%'
 }

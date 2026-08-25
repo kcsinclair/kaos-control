@@ -63,7 +63,7 @@ async function retryLog(): Promise<void> {
 }
 
 onMounted(() => {
-  devops.fetchPipelineHistory(props.project, props.pipelineSlug)
+  void devops.fetchPipelineHistory(props.project, props.pipelineSlug)
 })
 
 function toggle() {

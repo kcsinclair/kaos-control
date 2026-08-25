@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReleasesStore } from '@/stores/releases'
 import { ApiError } from '@/api/client'
@@ -104,7 +104,7 @@ function setScheduled(val: boolean) {
 
 function navigateToFile() {
   if (props.release?.file_path) {
-    router.push(`/p/${encodeURIComponent(props.project)}/artifacts/${props.release.file_path}`)
+    void router.push(`/p/${encodeURIComponent(props.project)}/artifacts/${props.release.file_path}`)
     emit('close')
   }
 }

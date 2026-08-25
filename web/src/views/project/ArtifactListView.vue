@@ -120,20 +120,20 @@ function openBrainDump(type: 'idea' | 'defect' | 'doc' = 'idea') {
 
 function onBrainDumpClose() {
   showBrainDump.value = false
-  nextTick(() => newIdeaButtonEl.value?.focus())
+  void nextTick(() => newIdeaButtonEl.value?.focus())
 }
 
 function onBrainDumpCreated(path: string) {
   showBrainDump.value = false
   ui.success('Artifact created!')
-  router.push(`/p/${project}/artifacts/${path}`)
+  void router.push(`/p/${project}/artifacts/${path}`)
 }
 
 function onAdrCreated(path: string) {
   showNewAdrModal.value = false
   ui.success('ADR created!')
   store.invalidate()
-  router.push(`/p/${project}/artifacts/${path}`)
+  void router.push(`/p/${project}/artifacts/${path}`)
 }
 
 const project = route.params.project as string
@@ -157,7 +157,7 @@ const searchText = ref('')
 function applyFilters() {
   resetSort()
   setPage(1)
-  store.fetchList(project, {
+  void store.fetchList(project, {
     stage: selectedStage.value || undefined,
     status: selectedStatus.value || undefined,
     label: selectedLabel.value || undefined,
@@ -230,7 +230,7 @@ function onToggleSort(col: string) {
 }
 
 function openArtifact(path: string) {
-  router.push(`/p/${project}/artifacts/${path}`)
+  void router.push(`/p/${project}/artifacts/${path}`)
 }
 
 function onRiceChanged(row: ArtifactRow, components: RiceComponents) {
@@ -247,7 +247,7 @@ function onRiceChanged(row: ArtifactRow, components: RiceComponents) {
 // Re-fetch when an artifact is indexed via WebSocket
 useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 
 // Re-fetch immediately when an agent run starts so the "Agent Running" pill
@@ -255,24 +255,24 @@ useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
 // appear if an `artifact.indexed` event happened to fire mid-run.
 useWebSocket(project, 'agent.started', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 
 // Re-fetch immediately when an agent run finishes so counts and pills update
 useWebSocket(project, 'agent.finished', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 
 // Re-fetch when a job is queued or cancelled so the "Queued for Agent" pill
 // appears/clears live — queued jobs fire no agent.started/finished event.
 useWebSocket(project, 'queue.added', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 useWebSocket(project, 'queue.cancelled', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 
 function initFiltersFromQuery() {
@@ -450,6 +450,7 @@ onMounted(async () => {
           >
             <td class="cell-path">
               <span class="cell-path-title-row">
+                <!-- eslint-disable-next-line vue/no-v-html -- highlightMatch escapes the text itself and only injects a <mark> wrapper -->
                 <span class="artifact-title" v-html="highlightMatch(row.title || row.slug)" />
                 <span
                   v-if="row.type === 'defect' && row.frontmatter?.labels?.includes('auto-filed')"

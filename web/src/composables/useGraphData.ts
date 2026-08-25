@@ -8,11 +8,11 @@ export function useGraphData(project: string) {
   const store = useGraphStore()
 
   useWebSocket(project, 'artifact.indexed', () => {
-    store.fetchGraph(project)
+    void store.fetchGraph(project)
   })
 
   onMounted(() => {
-    store.fetchGraph(project)
+    void store.fetchGraph(project)
   })
 
   return store

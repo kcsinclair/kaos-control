@@ -16,10 +16,10 @@ const props = defineProps<{
 const gitStatusStore = useGitStatusStore()
 
 // Fetch on mount and whenever the project changes
-gitStatusStore.fetch(props.project)
+void gitStatusStore.fetch(props.project)
 watch(
   () => props.project,
-  (p) => { if (p) gitStatusStore.fetch(p) },
+  (p) => { if (p) void gitStatusStore.fetch(p) },
 )
 
 // Subscribe to live WebSocket updates

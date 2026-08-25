@@ -74,9 +74,9 @@ function onTextareaKeydown(e: KeyboardEvent) {
     e.preventDefault()
     if (store.canSubmit) {
       if (props.artifactType === 'doc') {
-        onCreateDoc()
+        void onCreateDoc()
       } else {
-        store.generate(props.project, docOpts())
+        void store.generate(props.project, docOpts())
       }
     }
   }
@@ -129,7 +129,7 @@ async function onGenerate() {
   if (!store.canSubmit) return
   await store.generate(props.project, docOpts())
   // focus panel after transition so keyboard users can Tab to actions
-  nextTick(() => panelEl.value?.focus())
+  void nextTick(() => panelEl.value?.focus())
 }
 
 async function onAccept() {
@@ -162,7 +162,7 @@ async function onCreateDefectManually() {
 
 function onEdit() {
   store.startEdit()
-  nextTick(() => editTextareaEl.value?.focus())
+  void nextTick(() => editTextareaEl.value?.focus())
 }
 
 function onApplyEdit() {
@@ -177,7 +177,7 @@ function onDiscard() {
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 
 onMounted(() => {
-  nextTick(() => textareaEl.value?.focus())
+  void nextTick(() => textareaEl.value?.focus())
 })
 
 // Prevent body scroll while modal is open
@@ -189,7 +189,7 @@ watch(
   () => store.phase,
   (p) => {
     if (p === 'editing') {
-      nextTick(() => editTextareaEl.value?.focus())
+      void nextTick(() => editTextareaEl.value?.focus())
     }
   },
 )
@@ -294,6 +294,7 @@ watch(
             </div>
             <div class="bdm-divider" />
             <!-- Rendered markdown -->
+            <!-- eslint-disable-next-line vue/no-v-html -- renderedBody is markdown-it output, not user-controlled raw HTML -->
             <div class="bdm-md-preview md-preview" v-html="renderedBody" />
             <!-- Error from accept -->
             <div v-if="store.error" class="bdm-error" role="alert">

@@ -35,9 +35,7 @@ const graphStore = useGraphStore()
 const { palette, isDark } = useGraphTheme()
 
 const container = ref<HTMLDivElement | null>(null)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cy: any = null
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let Cy: any = null
 let pulseInterval: ReturnType<typeof setInterval> | null = null
 let pulseTick = false
@@ -384,7 +382,7 @@ async function update() {
   // Pure release-overlay REMOVE: yank release nodes (Cytoscape removes their edges automatically).
   if (removedAreAllRelease && addedNodes.length === 0) {
     removedIds.forEach((id) => cy.getElementById(id).remove())
-    nextTick(applySearchHighlight)
+    void nextTick(applySearchHighlight)
     return
   }
 
@@ -423,7 +421,7 @@ async function update() {
         },
       }))
     cy.add([...newCyNodes, ...newCyEdges])
-    nextTick(applySearchHighlight)
+    void nextTick(applySearchHighlight)
     return
   }
 
@@ -431,7 +429,7 @@ async function update() {
   cy.elements().remove()
   cy.add(buildElements())
   await runLayout(false)
-  nextTick(applySearchHighlight)
+  void nextTick(applySearchHighlight)
 }
 
 // Reactively update Cytoscape colours on theme change — no layout rebuild

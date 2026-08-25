@@ -97,14 +97,14 @@ function subscribeWs(project: string) {
 }
 
 onMounted(() => {
-  syncProject()
+  void syncProject()
   subscribeWs(getProject())
   void appStore.fetchVersion()
 })
 
 watch(() => route.params.project, (newProject) => {
   if (newProject) {
-    syncProject()
+    void syncProject()
     subscribeWs(newProject as string)
   }
 })

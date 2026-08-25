@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { api } from './client'
-import type { ArtifactRow, ArtifactDetail, ArtifactFilter, ArtifactFrontmatter, LineageSummary, OpenQuestionsResponse } from '@/types/api'
+import type { ArtifactRow, ArtifactFilter, ArtifactFrontmatter, LineageSummary, OpenQuestionsResponse } from '@/types/api'
 import type { RiceComponents } from '@/lib/rice'
 
 function filterParams(f: ArtifactFilter): string {

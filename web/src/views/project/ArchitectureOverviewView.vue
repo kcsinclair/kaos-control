@@ -56,8 +56,8 @@ const showNewAdrModal = ref(false)
 function onAdrCreated(path: string) {
   showNewAdrModal.value = false
   ui.success('ADR created!')
-  reload()
-  router.push(`/p/${project}/artifacts/${path}`)
+  void reload()
+  void router.push(`/p/${project}/artifacts/${path}`)
 }
 </script>
 

@@ -24,7 +24,11 @@ export default defineConfigWithVueTs(
       'vue/no-unused-components': 'error',
       'vue/no-mutating-props': 'error',
       'vue/no-v-html': 'error',
-      eqeqeq: ['error', 'always'],
+      // 'smart' still forces === / !== everywhere except the standard
+      // `== null` / `!= null` idiom, which intentionally matches both
+      // null and undefined in one check — 'always' would force splitting
+      // every such check into two comparisons for no behavioural gain.
+      eqeqeq: ['error', 'smart'],
       'prefer-const': 'error',
     },
   },

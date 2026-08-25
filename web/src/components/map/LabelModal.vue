@@ -22,7 +22,7 @@ const artifacts = computed(() =>
 )
 
 function openArtifact(node: GraphNode) {
-  router.push(`/p/${props.project}/artifacts/${node.id}`)
+  void router.push(`/p/${props.project}/artifacts/${node.id}`)
   emit('close')
 }
 

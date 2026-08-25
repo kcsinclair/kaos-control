@@ -30,7 +30,7 @@ const sortedProjects = computed(() =>
 
 function openProject(name: string) {
   projectStore.setCurrent(name)
-  router.push(`/p/${encodeURIComponent(name)}`)
+  void router.push(`/p/${encodeURIComponent(name)}`)
 }
 </script>
 

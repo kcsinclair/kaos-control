@@ -103,7 +103,7 @@ onMounted(() => {
   // The click listener must be registered after the chart is created.
   // useECharts initialises on onMounted, so we schedule this as a
   // microtask to run after that hook completes.
-  Promise.resolve().then(() => {
+  void Promise.resolve().then(() => {
     chart()?.on('click', onChartClick)
   })
 })

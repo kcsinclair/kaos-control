@@ -47,7 +47,7 @@ const failoverBadgeTooltip = computed(() =>
 async function handleLogout() {
   try {
     await auth.logout()
-    router.push('/login')
+    void router.push('/login')
   } catch (err) {
     if (err instanceof ApiError) {
       ui.error(err.message)

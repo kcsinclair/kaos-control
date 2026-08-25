@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useWebSocket } from '@/composables/useWebSocket'
 import * as releasesApi from '@/api/releases'
 import type { GraphNode, GraphEdge, GraphData } from '@/types/api'
@@ -107,10 +107,10 @@ function handleNodeClick(node: GraphNode) {
 onMounted(load)
 
 // Refresh on release or artifact WS events
-useWebSocket(props.project, 'release.created', load)
-useWebSocket(props.project, 'release.updated', load)
-useWebSocket(props.project, 'release.deleted', load)
-useWebSocket(props.project, 'artifact.indexed', load)
+useWebSocket(props.project, 'release.created', () => void load())
+useWebSocket(props.project, 'release.updated', () => void load())
+useWebSocket(props.project, 'release.deleted', () => void load())
+useWebSocket(props.project, 'artifact.indexed', () => void load())
 </script>
 
 <template>

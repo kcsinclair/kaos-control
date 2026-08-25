@@ -108,14 +108,12 @@ async function handleAgentFormSubmit(data: AgentFormData) {
   const wasEdit = !!editAgent.value
   try {
     const res = await configApi.getConfig(project)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cfg = configApi.parseConfigYaml(res.raw) as any
     const agents: unknown[] = Array.isArray(cfg.agents) ? cfg.agents : []
     const idx = agents.findIndex((a) => (a as Record<string, unknown>).name === data.name)
 
     // Start from a copy of the existing on-disk entry (or empty, for create)
     // and merge only the fields the form manages onto it.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const entry: Record<string, any> = idx >= 0 ? { ...(agents[idx] as Record<string, unknown>) } : {}
 
     entry.name = data.name
@@ -257,12 +255,12 @@ async function kill(runId: string) {
 }
 
 onMounted(() => {
-  store.fetchRuns(project)
-  if (!store.agents.length) store.fetchAgents(project)
+  void store.fetchRuns(project)
+  if (!store.agents.length) void store.fetchAgents(project)
   // Ready counts populate the per-agent badge; without this initial fetch the
   // badges would read 0 until the first artifact.indexed WebSocket event.
   void store.fetchReadyCounts(project)
-  configStore.fetchRoles(project)
+  void configStore.fetchRoles(project)
   if (import.meta.env.MODE !== 'test') queueStore.fetch().catch(() => {})
 })
 </script>

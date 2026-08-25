@@ -23,7 +23,7 @@ const ariaLabel = computed(() =>
 )
 
 function navigate() {
-  if (props.to) router.push(props.to)
+  if (props.to) void router.push(props.to)
 }
 </script>
 

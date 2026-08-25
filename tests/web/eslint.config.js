@@ -20,7 +20,9 @@ export default defineConfigWithVueTs(
       'vue/no-unused-components': 'error',
       'vue/no-mutating-props': 'error',
       'vue/no-v-html': 'error',
-      eqeqeq: ['error', 'always'],
+      // See web/eslint.config.js — 'smart' keeps === / !== everywhere
+      // except the `== null` / `!= null` idiom.
+      eqeqeq: ['error', 'smart'],
       'prefer-const': 'error',
     },
   },
