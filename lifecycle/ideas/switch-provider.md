@@ -1,7 +1,7 @@
 ---
 title: Switch provider function
 type: idea
-status: in-development
+status: done
 lineage: switch-provider
 created: "2026-08-24T17:52:03+10:00"
 parent: lifecycle/ideas/open-provider-support.md
