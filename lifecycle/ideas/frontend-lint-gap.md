@@ -1,7 +1,7 @@
 ---
 title: Frontend Lint Coverage Gap
 type: idea
-status: planning
+status: done
 lineage: frontend-lint-gap
 created: "2026-07-14T19:34:44+10:00"
 priority: medium
