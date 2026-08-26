@@ -52,7 +52,7 @@ func (c *openAICompleter) Complete(ctx context.Context, cfg ModelConfig, message
 		reqBody.Messages = append(reqBody.Messages, openAICompletionMessage{Role: "system", Content: cfg.SystemPrompt})
 	}
 	for _, m := range messages {
-		reqBody.Messages = append(reqBody.Messages, openAICompletionMessage{Role: m.Role, Content: m.Content})
+		reqBody.Messages = append(reqBody.Messages, openAICompletionMessage(m))
 	}
 	if cfg.MaxTokens > 0 {
 		reqBody.MaxTokens = cfg.MaxTokens
