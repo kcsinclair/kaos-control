@@ -1,7 +1,7 @@
 ---
 title: "Frontend Plan — Surface Run Provider and Driver in the UI"
 type: plan-frontend
-status: in-development
+status: done
 lineage: agent-logging-provider-driver
 parent: lifecycle/requirements/agent-logging-provider-driver-2.md
 created: "2026-08-25T11:20:00+10:00"
