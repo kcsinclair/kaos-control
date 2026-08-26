@@ -1,7 +1,7 @@
 ---
 title: Inline Conversational Driver Provider Abstraction — Frontend Plan
 type: plan-frontend
-status: in-development
+status: done
 lineage: inline-driver-provider-abstraction
 parent: lifecycle/requirements/inline-driver-provider-abstraction-2.md
 created: "2026-08-25T14:30:00+10:00"
