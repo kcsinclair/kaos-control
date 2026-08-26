@@ -81,8 +81,8 @@ type OpenOptions struct {
 	MaxConcurrentAgents        int
 	MaxConcurrentSchedulerJobs int
 	SchedulerRunRetentionDays  int
-	Providers                  []config.Provider       // app-level LLM providers
-	AgentCfg                   config.AppAgentConfig   // precheck timeout + bypass-permissions flag
+	Providers                  []config.Provider     // app-level LLM providers
+	AgentCfg                   config.AppAgentConfig // precheck timeout + bypass-permissions flag
 
 	// DevopsLogDir is the base directory for pipeline run logs.
 	// Logs are stored at DevopsLogDir/<project-name>/<run_id>.log.
@@ -113,6 +113,9 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	cfg, err := config.LoadProject(entry.Path)
 	if err != nil {
 		return nil, fmt.Errorf("project %q: loading config: %w", entry.Name, err)
+	}
+	if err := config.ValidateAgentProviders(cfg, opts.Providers); err != nil {
+		return nil, fmt.Errorf("project %q: %w", entry.Name, err)
 	}
 
 	// Retrofit lifecycle/architecture/ for existing projects that predate it

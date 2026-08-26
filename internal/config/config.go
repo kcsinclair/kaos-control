@@ -1342,6 +1342,26 @@ func validateProject(cfg *Project) error {
 	return nil
 }
 
+// ValidateAgentProviders rejects an inline agent (driver "inline") whose
+// provider names a provider not present in the app-level provider list,
+// consistent with the async-path rule in [[provider-model-for-agents]].
+// It is a distinct check from validateProject's intra-project rules because
+// it needs the app-level provider list, which validateProject (called from
+// LoadProject) does not have access to — callers run it at the seam where
+// both project and app config are available (project.Open).
+func ValidateAgentProviders(cfg *Project, providers []ProviderConfig) error {
+	names := make(map[string]bool, len(providers))
+	for _, p := range providers {
+		names[p.Name] = true
+	}
+	for _, a := range cfg.Agents {
+		if a.Driver == "inline" && a.Provider != "" && !names[a.Provider] {
+			return fmt.Errorf("project config: agent %q references unknown provider %q", a.Name, a.Provider)
+		}
+	}
+	return nil
+}
+
 // IsInitialised reports whether a project at projectPath has been initialised
 // (i.e. lifecycle/config.yaml exists on disk).
 func IsInitialised(projectPath string) bool {

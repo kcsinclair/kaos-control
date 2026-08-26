@@ -1643,6 +1643,90 @@ func TestProjectConfig_OpenAICompatibleAgent(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// inline-driver-provider-abstraction-3-be Milestone 5 — config validation
+// for inline provider bindings (FR-6)
+// ---------------------------------------------------------------------------
+
+func TestProjectConfig_InlineAgentProviderRequiresModel(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: idea-capture
+    role: [analyst]
+    driver: inline
+    provider: local-llama
+    prompt_templates:
+      idea-capture: "x"
+`)
+	_, err := LoadProject(dir)
+	if err == nil || !strings.Contains(err.Error(), "missing model") {
+		t.Fatalf("expected missing model error, got: %v", err)
+	}
+}
+
+func TestProjectConfig_InlineAgentNoProviderValidatesAsToday(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: idea-capture
+    role: [analyst]
+    driver: inline
+    model: claude-sonnet-4-6
+    prompt_templates:
+      idea-capture: "x"
+`)
+	if _, err := LoadProject(dir); err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+}
+
+func TestValidateAgentProviders(t *testing.T) {
+	t.Run("inline agent with unregistered provider is rejected", func(t *testing.T) {
+		cfg := &Project{Agents: []AgentConfig{{
+			Name:     "idea-capture",
+			Driver:   "inline",
+			Provider: "ghost",
+			Model:    "m",
+		}}}
+		err := ValidateAgentProviders(cfg, []ProviderConfig{{Name: "local-llama"}})
+		if err == nil || !strings.Contains(err.Error(), "idea-capture") || !strings.Contains(err.Error(), "ghost") {
+			t.Fatalf("expected error naming agent and provider, got: %v", err)
+		}
+	})
+
+	t.Run("inline agent with registered provider passes", func(t *testing.T) {
+		cfg := &Project{Agents: []AgentConfig{{
+			Name:     "idea-capture",
+			Driver:   "inline",
+			Provider: "local-llama",
+			Model:    "m",
+		}}}
+		if err := ValidateAgentProviders(cfg, []ProviderConfig{{Name: "local-llama"}}); err != nil {
+			t.Fatalf("ValidateAgentProviders: %v", err)
+		}
+	})
+
+	t.Run("inline agent with no provider passes regardless of app config", func(t *testing.T) {
+		cfg := &Project{Agents: []AgentConfig{{
+			Name:   "idea-capture",
+			Driver: "inline",
+			Model:  "claude-sonnet-4-6",
+		}}}
+		if err := ValidateAgentProviders(cfg, nil); err != nil {
+			t.Fatalf("ValidateAgentProviders: %v", err)
+		}
+	})
+
+	t.Run("non-inline agent with unregistered provider is not this check's concern", func(t *testing.T) {
+		cfg := &Project{Agents: []AgentConfig{{
+			Name:     "async-agent",
+			Driver:   "openai-compatible",
+			Provider: "ghost",
+			Model:    "m",
+		}}}
+		if err := ValidateAgentProviders(cfg, nil); err != nil {
+			t.Fatalf("ValidateAgentProviders: %v", err)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
 // switch-provider-3-be Milestone 1 — fallback config, failover policy,
 // provider templates
 // ---------------------------------------------------------------------------
@@ -1832,4 +1916,3 @@ func TestProviderTemplates_ParseAndValidate(t *testing.T) {
 		}
 	})
 }
-
