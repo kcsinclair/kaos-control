@@ -37,17 +37,30 @@ function failureBadgeTitle(reason: string): string {
   return getFailureReasonInfo(reason)?.heading ?? LEGACY_FAILURE_LABELS[reason] ?? `Run failed: ${reason}`
 }
 
-function agentDriver(agentName: string, agents: AgentSummary[]): string {
-  const a = agents.find((ag) => ag.name === agentName)
-  if (!a) return ''
-  if (a.driver === 'ollama') return 'Ollama'
-  if (a.driver === 'claude-code-cli') return 'Claude Code'
-  if (a.driver === 'claude-mediated') return 'Claude Mediated'
-  if (a.driver === 'codex-cli') return 'Codex'
-  if (a.driver === 'gemini') return 'Gemini'
-  if (a.driver === 'gemini-cli') return 'Gemini CLI'
-  if (a.driver === 'openai-compatible') return 'OpenAI Compatible'
-  return a.driver
+function driverLabel(driver: string): string {
+  if (driver === 'ollama') return 'Ollama'
+  if (driver === 'claude-code-cli') return 'Claude Code'
+  if (driver === 'claude-mediated') return 'Claude Mediated'
+  if (driver === 'codex-cli') return 'Codex'
+  if (driver === 'gemini') return 'Gemini'
+  if (driver === 'gemini-cli') return 'Gemini CLI'
+  if (driver === 'openai-compatible') return 'OpenAI Compatible'
+  return driver
+}
+
+// Prefers the driver recorded on the run itself (immutable, set at
+// run-start) over the agent's current config, so a historical run keeps
+// showing the driver it actually ran with even after the agent's config
+// changes. Falls back to the config-derived driver only for legacy rows
+// with no run.driver recorded.
+function runDriverId(run: AgentRunRow, agents: AgentSummary[]): string {
+  if (run.driver) return run.driver
+  return agents.find((ag) => ag.name === run.agent_name)?.driver ?? ''
+}
+
+function runDriverLabel(run: AgentRunRow, agents: AgentSummary[]): string {
+  const driver = runDriverId(run, agents)
+  return driver ? driverLabel(driver) : ''
 }
 
 function agentHasTokenMetrics(agentName: string): boolean {
@@ -318,10 +331,11 @@ onMounted(() => {
                 <td>{{ run.agent_name }}</td>
                 <td>
                   <span
-                    v-if="agentDriver(run.agent_name, store.agents)"
+                    v-if="runDriverLabel(run, store.agents)"
                     class="driver-badge"
-                    :data-driver="store.agents.find(a => a.name === run.agent_name)?.driver"
-                  >{{ agentDriver(run.agent_name, store.agents) }}</span>
+                    :data-driver="runDriverId(run, store.agents)"
+                  >{{ runDriverLabel(run, store.agents) }}</span>
+                  <span v-if="run.provider" class="provider-sublabel">{{ run.provider }}</span>
                 </td>
                 <td class="cell-path">
                   <button
@@ -730,6 +744,13 @@ onMounted(() => {
 .driver-badge[data-driver="gemini"] { background: #e0e7ff; color: #4338ca; }
 .driver-badge[data-driver="gemini-cli"] { background: #ccfbf1; color: #0f766e; }
 .driver-badge[data-driver="openai-compatible"] { background: #d1fae5; color: #065f46; }
+.provider-sublabel {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
 /* Queue pause banner */
 .queue-pause-banner {
   display: flex;
