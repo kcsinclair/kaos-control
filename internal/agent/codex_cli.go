@@ -80,8 +80,7 @@ func (d *CodexCLIDriver) Start(ctx context.Context, run Run) (Process, error) {
 				slog.Warn("agent: opening log file failed", "path", run.LogPath, "err", err)
 			} else {
 				logFile = f
-				fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s model=%s\n# args=%v\n# started=%s\n\n",
-					run.RunID, run.AgentName, run.Role, run.Model, args, time.Now().Format(time.RFC3339))
+				writeRunLogHeader(logFile, run, args)
 			}
 		}
 	}

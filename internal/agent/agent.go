@@ -216,6 +216,19 @@ func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) 
 	return startCommandProcess(ctx, cmd, run, args, "claude")
 }
 
+// writeRunLogHeader writes the canonical per-run log header — agent, role,
+// driver, provider, and model — shared by every driver so the fields never
+// drift out of sync across drivers again. args is omitted from the header
+// when nil (drivers that don't build a CLI arg list don't fabricate one).
+func writeRunLogHeader(w io.Writer, run Run, args any) {
+	fmt.Fprintf(w, "# kaos-control agent run %s\n# agent=%s role=%s driver=%s provider=%s model=%s\n",
+		run.RunID, run.AgentName, run.Role, run.Driver, run.ProviderName, run.Model)
+	if args != nil {
+		fmt.Fprintf(w, "# args=%v\n", args)
+	}
+	fmt.Fprintf(w, "# started=%s\n\n", time.Now().Format(time.RFC3339))
+}
+
 // startCommandProcess is the shared subprocess launcher used by CLI drivers.
 // readerDrainGrace bounds how long the process-reaper waits for the stdout/
 // stderr readers to hit EOF before calling cmd.Wait() (which force-closes the
@@ -251,8 +264,7 @@ func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []strin
 				slog.Warn("agent: opening log file failed", "path", run.LogPath, "err", err)
 			} else {
 				logFile = f
-				fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s model=%s\n# args=%v\n# started=%s\n\n",
-					run.RunID, run.AgentName, run.Role, run.Model, args, time.Now().Format(time.RFC3339))
+				writeRunLogHeader(logFile, run, args)
 			}
 		}
 	}

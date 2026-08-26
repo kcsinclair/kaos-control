@@ -7,8 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
+	"time"
 )
 
 // ShellStubDriver is a test-only agent driver that runs a configurable shell
@@ -23,6 +27,7 @@ type stubProcess struct {
 	cmd       *exec.Cmd
 	progress  chan ProgressEvent
 	stderrBuf *ringBuf
+	logFile   *os.File // nil if no log path was configured
 }
 
 func (d *ShellStubDriver) Start(ctx context.Context, run Run) (Process, error) {
@@ -45,11 +50,30 @@ func (d *ShellStubDriver) Start(ctx context.Context, run Run) (Process, error) {
 
 	progressCh := make(chan ProgressEvent, 64)
 
+	// Open the per-run log file if configured, mirroring startCommandProcess.
+	var logFile *os.File
+	if run.LogPath != "" {
+		if err := os.MkdirAll(filepath.Dir(run.LogPath), 0o755); err != nil {
+			slog.Warn("shell-stub agent: creating log dir failed", "path", run.LogPath, "err", err)
+		} else {
+			f, err := os.OpenFile(run.LogPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+			if err != nil {
+				slog.Warn("shell-stub agent: opening log file failed", "path", run.LogPath, "err", err)
+			} else {
+				logFile = f
+				writeRunLogHeader(logFile, run, nil)
+			}
+		}
+	}
+
 	if err := cmd.Start(); err != nil {
+		if logFile != nil {
+			_ = logFile.Close()
+		}
 		return nil, fmt.Errorf("shell-stub start: %w", err)
 	}
 
-	p := &stubProcess{cmd: cmd, progress: progressCh, stderrBuf: rb}
+	p := &stubProcess{cmd: cmd, progress: progressCh, stderrBuf: rb, logFile: logFile}
 
 	// Both reader goroutines below only ever write to progressCh (the stdout
 	// scanner) or read from stderr (never touching progressCh). Neither may
@@ -93,6 +117,10 @@ func (d *ShellStubDriver) Start(ctx context.Context, run Run) (Process, error) {
 
 	go func() {
 		wg.Wait()
+		if logFile != nil {
+			fmt.Fprintf(logFile, "\n# finished=%s\n", time.Now().Format(time.RFC3339))
+			_ = logFile.Close()
+		}
 		close(progressCh)
 	}()
 

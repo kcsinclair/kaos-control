@@ -94,6 +94,7 @@ func TestGeminiDriver_Start_Success(t *testing.T) {
 		RunID:          "test-run-123",
 		AgentName:      "test-gemini-agent",
 		Role:           "test-role",
+		Driver:         "gemini",
 		Model:          "gemini-2.5-flash",
 		PromptText:     "---SYSTEM---\nYou are a helpful assistant.\n---USER---\nSay hello world",
 		LogPath:        logPath,
@@ -152,7 +153,7 @@ func TestGeminiDriver_Start_Success(t *testing.T) {
 
 	expectedLogSnippets := []string{
 		"# kaos-control agent run test-run-123",
-		"# agent=test-gemini-agent role=test-role driver=gemini model=gemini-2.5-flash",
+		"# agent=test-gemini-agent role=test-role driver=gemini provider= model=gemini-2.5-flash",
 		"# system_prompt:",
 		"You are a helpful assistant.",
 		"# user_prompt:",
