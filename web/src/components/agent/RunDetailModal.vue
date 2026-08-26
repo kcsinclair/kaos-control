@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import * as agentsApi from '@/api/agents'
 import type { AgentRunRow, RunResult } from '@/types/api'
 import RunSummaryCard from './RunSummaryCard.vue'
@@ -127,14 +127,38 @@ function formatDatetime(iso: string | undefined): string {
   return new Date(iso).toLocaleString()
 }
 
-function agentHasTokenMetrics(agentName: string): boolean {
-  const driver = agentsStore.agents.find((agent) => agent.name === agentName)?.driver
+// Driver id recorded on the run itself (immutable, set at run-start) takes
+// precedence over the agent's current config, which may have since changed.
+function runDriverId(r: AgentRunRow): string | undefined {
+  return r.driver || agentsStore.agents.find((agent) => agent.name === r.agent_name)?.driver
+}
+
+function driverLabel(driver: string): string {
+  if (driver === 'ollama') return 'Ollama'
+  if (driver === 'claude-code-cli') return 'Claude Code'
+  if (driver === 'claude-mediated') return 'Claude Mediated'
+  if (driver === 'codex-cli') return 'Codex'
+  if (driver === 'gemini') return 'Gemini'
+  if (driver === 'gemini-cli') return 'Gemini CLI'
+  if (driver === 'openai-compatible') return 'OpenAI Compatible'
+  return driver
+}
+
+function runDriverDisplay(r: AgentRunRow): string {
+  const driver = runDriverId(r)
+  return driver ? driverLabel(driver) : '—'
+}
+
+function agentHasTokenMetrics(r: AgentRunRow): boolean {
+  const driver = runDriverId(r)
   if (!driver) return true
   return driver === 'claude-code-cli' || driver === 'claude-mediated'
 }
 
-function providerNameFor(agentName: string): string | undefined {
-  return agentsStore.agents.find((agent) => agent.name === agentName)?.provider
+// Recorded run.provider (immutable) takes precedence over the agent's
+// current config, which may have since switched providers.
+function providerNameFor(r: AgentRunRow): string | undefined {
+  return r.provider || agentsStore.agents.find((agent) => agent.name === r.agent_name)?.provider
 }
 
 // Warmup state lives only on the agentsStore's live (WS-updated) copy of the
@@ -234,6 +258,18 @@ function handleKeydown(e: KeyboardEvent) {
             </div>
           </div>
 
+          <!-- Driver / Provider -->
+          <div class="rdm-row">
+            <div class="rdm-field">
+              <div class="rdm-field-label">Driver</div>
+              <div class="rdm-field-value">{{ runDriverDisplay(run) }}</div>
+            </div>
+            <div class="rdm-field">
+              <div class="rdm-field-label">Provider</div>
+              <div class="rdm-field-value">{{ run.provider || '—' }}</div>
+            </div>
+          </div>
+
           <!-- Target path -->
           <div class="rdm-field">
             <div class="rdm-field-label">Target path</div>
@@ -280,7 +316,7 @@ function handleKeydown(e: KeyboardEvent) {
             :observed-mode="run.observed_permission_mode"
             :remediation="run.remediation"
             :error-details="run.error_details"
-            :provider-name="providerNameFor(run.agent_name)"
+            :provider-name="providerNameFor(run)"
           />
           <!-- Collapsible diagnostic info: whatever error_details the backend sent -->
           <details v-if="diagnosticEntries(run.error_details).length" class="rdm-field rdm-diagnostics">
@@ -310,7 +346,7 @@ function handleKeydown(e: KeyboardEvent) {
             <RunSummaryCard
               v-else
               :result="runResult"
-              :driver-available="agentHasTokenMetrics(run.agent_name)"
+              :driver-available="agentHasTokenMetrics(run)"
             />
           </div>
 
