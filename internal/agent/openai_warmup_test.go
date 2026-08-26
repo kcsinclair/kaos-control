@@ -165,3 +165,91 @@ func TestOpenAI_LoadTimeout(t *testing.T) {
 		t.Errorf("expected error message to mention the loading timeout, got: %v", waitErr)
 	}
 }
+
+// TestOpenAI_ReasoningContentPreventsLoadTimeout verifies that a model
+// streaming only delta.reasoning_content — never delta.content — past the
+// load-timeout deadline is not killed by the watchdog (regression test for
+// openai-driver-ttft-ignores-reasoning-content, fix guidance item 5): any
+// sign of generation, not just delta.content, must disarm it.
+func TestOpenAI_ReasoningContentPreventsLoadTimeout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&req)
+
+		if stream, _ := req["stream"].(bool); !stream {
+			promptTokens := 10
+			if _, hasTools := req["tools"]; hasTools {
+				promptTokens = 50
+			}
+			_ = json.NewEncoder(w).Encode(openAIChatCompletionResponse{
+				Usage: openAIUsage{PromptTokens: promptTokens},
+			})
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		flusher, _ := w.(http.Flusher)
+
+		// Stream only reasoning_content, spanning well past the dedicated
+		// load timeout below, before ever emitting delta.content.
+		fmt.Fprint(w, "data: {\"id\":\"1\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\"let me think...\"},\"finish_reason\":null}]}\n\n")
+		if flusher != nil {
+			flusher.Flush()
+		}
+		time.Sleep(400 * time.Millisecond)
+		fmt.Fprint(w, "data: {\"id\":\"1\",\"choices\":[{\"index\":0,\"delta\":{\"reasoning_content\":\" ...done thinking\"},\"finish_reason\":null}]}\n\n")
+		if flusher != nil {
+			flusher.Flush()
+		}
+		fmt.Fprint(w, "data: {\"id\":\"1\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"the answer\"},\"finish_reason\":null}]}\n\n")
+		fmt.Fprint(w, "data: {\"id\":\"1\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n")
+		fmt.Fprint(w, "data: [DONE]\n\n")
+	}))
+	defer ts.Close()
+
+	driver := &OpenAICompatibleDriver{
+		Providers: []config.Provider{
+			{Name: "local-test", BaseURL: ts.URL, Driver: "openai-compatible"},
+		},
+		HTTPClient: ts.Client(),
+	}
+
+	run := Run{
+		RunID:               "run-reasoning",
+		AgentName:           "reasoning-agent",
+		Driver:              "openai-compatible",
+		ProviderName:        "local-test",
+		Model:               "gemma-4-26b",
+		PromptText:          "System prompt\n\n---\n\nUser prompt",
+		TimeoutMinutes:      10,
+		ModelLoadingTimeout: 200 * time.Millisecond, // shorter than the 400ms reasoning gap above
+	}
+
+	proc, err := driver.Start(context.Background(), run)
+	if err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+
+	var sawReasoning, sawGenerating bool
+	for ev := range proc.Progress() {
+		if ev.Event == nil {
+			continue
+		}
+		switch ev.Event["stage"] {
+		case "reasoning":
+			sawReasoning = true
+		case "generating":
+			sawGenerating = true
+		}
+	}
+
+	if err := proc.Wait(); err != nil {
+		t.Fatalf("expected the run to complete without being killed by the load-timeout watchdog, got: %v", err)
+	}
+	if !sawReasoning {
+		t.Error("expected a reasoning progress event")
+	}
+	if !sawGenerating {
+		t.Error("expected a generating progress event once delta.content arrived")
+	}
+}
