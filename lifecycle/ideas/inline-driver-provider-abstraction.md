@@ -1,7 +1,7 @@
 ---
 title: Inline Driver Provider Abstraction
 type: idea
-status: clarifying
+status: planning
 lineage: inline-driver-provider-abstraction
 created: "2026-08-25T08:28:45+10:00"
 priority: normal
