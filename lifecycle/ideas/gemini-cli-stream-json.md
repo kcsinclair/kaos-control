@@ -1,7 +1,7 @@
 ---
 title: gemini-cli driver should use agy's stream-json output
 type: idea
-status: draft
+status: planning
 lineage: gemini-cli-stream-json
 created: "2026-08-25T12:40:00+10:00"
 priority: high
