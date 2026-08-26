@@ -4,13 +4,22 @@ package ideachat
 
 import (
 	"strings"
+
+	"github.com/kaos-control/kaos-control/internal/config"
 )
 
-// ModelConfig holds the LLM model configuration for a conversation.
+// ModelConfig holds the LLM model configuration for a conversation. It is
+// internal-only and must never be marshalled to JSON/YAML or otherwise
+// exposed on a serialised surface — carrying api_key/extra_headers via
+// Provider relies on that.
 type ModelConfig struct {
 	Model        string
 	SystemPrompt string
 	MaxTokens    int
+
+	// Provider identifies the app-level provider + driver to route this call
+	// through. Nil means "use the Claude CLI default" (today's behaviour).
+	Provider *config.ProviderConfig
 }
 
 // LLMMessage is a single message in a conversation turn.
