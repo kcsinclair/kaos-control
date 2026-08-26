@@ -515,8 +515,9 @@ agents:
   - name: qa
     role:
       - qa
-    driver: claude-code-cli
-    model: sonnet
+    provider: leia-llamacpp
+    driver: openai-compatible
+    model: gemma-4-26B-A4B-it-qat-UD-Q4_K_XL
     active_status: in-qa
     source_types:
       - test
