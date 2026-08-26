@@ -13,6 +13,8 @@ labels:
     - agent-runner
     - observability
     - backend
+release: KC-Release7
+parent: lifecycle/ideas/release-goal-and-description.md
 ---
 
 # Reporting for Open Provider Support and Gemini JSON Stream
