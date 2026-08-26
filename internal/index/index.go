@@ -1304,6 +1304,15 @@ type AgentRunRow struct {
 	// policy during a claude-mediated run (FR21). Empty for other drivers.
 	DeniedToolCalls []map[string]any `json:"denied_tool_calls,omitempty"`
 
+	// Driver is the agent driver id (e.g. "claude-code-cli", "gemini-cli",
+	// "openai-compatible") used for this run. Written once at run-start and
+	// immutable thereafter. Empty for legacy rows that predate this column.
+	Driver string `json:"driver"`
+	// Provider is the non-secret provider name (e.g. "gemini-cloud") when the
+	// driver resolves one; empty for CLI drivers with no provider concept.
+	// Written once at run-start and immutable thereafter.
+	Provider string `json:"provider"`
+
 	// Analytics metrics — populated on run finish when the driver emits a
 	// type:result line. All nullable so legacy rows remain valid.
 	Model               *string  `json:"model,omitempty"`
@@ -1875,6 +1884,9 @@ func (idx *Index) ensureAgentRunsTable() error {
 	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN failure_reason TEXT`)
 	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN remediation_json TEXT`)
 	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN error_details_json TEXT`)
+	// agent-logging-provider-driver Milestone 1: record driver/provider per run.
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN driver TEXT`)
+	_, _ = idx.db.Exec(`ALTER TABLE agent_runs ADD COLUMN provider TEXT`)
 	// Covering indexes for the report's primary filter dimensions.
 	_, _ = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_started_at ON agent_runs(started_at)`)
 	_, _ = idx.db.Exec(`CREATE INDEX IF NOT EXISTS idx_agent_runs_agent_name ON agent_runs(agent_name)`)
