@@ -3,9 +3,6 @@
 package ideachat
 
 import (
-	"context"
-	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -20,29 +17,6 @@ type ModelConfig struct {
 type LLMMessage struct {
 	Role    string
 	Content string
-}
-
-// CallLLM is the package-level function used to invoke the LLM. Tests can
-// replace it with a deterministic fake; production code should never reassign it.
-var CallLLM = callLLMImpl
-
-// callLLMImpl is the real production LLM caller.
-func callLLMImpl(ctx context.Context, cfg ModelConfig, messages []LLMMessage) (string, error) {
-	prompt := buildPrompt(cfg.SystemPrompt, messages)
-
-	args := []string{"--dangerously-skip-permissions", "-p", prompt}
-	if cfg.Model != "" {
-		args = append(args, "--model", cfg.Model)
-	}
-
-	out, err := exec.CommandContext(ctx, "claude", args...).Output()
-	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("claude exited %d: %s", ee.ExitCode(), strings.TrimSpace(string(ee.Stderr)))
-		}
-		return "", fmt.Errorf("calling claude: %w", err)
-	}
-	return strings.TrimSpace(string(out)), nil
 }
 
 // buildPrompt combines the system prompt and message history into a single
