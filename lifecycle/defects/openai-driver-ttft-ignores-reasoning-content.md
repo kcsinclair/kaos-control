@@ -1,7 +1,7 @@
 ---
 title: openai-compatible driver kills reasoning models — TTFT only counts delta.content
 type: defect
-status: in-development
+status: done
 lineage: openai-driver-ttft-ignores-reasoning-content
 created: "2026-08-25T14:30:00+10:00"
 priority: high
@@ -16,6 +16,7 @@ release: KC-Release6
 assignees:
     - role: backend-developer
       who: agent
+parent: lifecycle/tests/2d-graph-layout-selector-6-test.md
 ---
 
 # openai-compatible driver kills reasoning models — TTFT only counts `delta.content`
