@@ -158,3 +158,34 @@ func TestOpenAIPreflight(t *testing.T) {
 		}
 	})
 }
+
+// TestIsModelNotFoundMessage pins the 400 discriminator. Providers answer BOTH
+// "unknown model" and "model can't do tools" with HTTP 400, so the message is
+// the only signal. Blanket-classifying 400 as a tools rejection reported
+// llama.cpp's "model 'test-model' not found" as "model does not support tools",
+// pointing the operator at the wrong problem entirely.
+func TestIsModelNotFoundMessage(t *testing.T) {
+	notFound := []string{
+		"model 'test-model' not found",                                    // llama.cpp (verified live)
+		`model "llama3" not found, try pulling it first`,                   // Ollama
+		"The model `gpt-9` does not exist or you do not have access to it.", // OpenAI
+		"unknown model: foo",
+	}
+	for _, m := range notFound {
+		if !isModelNotFoundMessage(m) {
+			t.Errorf("isModelNotFoundMessage(%q) = false, want true", m)
+		}
+	}
+
+	// A tools rejection must NOT be reclassified, even though Ollama's phrasing
+	// also names the model.
+	toolsRejections := []string{
+		"gemma3:12b does not support tools", // Ollama (verified live)
+		"tools are not supported by this model",
+	}
+	for _, m := range toolsRejections {
+		if isModelNotFoundMessage(m) {
+			t.Errorf("isModelNotFoundMessage(%q) = true, want false (this is a tools rejection)", m)
+		}
+	}
+}

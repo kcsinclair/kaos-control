@@ -3,6 +3,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -313,15 +314,19 @@ func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	model := req.Model
-	if model == "" {
-		model = "test-model"
-	}
-
 	client := &http.Client{Timeout: 15 * time.Second}
 	start := time.Now()
 
-	err := agent.VerifyToolCapability(r.Context(), client, prov, model, agent.DefaultOpenAITools())
+	// Testing a *connection* means asking the provider what it serves — GET
+	// /v1/models. That validates base_url, credentials and reachability without
+	// needing a model name at all.
+	//
+	// This previously POSTed a tool-calling chat completion using a hardcoded
+	// "test-model" placeholder whenever no model was supplied. Providers answer
+	// an unknown model with HTTP 400, which the preflight then reported as
+	// "model does not support tools" — so testing a perfectly good provider
+	// produced a tools error naming a model the user never entered.
+	models, err := listProviderModels(r.Context(), client, prov)
 	latency := time.Since(start).Milliseconds()
 	if err != nil {
 		writeJSON(w, http.StatusOK, map[string]any{
@@ -332,11 +337,101 @@ func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// No model named: the connection itself is what was under test.
+	if req.Model == "" {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ok":         true,
+			"latency_ms": latency,
+			"models":     models,
+			"message":    fmt.Sprintf("Connected to %s — %d model(s) available", prov.Name, len(models)),
+		})
+		return
+	}
+
+	// A model was named: confirm the provider actually serves it before making
+	// any claim about tool support, so a typo reads as "not found" rather than
+	// "does not support tools".
+	found := false
+	for _, m := range models {
+		if m == req.Model {
+			found = true
+			break
+		}
+	}
+	if !found {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ok":         false,
+			"latency_ms": latency,
+			"models":     models,
+			"error": fmt.Sprintf("model %q not found on provider %q (%d model(s) available)",
+				req.Model, prov.Name, len(models)),
+		})
+		return
+	}
+
+	if err := agent.VerifyToolCapability(r.Context(), client, prov, req.Model, agent.DefaultOpenAITools()); err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ok":         false,
+			"latency_ms": time.Since(start).Milliseconds(),
+			"models":     models,
+			"error":      err.Error(),
+		})
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok":         true,
-		"latency_ms": latency,
-		"message":    fmt.Sprintf("Successfully connected and verified tool support on %s with model %s", prov.Name, model),
+		"latency_ms": time.Since(start).Milliseconds(),
+		"models":     models,
+		"message":    fmt.Sprintf("Successfully connected and verified tool support on %s with model %s", prov.Name, req.Model),
 	})
+}
+
+// listProviderModels performs the GET <base_url>/v1/models listing used by the
+// connection test. Returns the model IDs the provider advertises.
+func listProviderModels(ctx context.Context, client *http.Client, prov config.Provider) ([]string, error) {
+	modelsURL := prov.BaseURL + "/v1/models"
+	if strings.HasSuffix(prov.BaseURL, "/v1") {
+		modelsURL = prov.BaseURL + "/models"
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, modelsURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("building request to %s: %w", modelsURL, err)
+	}
+	if prov.APIKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+prov.APIKey)
+	}
+	for k, v := range prov.ExtraHeaders {
+		httpReq.Header.Set(k, v)
+	}
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("could not reach %s: %w", modelsURL, err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("provider returned HTTP %d from %s: %s",
+			resp.StatusCode, modelsURL, strings.TrimSpace(string(body)))
+	}
+
+	var listing struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &listing); err != nil {
+		return nil, fmt.Errorf("could not parse /v1/models response from %s: %w", prov.Name, err)
+	}
+
+	ids := make([]string, 0, len(listing.Data))
+	for _, m := range listing.Data {
+		ids = append(ids, m.ID)
+	}
+	return ids, nil
 }
 
 // handleProviderHealth checks connectivity to the provider with a 5s timeout.

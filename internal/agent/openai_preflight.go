@@ -285,8 +285,20 @@ func executePreflightCompletion(ctx context.Context, client *http.Client, provid
 	}
 
 	if resp.StatusCode == http.StatusBadRequest {
-		// Mode B: explicit 400 rejection (e.g. Ollama "does not support tools")
+		// A 400 is generic — it is NOT automatically a tools rejection. Observed
+		// cases on the same endpoint:
+		//   "gemma3:12b does not support tools"  -> genuinely Mode B
+		//   "model 'test-model' not found"       -> the model simply is not there
+		// llama.cpp returns the identical 400 for an unknown model whether or not
+		// `tools` is sent, so classifying every 400 as ErrToolsUnsupported
+		// reported "model does not support tools" for what is really a missing
+		// model, sending the operator after the wrong problem.
 		errMsg := extractErrorMessage(respBytes)
+		if isModelNotFoundMessage(errMsg) {
+			return nil, fmt.Errorf("%w: provider %q model %q (HTTP 400): %s",
+				ErrModelNotFound, provider.Name, reqBody["model"], errMsg)
+		}
+		// Mode B: explicit tools rejection (e.g. Ollama "does not support tools")
 		return nil, fmt.Errorf("%w: provider %q model %q rejected tools parameter (HTTP 400): %s",
 			ErrToolsUnsupported, provider.Name, reqBody["model"], errMsg)
 	}
@@ -341,4 +353,26 @@ func applyProviderHeaders(req *http.Request, provider config.Provider) {
 	for k, v := range provider.ExtraHeaders {
 		req.Header.Set(k, v)
 	}
+}
+
+// isModelNotFoundMessage reports whether a provider's HTTP 400 error message
+// describes an unknown/missing model rather than a tools rejection. Providers
+// use 400 for both, so the message is the only discriminator available.
+//
+// Observed forms:
+//
+//	llama.cpp: "model 'test-model' not found"
+//	Ollama:    "model \"x\" not found, try pulling it first"
+//	OpenAI:    "The model `x` does not exist or you do not have access to it."
+func isModelNotFoundMessage(msg string) bool {
+	m := strings.ToLower(msg)
+	// Guard against the tools phrasing first: a message mentioning tools is a
+	// capability rejection even if it also names the model.
+	if strings.Contains(m, "does not support tools") || strings.Contains(m, "tools are not supported") {
+		return false
+	}
+	return strings.Contains(m, "not found") ||
+		strings.Contains(m, "does not exist") ||
+		strings.Contains(m, "unknown model") ||
+		strings.Contains(m, "no such model")
 }
