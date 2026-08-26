@@ -1,7 +1,7 @@
 ---
 title: "Test Plan — Record Provider and Driver on Every Agent Run"
 type: plan-test
-status: draft
+status: approved
 lineage: agent-logging-provider-driver
 parent: lifecycle/requirements/agent-logging-provider-driver-2.md
 created: "2026-08-25T11:20:00+10:00"
