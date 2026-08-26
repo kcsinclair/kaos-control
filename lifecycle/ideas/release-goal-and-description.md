@@ -1,7 +1,7 @@
 ---
 title: Release Goal and Description Fields
 type: idea
-status: draft
+status: approved
 lineage: release-goal-and-description
 created: "2026-08-24T18:24:34+10:00"
 priority: normal
