@@ -203,23 +203,40 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 		startTime := time.Now()
 		var ttftRecorded atomic.Bool
 		var loadTimedOut atomic.Bool
+
+		// recordTTFT marks the moment the model shows *any* sign of life —
+		// content, reasoning tokens, or a tool-call delta all count equally.
+		// The load-timeout watchdog below only cares whether the model is
+		// producing something; gating on delta.content alone left reasoning
+		// models (which stream reasoning_content first) and pure tool-call
+		// turns exposed to being killed mid-response.
 		recordTTFT := func() {
-			if ttftRecorded.CompareAndSwap(false, true) {
-				if run.OnTTFT != nil {
-					run.OnTTFT(time.Since(startTime).Milliseconds())
-				}
+			if ttftRecorded.CompareAndSwap(false, true) && run.OnTTFT != nil {
+				run.OnTTFT(time.Since(startTime).Milliseconds())
+			}
+		}
+
+		// emitStage records TTFT and, the first time it's called for a given
+		// stage, emits a progress event for it. reasoning and generating are
+		// tracked separately (rather than sharing one "first token" flag) so
+		// a reasoning model shows a distinct "reasoning" stage instead of
+		// silently reusing "generating" for tokens that aren't the answer.
+		emitStage := func(sent *atomic.Bool, stage string) {
+			recordTTFT()
+			if sent.CompareAndSwap(false, true) {
 				select {
 				case progressCh <- ProgressEvent{
-					Raw: "generating",
+					Raw: stage,
 					Event: map[string]any{
 						"type":  "status",
-						"stage": "generating",
+						"stage": stage,
 					},
 				}:
 				default:
 				}
 			}
 		}
+		var reasoningStageSent, generatingStageSent atomic.Bool
 
 		// Warmup detection (Milestone 3): local inference servers often
 		// lazy-load multi-gigabyte weights on the first request, pausing
@@ -363,6 +380,7 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 			}
 			toolCallBuilders := make(map[int]*toolCallBuilder)
 			var turnContent strings.Builder
+			var turnReasoning strings.Builder
 			var finishReason string
 
 			sc := bufio.NewScanner(resp.Body)
@@ -393,11 +411,16 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 					}
 
 					for _, choice := range chunk.Choices {
+						if choice.Delta.ReasoningContent != "" {
+							emitStage(&reasoningStageSent, "reasoning")
+							turnReasoning.WriteString(choice.Delta.ReasoningContent)
+						}
 						if choice.Delta.Content != "" {
-							recordTTFT()
+							emitStage(&generatingStageSent, "generating")
 							turnContent.WriteString(choice.Delta.Content)
 						}
 						for _, tc := range choice.Delta.ToolCalls {
+							emitStage(&generatingStageSent, "generating")
 							b, exists := toolCallBuilders[tc.Index]
 							if !exists {
 								b = &toolCallBuilder{callType: "function"}
@@ -442,6 +465,14 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 				writeLog("# error: " + scanErr.Error())
 				doneCh <- scanErr
 				return
+			}
+
+			// The full reasoning text is already present in the raw stream
+			// lines logged above (writeLog(dataContent)); only note its size
+			// here rather than duplicating potentially large think-traces in
+			// the log body (fix guidance item 4).
+			if turnReasoning.Len() > 0 {
+				writeLog(fmt.Sprintf("# reasoning: %d chars this turn (see raw stream lines above)", turnReasoning.Len()))
 			}
 
 			// Assemble structured tool calls ordered by index
