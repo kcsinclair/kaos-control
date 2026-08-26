@@ -715,6 +715,8 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		TargetPath: targetPath,
 		StartedAt:  now,
 		Status:     "running",
+		Driver:     run.Driver,
+		Provider:   run.ProviderName,
 	}
 	if err := m.idx.InsertAgentRun(runRow); err != nil {
 		_ = m.locks.Release(lineage)
