@@ -331,6 +331,10 @@ export interface AgentRunRow {
   error_details?: Record<string, unknown> | null
   /** Tool calls denied by the mediated driver permission hooks. */
   denied_tool_calls?: DenialRecord[] | null
+  /** Driver id that executed this run, recorded at run-start (immutable). */
+  driver?: string
+  /** Provider name that backed this run; empty for CLI drivers. */
+  provider?: string
   /** Populated for test-runner agent runs. */
   run_summary?: RunSummary
   /** Time to first token in milliseconds (recorded for streaming drivers). */
