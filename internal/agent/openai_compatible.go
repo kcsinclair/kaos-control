@@ -62,9 +62,10 @@ type openAIChatMessage struct {
 type openAIStreamChoice struct {
 	Index int `json:"index"`
 	Delta struct {
-		Role      string `json:"role"`
-		Content   string `json:"content"`
-		ToolCalls []struct {
+		Role             string `json:"role"`
+		Content          string `json:"content"`
+		ReasoningContent string `json:"reasoning_content"`
+		ToolCalls        []struct {
 			Index    int    `json:"index"`
 			ID       string `json:"id"`
 			Type     string `json:"type"`
