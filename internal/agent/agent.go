@@ -867,7 +867,7 @@ func (m *Manager) preflightModelAvailability(ctx context.Context, ag *config.Age
 			reason = FailureReasonModelNotFound
 			remediation = modelNotFoundRemediation
 		}
-		m.recordPreflightFailure(agentName, targetPath, role, reason, remediation, err)
+		m.recordPreflightFailure(agentName, targetPath, role, ag.Driver, ag.Provider, reason, remediation, err)
 		return fmt.Errorf("preflight: %s: %w", reason, err)
 	}
 
@@ -890,7 +890,7 @@ func (m *Manager) preflightModelAvailability(ctx context.Context, ag *config.Age
 // preflight rejection, so the failure is visible in run history and the
 // live feed exactly like any other agent.failed run — without a process
 // ever having started, and without acquiring the semaphore or lineage lock.
-func (m *Manager) recordPreflightFailure(agentName, targetPath, role, reason string, remediation []string, cause error) {
+func (m *Manager) recordPreflightFailure(agentName, targetPath, role, driver, provider, reason string, remediation []string, cause error) {
 	runID := randomHex(8)
 	now := time.Now()
 	row := &index.AgentRunRow{
@@ -900,6 +900,8 @@ func (m *Manager) recordPreflightFailure(agentName, targetPath, role, reason str
 		TargetPath: targetPath,
 		StartedAt:  now,
 		Status:     "running",
+		Driver:     driver,
+		Provider:   provider,
 	}
 	if err := m.idx.InsertAgentRun(row); err != nil {
 		slog.Warn("agent: inserting preflight-failure run record", "run_id", runID, "err", err)
