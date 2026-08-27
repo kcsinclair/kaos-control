@@ -8,6 +8,10 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-08-27** — QA agent now runs the frontend suites: added `cd tests/web && pnpm test` and `cd web && pnpm test` to the qa allowlist and STEP 1 of its prompt. The agent previously ran only the two Go targets, so 149 frontend spec files were never exercised — including the frontend test plans it was being pointed at.
+
+- **2026-08-27** — Agent runs list gains a "View run details" button opening the structured `RunDetailModal` alongside the existing raw-log view; modal widened 600px → 900px.
+
 - **2026-08-25** — Milestone 6 — Agent Summary API & Project Agent Binding Integration ([[provider-model-for-agents-3-be]]): Update /api/p/{project}/agents serialization with provider, model, and configured flag, zeroing ready counts for unconfigured agents.
 
 - **2026-08-25** — Milestone 5 — Live Health Probing, Model Discovery & Extra Headers ([[provider-model-for-agents-3-be]]): Implement /health endpoint with 5-second timeout and latency tracking, wire /models discovery with extra headers and bearer token forwarding.

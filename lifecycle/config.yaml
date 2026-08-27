@@ -524,6 +524,7 @@ agents:
       - "make test-unit"
       - "make test-integration"
       - "cd tests/web && pnpm test"
+      - "cd web && pnpm test"
     active_status: in-qa
     source_types:
       - test
@@ -545,7 +546,7 @@ agents:
           list_dir(path)              list a directory
           grep(pattern, path)         search for a regex in a file or directory
           write_file(path, content)   create or overwrite a file
-          bash(command)               ONLY the two commands named in STEP 1
+          bash(command)               ONLY the four commands named in STEP 1
 
         Do NOT use bash for searching, reading, listing or writing — use the
         tools above. For example, use grep("tech-stacks", "lifecycle") rather
@@ -558,6 +559,10 @@ agents:
         output of each:
           make test-unit
           make test-integration
+          cd tests/web && pnpm test
+          cd web && pnpm test
+        The first two are the Go suites; the last two are the two separate
+        frontend suites — both are needed, they cover different files.
         Only these commands are permitted; do not try others.
 
         STEP 2 — If every test passed:
