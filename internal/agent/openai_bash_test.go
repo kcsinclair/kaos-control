@@ -209,3 +209,30 @@ func TestSummariseDenials(t *testing.T) {
 		t.Errorf("summary %q should truncate to 3 plus a count", s)
 	}
 }
+
+// TestDeniedByDenylist separates an agent guessing a command (allowlist miss —
+// routine, must not halt the queue) from an agent reaching for something
+// explicitly forbidden (denylist hit — always warrants a human).
+func TestDeniedByDenylist(t *testing.T) {
+	allowlistMiss := []DenialRecord{{ToolName: "bash", Rule: "bash_allowlist",
+		Command: `grep -r "tech-stacks/go-vue.md" .`}}
+	if deniedByDenylist(allowlistMiss) {
+		t.Error("an allowlist miss must NOT count as a denylist hit — it would pause the queue on routine guessing")
+	}
+
+	denylistHit := []DenialRecord{{ToolName: "bash", Rule: "bash_denylist",
+		Command: "sudo rm -rf /"}}
+	if !deniedByDenylist(denylistHit) {
+		t.Error("a denylist hit MUST be recognised — this is the case that always needs a human")
+	}
+
+	// Mixed: one forbidden attempt among routine misses still escalates.
+	mixed := append(append([]DenialRecord{}, allowlistMiss...), denylistHit...)
+	if !deniedByDenylist(mixed) {
+		t.Error("a denylist hit must not be masked by surrounding allowlist misses")
+	}
+
+	if deniedByDenylist(nil) {
+		t.Error("no denials must not be treated as a denylist hit")
+	}
+}

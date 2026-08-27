@@ -1363,11 +1363,28 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	_ = m.idx.UpdateAgentRun(row)
 
 	// Pause queue if there were denials (FR16).
+	// Pausing the whole queue on ANY denial proved too blunt: an allowlist miss
+	// is routine — the agent guesses a command, is refused, adapts, and finishes
+	// (run 4d4f8110dbb59ee3 completed successfully yet halted all work). Local
+	// models guess constantly, so that stops the queue continually for a policy
+	// working exactly as intended.
+	//
+	// Pause only when a human is genuinely needed:
+	//   - a DENYLIST hit — the agent attempted something explicitly forbidden,
+	//     which warrants review whether or not the run then succeeded; or
+	//   - the run FAILED while denials occurred — the refusal plausibly
+	//     contributed, so continuing would likely repeat it.
+	// A plain allowlist miss on a successful run is logged and recorded on the
+	// run, but does not stop other work.
 	if hasDenials && m.PauseQueue != nil {
-		// Name the offending tool(s) in the pause reason. "denied_tool_calls:
-		// run <id>" alone forced the operator to go digging in the database to
-		// discover what had actually been refused.
-		m.PauseQueue("denied_tool_calls: run " + run.RunID + " — " + summariseDenials(denials))
+		runFailed := status != "done"
+		if deniedByDenylist(denials) || runFailed {
+			m.PauseQueue("denied_tool_calls: run " + run.RunID + " — " + summariseDenials(denials))
+		} else {
+			slog.Info("agent: allowlist denials on a successful run — not pausing the queue",
+				"run_id", run.RunID, "agent", run.AgentName, "denials", len(denials),
+				"detail", summariseDenials(denials))
+		}
 	}
 
 	eventType := "agent.finished"
@@ -2279,4 +2296,17 @@ func summariseDenials(denials []DenialRecord) string {
 		}
 	}
 	return strings.Join(parts, "; ")
+}
+
+// deniedByDenylist reports whether any denial was an explicit denylist hit, as
+// opposed to a command simply not appearing on the allowlist. The distinction
+// matters for escalation: an allowlist miss is an agent guessing, whereas a
+// denylist hit is an agent reaching for something deliberately forbidden.
+func deniedByDenylist(denials []DenialRecord) bool {
+	for _, d := range denials {
+		if strings.Contains(strings.ToLower(d.Rule), "denylist") {
+			return true
+		}
+	}
+	return false
 }
