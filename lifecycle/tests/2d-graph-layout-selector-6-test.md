@@ -1,7 +1,7 @@
 ---
 title: "Tests — 2D Graph Layout Selector"
 type: test
-status: approved
+status: in-qa
 lineage: 2d-graph-layout-selector
 parent: lifecycle/test-plans/2d-graph-layout-selector-5-test.md
 created: "2026-05-07T00:00:00+10:00"
