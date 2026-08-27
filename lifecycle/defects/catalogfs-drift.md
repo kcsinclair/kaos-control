@@ -1,7 +1,7 @@
 ---
 title: Catalog FS drift detected
 type: defect
-status: in-development
+status: done
 lineage: internal/architecture/catalogfs
 created: "2026-08-27T12:45:00Z"
 parent: lifecycle/tests/2d-graph-layout-selector-6-test.md
