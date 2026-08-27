@@ -542,7 +542,7 @@ func New(
 		"shell-stub":        &ShellStubDriver{},
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
-	if err := idx.RecoverRunningRuns(); err != nil {
+	if err := idx.RecoverRunningRuns(FailureReasonInterruptedByRestart, interruptedByRestartRemediation); err != nil {
 		slog.Warn("agent manager: error recovering running runs", "err", err)
 	}
 	// Crash recovery: reset orphaned test artifacts left in-qa from a prior crash.

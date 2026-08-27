@@ -298,6 +298,7 @@ export type FailureReason =
   | 'model_unloaded'
   | 'endpoint_unreachable'
   | 'provider_disconnected'
+  | 'interrupted_by_restart'
   | 'context_window_exceeded'
   | 'turn_token_ceiling'
   | 'max_iterations_reached'

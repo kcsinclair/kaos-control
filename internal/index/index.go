@@ -1458,11 +1458,30 @@ func (idx *Index) ListAgentRunsByTargetPath(targetPath string) ([]*AgentRunRow, 
 	return out, rows.Err()
 }
 
-// RecoverRunningRuns marks any runs still in status=running as failed (called on startup).
-func (idx *Index) RecoverRunningRuns() error {
+// RecoverRunningRuns marks any runs still in status=running as failed (called on
+// startup). Such a run was in flight when the process died or was restarted, so
+// its exit code, stderr and terminal result were never captured — leaving a row
+// that is indistinguishable from a genuine failure. Record an explicit reason
+// and remediation so the operator can tell the difference: the agent may in fact
+// have completed and committed its work (observed: run 2073eaa29f90f088 finished
+// successfully one second before a restart, yet showed only "failed" with a NULL
+// exit code and empty stderr).
+//
+// reason/remediation are supplied by the caller to avoid an index -> agent
+// package dependency.
+func (idx *Index) RecoverRunningRuns(reason string, remediation []string) error {
+	remediationJSON := ""
+	if len(remediation) > 0 {
+		if b, err := json.Marshal(remediation); err == nil {
+			remediationJSON = string(b)
+		}
+	}
 	_, err := idx.db.Exec(
-		`UPDATE agent_runs SET status='failed', finished_at=? WHERE status='running'`,
-		time.Now().Unix(),
+		`UPDATE agent_runs
+		 SET status='failed', finished_at=?, failure_reason=?,
+		     remediation_json=NULLIF(?, '')
+		 WHERE status='running'`,
+		time.Now().Unix(), reason, remediationJSON,
 	)
 	return err
 }

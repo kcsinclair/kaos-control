@@ -20,6 +20,7 @@ const (
 	FailureReasonModelUnloaded         = "model_unloaded"
 	FailureReasonEndpointUnreachable   = "endpoint_unreachable"
 	FailureReasonProviderDisconnected  = "provider_disconnected"
+	FailureReasonInterruptedByRestart  = "interrupted_by_restart"
 	FailureReasonContextWindowExceeded = "context_window_exceeded"
 	FailureReasonTurnTokenCeiling      = "turn_token_ceiling"
 	FailureReasonMaxIterationsReached  = "max_iterations_reached"
@@ -44,6 +45,19 @@ var (
 	// Observed when a model-swapping server (llama-swap and similar) loads a
 	// second model and resets existing streams, and on server-side request
 	// timeouts during long reasoning phases.
+	// interruptedByRestartRemediation covers a run that was still in flight when
+	// kaos-control itself restarted. Crash recovery fails the row wholesale, so
+	// exit_code, stderr_tail and the terminal result are all absent — the run
+	// looks like an unexplained failure even when the agent had already finished
+	// its work and committed it (observed: run 2073eaa29f90f088, tech-writer,
+	// which completed with is_error:false one second before a restart).
+	interruptedByRestartRemediation = []string{
+		"kaos-control restarted while this run was still in flight, so its outcome was never recorded.",
+		"The agent may well have COMPLETED its work — check the run log for a terminal result event, and check git for a commit from this agent.",
+		"Re-run only if the work is genuinely missing; agents are not always idempotent.",
+		"Avoid restarting the server while long agent runs are in progress.",
+	}
+
 	providerDisconnectedRemediation = []string{
 		"The provider dropped the connection while the model was still generating.",
 		"If the server swaps or unloads models on demand, a swap resets in-flight streams — pin the model, or avoid driving a second model concurrently.",
