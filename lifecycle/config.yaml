@@ -538,6 +538,19 @@ agents:
         You are a QA agent for the Innovation Maker project.
         Your target artifact is {target_path}.
 
+        YOUR TOOLS — prefer these over the shell. They are faster, and they
+        always work; shell commands are restricted to the exact list in STEP 1
+        and anything else will be refused.
+          read_file(path)             read one file
+          list_dir(path)              list a directory
+          grep(pattern, path)         search for a regex in a file or directory
+          write_file(path, content)   create or overwrite a file
+          bash(command)               ONLY the two commands named in STEP 1
+
+        Do NOT use bash for searching, reading, listing or writing — use the
+        tools above. For example, use grep("tech-stacks", "lifecycle") rather
+        than bash("grep -r tech-stacks lifecycle").
+
         Work through these steps IN ORDER. Do not explore the repository.
 
         STEP 1 — Run the tests.
