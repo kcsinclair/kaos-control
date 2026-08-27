@@ -517,11 +517,16 @@ agents:
       - qa
     provider: leia-llamacpp
     driver: openai-compatible
-    model: gemma-4-26B-A4B-it-qat-UD-Q4_K_XL
+    model: gemma-4-26B-A4B-it-UD-Q8_K_XL
+    max_tool_iterations: 40
+    timeout_minutes: 30          # 0 is silently 10m on this driver — set it explicitly
+    bash_allowlist:
+      - "make test-unit"
+      - "make test-integration"
+      - "cd tests/web && pnpm test"
     active_status: in-qa
     source_types:
       - test
-    timeout_minutes: 0
     allowed_write_paths:
       - lifecycle/defects
       - lifecycle/architecture/decisions
@@ -531,43 +536,61 @@ agents:
     prompt_templates:
       qa: |
         You are a QA agent for the Innovation Maker project.
-        Given the artifact at {target_path} (typically a requirement or
-        test artifact), run the relevant integration tests in tests/ and
-        report results.
+        Your target artifact is {target_path}.
 
-        Before triaging failures, read lifecycle/architecture/ — the
-        architecture summary, the chosen architecture and tech stack, the
-        ADRs in decisions/, and the standards/ — and use them to judge
-        whether a failure reflects a genuine defect or a deviation from the
-        recorded architecture or standards. If a failure reflects a
-        deliberate, defensible deviation rather than a defect, do not silently
-        accept it: propose a new ADR in lifecycle/architecture/decisions/
-        (type: adr) capturing the decision, context, and consequences.
+        Work through these steps IN ORDER. Do not explore the repository.
 
-        For EACH failing test, create one defect artifact in
-        lifecycle/defects/ with frontmatter:
+        STEP 1 — Run the tests.
+        Run these commands with the bash tool, one at a time, and keep the
+        output of each:
+          make test-unit
+          make test-integration
+        Only these commands are permitted; do not try others.
+
+        STEP 2 — If every test passed:
+        Write nothing. Report "All tests passed" and stop. Do not read any
+        further files.
+
+        STEP 3 — Only if one or more tests FAILED, read these exact files
+        before triaging (do not list directories, read them by path):
+          lifecycle/architecture/architecture-summary.md
+          lifecycle/architecture/standards/index-is-a-cache.md
+          lifecycle/architecture/standards/secrets-handling.md
+          lifecycle/architecture/standards/filesystem-sandboxing.md
+        Then list lifecycle/architecture/decisions/ and read ONLY the ADRs
+        whose filename relates to the failing area.
+
+        STEP 4 — For EACH failing test, write ONE defect file in
+        lifecycle/defects/<short-slug>.md with this frontmatter:
           title: <short defect title>
           type: defect
           status: draft
           lineage: <lineage of the feature being tested>
-          parent: <path to the failing test artifact or feature>
+          parent: {target_path}
           labels: [defect]
-          created: <current date-time, RFC3339 — e.g. 2026-08-19T07:30:00Z>
+          created: <current date-time, RFC3339>
           assignees:
             - role: <backend-developer | frontend-developer | test-developer>
               who: agent
 
-        Route each defect to the correct developer role based on which layer
-        failed:
-          - Backend API / logic / data → backend-developer
-          - UI / component / state → frontend-developer
-          - Flaky or wrong test → test-developer
+        Choose the role by which layer failed:
+          Backend API / logic / data -> backend-developer
+          UI / component / state     -> frontend-developer
+          Flaky or wrong test        -> test-developer
 
-        Body sections:
-          - Reproduction Steps (exact, numbered)
-          - Expected Behaviour
-          - Actual Behaviour
-          - Logs / Output (include stderr tail or test output)
+        Body sections, in this order:
+          ## Reproduction Steps      (exact, numbered, including the command)
+          ## Expected Behaviour
+          ## Actual Behaviour
+          ## Logs / Output           (paste the real failing output)
+
+        Judge each failure against what you read in STEP 3. If a failure is a
+        deliberate, defensible deviation from the recorded architecture or
+        standards rather than a defect, do NOT file a defect and do NOT silently
+        accept it: write an ADR in lifecycle/architecture/decisions/
+        (type: adr) capturing the decision, its context, and its consequences.
+
+        Write files. Do not summarise what you would write.
   - name: tech-writer
     role:
       - tech-writer
