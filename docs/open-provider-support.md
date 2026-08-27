@@ -8,7 +8,7 @@ per-vendor approach where local models could only *talk* (single-shot
 completion, no tool use) and connection details were duplicated across every
 agent declaration.
 
-This document covers the two shipped workstreams of the **Open Provider
+This document covers the three shipped workstreams of the **Open Provider
 Support** epic:
 
 1. **Provider entity + `openai-compatible` driver** — a first-class
@@ -17,11 +17,13 @@ Support** epic:
 2. **Dynamic provider switching and failover** — automatic failover on
    upstream overload/rate-limit/outage, manual switch/restore controls, and
    provider templates.
+3. **Local-model operability** — local-model-tuned prompt fallbacks, model
+   availability preflight, warmup/lazy-load UI feedback, and a structured
+   error taxonomy, covered in full in
+   [local-model-operability.md](local-model-operability.md).
 
-A third workstream, **local-model operability** (prompt tuning, richer
-availability signals), and two smaller follow-ups —
-[[inline-driver-provider-abstraction]] (giving the idea-chat conversational
-completer the same provider abstraction) and
+Two smaller follow-ups — [[inline-driver-provider-abstraction]] (giving the
+idea-chat conversational completer the same provider abstraction) and
 [[agent-logging-provider-driver]] (recording provider/driver on every run
 record) — are still in progress; see [Related and in-progress work](#related-and-in-progress-work).
 
@@ -361,8 +363,10 @@ Primary** or `POST .../restore-provider`.
 - [[switch-provider]] — dynamic switching and automated failover (§5
   above). **Done.**
 - [[local-model-operability]] — workstream 3: local-model-tuned prompt
-  templates, richer availability checks, error surfacing. Not yet planned
-  in detail.
+  fallbacks, model availability preflight, warmup detection, and a
+  structured error taxonomy. **Done** — see
+  [local-model-operability.md](local-model-operability.md) and
+  [[local-llm-operability]].
 - [[inline-driver-provider-abstraction]] — extending the same Provider
   abstraction to the conversational idea-chat completer (currently
   in planning/development).
