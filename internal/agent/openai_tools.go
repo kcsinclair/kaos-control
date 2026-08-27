@@ -8,9 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/kaos-control/kaos-control/internal/sandbox"
 )
@@ -124,9 +126,50 @@ func DefaultOpenAITools() []OpenAITool {
 }
 
 // ToolExecutor executes sandboxed tools locally against a project root.
+// BashTool is the shell tool for the openai-compatible driver. It is
+// deliberately NOT part of DefaultOpenAITools: v1 excluded shell because small
+// local models are the least trustworthy with it. The driver advertises this
+// tool only when the agent has a non-empty bash_allowlist, so shell access is
+// opt-in per agent and the allowlist doubles as the grant.
+func BashTool() OpenAITool {
+	return OpenAITool{
+		Type: "function",
+		Function: OpenAIFunctionDesc{
+			Name: "bash",
+			Description: "Run a shell command in the project root. Only commands " +
+				"permitted by this agent's configured allowlist will execute; " +
+				"anything else is refused and reported back to you.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"command": map[string]any{
+						"type":        "string",
+						"description": "The shell command to run, e.g. 'make test-unit'.",
+					},
+				},
+				"required": []string{"command"},
+			},
+		},
+	}
+}
+
+// bashTimeout bounds a single bash tool call so one hung command cannot consume
+// the whole run.
+const bashTimeout = 5 * time.Minute
+
+// bashOutputLimit caps how much command output is fed back to the model.
+const bashOutputLimit = 16 * 1024
+
 type ToolExecutor struct {
 	ProjectRoot  string
 	AllowedPaths []string
+	// Policy governs bash calls. Nil means bash is not available: every call is
+	// refused. Reuses the same PolicyConfig/Evaluate path as claude-mediated so
+	// there is exactly one shell policy implementation.
+	Policy *PolicyConfig
+	// OnDenial is called for each refused bash call so the run record can carry
+	// denied_tool_calls, matching the mediated driver.
+	OnDenial func(d Decision, toolName string, toolInput map[string]any)
 }
 
 // Execute parses argsJSON and invokes the named tool against the sandbox.
@@ -174,9 +217,66 @@ func (e *ToolExecutor) Execute(ctx context.Context, name string, argsJSON string
 		}
 		return e.grep(args.Pattern, args.Path)
 
+	case "bash":
+		var args struct {
+			Command string `json:"command"`
+		}
+		if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+			return fmt.Sprintf("invalid arguments: %v", err), nil
+		}
+		return e.bash(ctx, args.Command)
+
 	default:
 		return fmt.Sprintf("unknown tool: %s", name), nil
 	}
+}
+
+// bash evaluates a shell command against the agent's policy and, if permitted,
+// runs it in the project root. A refusal is returned to the model as tool
+// output (not an error) so the agent can adapt instead of the run dying.
+func (e *ToolExecutor) bash(ctx context.Context, command string) (string, error) {
+	if strings.TrimSpace(command) == "" {
+		return "permission denied: empty command", nil
+	}
+	if e.Policy == nil {
+		return "permission denied: bash is not enabled for this agent " +
+			"(set bash_allowlist in the agent config to enable it)", nil
+	}
+
+	// Policy name is "Bash" — the same key claude-mediated uses — so both
+	// drivers share one denylist/allowlist implementation.
+	toolInput := map[string]any{"command": command}
+	decision := Evaluate(*e.Policy, "Bash", toolInput)
+	if decision.Action == "deny" {
+		if e.OnDenial != nil {
+			e.OnDenial(decision, "bash", toolInput)
+		}
+		return fmt.Sprintf("permission denied: %s (rule: %s)", decision.Reason, decision.Rule), nil
+	}
+
+	cmdCtx, cancel := context.WithTimeout(ctx, bashTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(cmdCtx, "sh", "-c", command)
+	cmd.Dir = e.ProjectRoot
+	out, err := cmd.CombinedOutput()
+
+	text := string(out)
+	if len(text) > bashOutputLimit {
+		text = text[:bashOutputLimit] + "\n... [output truncated]"
+	}
+	if cmdCtx.Err() == context.DeadlineExceeded {
+		return fmt.Sprintf("command timed out after %s\n%s", bashTimeout, text), nil
+	}
+	if err != nil {
+		// A non-zero exit is information for the model (a failing test suite is
+		// the normal case for a QA agent), not a run-ending error.
+		return fmt.Sprintf("exit error: %v\n%s", err, text), nil
+	}
+	if strings.TrimSpace(text) == "" {
+		return "(command produced no output)", nil
+	}
+	return text, nil
 }
 
 func (e *ToolExecutor) readFile(relPath string) (string, error) {

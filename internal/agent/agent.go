@@ -97,6 +97,18 @@ type Run struct {
 	// OpenAI-compatible driver fields.
 	ProviderName      string // resolved from AgentConfig.Provider
 	MaxToolIterations int    // per-agent override; 0 = default (25)
+	// BashAllowlist gates the openai-compatible driver's bash tool: the tool is
+	// only advertised to the model when this is non-empty, so shell access is
+	// opt-in per agent rather than granted to every local agent by default.
+	BashAllowlist []string
+	// BashDenylist is the merged (DefaultBashDenylist + per-agent) denylist,
+	// checked before the allowlist.
+	BashDenylist []string
+	// ObserveOnly logs policy decisions but allows them (dry-run).
+	ObserveOnly bool
+	// OnBashDenial is invoked for each refused bash tool call so the run record
+	// carries denied_tool_calls, matching the mediated driver.
+	OnBashDenial func(d Decision, toolName string, toolInput map[string]any)
 	// ModelLoadingTimeout bounds how long the openai-compatible driver waits
 	// for the first streamed content token before aborting as a load timeout
 	// (local-model-operability Milestone 3). 0 = driver default (60s).
@@ -698,6 +710,19 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		BaseURL:             ag.BaseURL,
 		AuthToken:           ag.AuthToken,
 		ModelLoadingTimeout: m.modelLoadingTimeout,
+		BashAllowlist:       ag.BashAllowlist,
+		BashDenylist:        mergeDenylist(ag.BashDenylist),
+		ObserveOnly:         ag.ObserveOnly,
+	}
+
+	// Refused bash calls are recorded on the run (denied_tool_calls) exactly as
+	// the mediated driver does, so an opt-in shell is auditable.
+	if ag.Driver == "openai-compatible" && len(ag.BashAllowlist) > 0 {
+		runIDCopy := runID
+		mgr := m
+		run.OnBashDenial = func(d Decision, toolName string, toolInput map[string]any) {
+			mgr.RecordDenial(runIDCopy, d, toolName, toolInput)
+		}
 	}
 
 	// Wire TTFT recording for streaming drivers. The callback is called from

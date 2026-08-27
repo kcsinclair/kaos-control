@@ -107,6 +107,14 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 	}
 
 	tools := DefaultOpenAITools()
+	// Shell is opt-in per agent: advertise the bash tool only when the agent has
+	// a non-empty bash_allowlist. v1 excluded shell entirely because small local
+	// models are least trustworthy with it, so the allowlist is both the switch
+	// and the grant.
+	bashEnabled := len(run.BashAllowlist) > 0
+	if bashEnabled {
+		tools = append(tools, BashTool())
+	}
 
 	// Timeout configuration
 	timeout := time.Duration(run.TimeoutMinutes) * time.Minute
@@ -148,6 +156,19 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 	executor := &ToolExecutor{
 		ProjectRoot:  run.ProjectRoot,
 		AllowedPaths: run.AllowedPaths,
+	}
+	// Same PolicyConfig/Evaluate path claude-mediated uses, so there is one
+	// shell policy implementation rather than two. Left nil when bash is not
+	// enabled, which makes the executor refuse any bash call outright.
+	if bashEnabled {
+		executor.Policy = &PolicyConfig{
+			ProjectRoot:   run.ProjectRoot,
+			AllowedPaths:  run.AllowedPaths,
+			BashAllowlist: run.BashAllowlist,
+			BashDenylist:  run.BashDenylist,
+			ObserveOnly:   run.ObserveOnly,
+		}
+		executor.OnDenial = run.OnBashDenial
 	}
 
 	mask := func(s string) string {

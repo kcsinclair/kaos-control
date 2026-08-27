@@ -232,8 +232,13 @@ func TestOpenAITools_Grep(t *testing.T) {
 }
 
 func TestOpenAITools_UnknownTool(t *testing.T) {
+	// This used "bash" as its example of an unrecognised tool, which was true
+	// until bash became a real (opt-in, policy-gated) tool. The behaviour under
+	// test is unchanged — an unrecognised name is reported, not executed — so
+	// only the example moves. Bash-specific refusal is covered directly by
+	// TestBash_RefusedWhenPolicyNil in openai_bash_test.go.
 	exec := &ToolExecutor{ProjectRoot: t.TempDir()}
-	res, err := exec.Execute(context.Background(), "bash", `{"command": "echo hi"}`)
+	res, err := exec.Execute(context.Background(), "not_a_real_tool", `{"foo": "bar"}`)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
