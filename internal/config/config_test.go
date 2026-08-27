@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestShouldIgnore verifies the ShouldIgnore helper with various pattern/path
@@ -493,6 +494,41 @@ func TestLoadAppDefaultDataDir(t *testing.T) {
 // TestLoadApp_AgentPrecheckDefaults verifies that when no agent: section is
 // present in the app config file, the default values are applied correctly.
 // Run with: go test ./internal/config/ -run TestLoadApp_AgentPrecheckDefaults
+// TestLoadApp_OmittedSectionsKeepDefaults verifies that a config file which
+// omits a section entirely keeps the defaults for that section. App.UnmarshalYAML
+// previously decoded into a zero-valued appRaw and overwrote every field, so any
+// key absent from the file lost its default. For auth that was fatal: no "auth:"
+// key meant method "", which validateApp rejects as unsupported — the server
+// refused to start on a minimal config, and 33 integration tests each burned
+// their full 15s readiness timeout as a result.
+func TestLoadApp_OmittedSectionsKeepDefaults(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+
+	// No auth:, limits: or agent: section — only what a hand-written minimal
+	// config would carry.
+	minimalCfg := "server:\n  listen: \":9999\"\ndata_dir: " + filepath.Join(dir, "data") + "\n"
+	if err := os.WriteFile(cfgPath, []byte(minimalCfg), 0o600); err != nil {
+		t.Fatalf("writing config: %v", err)
+	}
+
+	cfg, err := LoadApp(cfgPath)
+	if err != nil {
+		t.Fatalf("LoadApp on a config without an auth: section: %v", err)
+	}
+
+	if cfg.Auth.Method != "local" {
+		t.Errorf("Auth.Method = %q, want %q", cfg.Auth.Method, "local")
+	}
+	if cfg.Auth.SessionTTL != 30*24*time.Hour {
+		t.Errorf("Auth.SessionTTL = %v, want %v", cfg.Auth.SessionTTL, 30*24*time.Hour)
+	}
+	// The value present in the file must still win over the default.
+	if cfg.Server.Listen != ":9999" {
+		t.Errorf("Server.Listen = %q, want %q", cfg.Server.Listen, ":9999")
+	}
+}
+
 func TestLoadApp_AgentPrecheckDefaults(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")

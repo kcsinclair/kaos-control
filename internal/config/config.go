@@ -202,8 +202,24 @@ type appRaw struct {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler for App.
+//
+// raw is seeded from the receiver rather than left zero-valued. LoadApp starts
+// from defaultApp() and unmarshals the file over the top, so decoding into a
+// zero appRaw would discard every default the file does not happen to mention —
+// a config without an "auth:" key would end up with auth.method "" and be
+// rejected by validateApp, even though the default is "local". Decoding into a
+// pre-populated struct leaves absent keys untouched.
 func (a *App) UnmarshalYAML(value *yaml.Node) error {
-	var raw appRaw
+	raw := appRaw{
+		Server:          a.Server,
+		Auth:            a.Auth,
+		ProjectsDir:     a.ProjectsDir,
+		Limits:          a.Limits,
+		DataDir:         a.DataDir,
+		Providers:       a.Providers,
+		OllamaInstances: a.OllamaInstances,
+		Agent:           a.Agent,
+	}
 	if err := value.Decode(&raw); err != nil {
 		return err
 	}
