@@ -1364,7 +1364,10 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 
 	// Pause queue if there were denials (FR16).
 	if hasDenials && m.PauseQueue != nil {
-		m.PauseQueue("denied_tool_calls: run " + run.RunID)
+		// Name the offending tool(s) in the pause reason. "denied_tool_calls:
+		// run <id>" alone forced the operator to go digging in the database to
+		// discover what had actually been refused.
+		m.PauseQueue("denied_tool_calls: run " + run.RunID + " — " + summariseDenials(denials))
 	}
 
 	eventType := "agent.finished"
@@ -1642,6 +1645,19 @@ func (m *Manager) RecordDenial(runID string, d Decision, toolName string, toolIn
 	m.mu.Lock()
 	m.deniedCalls[runID] = append(m.deniedCalls[runID], rec)
 	m.mu.Unlock()
+
+	// Log at the moment of denial. Previously this only accumulated in memory,
+	// so a denial that paused the queue left nothing in the server log naming
+	// the tool — the operator saw "paused: denied_tool_calls" with no way to
+	// tell what had been refused or why.
+	slog.Warn("agent: tool call denied",
+		"run_id", runID,
+		"tool", toolName,
+		"rule", d.Rule,
+		"reason", d.Reason,
+		"command", rec.Command,
+		"path", rec.Path,
+	)
 }
 
 // DeniedCalls returns a copy of all denial records for the given run.
@@ -2229,4 +2245,38 @@ func splitPrompt(text string) (system, user string) {
 	}
 
 	return strings.TrimSpace(after[:userIdx]), strings.TrimSpace(after[userIdx+len(userDelim):])
+}
+
+// summariseDenials renders denial records into a short, human-readable reason
+// suitable for a queue-pause message: the tool, what it tried, and the rule that
+// refused it. Truncated so one pathological run cannot produce an unreadable
+// pause banner.
+func summariseDenials(denials []DenialRecord) string {
+	if len(denials) == 0 {
+		return "no details recorded"
+	}
+	const maxShown = 3
+	parts := make([]string, 0, maxShown)
+	for i, d := range denials {
+		if i == maxShown {
+			parts = append(parts, fmt.Sprintf("and %d more", len(denials)-maxShown))
+			break
+		}
+		target := d.Command
+		if target == "" {
+			target = d.Path
+		}
+		if len(target) > 80 {
+			target = target[:80] + "…"
+		}
+		switch {
+		case target != "" && d.Rule != "":
+			parts = append(parts, fmt.Sprintf("%s: %q (rule: %s)", d.ToolName, target, d.Rule))
+		case target != "":
+			parts = append(parts, fmt.Sprintf("%s: %q", d.ToolName, target))
+		default:
+			parts = append(parts, d.ToolName)
+		}
+	}
+	return strings.Join(parts, "; ")
 }

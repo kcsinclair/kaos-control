@@ -170,7 +170,6 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 			BashDenylist:  run.BashDenylist,
 			ObserveOnly:   run.ObserveOnly,
 		}
-		executor.OnDenial = run.OnBashDenial
 	}
 
 	mask := func(s string) string {
@@ -203,6 +202,22 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 			_, _ = logFile.WriteString(masked)
 			if !strings.HasSuffix(masked, "\n") {
 				_, _ = logFile.WriteString("\n")
+			}
+		}
+	}
+
+	// Wire denial reporting now that writeLog exists. A denial is written as a
+	// distinct, greppable marker: the raw "# tool result: permission denied…"
+	// line is present but buried among thousands of stream lines, so an operator
+	// facing a paused queue had no obvious way to find what was refused.
+	if executor.Policy != nil {
+		userOnDenial := run.OnBashDenial
+		executor.OnDenial = func(d Decision, toolName string, toolInput map[string]any) {
+			cmd, _ := toolInput["command"].(string)
+			writeLog(fmt.Sprintf("# DENIED tool=%s rule=%s reason=%s command=%q",
+				toolName, d.Rule, d.Reason, cmd))
+			if userOnDenial != nil {
+				userOnDenial(d, toolName, toolInput)
 			}
 		}
 	}
