@@ -95,3 +95,34 @@ func TestMaskSecretsInText(t *testing.T) {
 		}
 	}
 }
+
+// TestClassifyReason_MidStreamConnectionReset pins the classification of a
+// connection dropped mid-generation. Run 8f15fc7f0fe9afa9 died with exactly
+// this stderr and recorded an EMPTY failure_reason, because the classifier
+// looked for "dial tcp"/"connection refused"/"eof" and this string matches none
+// of them. It must NOT be reported as endpoint_unreachable: that remediation
+// says "verify base_url is correct and the server is running", which is
+// misleading when the server is up and merely reset an in-flight stream (here,
+// a llama-swap model swap).
+func TestClassifyReason_MidStreamConnectionReset(t *testing.T) {
+	stderr := "read tcp 192.168.1.9:63826->192.168.1.2:7442: read: connection reset by peer"
+	reason, remediation := classifyReason(nil, stderr)
+
+	if reason != FailureReasonProviderDisconnected {
+		t.Errorf("reason = %q, want %q", reason, FailureReasonProviderDisconnected)
+	}
+	if len(remediation) == 0 {
+		t.Error("remediation is empty — the operator gets no guidance")
+	}
+
+	// A genuinely unreachable endpoint must still classify as such.
+	if r, _ := classifyReason(nil, "dial tcp 192.168.1.2:7442: connect: connection refused"); r != FailureReasonEndpointUnreachable {
+		t.Errorf("connection refused = %q, want %q", r, FailureReasonEndpointUnreachable)
+	}
+
+	// "unexpected EOF" is a mid-stream drop, not an unreachable endpoint — it
+	// must not be swallowed by the generic branch's "eof" needle.
+	if r, _ := classifyReason(nil, "stream error: unexpected EOF"); r != FailureReasonProviderDisconnected {
+		t.Errorf("unexpected EOF = %q, want %q", r, FailureReasonProviderDisconnected)
+	}
+}

@@ -297,6 +297,7 @@ export type FailureReason =
   | 'model_not_found'
   | 'model_unloaded'
   | 'endpoint_unreachable'
+  | 'provider_disconnected'
   | 'context_window_exceeded'
   | 'turn_token_ceiling'
   | 'max_iterations_reached'

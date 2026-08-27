@@ -19,6 +19,7 @@ const (
 	FailureReasonModelNotFound         = "model_not_found"
 	FailureReasonModelUnloaded         = "model_unloaded"
 	FailureReasonEndpointUnreachable   = "endpoint_unreachable"
+	FailureReasonProviderDisconnected  = "provider_disconnected"
 	FailureReasonContextWindowExceeded = "context_window_exceeded"
 	FailureReasonTurnTokenCeiling      = "turn_token_ceiling"
 	FailureReasonMaxIterationsReached  = "max_iterations_reached"
@@ -36,6 +37,18 @@ var (
 		"The model or provider rejected or silently dropped the tools parameter.",
 		"Verify the model supports function calling (check the provider's model card).",
 		"For llama-server, ensure it was started with --jinja and a tool-calling chat template.",
+	}
+	// providerDisconnectedRemediation covers a connection dropped MID-STREAM,
+	// which is a different failure from an unreachable endpoint: the base_url is
+	// correct and the server is running — it terminated an in-flight generation.
+	// Observed when a model-swapping server (llama-swap and similar) loads a
+	// second model and resets existing streams, and on server-side request
+	// timeouts during long reasoning phases.
+	providerDisconnectedRemediation = []string{
+		"The provider dropped the connection while the model was still generating.",
+		"If the server swaps or unloads models on demand, a swap resets in-flight streams — pin the model, or avoid driving a second model concurrently.",
+		"Check the provider's request/idle timeout; a long reasoning phase can exceed it.",
+		"Retry the run — the endpoint itself is reachable.",
 	}
 	modelUnloadedRemediation = []string{
 		"The provider reported the model as unloaded or failed to allocate memory for it.",
@@ -156,6 +169,11 @@ func classifyReason(err error, stderr string) (string, []string) {
 		return FailureReasonTurnTokenCeiling, turnTokenCeilingRemediation
 	case containsAny(lower, "model not found", "no such model", "model_not_found", "does not exist"):
 		return FailureReasonModelNotFound, modelNotFoundRemediation
+	case containsAny(lower, "connection reset", "broken pipe", "unexpected eof", "econnreset", "stream closed"):
+		// Checked BEFORE the unreachable branch: its "eof" needle would
+		// otherwise swallow "unexpected eof" and report a reachable server as
+		// unreachable.
+		return FailureReasonProviderDisconnected, providerDisconnectedRemediation
 	case containsAny(lower, "connection refused", "no such host", "dial tcp", "i/o timeout", "unreachable", "eof"):
 		return FailureReasonEndpointUnreachable, endpointUnreachableRemediation
 	}
