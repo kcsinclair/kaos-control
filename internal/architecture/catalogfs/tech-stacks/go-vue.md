@@ -67,7 +67,7 @@ stack_profile:
     frontend-developer:
       write_paths: [web/src]
       build: cd web && pnpm build
-      lint: cd web && pnpm exec vue-tsc --noEmit
+      lint: cd web && pnpm run lint && pnpm exec vue-tsc --noEmit
       test: cd web && pnpm test
     test-developer:
       write_paths: [tests, web/src]
