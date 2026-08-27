@@ -6,6 +6,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The bash tool is opt-in and policy-gated. These tests pin the security
@@ -142,5 +143,39 @@ func TestBash_RunsInProjectRoot(t *testing.T) {
 	// macOS reports /private/var for /var; compare on the trailing element.
 	if !strings.Contains(out, strings.TrimPrefix(dir, "/private")) {
 		t.Errorf("pwd = %q, want the project root %q", strings.TrimSpace(out), dir)
+	}
+}
+
+// TestRunContextFor_ZeroMeansUnlimited pins kaos-control's convention that
+// timeout_minutes: 0 means UNLIMITED. This driver used to coerce 0 to a private
+// 10-minute default, so run c38b0f28a9cb5816 — a qa agent explicitly configured
+// timeout_minutes: 0 — was killed at 601s with "context deadline exceeded",
+// overriding the unbounded context the runner had already created. agent.go
+// ("timeout_minutes=0 disables the timeout") and gemini-cli (0 -> 24h) both
+// treat 0 as unlimited; this driver must agree.
+func TestRunContextFor_ZeroMeansUnlimited(t *testing.T) {
+	ctx0, cancel0 := runContextFor(context.Background(), 0)
+	defer cancel0()
+	if dl, ok := ctx0.Deadline(); ok {
+		t.Errorf("timeout_minutes=0 gave a deadline of %v; 0 must mean unlimited", dl)
+	}
+
+	ctx30, cancel30 := runContextFor(context.Background(), 30)
+	defer cancel30()
+	dl, ok := ctx30.Deadline()
+	if !ok {
+		t.Fatal("timeout_minutes=30 produced no deadline")
+	}
+	if remaining := time.Until(dl); remaining > 31*time.Minute || remaining < 29*time.Minute {
+		t.Errorf("deadline in ~%v, want ~30m", remaining)
+	}
+
+	// A bounded parent must still bound an "unlimited" run.
+	parent, pcancel := context.WithTimeout(context.Background(), time.Hour)
+	defer pcancel()
+	ctxInherit, cancelInherit := runContextFor(parent, 0)
+	defer cancelInherit()
+	if _, ok := ctxInherit.Deadline(); !ok {
+		t.Error("unlimited run discarded the parent's deadline; it must inherit it")
 	}
 }

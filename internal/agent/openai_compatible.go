@@ -116,12 +116,14 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 		tools = append(tools, BashTool())
 	}
 
-	// Timeout configuration
-	timeout := time.Duration(run.TimeoutMinutes) * time.Minute
-	if timeout <= 0 {
-		timeout = 10 * time.Minute
-	}
-	runCtx, cancel := context.WithTimeout(ctx, timeout)
+	// Timeout configuration. timeout_minutes: 0 means UNLIMITED across
+	// kaos-control — the runner in agent.go documents "timeout_minutes=0
+	// disables the timeout" and gemini-cli maps 0 onto a 24h --print-timeout.
+	// This driver previously coerced 0 to a private 10-minute default, so an
+	// agent explicitly configured as unbounded was killed at 601s with
+	// "context deadline exceeded", overriding the timeout the runner had
+	// already decided. Honour the caller's context when unbounded.
+	runCtx, cancel := runContextFor(ctx, run.TimeoutMinutes)
 
 	// Preflight capability verification (FR-5b)
 	if err := VerifyToolCapability(runCtx, client, *prov, run.Model, tools); err != nil {
@@ -599,4 +601,19 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 	}()
 
 	return proc, nil
+}
+
+// runContextFor derives the run context from an agent's timeout_minutes.
+//
+// timeout_minutes: 0 means UNLIMITED across kaos-control — agent.go documents
+// "timeout_minutes=0 disables the timeout" and gemini-cli maps 0 onto a 24h
+// --print-timeout. This driver previously coerced 0 to a private 10-minute
+// default, so a qa agent explicitly configured unbounded was killed at 601s
+// with "context deadline exceeded" (run c38b0f28a9cb5816), silently overriding
+// the unbounded context the runner had already created.
+func runContextFor(ctx context.Context, timeoutMinutes int) (context.Context, context.CancelFunc) {
+	if timeoutMinutes > 0 {
+		return context.WithTimeout(ctx, time.Duration(timeoutMinutes)*time.Minute)
+	}
+	return context.WithCancel(ctx)
 }
