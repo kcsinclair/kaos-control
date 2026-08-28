@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-08-28** — Moved code scanning from default to advanced setup so the analysis can load a config. Adds `.github/workflows/codeql.yml`, `.github/codeql/codeql-config.yml` and a local model pack declaring `sandbox.Resolve` and `config.ValidatePath` as `barrierModel` entries for the `path-injection` kind. All 116 open `go/path-injection` alerts trace through those sanitisers, which CodeQL does not model as barriers. Requires disabling default setup before the workflow takes effect.
+
 - **2026-08-28** — Triaged the 10 integration-test failures. Six were test-side and are fixed: `make lint` unbroken (gosec/gitleaks false positives), the five native-Ollama test files deleted (they stopped `tests/integration` compiling at all), `ollama` dropped from the drivers-must-load list, the two live-provider tests made opt-in via `KC_LIVE_PROVIDER_TESTS` with a run budget that matches their own timeout, provider DELETE corrected to 204, and the ADR write-path assertion changed to respect prefix matching. The remaining four are genuine product bugs, now raised as [[automated-failover-always-rejected]] and [[onboard-existing-project-rescaffolds]].
 
 - **2026-08-27** — Turn timeline now renders for `claude-code-cli` runs. `parseLogTurns` only understood the openai-compatible `# turn N` format, so every Claude Code run showed an empty timeline — a driver difference that looked like a success/failure difference. Added a stream-json parser (assistant text/thinking/tool_use + matching tool_result) behind a format check. Verified on real logs: 28 turns / 13 tool calls for a Claude Code run, 8 turns unchanged for an openai-compatible run.

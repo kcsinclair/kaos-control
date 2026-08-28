@@ -1,0 +1,5 @@
+# Declares the repository's local CodeQL packs so `packs:` entries in
+# .github/codeql/codeql-config.yml resolve from source in this checkout rather
+# than from the package registry.
+provide:
+  - ".github/codeql/models/qlpack.yml"
