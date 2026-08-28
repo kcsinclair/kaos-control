@@ -22,10 +22,11 @@ const (
 	FailureReasonProviderDisconnected  = "provider_disconnected"
 	FailureReasonInterruptedByRestart  = "interrupted_by_restart"
 	FailureReasonContextWindowExceeded = "context_window_exceeded"
-	FailureReasonTurnTokenCeiling      = "turn_token_ceiling"
-	FailureReasonMaxIterationsReached  = "max_iterations_reached"
-	FailureReasonAuthError             = "auth_error"
-	FailureReasonTimeout               = "timeout"
+	// #nosec G101 -- a failure-reason label, not a credential; flagged only because the name contains "Token".
+	FailureReasonTurnTokenCeiling     = "turn_token_ceiling"
+	FailureReasonMaxIterationsReached = "max_iterations_reached"
+	FailureReasonAuthError            = "auth_error"
+	FailureReasonTimeout              = "timeout"
 )
 
 // ErrMaxIterationsReached indicates the openai-compatible driver hit its
