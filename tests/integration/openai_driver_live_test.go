@@ -19,6 +19,29 @@ import (
 
 // ── Milestone 4 — Live Target Verification Tests ─────────────────────────────
 
+// liveTargetsEnabled reports whether the live-provider tests should run.
+//
+// These tests drive real models on a real inference server, so they are opt-in:
+// they are slow (a cold 26B model load alone can exceed a minute), they depend
+// on which models happen to be resident on that host, and their results say
+// nothing about this repository's code. A plain TCP reachability check is not
+// enough of a gate — on a developer machine that can reach the server, they ran
+// on every `make test-integration`.
+// liveRunBudget matches TimeoutMinutes on the runs below. The context
+// previously capped these at 25s while the run asked for 2 minutes, so a cold
+// model load failed with "context deadline exceeded" before the run's own
+// timeout ever applied.
+const liveRunBudget = 2 * time.Minute
+
+func liveTargetsEnabled(t *testing.T) bool {
+	t.Helper()
+	if os.Getenv("KC_LIVE_PROVIDER_TESTS") == "" {
+		t.Skip("set KC_LIVE_PROVIDER_TESTS=1 to run live provider tests against a real inference server")
+		return false
+	}
+	return true
+}
+
 func isLiveTargetReachable(addr string, timeout time.Duration) bool {
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
@@ -30,6 +53,7 @@ func isLiveTargetReachable(addr string, timeout time.Duration) bool {
 
 // TestOpenAIDriver_LiveTarget_LlamaServer tests live execution against llama.cpp (leia.packsin.com:7442).
 func TestOpenAIDriver_LiveTarget_LlamaServer(t *testing.T) {
+	liveTargetsEnabled(t)
 	const llamaAddr = "leia.packsin.com:7442"
 	const llamaURL = "http://" + llamaAddr
 
@@ -76,7 +100,7 @@ func TestOpenAIDriver_LiveTarget_LlamaServer(t *testing.T) {
 				TimeoutMinutes:    2,
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), liveRunBudget)
 			defer cancel()
 
 			start := time.Now()
@@ -85,7 +109,7 @@ func TestOpenAIDriver_LiveTarget_LlamaServer(t *testing.T) {
 				t.Fatalf("Start failed against %s (%s): %v", llamaAddr, model, err)
 			}
 
-			_ = collectEvents(t, proc, 25*time.Second)
+			_ = collectEvents(t, proc, liveRunBudget)
 			if err := proc.Wait(); err != nil {
 				t.Fatalf("Wait failed against %s (%s): %v", llamaAddr, model, err)
 			}
@@ -98,6 +122,7 @@ func TestOpenAIDriver_LiveTarget_LlamaServer(t *testing.T) {
 
 // TestOpenAIDriver_LiveTarget_Ollama tests live execution against Ollama (leia.packsin.com:11434).
 func TestOpenAIDriver_LiveTarget_Ollama(t *testing.T) {
+	liveTargetsEnabled(t)
 	const ollamaAddr = "leia.packsin.com:11434"
 	const ollamaURL = "http://" + ollamaAddr
 
@@ -144,7 +169,7 @@ func TestOpenAIDriver_LiveTarget_Ollama(t *testing.T) {
 				TimeoutMinutes:    2,
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), liveRunBudget)
 			defer cancel()
 
 			start := time.Now()
@@ -153,7 +178,7 @@ func TestOpenAIDriver_LiveTarget_Ollama(t *testing.T) {
 				t.Fatalf("Start failed against %s (%s): %v", ollamaAddr, model, err)
 			}
 
-			_ = collectEvents(t, proc, 25*time.Second)
+			_ = collectEvents(t, proc, liveRunBudget)
 			if err := proc.Wait(); err != nil {
 				t.Fatalf("Wait failed against %s (%s): %v", ollamaAddr, model, err)
 			}

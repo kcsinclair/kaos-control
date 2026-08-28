@@ -25,7 +25,9 @@ func TestOpenAIRegression_ExistingDriversWork(t *testing.T) {
 		"gemini",
 		"gemini-cli",
 		"shell-stub",
-		"ollama",
+		// "ollama" is deliberately absent: the native driver was removed and is
+		// now rejected at config load with a migration message. That rejection is
+		// asserted in internal/config: TestLoadProject rejects deprecated driver.
 	}
 
 	for _, drv := range drivers {
@@ -33,9 +35,6 @@ func TestOpenAIRegression_ExistingDriversWork(t *testing.T) {
 			extraProps := ""
 			if drv == "gemini" || drv == "gemini-cli" {
 				extraProps = "    model: gemini-2.0-flash\n"
-			}
-			if drv == "ollama" {
-				extraProps = "    model: test-model\n    ollama_instance: test-instance\n"
 			}
 			cfgYAML := `
 git:

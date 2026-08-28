@@ -127,6 +127,7 @@ func TestAgentDirectives_ProposeADROnDeviation(t *testing.T) {
 // agents FR-13 permits to author a proposed ADR have
 // lifecycle/architecture/decisions in allowed_write_paths.
 func TestAgentDirectives_ADRAuthoringWritePath(t *testing.T) {
+	const adrDir = "lifecycle/architecture/decisions"
 	cfg := loadRealProjectConfig(t)
 	for _, name := range adrAuthoringAgents {
 		ag := findAgentConfig(cfg, name)
@@ -134,15 +135,20 @@ func TestAgentDirectives_ADRAuthoringWritePath(t *testing.T) {
 			t.Errorf("agent %q not found in lifecycle/config.yaml", name)
 			continue
 		}
+		// allowed_write_paths is prefix-matched at the tool boundary (see
+		// pathHasPrefix in internal/agent/policy.go), so a broader entry such as
+		// "lifecycle/architecture" already permits authoring an ADR under
+		// lifecycle/architecture/decisions/. Assert the capability, not one
+		// exact spelling of it.
 		found := false
 		for _, p := range ag.AllowedPaths {
-			if p == "lifecycle/architecture/decisions" {
+			if adrDir == p || strings.HasPrefix(adrDir, strings.TrimSuffix(p, "/")+"/") {
 				found = true
 				break
 			}
 		}
 		if !found {
-			t.Errorf("agent %q missing \"lifecycle/architecture/decisions\" in allowed_write_paths (FR-13)", name)
+			t.Errorf("agent %q cannot write %q — allowed_write_paths = %v (FR-13)", name, adrDir, ag.AllowedPaths)
 		}
 	}
 }
