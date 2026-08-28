@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-08-27** — Turn timeline now renders for `claude-code-cli` runs. `parseLogTurns` only understood the openai-compatible `# turn N` format, so every Claude Code run showed an empty timeline — a driver difference that looked like a success/failure difference. Added a stream-json parser (assistant text/thinking/tool_use + matching tool_result) behind a format check. Verified on real logs: 28 turns / 13 tool calls for a Claude Code run, 8 turns unchanged for an openai-compatible run.
+
 - **2026-08-27** — Fixed `App.UnmarshalYAML` discarding every app-level default when a config file exists. It decoded into a zero-valued `appRaw` and overwrote all fields, so a config omitting `auth:` got method `""` and was rejected by `validateApp` — the server refused to start on any minimal config. 33 integration tests each burned their full 15s readiness timeout as a result; integration failures drop 39 → 10.
 
 - **2026-08-27** — QA agent now runs the frontend suites: added `cd tests/web && pnpm test` and `cd web && pnpm test` to the qa allowlist and STEP 1 of its prompt. The agent previously ran only the two Go targets, so 149 frontend spec files were never exercised — including the frontend test plans it was being pointed at.
