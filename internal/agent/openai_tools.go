@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/kaos-control/kaos-control/internal/sandbox"
 )
@@ -261,10 +262,7 @@ func (e *ToolExecutor) bash(ctx context.Context, command string) (string, error)
 	cmd.Dir = e.ProjectRoot
 	out, err := cmd.CombinedOutput()
 
-	text := string(out)
-	if len(text) > bashOutputLimit {
-		text = text[:bashOutputLimit] + "\n... [output truncated]"
-	}
+	text := truncateCommandOutput(string(out))
 	if cmdCtx.Err() == context.DeadlineExceeded {
 		return fmt.Sprintf("command timed out after %s\n%s", bashTimeout, text), nil
 	}
@@ -443,4 +441,35 @@ func (e *ToolExecutor) grep(pattern string, relPath string) (string, error) {
 		return "(no matches found)", nil
 	}
 	return strings.Join(results, "\n"), nil
+}
+
+// truncateCommandOutput caps command output fed back to the model, keeping both
+// ends rather than just the head.
+//
+// Head-only truncation silently defeated the qa agent: `go test` and `vitest`
+// both print their verdict last, so a suite whose output exceeded the cap was
+// summarised to the model as its opening lines only — no "--- FAIL", no "ok",
+// no totals. Run 8fe31d94d48f2b67 reported "All tests passed" from output that
+// contained no verdict at all, while make test-integration had four failures.
+//
+// The tail carries the verdict, so it gets the larger share; the head is kept
+// because the command being run and any early fatal error appear there.
+func truncateCommandOutput(text string) string {
+	if len(text) <= bashOutputLimit {
+		return text
+	}
+	head := bashOutputLimit / 4
+	tail := bashOutputLimit - head
+	// Avoid slicing through a UTF-8 rune.
+	for head > 0 && !utf8.RuneStart(text[head]) {
+		head--
+	}
+	cut := len(text) - tail
+	for cut < len(text) && !utf8.RuneStart(text[cut]) {
+		cut++
+	}
+	omitted := cut - head
+	return text[:head] +
+		fmt.Sprintf("\n\n... [%d bytes of output omitted; the end of the output follows] ...\n\n", omitted) +
+		text[cut:]
 }

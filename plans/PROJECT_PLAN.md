@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-08-28** — Fixed the bash tool discarding the end of command output. It kept the first 16 KB and dropped the rest, but `go test` and `vitest` print their verdict last, so the qa agent never saw a pass/fail line for any suite over the cap. Run `8fe31d94d48f2b67` reported "All tests passed" while `make test-integration` had four failures. Truncation now keeps both ends.
+
 - **2026-08-28** — Moved code scanning from default to advanced setup so the analysis can load a config. Adds `.github/workflows/codeql.yml`, `.github/codeql/codeql-config.yml` and a local model pack declaring `sandbox.Resolve` and `config.ValidatePath` as `barrierModel` entries for the `path-injection` kind. All 116 open `go/path-injection` alerts trace through those sanitisers, which CodeQL does not model as barriers. Requires disabling default setup before the workflow takes effect.
 
 - **2026-08-28** — Triaged the 10 integration-test failures. Six were test-side and are fixed: `make lint` unbroken (gosec/gitleaks false positives), the five native-Ollama test files deleted (they stopped `tests/integration` compiling at all), `ollama` dropped from the drivers-must-load list, the two live-provider tests made opt-in via `KC_LIVE_PROVIDER_TESTS` with a run budget that matches their own timeout, provider DELETE corrected to 204, and the ADR write-path assertion changed to respect prefix matching. The remaining four are genuine product bugs, now raised as [[automated-failover-always-rejected]] and [[onboard-existing-project-rescaffolds]].
