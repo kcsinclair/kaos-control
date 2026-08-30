@@ -40,12 +40,22 @@ var (
 		"Verify the model supports function calling (check the provider's model card).",
 		"For llama-server, ensure it was started with --jinja and a tool-calling chat template.",
 	}
-	// providerDisconnectedRemediation covers a connection dropped MID-STREAM,
-	// which is a different failure from an unreachable endpoint: the base_url is
-	// correct and the server is running — it terminated an in-flight generation.
-	// Observed when a model-swapping server (llama-swap and similar) loads a
-	// second model and resets existing streams, and on server-side request
-	// timeouts during long reasoning phases.
+	// providerDisconnectedRemediation covers a connection dropped after the
+	// request was accepted, which is a different failure from an unreachable
+	// endpoint: the base_url is correct and the server is running.
+	//
+	// The first version of this text blamed model swapping. Server-log forensics
+	// on run 97078a4c1bf40c04 disproved that: the llama.cpp backend logged no
+	// error, cancel, timeout, eviction, swap or restart, and the final request
+	// completed normally ("natural end", 16 tokens, 9s). The client received
+	// ZERO bytes for that turn and then a reset on the router port, with both
+	// sides showing a multi-minute stall where no data flowed. The drop was in
+	// the router hop, not the inference backend — so the remediation must not
+	// send operators looking at the model.
+	//
+	// Note the reset can arrive with no bytes received at all, which makes the
+	// turn safely retryable: no tokens were consumed and no partial output was
+	// produced.
 	// interruptedByRestartRemediation covers a run that was still in flight when
 	// kaos-control itself restarted. Crash recovery fails the row wholesale, so
 	// exit_code, stderr_tail and the terminal result are all absent — the run
@@ -60,10 +70,11 @@ var (
 	}
 
 	providerDisconnectedRemediation = []string{
-		"The provider dropped the connection while the model was still generating.",
-		"If the server swaps or unloads models on demand, a swap resets in-flight streams — pin the model, or avoid driving a second model concurrently.",
-		"Check the provider's request/idle timeout; a long reasoning phase can exceed it.",
-		"Retry the run — the endpoint itself is reachable.",
+		"The connection was dropped after the request was accepted. The endpoint is reachable and this is usually transient.",
+		"Check the hop in front of the model first. Where a router or proxy fronts the backend (llama.cpp's own router, llama-swap, nginx), the reset is often there rather than in the model — confirm by looking for a matching error in the BACKEND log before blaming the model.",
+		"A clean backend log that shows the request completing normally means the response was lost on the way back; look at the proxy's timeouts and any idle-connection reaping.",
+		"If the server does swap or unload models on demand, a swap can also reset in-flight streams — but verify it happened rather than assuming it.",
+		"Retry the run. If the stream failed before any token arrived, nothing was consumed and the turn is safe to repeat.",
 	}
 	modelUnloadedRemediation = []string{
 		"The provider reported the model as unloaded or failed to allocate memory for it.",

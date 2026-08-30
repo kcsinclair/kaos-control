@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-08-30** — Corrected the `provider_disconnected` remediation, which blamed model swapping. Server-log forensics on run `97078a4c1bf40c04` disproved that: the llama.cpp backend logged no error, cancel, timeout, eviction, swap or restart, and the final request completed normally, while the client received zero bytes and a reset on the router port. The drop was in the router hop, not the model.
+
 - **2026-08-28** — Fixed the bash tool discarding the end of command output. It kept the first 16 KB and dropped the rest, but `go test` and `vitest` print their verdict last, so the qa agent never saw a pass/fail line for any suite over the cap. Run `8fe31d94d48f2b67` reported "All tests passed" while `make test-integration` had four failures. Truncation now keeps both ends.
 
 - **2026-08-28** — Moved code scanning from default to advanced setup so the analysis can load a config. Adds `.github/workflows/codeql.yml`, `.github/codeql/codeql-config.yml` and a local model pack declaring `sandbox.Resolve` and `config.ValidatePath` as `barrierModel` entries for the `path-injection` kind. All 116 open `go/path-injection` alerts trace through those sanitisers, which CodeQL does not model as barriers. Requires disabling default setup before the workflow takes effect.
