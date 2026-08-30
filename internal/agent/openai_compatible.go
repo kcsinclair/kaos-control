@@ -391,14 +391,26 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 			httpReq.Header.Set("Accept", "text/event-stream")
 			applyProviderHeaders(httpReq, *prov)
 
+			// Timing around the request is the difference between a diagnosable
+			// provider_disconnected and a bare "connection reset by peer". Run
+			// 97078a4c1bf40c04 died here with no indication of whether the wait
+			// was ours or the provider's, which cost a round of server-log
+			// forensics to establish.
+			reqSentAt := time.Now()
+			writeLog(fmt.Sprintf("# request: turn %d sent, %d bytes", turn, len(bodyBytes)))
+
 			resp, err := client.Do(httpReq)
 			if err != nil {
 				err = wrapLoadTimeout(err)
 				rb.Write([]byte(mask(err.Error())))
-				writeLog("# error: " + err.Error())
+				writeLog(fmt.Sprintf("# error: %s (no response headers after %s)",
+					err.Error(), time.Since(reqSentAt).Round(time.Millisecond)))
 				doneCh <- wrapHTTPError(err, 0)
 				return
 			}
+			headersAt := time.Now()
+			writeLog(fmt.Sprintf("# response: HTTP %d, headers after %s",
+				resp.StatusCode, headersAt.Sub(reqSentAt).Round(time.Millisecond)))
 
 			if resp.StatusCode != http.StatusOK {
 				respBody, _ := io.ReadAll(resp.Body)
@@ -424,11 +436,13 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 			sc := bufio.NewScanner(resp.Body)
 			sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 
+			sseLines := 0
 			for sc.Scan() {
 				line := sc.Text()
 				if line == "" {
 					continue
 				}
+				sseLines++
 				if !strings.HasPrefix(line, "data:") {
 					continue
 				}
@@ -500,7 +514,12 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 					return
 				}
 				rb.Write([]byte(mask(scanErr.Error())))
-				writeLog("# error: " + scanErr.Error())
+				writeLog(fmt.Sprintf(
+					"# error: %s (stream died %s after headers, %s after send; %d SSE lines received)",
+					scanErr.Error(),
+					time.Since(headersAt).Round(time.Millisecond),
+					time.Since(reqSentAt).Round(time.Millisecond),
+					sseLines))
 				doneCh <- scanErr
 				return
 			}
