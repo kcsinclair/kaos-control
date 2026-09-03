@@ -3,26 +3,23 @@ title: agent switchover and failover
 type: idea
 status: draft
 lineage: agent-switchover-and-failover
-created: "2026-08-28"
-priority:
-release: KC-Release6
+created: "2026-08-28T00:00:00+10:00"
 labels:
     - agent
     - queue
     - failover
     - providers
     - reliability
-reach:
-impact:
-confidence:
-effort:
+release: KC-Release6
 ---
+
 ## Idea
 
 ### agent switchover and failover Features  
 * Manual agent switch over  
 * Automated agent failover over  
 * Ratelimit queue pause  
+* Tool deny list queue pause [[improved-bash-allow-lists]]
 * Provider outage queue pause  
 * Provider availability monitoring  
 * Provider failure mode monitoring  
@@ -68,6 +65,8 @@ each discovered only when that agent's next job runs and fails.
 **Open question:** should provider-level exhaustion fail over every agent bound
 to that provider in one action, rather than one at a time?
 
+> The queue has been setup to be executed in that order.  When exhaustion for any agent the queue should be paused so the jobs can be executed in order.  The system should then wait until there are tokens available again and restart the job which failed and then continue processing the queue as jobs were queued.
+
 ### 2. "Track provider reachability" is not met by what exists
 
 The *Single provider* section above requires kaos-control to track provider
@@ -78,6 +77,8 @@ agents already in failover** — returning early when that set is empty
 
 In single-provider mode, nothing is ever probed. This is a new requirement, not
 existing behaviour.
+
+> Yes, this is a new requirement.
 
 ### 3. Failback has no trustworthy signal
 
@@ -99,6 +100,8 @@ for failback: `resets_at_unix`, together with a `bucket` of `five_hour` or
 signal until it passes, and probe something quota-gated (a 1-token completion)
 rather than `/v1/models`.
 
+> At this time failback will only be triggered manually.
+
 ### 4. Failure scenarios missing from the list of three
 
 The three scenarios above map to the three implemented kinds
@@ -118,6 +121,8 @@ Not covered by the idea, and not currently failover triggers:
 
 Each needs an explicit decision: trigger failover, pause the queue, or fail hard.
 
+> "Auth / credential failure" is operational, that should trigger a failover to secondary.  The other issues I consider these issues to be setup issues, e.g. when something is modified and the user should have verified they are working before setting up alot of work to be done.  
+
 ### 5. Failover ignores model capability
 
 A switch requires only a health probe. The tool-calling preflight is **not**
@@ -131,6 +136,8 @@ the architecture and standards is not a suitable agent.
 **Proposed:** passing the tool-calling preflight is a precondition for any
 switch target, manual or automated.
 
+> It can be assumed that the primary and secondary agents and models have already been verified before this is put into full production.
+
 ### 6. Only one fallback level
 
 `fallback_provider` is a single field and `max_failovers_per_run` defaults to 1,
@@ -138,6 +145,8 @@ so there is no chain. The *Multiple providers* mode implies more than two.
 
 **Open question:** is a tertiary provider in scope, and what is the ordering
 rule?
+
+> At this time a primary and secondary will be sufficient.
 
 ### 7. Failover state is written to git
 
@@ -150,13 +159,25 @@ allows an external sync to race a failover write.
 (e.g. in the index or a runtime state file), with config remaining the declared
 intent?
 
+> Yes, operational state will not be committed to git.  The configuration should not be modified to support failover, the operational state should be tracked in a seperate file, e.g. operation.yaml in the lifecycle directory. How the system is currently operating will be maintained in that file.  The UI can use it to display current status and any other necessary messages for the user.
+
 ### 8. Manual switchover and in-flight runs
 
 The idea does not say what happens to a run already executing when an operator
 switches an agent: killed and requeued, or allowed to drain first?
+
+> The user should be warned of the running jobs and the switchover rejected, the user can then decide how they want to handle the running and queued jobs.
 
 ### 9. Observability
 
 Not mentioned, and needed to tell whether any of this is working: how often each
 agent fails over, which provider caused it, how long it stayed on the fallback,
 and time-to-restore. The `internal/reports` aggregation is the natural home.
+
+> Operational state should be stored in a yaml file. e.g. operations.yaml and transitions recorded in the application log.  Saving other records into the internal/reports aggregation is a good idea.
+
+## Product Owner Additional Thoughts
+
+Configuration for how the switchover and failover features should be working is required.  This should include the preferred mode of operation and can provide a list of detected events and which action should be taken, e.g. pause queue or failover to secondary provider.
+
+When switching between the primary and secondary agents they should be done together, e.g. the backend developer agent is running a job, and the provider fails, if automated switchover is enabled, all agents are switched to the secondary, the job which was currently running restarts and the rest of the jobs are running on the secondary provider.
