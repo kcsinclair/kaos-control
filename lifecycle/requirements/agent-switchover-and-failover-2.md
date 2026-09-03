@@ -1,7 +1,7 @@
 ---
 title: Agent Switchover and Failover
 type: requirement
-status: blocked
+status: draft
 lineage: agent-switchover-and-failover
 created: "2026-09-03T11:00:00+10:00"
 priority: high
@@ -383,7 +383,7 @@ run `2073eaa29f90f088`). Blindly re-running would duplicate work.
 
 ---
 
-## Open Questions
+## Resolved Questions
 
 1. **Closely-spaced disconnect counting (FR-6.3).** The default is that each
    disconnect event counts individually toward the rolling-hour threshold, with
@@ -407,3 +407,5 @@ run `2073eaa29f90f088`). Blindly re-running would duplicate work.
    in a git-ignored root `operations.yaml`, config is declared intent only"
    decision be recorded as an ADR under `lifecycle/architecture/decisions/` given it
    reverses a `done` requirement?
+
+> No ADR is required for this.
