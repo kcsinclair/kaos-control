@@ -1,7 +1,7 @@
 ---
 title: Agent Switchover and Failover — Frontend Plan
 type: plan-frontend
-status: in-development
+status: done
 lineage: agent-switchover-and-failover
 parent: lifecycle/requirements/agent-switchover-and-failover-2.md
 created: "2026-09-03T12:00:00+10:00"
