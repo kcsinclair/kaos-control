@@ -927,6 +927,24 @@ func (d *Dispatcher) PendingJobs() ([]*Job, error) {
 	return d.store.ListByState(StatePending)
 }
 
+// RunningJobs returns the jobs currently running for project, used to guard
+// a manual provider switch against in-flight runs (agent-switchover-and-
+// failover FR-8.2): an operator-requested switch while any run is executing
+// is rejected with a warning listing these jobs.
+func (d *Dispatcher) RunningJobs(project string) ([]*Job, error) {
+	running, err := d.store.ListByState(StateRunning)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*Job, 0, len(running))
+	for _, j := range running {
+		if j.Project == project {
+			out = append(out, j)
+		}
+	}
+	return out, nil
+}
+
 func (d *Dispatcher) StateSnapshot() (*queueSnapshot, error) {
 	running, err := d.store.ListByState(StateRunning)
 	if err != nil {

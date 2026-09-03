@@ -308,8 +308,10 @@ func (s *Server) buildRouter() chi.Router {
 				r.Post("/agents/{name}/switch-provider", s.handleAgentSwitchProvider)
 				r.Post("/agents/{name}/restore-provider", s.handleAgentRestoreProvider)
 
-				// Provider switching / failover (switch-provider-3-be)
+				// Provider switching / failover (switch-provider-3-be,
+				// agent-switchover-and-failover)
 				r.Get("/provider-switch/status", s.handleGetFailoverStatus)
+				r.Get("/provider-switch/policy", s.handleGetSwitchoverPolicy)
 				r.Post("/provider-switch/switch-all", s.handleSwitchAllProviders)
 				r.Post("/provider-switch/restore-all", s.handleRestoreAllProviders)
 				r.Get("/provider-templates", s.handleListProviderTemplates)

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/kaos-control/kaos-control/internal/agent"
 	"github.com/kaos-control/kaos-control/internal/config"
+	"github.com/kaos-control/kaos-control/internal/project"
 )
 
 // providerExists reports whether name is a registered app-level provider.
@@ -37,7 +37,10 @@ func (s *Server) providerConfig(name string) (config.Provider, bool) {
 }
 
 // providerSwitchAgentStatus is one agent's entry in the
-// GET .../provider-switch/status response.
+// GET .../provider-switch/status response — built entirely from
+// operations.yaml (agent-switchover-and-failover Milestone 8), never from a
+// live probe: reachability is populated by the background RecoveryProber
+// (Milestone 6), which runs in every mode, not just while failed over.
 type providerSwitchAgentStatus struct {
 	Agent            string `json:"agent"`
 	IsFailover       bool   `json:"is_failover"`
@@ -47,17 +50,41 @@ type providerSwitchAgentStatus struct {
 	ActiveModel      string `json:"active_model"`
 	FallbackProvider string `json:"fallback_provider,omitempty"`
 	FallbackModel    string `json:"fallback_model,omitempty"`
-	// PrimaryHealthy is a live reachability probe of the primary provider,
-	// populated only for agents currently in a failover state.
-	PrimaryHealthy *bool `json:"primary_healthy,omitempty"`
+	// SwitchedAt (RFC3339) and Reason describe the most recent switch away
+	// from Primary; both are empty when the agent is on its primary.
+	SwitchedAt string `json:"switched_at,omitempty"`
+	Reason     string `json:"reason,omitempty"`
+	// ResetsAtUnix + Bucket carry rate-limit context (FR-3.3) so the UI can
+	// show when the primary is expected to become usable again.
+	ResetsAtUnix int64  `json:"resets_at_unix,omitempty"`
+	Bucket       string `json:"bucket,omitempty"`
+	// PartialPause (FR-3.4): this agent has no secondary to fail over to and
+	// its jobs are paused while the rest of the project proceeds.
+	PartialPause bool `json:"partial_pause,omitempty"`
+	// AwaitingDecision (FR-7.3): a job for this agent was interrupted with a
+	// suspected partial commit and needs an operator decision.
+	AwaitingDecision      bool   `json:"awaiting_decision,omitempty"`
+	AwaitingDecisionJobID string `json:"awaiting_decision_job_id,omitempty"`
 }
 
-// handleGetFailoverStatus returns project-wide provider-failover status.
+// providerReachabilityStatus is one provider's entry in the top-level
+// reachability map of the status response (Milestone 6: every provider
+// bound to any agent, in every mode — not only ones currently failed over).
+type providerReachabilityStatus struct {
+	Healthy      bool  `json:"healthy"`
+	LastProbedAt int64 `json:"last_probed_at,omitempty"`
+	Since        int64 `json:"since,omitempty"`
+}
+
+// handleGetFailoverStatus returns project-wide provider-failover status,
+// built from operations.yaml: active-vs-primary per agent, reason,
+// switched_at, resets_at_unix, bucket, partial pause, awaiting-operator-
+// decision, and provider reachability in every mode (FR-8.4).
 // GET /api/p/{project}/provider-switch/status
 func (s *Server) handleGetFailoverStatus(w http.ResponseWriter, r *http.Request) {
 	p := projectFromCtx(r.Context())
 	if p.Agents == nil {
-		writeJSON(w, http.StatusOK, map[string]any{"failover_active": false, "agents": []any{}})
+		writeJSON(w, http.StatusOK, map[string]any{"failover_active": false, "agents": []any{}, "reachability": map[string]any{}})
 		return
 	}
 
@@ -69,33 +96,90 @@ func (s *Server) handleGetFailoverStatus(w http.ResponseWriter, r *http.Request)
 		// failover Milestone 2) — lifecycle/config.yaml is never mutated by a
 		// switch, so failover state must be read from the operations store,
 		// not from ag.PrimaryProvider/ag.Provider directly.
-		state, isFailover := p.Operations().AgentState(ag.Name)
-		primaryProvider, primaryModel := ag.Provider, ag.Model
+		state, hasState := p.Operations().AgentState(ag.Name)
+		isFailover := hasState && state.IsFailedOver()
 		activeProvider, activeModel := ag.Provider, ag.Model
-		if isFailover {
-			active = true
-			primaryProvider, primaryModel = state.Primary.Provider, state.Primary.Model
+		if hasState {
 			activeProvider, activeModel = state.Active.Provider, state.Active.Model
 		}
+		if isFailover {
+			active = true
+		}
 		status := providerSwitchAgentStatus{
-			Agent:            ag.Name,
-			IsFailover:       isFailover,
-			ActiveProvider:   activeProvider,
-			ActiveModel:      activeModel,
-			FallbackProvider: ag.FallbackProvider,
-			FallbackModel:    ag.FallbackModel,
+			Agent:                 ag.Name,
+			IsFailover:            isFailover,
+			ActiveProvider:        activeProvider,
+			ActiveModel:           activeModel,
+			FallbackProvider:      ag.FallbackProvider,
+			FallbackModel:         ag.FallbackModel,
+			PartialPause:          hasState && state.PartialPause,
+			AwaitingDecision:      hasState && state.AwaitingOperatorDecision,
+			AwaitingDecisionJobID: state.AwaitingDecisionJobID,
+		}
+		if hasState {
+			status.Reason = state.Reason
+			if state.SwitchedAt > 0 {
+				status.SwitchedAt = time.Unix(state.SwitchedAt, 0).UTC().Format(time.RFC3339)
+			}
+			status.ResetsAtUnix = state.ResetsAtUnix
+			status.Bucket = state.Bucket
 		}
 		if isFailover {
-			status.PrimaryProvider = primaryProvider
-			status.PrimaryModel = primaryModel
-			if prov, ok := s.providerConfig(primaryProvider); ok {
-				healthy := agent.ProbeProviderHealth(r.Context(), nil, prov, 2*time.Second)
-				status.PrimaryHealthy = &healthy
-			}
+			status.PrimaryProvider = state.Primary.Provider
+			status.PrimaryModel = state.Primary.Model
 		}
 		out = append(out, status)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"failover_active": active, "agents": out})
+
+	reachability := map[string]providerReachabilityStatus{}
+	for name, reach := range p.Operations().AllReachability() {
+		reachability[name] = providerReachabilityStatus{Healthy: reach.Healthy, LastProbedAt: reach.LastProbedAt, Since: reach.Since}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"failover_active": active, "agents": out, "reachability": reachability})
+}
+
+// handleGetSwitchoverPolicy returns the project's effective event->action
+// switchover policy (FR-2.4): automated_switchover and an explicit action
+// for every classified reason, configured entries overriding the FR-2.3
+// defaults.
+// GET /api/p/{project}/provider-switch/policy
+func (s *Server) handleGetSwitchoverPolicy(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	writeJSON(w, http.StatusOK, p.Config().EffectiveSwitchoverPolicy())
+}
+
+// runningJobsRejection guards a manual provider switch against in-flight
+// runs (FR-8.2): if any run is currently executing for the project, the
+// switch is rejected with a 409 naming the running jobs, and ok=false. When
+// the queue isn't wired (nil, e.g. minimal test/deploy configurations) the
+// guard is a no-op, matching the rest of the queue-optional handlers in
+// this package.
+func (s *Server) runningJobsRejection(w http.ResponseWriter, p *project.Project) bool {
+	if s.queue == nil {
+		return true
+	}
+	running, err := s.queue.RunningJobs(p.Entry.Name)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, apiError("queue_error", err.Error()))
+		return false
+	}
+	if len(running) == 0 {
+		return true
+	}
+	jobs := make([]map[string]any, 0, len(running))
+	for _, j := range running {
+		jobs = append(jobs, map[string]any{
+			"id":            j.ID,
+			"agent":         j.AgentName,
+			"artifact_path": j.ArtifactPath,
+		})
+	}
+	writeJSON(w, http.StatusConflict, map[string]any{
+		"error":        map[string]any{"code": "runs_in_progress", "message": "cannot switch provider while runs are in progress"},
+		"running_jobs": jobs,
+	})
+	return false
 }
 
 // handleAgentSwitchProvider manually switches an individual agent's
@@ -132,6 +216,9 @@ func (s *Server) handleAgentSwitchProvider(w http.ResponseWriter, r *http.Reques
 	}
 	if !s.providerExists(req.Provider) {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "unknown provider: "+req.Provider))
+		return
+	}
+	if !s.runningJobsRejection(w, p) {
 		return
 	}
 
@@ -194,6 +281,9 @@ func (s *Server) handleSwitchAllProviders(w http.ResponseWriter, r *http.Request
 	}
 	if !s.providerExists(req.ToProvider) {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "unknown provider: "+req.ToProvider))
+		return
+	}
+	if !s.runningJobsRejection(w, p) {
 		return
 	}
 
