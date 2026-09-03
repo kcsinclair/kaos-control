@@ -10,6 +10,7 @@ import RunFailureBanner from './RunFailureBanner.vue'
 import RawLogModal from './RawLogModal.vue'
 import TestRunSummaryCard from './TestRunSummaryCard.vue'
 import { useAgentsStore } from '@/stores/agents'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import { parseLogTurns } from '@/lib/logParser'
 import type { RunTurn } from '@/types/api'
 
@@ -59,6 +60,14 @@ function toggleToolRes(id: string) {
 const TERMINAL_RUN_STATUSES = new Set(['done', 'failed', 'killed', 'killed-timeout'])
 const showRawLog = ref(false)
 const agentsStore = useAgentsStore()
+const providerSwitchStore = useProviderSwitchStore()
+
+// FR-7.3: this run was interrupted with a suspected partial commit and is
+// held pending an operator decision — no auto-rerun or auto-rollback.
+const isAwaitingOperatorDecision = computed(() => {
+  const agent = providerSwitchStore.status.agents.find((a) => a.agent === run.value?.agent_name)
+  return !!agent?.awaiting_decision && agent.awaiting_decision_job_id === props.runId
+})
 
 // Files under lifecycle/ are artifacts and link to the editor; other produced
 // files (code, config) are shown as plain paths.
@@ -85,6 +94,9 @@ let previousFocus: HTMLElement | null = null
 
 onMounted(async () => {
   previousFocus = document.activeElement as HTMLElement | null
+  if (!providerSwitchStore.status.agents.length) {
+    void providerSwitchStore.fetchStatus(props.project)
+  }
   try {
     const data = await agentsApi.getRun(props.project, props.runId)
     run.value = data.run
@@ -307,6 +319,17 @@ function handleKeydown(e: KeyboardEvent) {
           <div v-if="run.ttft_ms != null" class="rdm-field">
             <div class="rdm-field-label">Time To First Token (TTFT)</div>
             <div class="rdm-field-value">{{ run.ttft_ms }} ms</div>
+          </div>
+
+          <!-- FR-7.3: suspected partial commit, awaiting operator decision -->
+          <div v-if="isAwaitingOperatorDecision" class="rdm-awaiting-decision" role="alert">
+            <strong class="rdm-awaiting-decision-heading">Awaiting operator decision</strong>
+            <p class="rdm-awaiting-decision-body">
+              This run was interrupted while {{ run.agent_name }} may have been mid-write, so a
+              partial commit is suspected. kaos-control will not automatically re-run or roll
+              back this job — review the files this run may have touched before deciding whether
+              to re-run {{ run.agent_name }}.
+            </p>
           </div>
 
           <!-- Failure banner with structured diagnostics and remediation -->
@@ -649,6 +672,23 @@ function handleKeydown(e: KeyboardEvent) {
 @keyframes rdm-warmup-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.5; transform: scale(0.7); }
+}
+
+.rdm-awaiting-decision {
+  border: 1px solid var(--color-error);
+  background: var(--badge-blocked-bg);
+  color: var(--badge-blocked-text);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+.rdm-awaiting-decision-heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.rdm-awaiting-decision-body {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  margin: var(--space-1) 0 0 0;
 }
 
 .rdm-diagnostics {

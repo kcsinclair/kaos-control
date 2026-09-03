@@ -57,6 +57,13 @@ export interface ProviderTemplate {
   agents: Record<string, ProviderTemplateAgentBinding>
 }
 
+/** One in-flight job named in the FR-8.2 running-jobs switch rejection. */
+export interface RunningJobInfo {
+  id: string
+  agent: string
+  artifact_path: string
+}
+
 export interface SwitchProviderPayload {
   provider: string
   model: string

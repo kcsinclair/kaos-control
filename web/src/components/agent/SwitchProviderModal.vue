@@ -4,7 +4,10 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useProvidersStore } from '@/stores/providers'
 import { useProviderSwitchStore } from '@/stores/providerSwitch'
+import { useQueueStore } from '@/stores/queue'
 import { useUiStore } from '@/stores/ui'
+import { ApiError } from '@/api/client'
+import type { RunningJobInfo } from '@/types/providerSwitch'
 
 const props = defineProps<{
   project: string
@@ -18,6 +21,7 @@ const emit = defineEmits<{
 
 const providersStore = useProvidersStore()
 const providerSwitchStore = useProviderSwitchStore()
+const queueStore = useQueueStore()
 const ui = useUiStore()
 
 const provider = ref('')
@@ -25,6 +29,26 @@ const model = ref('')
 const reason = ref('')
 const submitting = ref(false)
 const error = ref<string | null>(null)
+const rejectedRunningJobs = ref<RunningJobInfo[] | null>(null)
+
+// FR-8.2: a run is currently executing for this project — the backend
+// rejects a manual switch outright, so block the submit button up front
+// rather than letting the operator hit the 409 first.
+const hasRunningJob = computed(() => queueStore.snapshot.running != null)
+
+// The rejection warning shows once the backend has actually rejected a
+// submit (rejectedRunningJobs set, even to []) or proactively once the queue
+// store already knows a job is running for this project.
+const showRunningWarning = computed(() => rejectedRunningJobs.value !== null || hasRunningJob.value)
+
+// Jobs to name in the warning: the backend's 409 body once rejected, else
+// (proactively, before submit) whatever the queue store already knows is running.
+const runningJobsToShow = computed<RunningJobInfo[]>(() => {
+  if (rejectedRunningJobs.value) return rejectedRunningJobs.value
+  const running = queueStore.snapshot.running
+  if (!running) return []
+  return [{ id: running.id, agent: running.agent_name, artifact_path: running.artifact_path }]
+})
 
 const providerModels = computed(() => {
   if (!provider.value) return []
@@ -43,11 +67,13 @@ onMounted(async () => {
 })
 
 async function handleSubmit() {
+  if (hasRunningJob.value) return
   if (!provider.value || !model.value.trim()) {
     error.value = 'Provider and model are required.'
     return
   }
   error.value = null
+  rejectedRunningJobs.value = null
   submitting.value = true
   try {
     await providerSwitchStore.switchAgent(props.project, props.agentName, {
@@ -58,7 +84,12 @@ async function handleSubmit() {
     ui.success(`${props.agentName} switched to ${provider.value}/${model.value.trim()}`)
     emit('switched')
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to switch provider'
+    if (e instanceof ApiError && e.code === 'runs_in_progress') {
+      const body = e.body as { running_jobs?: RunningJobInfo[] } | undefined
+      rejectedRunningJobs.value = body?.running_jobs ?? []
+    } else {
+      error.value = e instanceof Error ? e.message : 'Failed to switch provider'
+    }
   } finally {
     submitting.value = false
   }
@@ -120,10 +151,21 @@ async function handleSubmit() {
           />
         </div>
 
+        <div v-if="showRunningWarning" class="spm-running-warning" role="alert">
+          <p class="spm-running-warning-heading">
+            Cannot switch provider while runs are in progress (FR-8.2).
+          </p>
+          <ul v-if="runningJobsToShow.length" class="spm-running-jobs-list">
+            <li v-for="job in runningJobsToShow" :key="job.id">
+              <span class="spm-running-job-agent">{{ job.agent }}</span> — {{ job.artifact_path }}
+            </li>
+          </ul>
+        </div>
+
         <p v-if="error" class="spm-error">{{ error }}</p>
 
         <div class="modal-footer">
-          <button type="submit" class="btn-primary" :disabled="submitting">
+          <button type="submit" class="btn-primary" :disabled="submitting || hasRunningJob">
             {{ submitting ? 'Switching…' : 'Switch Target' }}
           </button>
           <button type="button" class="btn-ghost" :disabled="submitting" @click="emit('cancel')">Cancel</button>
@@ -217,6 +259,26 @@ async function handleSubmit() {
   font-size: 12px;
   color: var(--color-error);
   margin: 0;
+}
+.spm-running-warning {
+  padding: var(--space-3);
+  background: var(--badge-blocked-bg);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  color: var(--badge-blocked-text);
+}
+.spm-running-warning-heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin: 0;
+}
+.spm-running-jobs-list {
+  margin: var(--space-2) 0 0 0;
+  padding-left: var(--space-4);
+  font-size: 12px;
+}
+.spm-running-job-agent {
+  font-weight: 600;
 }
 .modal-footer {
   display: flex;
