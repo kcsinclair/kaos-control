@@ -243,6 +243,8 @@ than resolved here.
    in `Write` (DR-3) and deciding how the detail endpoint sources body text. Needs
    a product-owner/architect decision before implementation.
 
+> YAML frontmatter
+
 2. **Should `goal` be filterable/sortable in the artifact/release list, or
    display-only?** This requirement scopes it as display-only; promoting it to a
    sortable/filterable column would extend `buildOrderBy` and the list query.
