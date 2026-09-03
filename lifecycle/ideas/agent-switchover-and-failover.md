@@ -67,6 +67,19 @@ to that provider in one action, rather than one at a time?
 
 > The queue has been setup to be executed in that order.  When exhaustion for any agent the queue should be paused so the jobs can be executed in order.  The system should then wait until there are tokens available again and restart the job which failed and then continue processing the queue as jobs were queued.
 
+**Decided — the switch is project-wide, not per-agent.** Which of the two
+behaviours applies is chosen by the event→action configuration (see *Product
+Owner Additional Thoughts*):
+
+| Automated switchover | Behaviour on provider exhaustion |
+|---|---|
+| **disabled** | Pause the queue, preserving order. Wait until tokens are available, restart the job that failed, then continue processing in the order queued. |
+| **enabled** | Switch **every agent** bound to that provider to its secondary in one action. Restart the job that was running; the rest of the queue continues on the secondary. |
+
+This resolves the open question above: because a quota is a property of the
+provider account rather than of one agent, failover operates on **all agents
+using that provider at once**, not one at a time as each subsequent job fails.
+
 ### 2. "Track provider reachability" is not met by what exists
 
 The *Single provider* section above requires kaos-control to track provider
@@ -102,6 +115,23 @@ rather than `/v1/models`.
 
 > At this time failback will only be triggered manually.
 
+**STILL OPEN — what does the operator see when deciding?** Making failback manual
+removes the risk of switching back automatically on a bad signal, but the
+operator still has to judge when the primary is usable, and the signal available
+today is wrong for the quota case: `provider.primary_recovered` fires after two
+healthy probes of `GET /v1/models`, which is not quota-gated, so it reports
+recovery within roughly two minutes of any quota failover regardless of the
+actual reset.
+
+**Open question:** what should the UI show against a provider in failover? The
+authoritative data already arrives on the rate-limit event — `resets_at_unix`
+and a `bucket` of `five_hour` or `weekly`. Showing the expected reset time, and
+suppressing or qualifying the "recovered" indicator until it passes, would give
+the operator something true to act on. Without that, manual failback is a
+guess informed by a misleading green light.
+
+> When primary and secondary agents are configured, the GUI should show which is the current state, e.g. "Primary Agents" or "Secondary Agents" in a status button the GUI.  An additional screen with the content described would be great to help assist when to failback.
+
 ### 4. Failure scenarios missing from the list of three
 
 The three scenarios above map to the three implemented kinds
@@ -122,6 +152,29 @@ Not covered by the idea, and not currently failover triggers:
 Each needs an explicit decision: trigger failover, pause the queue, or fail hard.
 
 > "Auth / credential failure" is operational, that should trigger a failover to secondary.  The other issues I consider these issues to be setup issues, e.g. when something is modified and the user should have verified they are working before setting up alot of work to be done.  
+
+**STILL OPEN — `provider_disconnected` does not fit the "setup issue" grouping.**
+Model-not-found and cannot-do-tool-calling are setup issues and are settled by
+the answer above and by item 5. A mid-stream disconnect is different: it has
+occurred twice on a correctly configured system with no change of any kind
+between the working and failing runs.
+
+| Run | Outcome |
+|---|---|
+| `97078a4c1bf40c04` | Died at turn 20 after 19 turns of real work. The provider's own log showed no error, cancel, timeout, eviction or restart, and the final request completed normally — the client received zero bytes and a connection reset. |
+| `8f15fc7f0fe9afa9` | Same class of failure, 17 minutes lost. |
+
+Today it neither triggers failover nor pauses the queue: the run simply fails and
+its work is discarded.
+
+**Open question:** what should happen on `provider_disconnected`? A retry in
+place looks safest where the stream died **before any token arrived** — nothing
+was consumed and no partial output exists, so repeating the request is free of
+side effects — escalating to pause or failover only if retries also fail. That
+distinction is now visible in the run log, which records the SSE line count at
+the point of failure.
+
+> provider_disconnected = Pause the queue.
 
 ### 5. Failover ignores model capability
 
@@ -161,12 +214,46 @@ intent?
 
 > Yes, operational state will not be committed to git.  The configuration should not be modified to support failover, the operational state should be tracked in a seperate file, e.g. operation.yaml in the lifecycle directory. How the system is currently operating will be maintained in that file.  The UI can use it to display current status and any other necessary messages for the user.
 
+**Settled details.** The file is named **`lifecycle/operations.yaml`** (item 9
+referred to it as `operations.yaml` and this item as `operation.yaml` — the
+plural is canonical). Two facts verified against the code:
+
+- It will **not** be indexed as an artifact. Both the indexer and the watcher
+  filter on `.md` (`internal/index/index.go:375`, `:471`;
+  `internal/watcher/watcher.go:375`), so a `.yaml` under `lifecycle/` is ignored
+  by the artifact pipeline.
+- It **will** be committed unless explicitly excluded. Nothing in `.gitignore`
+  covers `lifecycle/`, so the file must be added there — otherwise the
+  requirement above ("operational state will not be committed to git") is not
+  met by placing it in that directory.
+
+It must also be excluded from the Obsidian/Unison replication, or the race this
+item exists to avoid returns in a new form: an external sync overwriting live
+operational state.
+
+> Lets move operations.yaml to the root folder of the project, OUT of lifecyle.
+
 ### 8. Manual switchover and in-flight runs
 
 The idea does not say what happens to a run already executing when an operator
 switches an agent: killed and requeued, or allowed to drain first?
 
 > The user should be warned of the running jobs and the switchover rejected, the user can then decide how they want to handle the running and queued jobs.
+
+**Restart semantics need defining.** Both this section and item 1 say the failed
+job is restarted. Agents are not reliably idempotent — a run may already have
+written artifacts, or committed them, before it failed. Run
+`2073eaa29f90f088` completed its work and committed it one second before the
+process died, and was still recorded as failed; re-running it would have
+duplicated the work.
+
+The requirement needs to state:
+
+- whether "restart" means re-running the agent from the beginning, or resuming;
+- what happens when the failed job already produced output — detect and skip,
+  re-run regardless, or surface it to the operator;
+- and whether that answer differs for a job interrupted mid-generation (nothing
+  written) versus one interrupted after its files landed.
 
 ### 9. Observability
 
@@ -179,5 +266,17 @@ and time-to-restore. The `internal/reports` aggregation is the natural home.
 ## Product Owner Additional Thoughts
 
 Configuration for how the switchover and failover features should be working is required.  This should include the preferred mode of operation and can provide a list of detected events and which action should be taken, e.g. pause queue or failover to secondary provider.
+
+To make that event list complete by construction, it should be enumerated
+against the failure reasons the system already classifies, so each gets an
+explicit action rather than falling through to a default:
+
+`rate_limit`, `overloaded`, `unreachable`, `auth_error`, `provider_disconnected`,
+`model_not_found`, `model_unloaded`, `tools_unsupported`,
+`context_window_exceeded`, `turn_token_ceiling`, `max_iterations_reached`,
+`timeout`.
+
+Actions to choose from: fail over to secondary, pause the queue, retry in place,
+or fail the run outright.
 
 When switching between the primary and secondary agents they should be done together, e.g. the backend developer agent is running a job, and the provider fails, if automated switchover is enabled, all agents are switched to the secondary, the job which was currently running restarts and the rest of the jobs are running on the secondary provider.
