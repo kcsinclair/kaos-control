@@ -44,11 +44,13 @@ func (s *Server) handleListReleases(w http.ResponseWriter, r *http.Request) {
 
 // createReleaseRequest is the JSON body for POST /releases.
 type createReleaseRequest struct {
-	Name      string  `json:"name"`
-	Status    string  `json:"status"`
-	StartDate *string `json:"start_date"`
-	EndDate   *string `json:"end_date"`
-	Duration  *string `json:"duration"` // e.g. "14d" or "2w"
+	Name        string  `json:"name"`
+	Status      string  `json:"status"`
+	Goal        *string `json:"goal"`
+	Description *string `json:"description"`
+	StartDate   *string `json:"start_date"`
+	EndDate     *string `json:"end_date"`
+	Duration    *string `json:"duration"` // e.g. "14d" or "2w"
 }
 
 // handleCreateRelease handles POST /api/p/:project/releases
@@ -76,6 +78,13 @@ func (s *Server) handleCreateRelease(w http.ResponseWriter, r *http.Request) {
 		ProjectID: p.Entry.Name,
 		Name:      req.Name,
 		Status:    req.Status,
+	}
+
+	if req.Goal != nil {
+		rel.Goal = *req.Goal
+	}
+	if req.Description != nil {
+		rel.Description = *req.Description
 	}
 
 	if req.StartDate != nil {
@@ -166,12 +175,14 @@ func (s *Server) handleGetRelease(w http.ResponseWriter, r *http.Request) {
 
 // updateReleaseRequest is the JSON body for PUT /releases/{releaseID}.
 type updateReleaseRequest struct {
-	Name      string  `json:"name"`
-	Status    string  `json:"status"`
-	StartDate *string `json:"start_date"`
-	EndDate   *string `json:"end_date"`
-	Duration  *string `json:"duration"`
-	UpdatedAt *string `json:"updated_at"` // optional; when present used for conflict detection
+	Name        string  `json:"name"`
+	Status      string  `json:"status"`
+	Goal        *string `json:"goal"`
+	Description *string `json:"description"`
+	StartDate   *string `json:"start_date"`
+	EndDate     *string `json:"end_date"`
+	Duration    *string `json:"duration"`
+	UpdatedAt   *string `json:"updated_at"` // optional; when present used for conflict detection
 }
 
 // handleUpdateRelease handles PUT /api/p/:project/releases/{releaseID}
@@ -219,6 +230,17 @@ func (s *Server) handleUpdateRelease(w http.ResponseWriter, r *http.Request) {
 		ProjectID: p.Entry.Name,
 		Name:      req.Name,
 		Status:    req.Status,
+	}
+
+	if req.Goal != nil {
+		rel.Goal = *req.Goal
+	} else {
+		rel.Goal = current.Goal
+	}
+	if req.Description != nil {
+		rel.Description = *req.Description
+	} else {
+		rel.Description = current.Description
 	}
 
 	if req.StartDate != nil {
