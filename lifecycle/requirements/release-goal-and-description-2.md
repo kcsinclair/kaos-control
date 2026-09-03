@@ -1,7 +1,7 @@
 ---
 title: Release Goal and Description Fields
 type: requirement
-status: blocked
+status: draft
 lineage: release-goal-and-description
 created: "2026-08-26T11:45:00+10:00"
 priority: normal
@@ -230,7 +230,7 @@ than resolved here.
 - [ ] Related: aligns with [[release-artefacts]] (markdown-authoritative release
       write path) and does not reintroduce a DB-origin write.
 
-## Open Questions
+## Resolved Questions
 
 1. **Where does `description` live — frontmatter or markdown body?**
    *Recommendation:* **frontmatter** (a YAML block scalar), because (a) it matches
@@ -254,3 +254,5 @@ than resolved here.
 3. **Soft cap for `goal` length** — is 120 characters (matching the release
    `name` bound) the right UI maxlength, or should it be shorter to guarantee
    single-line rendering across the list/kanban chips?
+
+> 120 chars is good.
