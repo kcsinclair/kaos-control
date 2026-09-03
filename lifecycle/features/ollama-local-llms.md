@@ -45,4 +45,5 @@ edits, streamed progress, run logging) that the old driver never had.
 
 See [[provider-management]] and
 [open-provider-support](../../docs/open-provider-support.md) for the
-current feature.
+current feature, and [[local-llm-operability]] for local-model-specific
+prompt tuning, availability checks, and error surfacing.
