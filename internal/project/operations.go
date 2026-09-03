@@ -95,7 +95,7 @@ type Operations struct {
 	// Disconnects maps provider name to the Unix timestamps of recorded
 	// disconnect occurrences (already collapsed per the backoff-window rule
 	// in RecordDisconnect), used for the rolling-hour counter (FR-6.3/6.4).
-	Disconnects map[string][]int64    `yaml:"disconnects,omitempty"`
+	Disconnects map[string][]int64     `yaml:"disconnects,omitempty"`
 	History     []FailoverHistoryEntry `yaml:"history,omitempty"`
 }
 

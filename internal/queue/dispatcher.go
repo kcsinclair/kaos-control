@@ -130,6 +130,13 @@ type ProjectAccess struct {
 	// (FR-3.4, returned in noSecondary) instead. Returns the agent names
 	// actually switched and left partially paused.
 	FailoverProviderWide func(provider, reason string, resetsAtUnix int64, bucket string) (switched, noSecondary []string, err error)
+
+	// ProviderDisconnectCountLastHour returns the number of recorded
+	// provider_disconnected occurrences for providerName within the last
+	// rolling hour (Milestone 5, FR-6.3/6.4), sourced from operations.yaml.
+	// Optional — nil disables the threshold override, leaving
+	// "provider_disconnected" resolved as plain retry_in_place always.
+	ProviderDisconnectCountLastHour func(providerName string) int
 }
 
 // FailoverPolicy is the subset of config.ProviderFailoverConfig /
@@ -546,6 +553,11 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 	}
 }
 
+// providerDisconnectThreshold is the FR-6.3 rolling-hour pause threshold:
+// the 4th distinct provider_disconnected occurrence for a provider within
+// an hour pauses the queue.
+const providerDisconnectThreshold = 3
+
 // handleClassifiedFailure resolves the agent-switchover-and-failover event
 // -> action policy for reason and dispatches accordingly (Milestone 4):
 //   - "failover": attempt project-wide failover (tryProjectWideFailover);
@@ -574,7 +586,18 @@ func (d *Dispatcher) handleClassifiedFailure(ctx context.Context, job *Job, pa P
 		}
 		d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
 	case "retry_in_place":
-		d.handleAuthError(job) // immediate re-enqueue, no pause
+		// FR-6.3: more than 3 provider_disconnected occurrences for this
+		// provider within a rolling hour pauses the queue instead of
+		// retrying immediately again. The driver's own in-loop backoff
+		// retry (2s/8s/30s) has already run by the time a run reaches this
+		// terminal-failure path; this is the queue-level bound on top of it.
+		if reason == "provider_disconnected" && pa.ProviderDisconnectCountLastHour != nil && pa.AgentActiveProvider != nil {
+			if provider, ok := pa.AgentActiveProvider(job.AgentName); ok && pa.ProviderDisconnectCountLastHour(provider) > providerDisconnectThreshold {
+				d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
+				return
+			}
+		}
+		d.handleImmediateRetry(job, reason, reason+"_retry") // immediate re-enqueue, no pause
 	case "fail_run":
 		_ = d.store.MarkTerminal(job.ID, StateFailed, reason)
 		d.broadcastJobEvent("queue.finished", job, "failed")
@@ -754,15 +777,27 @@ func (d *Dispatcher) handleRateLimit(job *Job, rawText, kind string, resetsAtUni
 // pausing the queue. An auth rotation is transient and per-run — subsequent
 // runs will pick up the freshly-rotated token, so no queue-wide pause is needed.
 func (d *Dispatcher) handleAuthError(job *Job) {
+	d.handleImmediateRetry(job, "auth_error", "auth_error_retry")
+}
+
+// handleImmediateRetry marks job failed with reason, re-enqueues it at the
+// head if within max-attempts, and does NOT pause the queue — used for
+// transient, per-run conditions where a pause would help nothing: an OAuth
+// token rotation (handleAuthError) and, since Milestone 5, a
+// provider_disconnected failure resolved to retry_in_place once the
+// driver's own in-loop backoff retry has been exhausted. requeueReason
+// labels the queue.added broadcast so the two callers stay distinguishable
+// in the event stream.
+func (d *Dispatcher) handleImmediateRetry(job *Job, reason, requeueReason string) {
 	now := d.cfg.clock()
 
 	// 1. Mark current job failed.
-	_ = d.store.MarkTerminal(job.ID, StateFailed, "auth_error")
+	_ = d.store.MarkTerminal(job.ID, StateFailed, reason)
 
 	// 2. Re-enqueue at head if within max-attempts.
 	if job.Attempts >= d.cfg.maxAttempts() {
-		slog.Warn("queue: job exceeded max attempts after auth error; not re-enqueueing",
-			"job_id", job.ID, "attempts", job.Attempts, "max", d.cfg.maxAttempts())
+		slog.Warn("queue: job exceeded max attempts; not re-enqueueing",
+			"job_id", job.ID, "reason", reason, "attempts", job.Attempts, "max", d.cfg.maxAttempts())
 		d.broadcast("queue.skipped", map[string]any{
 			"id":     job.ID,
 			"reason": "max_attempts",
@@ -775,22 +810,21 @@ func (d *Dispatcher) handleAuthError(job *Job) {
 		requeue.Position = d.store.MinPosition() - 1
 		requeue.EnqueuedAt = now
 		if err := d.store.EnqueueDirect(requeue); err != nil {
-			slog.Error("queue: re-enqueue after auth error failed", "err", err)
+			slog.Error("queue: re-enqueue failed", "reason", reason, "err", err)
 		} else {
 			d.broadcast("queue.added", map[string]any{
 				"id":       requeue.ID,
 				"position": requeue.Position,
 				"attempts": requeue.Attempts,
-				"reason":   "auth_error_retry",
+				"reason":   requeueReason,
 			})
 		}
 	}
 
-	// 3. Do NOT pause — auth rotation is transient and affects only this run.
+	// 3. Do NOT pause — this is a transient, per-run condition.
 	d.broadcastJobEvent("queue.finished", job, "failed")
 
-	slog.Info("queue: auth error — re-enqueued job without pausing",
-		"job_id", job.ID, "attempts", job.Attempts)
+	slog.Info("queue: re-enqueued job without pausing", "job_id", job.ID, "reason", reason, "attempts", job.Attempts)
 }
 
 // ---- public store-proxy methods (used by HTTP handlers) ----

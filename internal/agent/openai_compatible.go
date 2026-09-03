@@ -28,6 +28,25 @@ import (
 // lazy-loading weights into memory (local-model-operability Milestone 3).
 var ErrModelLoadTimeout = errors.New("model did not respond within the loading timeout")
 
+// providerDisconnectBackoff is the exponential backoff schedule between
+// in-loop retry attempts after a mid-stream disconnect (FR-6.2). The
+// chat-completions request re-sends the full messages array each turn, so a
+// retry is a byte-identical resend — no session context is lost.
+var providerDisconnectBackoff = []time.Duration{2 * time.Second, 8 * time.Second, 30 * time.Second}
+
+// ProviderDisconnectCollapseWindow bounds how close together two disconnects
+// must be to collapse into a single rolling-hour-threshold occurrence
+// (Resolved Question 1, FR-6.5): one full backoff cycle, so a single
+// incident that trips several retries in a row cannot spend the FR-6.3
+// budget on its own. Exported for internal/project's RecordDisconnect call.
+var ProviderDisconnectCollapseWindow = func() time.Duration {
+	var total time.Duration
+	for _, d := range providerDisconnectBackoff {
+		total += d
+	}
+	return total
+}()
+
 // OpenAICompatibleDriver implements Driver by communicating with an OpenAI-compatible
 // /v1/chat/completions endpoint using a multi-turn tool calling agent loop.
 type OpenAICompatibleDriver struct {
@@ -380,126 +399,196 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 				return
 			}
 
-			httpReq, err := http.NewRequestWithContext(runCtx, http.MethodPost, endpointURL, bytes.NewReader(bodyBytes))
-			if err != nil {
-				rb.Write([]byte(mask(err.Error())))
-				writeLog("# error: " + err.Error())
-				doneCh <- err
-				return
-			}
-			httpReq.Header.Set("Content-Type", "application/json")
-			httpReq.Header.Set("Accept", "text/event-stream")
-			applyProviderHeaders(httpReq, *prov)
-
-			// Timing around the request is the difference between a diagnosable
-			// provider_disconnected and a bare "connection reset by peer". Run
-			// 97078a4c1bf40c04 died here with no indication of whether the wait
-			// was ours or the provider's, which cost a round of server-log
-			// forensics to establish.
-			reqSentAt := time.Now()
-			writeLog(fmt.Sprintf("# request: turn %d sent, %d bytes", turn, len(bodyBytes)))
-
-			resp, err := client.Do(httpReq)
-			if err != nil {
-				err = wrapLoadTimeout(err)
-				rb.Write([]byte(mask(err.Error())))
-				writeLog(fmt.Sprintf("# error: %s (no response headers after %s)",
-					err.Error(), time.Since(reqSentAt).Round(time.Millisecond)))
-				doneCh <- wrapHTTPError(err, 0)
-				return
-			}
-			headersAt := time.Now()
-			writeLog(fmt.Sprintf("# response: HTTP %d, headers after %s",
-				resp.StatusCode, headersAt.Sub(reqSentAt).Round(time.Millisecond)))
-
-			if resp.StatusCode != http.StatusOK {
-				respBody, _ := io.ReadAll(resp.Body)
-				resp.Body.Close()
-				errMsg := fmt.Sprintf("provider %q returned HTTP %d: %s", prov.Name, resp.StatusCode, extractErrorMessage(respBody))
-				rb.Write([]byte(mask(errMsg)))
-				writeLog("# error: " + errMsg)
-				doneCh <- wrapHTTPError(fmt.Errorf("%s", errMsg), resp.StatusCode)
-				return
-			}
-
 			type toolCallBuilder struct {
 				id       string
 				callType string
 				name     string
 				args     strings.Builder
 			}
-			toolCallBuilders := make(map[int]*toolCallBuilder)
-			var turnContent strings.Builder
-			var turnReasoning strings.Builder
-			var finishReason string
+			var (
+				toolCallBuilders map[int]*toolCallBuilder
+				turnContent      strings.Builder
+				turnReasoning    strings.Builder
+				finishReason     string
+				sseLines         int
+				scanErr          error
+				reqSentAt        time.Time
+				headersAt        time.Time
+			)
 
-			sc := bufio.NewScanner(resp.Body)
-			sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+			// Mid-stream disconnect retry (FR-6.1/6.2): the chat-completions
+			// request re-sends the identical messages array each turn, so a
+			// retry after a dropped connection is a byte-identical resend —
+			// no session context is lost. Each failed attempt's partial
+			// output is discarded and the request retried with exponential
+			// backoff (2s/8s/30s) before the turn is reported as failed.
+			for attempt := 0; ; attempt++ {
+				httpReq, err := http.NewRequestWithContext(runCtx, http.MethodPost, endpointURL, bytes.NewReader(bodyBytes))
+				if err != nil {
+					rb.Write([]byte(mask(err.Error())))
+					writeLog("# error: " + err.Error())
+					doneCh <- err
+					return
+				}
+				httpReq.Header.Set("Content-Type", "application/json")
+				httpReq.Header.Set("Accept", "text/event-stream")
+				applyProviderHeaders(httpReq, *prov)
 
-			sseLines := 0
-			for sc.Scan() {
-				line := sc.Text()
-				if line == "" {
-					continue
+				// Timing around the request is the difference between a diagnosable
+				// provider_disconnected and a bare "connection reset by peer". Run
+				// 97078a4c1bf40c04 died here with no indication of whether the wait
+				// was ours or the provider's, which cost a round of server-log
+				// forensics to establish.
+				reqSentAt = time.Now()
+				writeLog(fmt.Sprintf("# request: turn %d sent, %d bytes (attempt %d)", turn, len(bodyBytes), attempt+1))
+
+				resp, err := client.Do(httpReq)
+				if err != nil {
+					err = wrapLoadTimeout(err)
+					rb.Write([]byte(mask(err.Error())))
+					writeLog(fmt.Sprintf("# error: %s (no response headers after %s)",
+						err.Error(), time.Since(reqSentAt).Round(time.Millisecond)))
+					doneCh <- wrapHTTPError(err, 0)
+					return
 				}
-				sseLines++
-				if !strings.HasPrefix(line, "data:") {
-					continue
+				headersAt = time.Now()
+				writeLog(fmt.Sprintf("# response: HTTP %d, headers after %s",
+					resp.StatusCode, headersAt.Sub(reqSentAt).Round(time.Millisecond)))
+
+				if resp.StatusCode != http.StatusOK {
+					respBody, _ := io.ReadAll(resp.Body)
+					resp.Body.Close()
+					errMsg := fmt.Sprintf("provider %q returned HTTP %d: %s", prov.Name, resp.StatusCode, extractErrorMessage(respBody))
+					rb.Write([]byte(mask(errMsg)))
+					writeLog("# error: " + errMsg)
+					doneCh <- wrapHTTPError(fmt.Errorf("%s", errMsg), resp.StatusCode)
+					return
 				}
-				dataContent := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-				if dataContent == "[DONE]" {
+
+				toolCallBuilders = make(map[int]*toolCallBuilder)
+				turnContent.Reset()
+				turnReasoning.Reset()
+				finishReason = ""
+				sseLines = 0
+
+				sc := bufio.NewScanner(resp.Body)
+				sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+
+				for sc.Scan() {
+					line := sc.Text()
+					if line == "" {
+						continue
+					}
+					sseLines++
+					if !strings.HasPrefix(line, "data:") {
+						continue
+					}
+					dataContent := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+					if dataContent == "[DONE]" {
+						break
+					}
+
+					writeLog(dataContent)
+
+					var chunk openAIStreamChunk
+					if err := json.Unmarshal([]byte(dataContent), &chunk); err == nil {
+						var rawMap map[string]any
+						_ = json.Unmarshal([]byte(dataContent), &rawMap)
+						select {
+						case progressCh <- ProgressEvent{Raw: mask(dataContent), Event: rawMap}:
+						default:
+						}
+
+						for _, choice := range chunk.Choices {
+							if choice.Delta.ReasoningContent != "" {
+								emitStage(&reasoningStageSent, "reasoning")
+								turnReasoning.WriteString(choice.Delta.ReasoningContent)
+							}
+							if choice.Delta.Content != "" {
+								emitStage(&generatingStageSent, "generating")
+								turnContent.WriteString(choice.Delta.Content)
+							}
+							for _, tc := range choice.Delta.ToolCalls {
+								emitStage(&generatingStageSent, "generating")
+								b, exists := toolCallBuilders[tc.Index]
+								if !exists {
+									b = &toolCallBuilder{callType: "function"}
+									toolCallBuilders[tc.Index] = b
+								}
+								if tc.ID != "" {
+									b.id = tc.ID
+								}
+								if tc.Type != "" {
+									b.callType = tc.Type
+								}
+								if tc.Function.Name != "" {
+									b.name += tc.Function.Name
+								}
+								if tc.Function.Arguments != "" {
+									b.args.WriteString(tc.Function.Arguments)
+								}
+							}
+							if choice.FinishReason != nil {
+								finishReason = *choice.FinishReason
+							}
+						}
+					}
+				}
+
+				scanErr = sc.Err()
+				resp.Body.Close()
+				if scanErr == nil {
+					break // stream completed cleanly — proceed with this attempt's output
+				}
+
+				// A cancelled runCtx (load timeout, overall run timeout, or a
+				// user Kill) is what actually explains the scan error, not a
+				// provider disconnect — stop retrying and let the handling
+				// below report the cancellation.
+				if runCtx.Err() != nil {
 					break
 				}
 
-				writeLog(dataContent)
-
-				var chunk openAIStreamChunk
-				if err := json.Unmarshal([]byte(dataContent), &chunk); err == nil {
-					var rawMap map[string]any
-					_ = json.Unmarshal([]byte(dataContent), &rawMap)
-					select {
-					case progressCh <- ProgressEvent{Raw: mask(dataContent), Event: rawMap}:
-					default:
-					}
-
-					for _, choice := range chunk.Choices {
-						if choice.Delta.ReasoningContent != "" {
-							emitStage(&reasoningStageSent, "reasoning")
-							turnReasoning.WriteString(choice.Delta.ReasoningContent)
-						}
-						if choice.Delta.Content != "" {
-							emitStage(&generatingStageSent, "generating")
-							turnContent.WriteString(choice.Delta.Content)
-						}
-						for _, tc := range choice.Delta.ToolCalls {
-							emitStage(&generatingStageSent, "generating")
-							b, exists := toolCallBuilders[tc.Index]
-							if !exists {
-								b = &toolCallBuilder{callType: "function"}
-								toolCallBuilders[tc.Index] = b
-							}
-							if tc.ID != "" {
-								b.id = tc.ID
-							}
-							if tc.Type != "" {
-								b.callType = tc.Type
-							}
-							if tc.Function.Name != "" {
-								b.name += tc.Function.Name
-							}
-							if tc.Function.Arguments != "" {
-								b.args.WriteString(tc.Function.Arguments)
-							}
-						}
-						if choice.FinishReason != nil {
-							finishReason = *choice.FinishReason
-						}
-					}
+				// A genuine mid-stream disconnect (FR-6.1). Record it — a run
+				// that eventually succeeds after retrying still contributes
+				// every disconnect it hit to the rolling-hour count (FR-6.3) —
+				// and note whether any token had already streamed (FR-6.5): a
+				// post-first-token retry re-bills the prompt, a pre-first-token
+				// retry is a free byte-identical resend.
+				postFirstToken := ttftRecorded.Load()
+				if run.OnProviderDisconnect != nil {
+					run.OnProviderDisconnect(prov.Name, time.Now())
 				}
+				writeLog(fmt.Sprintf(
+					"# provider_disconnected: %s (post_first_token=%v, %d SSE lines this attempt, stream died %s after headers, %s after send)",
+					scanErr.Error(), postFirstToken, sseLines,
+					time.Since(headersAt).Round(time.Millisecond),
+					time.Since(reqSentAt).Round(time.Millisecond)))
+				select {
+				case progressCh <- ProgressEvent{
+					Raw: "provider_disconnected",
+					Event: map[string]any{
+						"type":             "provider_disconnected",
+						"provider":         prov.Name,
+						"post_first_token": postFirstToken,
+					},
+				}:
+				default:
+				}
+
+				if attempt >= len(providerDisconnectBackoff) {
+					break // retry budget exhausted — report the failure below
+				}
+				backoff := providerDisconnectBackoff[attempt]
+				writeLog(fmt.Sprintf("# retrying turn %d after disconnect: attempt %d/%d, backoff %s",
+					turn, attempt+1, len(providerDisconnectBackoff), backoff))
+				select {
+				case <-time.After(backoff):
+				case <-runCtx.Done():
+				}
+				// loop continues: retry with the identical request
 			}
 
-			scanErr := sc.Err()
-			resp.Body.Close()
 			if scanErr != nil {
 				// A cancelled runCtx (load timeout, overall run timeout, or a
 				// user Kill) is what actually explains the scan error; report
@@ -515,7 +604,7 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 				}
 				rb.Write([]byte(mask(scanErr.Error())))
 				writeLog(fmt.Sprintf(
-					"# error: %s (stream died %s after headers, %s after send; %d SSE lines received)",
+					"# error: %s (stream died %s after headers, %s after send; %d SSE lines received; retries exhausted)",
 					scanErr.Error(),
 					time.Since(headersAt).Round(time.Millisecond),
 					time.Since(reqSentAt).Round(time.Millisecond),

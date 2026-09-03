@@ -383,6 +383,9 @@ func run() error {
 				FailoverProviderWide: func(provider, reason string, resetsAtUnix int64, bucket string) ([]string, []string, error) {
 					return p.FailoverProviderWide(provider, reason, resetsAtUnix, bucket)
 				},
+				ProviderDisconnectCountLastHour: func(providerName string) int {
+					return p.Operations().DisconnectCountSince(providerName, time.Now().Add(-1*time.Hour))
+				},
 			}, true
 		}
 		queueDispatcher = queue.New(queueStore, projectLookup, appHub, queue.Config{})

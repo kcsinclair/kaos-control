@@ -366,3 +366,133 @@ func TestOpenAICompatibleDriver_KillCancellation(t *testing.T) {
 		t.Fatal("expected canceled error from Kill, got nil")
 	}
 }
+
+// withFastProviderDisconnectBackoff temporarily shrinks the retry backoff
+// schedule (agent-switchover-and-failover Milestone 5) so tests exercising
+// the in-loop retry path don't wait through the real 2s/8s/30s schedule.
+func withFastProviderDisconnectBackoff(t *testing.T) {
+	t.Helper()
+	orig := providerDisconnectBackoff
+	providerDisconnectBackoff = []time.Duration{5 * time.Millisecond, 5 * time.Millisecond}
+	t.Cleanup(func() { providerDisconnectBackoff = orig })
+}
+
+// midStreamDisconnectHandler streams one SSE chunk, flushes it, then panics
+// to sever the connection mid-response — net/http's per-request panic
+// recovery closes the underlying connection without a valid chunked
+// terminator, so the client reliably observes a genuine stream read error
+// (not a clean EOF) on failCount calls, then completes normally.
+func midStreamDisconnectHandler(t *testing.T, failCount int) http.HandlerFunc {
+	t.Helper()
+	var calls atomic.Int32
+	return openAIPreflightOKHandler(t, func(w http.ResponseWriter, r *http.Request) {
+		fl, ok := w.(http.Flusher)
+		if !ok {
+			t.Fatal("expected http.Flusher")
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n")
+		fl.Flush()
+
+		if calls.Add(1) <= int32(failCount) {
+			panic(http.ErrAbortHandler) // severs the connection; logged, recovered by net/http
+		}
+
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\" done\"},\"finish_reason\":\"stop\"}]}\n\n")
+		fmt.Fprint(w, "data: [DONE]\n\n")
+		fl.Flush()
+	})
+}
+
+// TestOpenAICompatibleDriver_MidStreamDisconnect_RetriesAndSucceeds verifies
+// FR-6.1: a mid-stream disconnect retries the identical request in place,
+// inside the turn loop, and a subsequent successful attempt completes the
+// run normally — no error is ever reported to the caller.
+func TestOpenAICompatibleDriver_MidStreamDisconnect_RetriesAndSucceeds(t *testing.T) {
+	withFastProviderDisconnectBackoff(t)
+
+	ts := httptest.NewServer(midStreamDisconnectHandler(t, 1))
+	defer ts.Close()
+
+	var disconnects atomic.Int32
+	var lastProvider string
+	driver := &OpenAICompatibleDriver{
+		Providers:  []config.Provider{{Name: "local-test", BaseURL: ts.URL, Driver: "openai-compatible"}},
+		HTTPClient: ts.Client(),
+	}
+	run := Run{
+		RunID:        "run-disc-1",
+		Driver:       "openai-compatible",
+		ProviderName: "local-test",
+		Model:        "gemma-4-26b",
+		PromptText:   "Do the thing.",
+		ProjectRoot:  t.TempDir(),
+		OnProviderDisconnect: func(providerName string, at time.Time) {
+			disconnects.Add(1)
+			lastProvider = providerName
+		},
+	}
+
+	proc, err := driver.Start(context.Background(), run)
+	if err != nil {
+		t.Fatalf("driver.Start error: %v", err)
+	}
+	for range proc.Progress() {
+	}
+	if err := proc.Wait(); err != nil {
+		t.Fatalf("expected the run to succeed after retrying, got: %v", err)
+	}
+	if disconnects.Load() != 1 {
+		t.Errorf("expected exactly 1 recorded disconnect, got %d", disconnects.Load())
+	}
+	if lastProvider != "local-test" {
+		t.Errorf("expected disconnect recorded for local-test, got %q", lastProvider)
+	}
+}
+
+// TestOpenAICompatibleDriver_MidStreamDisconnect_ExhaustsRetries verifies
+// that once the backoff schedule is exhausted, the run fails with the
+// stream error (classified as provider_disconnected upstream) rather than
+// retrying forever, and every attempt — including the final failed one —
+// was recorded via OnProviderDisconnect (FR-6.3: a run's disconnects all
+// count toward the rolling-hour threshold, whether or not it eventually
+// succeeds).
+func TestOpenAICompatibleDriver_MidStreamDisconnect_ExhaustsRetries(t *testing.T) {
+	withFastProviderDisconnectBackoff(t)
+
+	ts := httptest.NewServer(midStreamDisconnectHandler(t, 1000)) // always disconnects
+	defer ts.Close()
+
+	var disconnects atomic.Int32
+	driver := &OpenAICompatibleDriver{
+		Providers:  []config.Provider{{Name: "local-test", BaseURL: ts.URL, Driver: "openai-compatible"}},
+		HTTPClient: ts.Client(),
+	}
+	run := Run{
+		RunID:        "run-disc-2",
+		Driver:       "openai-compatible",
+		ProviderName: "local-test",
+		Model:        "gemma-4-26b",
+		PromptText:   "Do the thing.",
+		ProjectRoot:  t.TempDir(),
+		OnProviderDisconnect: func(providerName string, at time.Time) {
+			disconnects.Add(1)
+		},
+	}
+
+	proc, err := driver.Start(context.Background(), run)
+	if err != nil {
+		t.Fatalf("driver.Start error: %v", err)
+	}
+	for range proc.Progress() {
+	}
+	if err := proc.Wait(); err == nil {
+		t.Fatal("expected the run to fail once the retry budget is exhausted")
+	}
+
+	wantAttempts := int32(len(providerDisconnectBackoff) + 1) // initial attempt + one per backoff step
+	if disconnects.Load() != wantAttempts {
+		t.Errorf("expected %d recorded disconnects (retry budget exhausted), got %d", wantAttempts, disconnects.Load())
+	}
+}

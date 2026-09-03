@@ -117,6 +117,13 @@ type Run struct {
 	// between process start and the first streamed content token. Set by the
 	// Manager for streaming drivers; nil for batch-mode drivers.
 	OnTTFT func(ms int64)
+	// OnProviderDisconnect, when non-nil, is called once per detected
+	// mid-stream disconnect — before any in-loop retry — so the caller can
+	// record it in operations.yaml for the rolling-hour pause threshold
+	// (agent-switchover-and-failover FR-6.3/6.4). A run that retries and
+	// eventually succeeds still reports every disconnect it hit along the
+	// way (FR-6.3).
+	OnProviderDisconnect func(providerName string, at time.Time)
 }
 
 // Process is a handle to a running agent.
@@ -451,6 +458,12 @@ type Manager struct {
 	// applies.
 	EffectiveProvider func(agentName string) (provider, model string, ok bool)
 
+	// OnProviderDisconnect, when non-nil, records a mid-stream provider
+	// disconnect in operations.yaml (agent-switchover-and-failover
+	// Milestone 5). Wired onto every openai-compatible Run started by
+	// StartRun.
+	OnProviderDisconnect func(providerName string, at time.Time)
+
 	idx     *index.Index
 	git     *kgit.Repo
 	hub     *hub.Hub
@@ -754,6 +767,12 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 				slog.Warn("agent: recording ttft_ms", "run_id", runIDCopy, "err", err)
 			}
 		}
+	}
+
+	// Wire provider-disconnect recording (Milestone 5) for the
+	// openai-compatible driver, the only driver with an in-loop retry path.
+	if ag.Driver == "openai-compatible" && m.OnProviderDisconnect != nil {
+		run.OnProviderDisconnect = m.OnProviderDisconnect
 	}
 
 	// Acquire lineage lock.

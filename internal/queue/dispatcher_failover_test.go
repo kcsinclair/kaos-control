@@ -33,6 +33,14 @@ type failoverTestHarness struct {
 	failoverWideErr      error
 	switchedAgents       []string
 	noSecondaryAgents    []string
+
+	// disconnectCountLastHour, when set, wires
+	// ProviderDisconnectCountLastHour and simulateAgentFailed (below)
+	// exercises the provider_disconnected retry_in_place/pause_queue path
+	// instead of the default queue.rate_limit simulation.
+	disconnectCountLastHour int
+	simulateAgentFailed     bool
+	simulateFailureReason   string
 }
 
 func newFailoverTestHarness(t *testing.T) *failoverTestHarness {
@@ -68,7 +76,17 @@ func (h *failoverTestHarness) lookup(name string) (ProjectAccess, bool) {
 			first := h.startRunCalls.Add(1) == 1
 			go func() {
 				time.Sleep(10 * time.Millisecond)
-				if first {
+				switch {
+				case first && h.simulateAgentFailed:
+					h.projHub.Broadcast(hub.Event{
+						Type: "agent.failed",
+						Payload: map[string]any{
+							"run_id":         "test-run",
+							"status":         "failed",
+							"failure_reason": h.simulateFailureReason,
+						},
+					})
+				case first:
 					h.projHub.Broadcast(hub.Event{
 						Type: "queue.rate_limit",
 						Payload: map[string]any{
@@ -77,7 +95,7 @@ func (h *failoverTestHarness) lookup(name string) (ProjectAccess, bool) {
 							"kind":     "overloaded",
 						},
 					})
-				} else {
+				default:
 					h.projHub.Broadcast(hub.Event{
 						Type:    "agent.finished",
 						Payload: map[string]any{"run_id": "test-run", "status": "done"},
@@ -111,6 +129,9 @@ func (h *failoverTestHarness) lookup(name string) (ProjectAccess, bool) {
 				return nil, nil, h.failoverWideErr
 			}
 			return h.switchedAgents, h.noSecondaryAgents, nil
+		},
+		ProviderDisconnectCountLastHour: func(providerName string) int {
+			return h.disconnectCountLastHour
 		},
 	}, true
 }
@@ -341,6 +362,106 @@ func TestDispatcher_AgentAlreadyFailedOver_CapsAtOneLevel(t *testing.T) {
 		t.Errorf("expected FailoverProviderWide never called once the agent is already failed over, got %d", h.failoverWideCalls.Load())
 	}
 
+	stopCollect()
+	if !containsEvent(events, "queue.paused") {
+		t.Errorf("expected queue.paused broadcast; got %v", events())
+	}
+}
+
+// TestDispatcher_ProviderDisconnected_RetriesInPlaceBelowThreshold verifies
+// that a provider_disconnected failure resolved to retry_in_place is
+// re-enqueued immediately without pausing the queue when the rolling-hour
+// disconnect count is at or below the FR-6.3 threshold.
+func TestDispatcher_ProviderDisconnected_RetriesInPlaceBelowThreshold(t *testing.T) {
+	h := newFailoverTestHarness(t)
+	h.failoverPolicy = FailoverPolicy{
+		Actions: map[string]string{"provider_disconnected": "retry_in_place"},
+	}
+	h.simulateAgentFailed = true
+	h.simulateFailureReason = "provider_disconnected"
+	h.disconnectCountLastHour = 2 // at the threshold (>3 triggers pause), not over it
+	d := h.dispatcher(time.Now())
+
+	events, stopCollect := collectAppEvents(t, h.appHub)
+	defer stopCollect()
+
+	h.enqueue(t, 1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	d.Start(ctx)
+
+	// The re-enqueued job succeeds immediately (the harness's non-first
+	// StartRun call always broadcasts agent.finished), so it may already
+	// have left the pending state by the time we observe it — poll across
+	// pending/running/completed rather than pending alone.
+	var failed, requeued []*Job
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		failed, _ = h.store.ListByState(StateFailed)
+		inFlight, _ := h.store.ListByState(StatePending, StateRunning)
+		done, _ := h.store.ListByState(StateCompleted)
+		requeued = append(inFlight, done...)
+		if len(failed) > 0 && len(requeued) > 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if len(failed) == 0 || len(requeued) == 0 {
+		t.Fatalf("expected a failed job and a re-queued job; failed=%d requeued=%d", len(failed), len(requeued))
+	}
+	if failed[0].Reason != "provider_disconnected" {
+		t.Errorf("failed job reason: got %q, want %q", failed[0].Reason, "provider_disconnected")
+	}
+
+	paused, _, _, err := h.store.GetPauseState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if paused {
+		t.Error("expected queue NOT to be paused below the disconnect threshold")
+	}
+	stopCollect()
+	if containsEvent(events, "queue.paused") {
+		t.Errorf("expected no queue.paused broadcast below threshold; got %v", events())
+	}
+}
+
+// TestDispatcher_ProviderDisconnected_PausesOnceThresholdExceeded verifies
+// FR-6.3: once the rolling-hour disconnect count for a provider exceeds 3,
+// a further provider_disconnected failure pauses the queue instead of
+// retrying in place again.
+func TestDispatcher_ProviderDisconnected_PausesOnceThresholdExceeded(t *testing.T) {
+	h := newFailoverTestHarness(t)
+	h.failoverPolicy = FailoverPolicy{
+		Actions: map[string]string{"provider_disconnected": "retry_in_place"},
+	}
+	h.simulateAgentFailed = true
+	h.simulateFailureReason = "provider_disconnected"
+	h.disconnectCountLastHour = 4 // over the threshold
+	d := h.dispatcher(time.Now())
+
+	events, stopCollect := collectAppEvents(t, h.appHub)
+	defer stopCollect()
+
+	h.enqueue(t, 1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	d.Start(ctx)
+
+	failed, _ := waitForFailedAndPending(t, h.store)
+	if len(failed) == 0 {
+		t.Fatal("expected a failed job")
+	}
+
+	paused, _, _, err := h.store.GetPauseState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !paused {
+		t.Error("expected queue to be paused once the disconnect threshold is exceeded")
+	}
 	stopCollect()
 	if !containsEvent(events, "queue.paused") {
 		t.Errorf("expected queue.paused broadcast; got %v", events())

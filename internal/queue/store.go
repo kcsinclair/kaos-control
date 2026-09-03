@@ -431,10 +431,10 @@ type scanner interface {
 func scanJob(row scanner) (*Job, error) {
 	var (
 		id, project, artifactPath, agentName, state, reason, enqueuedBy string
-		attempts                                                         int
-		enqueuedAt                                                       int64
-		startedAt, finishedAt                                            sql.NullInt64
-		position                                                         int64
+		attempts                                                        int
+		enqueuedAt                                                      int64
+		startedAt, finishedAt                                           sql.NullInt64
+		position                                                        int64
 	)
 	err := row.Scan(&id, &project, &artifactPath, &agentName, &state, &reason,
 		&attempts, &enqueuedAt, &startedAt, &finishedAt, &position, &enqueuedBy)
