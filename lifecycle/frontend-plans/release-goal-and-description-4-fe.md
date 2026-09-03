@@ -1,7 +1,7 @@
 ---
 title: Frontend Plan — Release Goal and Description Fields
 type: plan-frontend
-status: draft
+status: approved
 lineage: release-goal-and-description
 parent: lifecycle/requirements/release-goal-and-description-2.md
 created: "2026-09-03T11:15:00Z"
