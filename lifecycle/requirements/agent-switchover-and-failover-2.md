@@ -1,7 +1,7 @@
 ---
 title: Agent Switchover and Failover
 type: requirement
-status: draft
+status: approved
 lineage: agent-switchover-and-failover
 created: "2026-09-03T11:00:00+10:00"
 priority: high
