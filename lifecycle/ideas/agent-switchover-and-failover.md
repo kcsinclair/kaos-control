@@ -1,7 +1,7 @@
 ---
 title: agent switchover and failover
 type: idea
-status: planning
+status: in-development
 lineage: agent-switchover-and-failover
 created: "2026-08-28T00:00:00+10:00"
 labels:
