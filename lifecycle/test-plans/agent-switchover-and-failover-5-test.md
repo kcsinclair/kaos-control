@@ -1,7 +1,7 @@
 ---
 title: Agent Switchover and Failover — Test Plan
 type: plan-test
-status: approved
+status: in-development
 lineage: agent-switchover-and-failover
 parent: lifecycle/requirements/agent-switchover-and-failover-2.md
 created: "2026-09-03T12:00:00+10:00"
