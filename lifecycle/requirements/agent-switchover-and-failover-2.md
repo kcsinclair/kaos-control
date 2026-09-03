@@ -398,6 +398,8 @@ run `2073eaa29f90f088`). Blindly re-running would duplicate work.
    discards partial output. Should a post-first-token disconnect still auto-retry,
    or immediately count toward the pause threshold without retrying?
 
+> a post-first-token disconnect should auto-retry
+
 3. **ADR for `operations.yaml`.** This requirement reverses the shipped
    [[switch-provider-2]] approach of writing failover state into
    `lifecycle/config.yaml` and git. No recorded ADR/standard mandates the old
