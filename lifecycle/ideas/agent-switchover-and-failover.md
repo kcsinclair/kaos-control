@@ -255,6 +255,8 @@ The requirement needs to state:
 - and whether that answer differs for a job interrupted mid-generation (nothing
   written) versus one interrupted after its files landed.
 
+> Regarding restart semantics: this is a difficult race condition, it is unusual for a human developer to die right after a partial commit.  The cleanest way is when the agent for job has partially commited content and dies, the partially commited work should be rolled back and the whole job restarted.  So kaos-control should check the status of the partial job and if it suspects there is partial commits then it should ask the user what they want to do.  The human can then investigate.
+
 ### 9. Observability
 
 Not mentioned, and needed to tell whether any of this is working: how often each
