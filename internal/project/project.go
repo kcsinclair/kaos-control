@@ -38,10 +38,10 @@ type Project struct {
 	Cfg   *config.Project
 	cfgMu sync.RWMutex
 
-	// configWriteMu serialises AST-based lifecycle/config.yaml mutations
-	// (provider switch/restore/template-apply) so concurrent callers cannot
-	// race a read-patch-write cycle against each other and corrupt the file.
-	configWriteMu sync.Mutex
+	// switchMu serialises provider switch/restore/template-apply operations
+	// (each a read-decide-write cycle against operations.yaml) so concurrent
+	// callers cannot race and clobber each other's operations state.
+	switchMu sync.Mutex
 
 	Idx            *index.Index
 	Git            *kgit.Repo // nil if the project directory is not a git repo
@@ -235,6 +235,13 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, wf, entry.Path, runsLogDir, providers, opts.AgentCfg)
 		if opts.HookServerAddr != "" {
 			agentMgr.ConfigureHookDriver(opts.HookServerAddr, opts.HookBinaryPath)
+		}
+		agentMgr.EffectiveProvider = func(agentName string) (provider, model string, ok bool) {
+			state, ok := ops.AgentState(agentName)
+			if !ok {
+				return "", "", false
+			}
+			return state.Active.Provider, state.Active.Model, true
 		}
 	}
 

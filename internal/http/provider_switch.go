@@ -64,22 +64,31 @@ func (s *Server) handleGetFailoverStatus(w http.ResponseWriter, r *http.Request)
 	out := []providerSwitchAgentStatus{}
 	active := false
 	for _, ag := range p.Agents.Agents() {
-		isFailover := ag.PrimaryProvider != ""
+		// The effective active provider is an operations.yaml override, if
+		// recorded, else the agent's declared config (agent-switchover-and-
+		// failover Milestone 2) — lifecycle/config.yaml is never mutated by a
+		// switch, so failover state must be read from the operations store,
+		// not from ag.PrimaryProvider/ag.Provider directly.
+		state, isFailover := p.Operations().AgentState(ag.Name)
+		primaryProvider, primaryModel := ag.Provider, ag.Model
+		activeProvider, activeModel := ag.Provider, ag.Model
 		if isFailover {
 			active = true
+			primaryProvider, primaryModel = state.Primary.Provider, state.Primary.Model
+			activeProvider, activeModel = state.Active.Provider, state.Active.Model
 		}
 		status := providerSwitchAgentStatus{
 			Agent:            ag.Name,
 			IsFailover:       isFailover,
-			PrimaryProvider:  ag.PrimaryProvider,
-			PrimaryModel:     ag.PrimaryModel,
-			ActiveProvider:   ag.Provider,
-			ActiveModel:      ag.Model,
+			ActiveProvider:   activeProvider,
+			ActiveModel:      activeModel,
 			FallbackProvider: ag.FallbackProvider,
 			FallbackModel:    ag.FallbackModel,
 		}
 		if isFailover {
-			if prov, ok := s.providerConfig(ag.PrimaryProvider); ok {
+			status.PrimaryProvider = primaryProvider
+			status.PrimaryModel = primaryModel
+			if prov, ok := s.providerConfig(primaryProvider); ok {
 				healthy := agent.ProbeProviderHealth(r.Context(), nil, prov, 2*time.Second)
 				status.PrimaryHealthy = &healthy
 			}

@@ -443,6 +443,14 @@ type Manager struct {
 	// nil means queue pausing is not configured.
 	PauseQueue func(reason string)
 
+	// EffectiveProvider resolves an agent's operations.yaml active-provider
+	// override, if any (agent-switchover-and-failover Milestone 2). Returns
+	// ok=false when the agent has no recorded override, in which case the
+	// agent's config-declared provider/model apply unchanged. nil means no
+	// operations store is wired (e.g. in tests) — declared config always
+	// applies.
+	EffectiveProvider func(agentName string) (provider, model string, ok bool)
+
 	idx     *index.Index
 	git     *kgit.Repo
 	hub     *hub.Hub
@@ -660,8 +668,19 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	// on the provider before acquiring any resources (semaphore or lineage
 	// lock). A missing model or unreachable endpoint fails fast (<3s) with a
 	// classified run record instead of hanging or corrupting artifact state.
+	// Resolve the effective active provider/model: an operations.yaml
+	// failover/switch override when one is recorded, else the agent's
+	// config-declared provider/model (agent-switchover-and-failover
+	// Milestone 2) — so a run dispatched for a failed-over agent uses its
+	// secondary, not the primary named in lifecycle/config.yaml.
+	var overrideProvider, overrideModel string
+	if m.EffectiveProvider != nil {
+		overrideProvider, overrideModel, _ = m.EffectiveProvider(agentName)
+	}
+	effProvider, effModel := config.EffectiveProvider(*ag, overrideProvider, overrideModel)
+
 	if ag.Driver == "openai-compatible" {
-		if err := m.preflightModelAvailability(ctx, ag, agentName, targetPath, role); err != nil {
+		if err := m.preflightModelAvailability(ctx, effProvider, effModel, agentName, targetPath, role, ag.Driver); err != nil {
 			return "", err
 		}
 	}
@@ -686,14 +705,14 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		relatedTestPath = targetPath
 	}
 
-	providerName := ag.Provider
+	providerName := effProvider
 
 	run := Run{
 		RunID:               runID,
 		AgentName:           agentName,
 		Role:                role,
 		Driver:              ag.Driver,
-		Model:               ag.Model,
+		Model:               effModel,
 		PromptText:          prompt,
 		ProjectRoot:         m.root,
 		AllowedPaths:        ag.AllowedPaths,
@@ -858,33 +877,36 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	return runID, nil
 }
 
-// preflightModelAvailability resolves ag's provider and checks that ag.Model
-// is present on it, before any resource (semaphore, lineage lock) is
-// acquired (local-model-operability FR-2, NFR-1, NFR-3). On a classifiable
-// failure (model missing, endpoint unreachable) it records a failed run row
-// and broadcasts agent.failed so the failure is visible in the UI, then
-// returns an error so the caller aborts the run — without ever touching
-// locks or artifact status. When the model is present but the provider
-// reports it as not yet resident in memory (llama.cpp-style lazy loading),
-// it broadcasts an informational agent.status model_loading event and lets
-// the run proceed normally.
-func (m *Manager) preflightModelAvailability(ctx context.Context, ag *config.AgentConfig, agentName, targetPath, role string) error {
-	if ag.Model == "" {
+// preflightModelAvailability resolves the given provider and checks that
+// model is present on it, before any resource (semaphore, lineage lock) is
+// acquired (local-model-operability FR-2, NFR-1, NFR-3). provider/model are
+// the agent's *effective* active values (operations.yaml override, falling
+// back to config-declared) — see the EffectiveProvider resolution in
+// StartRun — so a failed-over agent is preflighted against its secondary,
+// not its primary. On a classifiable failure (model missing, endpoint
+// unreachable) it records a failed run row and broadcasts agent.failed so
+// the failure is visible in the UI, then returns an error so the caller
+// aborts the run — without ever touching locks or artifact status. When the
+// model is present but the provider reports it as not yet resident in
+// memory (llama.cpp-style lazy loading), it broadcasts an informational
+// agent.status model_loading event and lets the run proceed normally.
+func (m *Manager) preflightModelAvailability(ctx context.Context, provider, model, agentName, targetPath, role, driver string) error {
+	if model == "" {
 		return nil
 	}
 
 	var prov *config.Provider
 	for i := range m.providers {
-		if m.providers[i].Name == ag.Provider {
+		if m.providers[i].Name == provider {
 			prov = &m.providers[i]
 			break
 		}
 	}
 	if prov == nil {
-		return fmt.Errorf("provider %q not found for agent %q", ag.Provider, agentName)
+		return fmt.Errorf("provider %q not found for agent %q", provider, agentName)
 	}
 
-	status, err := probeModelAvailability(ctx, nil, *prov, ag.Model)
+	status, err := probeModelAvailability(ctx, nil, *prov, model)
 	if err != nil {
 		reason := FailureReasonEndpointUnreachable
 		remediation := endpointUnreachableRemediation
@@ -892,7 +914,7 @@ func (m *Manager) preflightModelAvailability(ctx context.Context, ag *config.Age
 			reason = FailureReasonModelNotFound
 			remediation = modelNotFoundRemediation
 		}
-		m.recordPreflightFailure(agentName, targetPath, role, ag.Driver, ag.Provider, reason, remediation, err)
+		m.recordPreflightFailure(agentName, targetPath, role, driver, provider, reason, remediation, err)
 		return fmt.Errorf("preflight: %s: %w", reason, err)
 	}
 

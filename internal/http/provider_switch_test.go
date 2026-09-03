@@ -47,10 +47,10 @@ agents:
   - name: failed-over-agent
     role: [analyst]
     driver: openai-compatible
-    provider: gemini-cloud
-    model: gemini-2.5-flash
-    primary_provider: anthropic-cloud
-    primary_model: claude-3-7-sonnet
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
+    fallback_provider: gemini-cloud
+    fallback_model: gemini-2.5-flash
     prompt_templates:
       analyst: "x"
 provider_templates:
@@ -123,6 +123,10 @@ func TestHandleGetFailoverStatus(t *testing.T) {
 	p := newTestProjectForProviderSwitch(t)
 	s := testServerWithAppProviders()
 
+	if err := p.SwitchAgentProvider("failed-over-agent", "gemini-cloud", "gemini-2.5-flash", "seed failover", true); err != nil {
+		t.Fatalf("seeding failover state: %v", err)
+	}
+
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req = withProjectAndUser(req, p, "po@test")
 	w := httptest.NewRecorder()
@@ -180,12 +184,21 @@ func TestHandleAgentSwitchProvider(t *testing.T) {
 		t.Fatalf("status: got %d, body: %s", w.Code, w.Body.String())
 	}
 
+	// lifecycle/config.yaml (declared intent) is never mutated by a switch —
+	// the active override lives in operations.yaml.
 	ag, ok := p.Agents.GetAgent("analyst-agent")
 	if !ok {
 		t.Fatal("analyst-agent not found after switch")
 	}
-	if ag.Provider != "local-ollama" || ag.Model != "llama3" {
-		t.Errorf("expected switched provider/model, got %+v", ag)
+	if ag.Provider != "anthropic-cloud" || ag.Model != "claude-3-7-sonnet" {
+		t.Errorf("expected declared config unchanged, got %+v", ag)
+	}
+	state, ok := p.Operations().AgentState("analyst-agent")
+	if !ok {
+		t.Fatal("expected operations.yaml to record the active override")
+	}
+	if state.Active.Provider != "local-ollama" || state.Active.Model != "llama3" {
+		t.Errorf("expected switched provider/model, got %+v", state)
 	}
 }
 
@@ -225,6 +238,10 @@ func TestHandleAgentRestoreProvider(t *testing.T) {
 	p := newTestProjectForProviderSwitch(t)
 	s := testServerWithAppProviders()
 
+	if err := p.SwitchAgentProvider("failed-over-agent", "gemini-cloud", "gemini-2.5-flash", "seed failover", true); err != nil {
+		t.Fatalf("seeding failover state: %v", err)
+	}
+
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	req = withProjectAndUser(req, p, "po@test")
 	req = withChiParam(req, "name", "failed-over-agent")
@@ -235,15 +252,15 @@ func TestHandleAgentRestoreProvider(t *testing.T) {
 		t.Fatalf("status: got %d, body: %s", w.Code, w.Body.String())
 	}
 
+	if _, ok := p.Operations().AgentState("failed-over-agent"); ok {
+		t.Error("expected operations.yaml override cleared after restore")
+	}
 	ag, ok := p.Agents.GetAgent("failed-over-agent")
 	if !ok {
 		t.Fatal("failed-over-agent not found after restore")
 	}
 	if ag.Provider != "anthropic-cloud" || ag.Model != "claude-3-7-sonnet" {
-		t.Errorf("expected restored to primary, got %+v", ag)
-	}
-	if ag.PrimaryProvider != "" || ag.PrimaryModel != "" {
-		t.Errorf("expected primary fields cleared, got %+v", ag)
+		t.Errorf("expected declared config (primary) unchanged, got %+v", ag)
 	}
 }
 
@@ -266,6 +283,10 @@ func TestHandleRestoreAllProviders(t *testing.T) {
 	p := newTestProjectForProviderSwitch(t)
 	s := testServerWithAppProviders()
 
+	if err := p.SwitchAgentProvider("failed-over-agent", "gemini-cloud", "gemini-2.5-flash", "seed failover", true); err != nil {
+		t.Fatalf("seeding failover state: %v", err)
+	}
+
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	req = withProjectAndUser(req, p, "po@test")
 	w := httptest.NewRecorder()
@@ -285,13 +306,11 @@ func TestHandleRestoreAllProviders(t *testing.T) {
 		t.Errorf("expected 1 restored agent, got %d", resp.RestoredAgents)
 	}
 
-	ag, _ := p.Agents.GetAgent("failed-over-agent")
-	if ag.PrimaryProvider != "" {
-		t.Errorf("expected failed-over-agent restored, got %+v", ag)
+	if _, ok := p.Operations().AgentState("failed-over-agent"); ok {
+		t.Error("expected failed-over-agent's operations override cleared")
 	}
-	other, _ := p.Agents.GetAgent("analyst-agent")
-	if other.Provider != "anthropic-cloud" {
-		t.Errorf("expected analyst-agent (not in failover) untouched, got %+v", other)
+	if _, ok := p.Operations().AgentState("analyst-agent"); ok {
+		t.Error("expected analyst-agent (not in failover) untouched")
 	}
 }
 
@@ -320,9 +339,12 @@ func TestHandleApplyProviderTemplate(t *testing.T) {
 		t.Errorf("expected 1 updated agent, got %d", resp.UpdatedAgents)
 	}
 
-	ag, _ := p.Agents.GetAgent("analyst-agent")
-	if ag.Provider != "local-ollama" || ag.Model != "llama3" {
-		t.Errorf("expected template-applied provider/model, got %+v", ag)
+	state, ok := p.Operations().AgentState("analyst-agent")
+	if !ok {
+		t.Fatal("expected operations.yaml to record the template-applied override")
+	}
+	if state.Active.Provider != "local-ollama" || state.Active.Model != "llama3" {
+		t.Errorf("expected template-applied provider/model, got %+v", state)
 	}
 }
 
