@@ -390,10 +390,14 @@ run `2073eaa29f90f088`). Blindly re-running would duplicate work.
    backoff preventing a single incident from tripling instantly. Should tightly
    clustered disconnects (e.g. within the backoff window) instead collapse to a
    single occurrence? A crisp default is set; confirm or override.
+
+> Yes, a backoff window is a good idea.
+
 2. **Retry after first token (FR-6.5).** A pre-first-token retry is free
    (byte-identical resend); a post-first-token retry re-bills the whole prompt and
    discards partial output. Should a post-first-token disconnect still auto-retry,
    or immediately count toward the pause threshold without retrying?
+
 3. **ADR for `operations.yaml`.** This requirement reverses the shipped
    [[switch-provider-2]] approach of writing failover state into
    `lifecycle/config.yaml` and git. No recorded ADR/standard mandates the old
