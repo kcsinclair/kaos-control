@@ -488,6 +488,19 @@ func (s *Server) GetProject(name string) (*project.Project, bool) {
 	return s.getProject(name)
 }
 
+// ProjectNames returns the names of every currently-registered project.
+// Used by the queue dispatcher (e.g. to enumerate partially-paused agents
+// across all open projects for FR-3.4).
+func (s *Server) ProjectNames() []string {
+	s.projectsMu.RLock()
+	defer s.projectsMu.RUnlock()
+	names := make([]string, 0, len(s.projects))
+	for name := range s.projects {
+		names = append(names, name)
+	}
+	return names
+}
+
 // RegisterProject opens a project, starts its goroutines, and adds it to the
 // server's live project map. The project's goroutines run until
 // UnregisterProject is called or the server shuts down.

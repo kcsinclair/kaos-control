@@ -1038,8 +1038,16 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 					// FR6/Mode-2: prefer the precise typed reset from the most
 					// recent rate_limit_event over the dispatcher's regex parse
 					// of rawText, when one has been observed for this run.
-					if cached, hadCache := m.getRunQuota(run.RunID); hadCache && cached.ResetsAtUnix > 0 {
-						rlPayload["resets_at_unix"] = cached.ResetsAtUnix
+					// agent-switchover-and-failover FR-3.3: also surface the
+					// reset bucket ("five_hour" | "weekly") so a project-wide
+					// failover can record it alongside resets_at_unix.
+					if cached, hadCache := m.getRunQuota(run.RunID); hadCache {
+						if cached.ResetsAtUnix > 0 {
+							rlPayload["resets_at_unix"] = cached.ResetsAtUnix
+						}
+						if cached.Bucket != "" {
+							rlPayload["bucket"] = cached.Bucket
+						}
 					}
 					m.hub.Broadcast(hub.Event{
 						Type:    "queue.rate_limit",

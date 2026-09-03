@@ -5,9 +5,7 @@ package queue
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
-	"slices"
 	"sync"
 	"time"
 
@@ -111,6 +109,27 @@ type ProjectAccess struct {
 	// controls whether the current provider is stashed as "primary" for
 	// later restore).
 	SwitchAgentProvider func(agentName, provider, model, reason string, isFailover bool) error
+
+	// ---- project-wide failover (agent-switchover-and-failover Milestone 4) ----
+	// All three fields below are optional; a nil field disables project-wide
+	// failover for this project (tryProjectWideFailover falls back to the
+	// standard pause_queue action).
+
+	// AgentActiveProvider returns agentName's current effective active
+	// provider (operations.yaml override, else config-declared), or
+	// ok=false when agentName is unknown.
+	AgentActiveProvider func(agentName string) (provider string, ok bool)
+	// IsAgentFailedOver reports whether agentName is currently active on a
+	// provider other than its primary — used to enforce the one-level
+	// failover cap (NFR-6): an agent already failed over that fails again
+	// routes to pause_queue instead of a second failover.
+	IsAgentFailedOver func(agentName string) bool
+	// FailoverProviderWide performs FR-3.1: every agent whose effective
+	// active provider is provider moves to its own configured secondary in
+	// one action. Agents with no secondary are recorded as partially paused
+	// (FR-3.4, returned in noSecondary) instead. Returns the agent names
+	// actually switched and left partially paused.
+	FailoverProviderWide func(provider, reason string, resetsAtUnix int64, bucket string) (switched, noSecondary []string, err error)
 }
 
 // FailoverPolicy is the subset of config.ProviderFailoverConfig /
@@ -160,6 +179,12 @@ type Dispatcher struct {
 	mu          sync.Mutex
 	pausedUntil time.Time // zero = not rate-limit-paused
 	manualPause bool      // true when paused via Pause(); cleared only by Resume()
+
+	// blockedAgents returns the (project, agent) pairs currently partially
+	// paused (FR-3.4) across every open project, so Dequeue can skip their
+	// jobs while other agents' work proceeds. nil disables the skip-logic
+	// (Dequeue behaves as before) — set via SetBlockedAgentsFunc.
+	blockedAgents func() []AgentKey
 }
 
 // New creates a Dispatcher.
@@ -170,6 +195,13 @@ func New(store *Store, lookup ProjectLookup, appHub *hub.Hub, cfg Config) *Dispa
 		appHub: appHub,
 		cfg:    cfg,
 	}
+}
+
+// SetBlockedAgentsFunc wires the callback the dispatcher uses to skip
+// partially-paused agents' jobs (FR-3.4) when dequeuing. Optional — a nil
+// (or never-called) setter leaves Dequeue unfiltered.
+func (d *Dispatcher) SetBlockedAgentsFunc(f func() []AgentKey) {
+	d.blockedAgents = f
 }
 
 // Start spawns the dispatcher goroutine. It returns immediately; the goroutine
@@ -262,7 +294,11 @@ func (d *Dispatcher) loop(ctx context.Context) {
 
 // processNext dequeues one job (if available) and runs it to completion.
 func (d *Dispatcher) processNext(ctx context.Context) {
-	job, err := d.store.Dequeue()
+	var blocked []AgentKey
+	if d.blockedAgents != nil {
+		blocked = d.blockedAgents()
+	}
+	job, err := d.store.DequeueSkipping(blocked)
 	if err != nil {
 		slog.Warn("queue: dequeue error", "err", err)
 		return
@@ -361,16 +397,26 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 		_ = d.store.MarkTerminal(job.ID, StateCompleted, "")
 		d.broadcastJobEvent("queue.finished", job, "completed")
 	case "rate_limit":
-		if d.tryFailover(ctx, job, pa, result) {
-			return
+		reason := result.rlKind
+		if reason == "" {
+			reason = "rate_limit"
 		}
-		d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
+		d.handleClassifiedFailure(ctx, job, pa, reason, result)
 	case "auth_error":
+		// Claude Code's own OAuth token rotation (queue.auth_error) — a
+		// transient, per-run condition distinct from a provider's
+		// FailureReasonAuthError (expired/invalid API key), which is
+		// handled via the "failed" branch below. Always retry immediately
+		// without pausing; the freshly-rotated token applies to the next run.
 		d.handleAuthError(job)
 	case "cancelled":
 		_ = d.store.MarkTerminal(job.ID, StateFailed, "cancelled")
 		d.broadcastJobEvent("queue.finished", job, "failed")
 	default:
+		if result.FailureReason != "" {
+			d.handleClassifiedFailure(ctx, job, pa, result.FailureReason, result)
+			return
+		}
 		_ = d.store.MarkTerminal(job.ID, StateFailed, result.reason)
 		d.broadcastJobEvent("queue.finished", job, "failed")
 	}
@@ -390,6 +436,16 @@ type runResult struct {
 	// rate_limit_event observed during the run (FR7), when > 0. When 0,
 	// handleRateLimit falls back to parsing rawText with ParseResetTime.
 	ResetsAtUnix int64
+	// Bucket is the rate-limit reset bucket ("five_hour" | "weekly" |
+	// "unknown") from the most recent rate_limit_event, when known
+	// (agent-switchover-and-failover FR-3.3).
+	Bucket string
+	// FailureReason is the classified failure reason for an "agent.failed"
+	// terminal event (agent.FailureReason* — e.g. "auth_error",
+	// "model_not_found", "timeout"), when the run supervisor classified one.
+	// Empty for an unclassified failure. Used to resolve the
+	// agent-switchover-and-failover event -> action policy.
+	FailureReason string
 }
 
 // watchRunEvents listens on evCh for agent.finished / agent.failed /
@@ -426,11 +482,13 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 			var evt struct {
 				Type    string `json:"type"`
 				Payload struct {
-					Status       string `json:"status"`
-					RunID        string `json:"run_id"`
-					RawText      string `json:"raw_text"` // for rate_limit stream events (M4)
-					Kind         string `json:"kind"`     // "rate_limit" | "overloaded" (M4 follow-up)
-					ResetsAtUnix int64  `json:"resets_at_unix"`
+					Status        string `json:"status"`
+					RunID         string `json:"run_id"`
+					RawText       string `json:"raw_text"` // for rate_limit stream events (M4)
+					Kind          string `json:"kind"`     // "rate_limit" | "overloaded" | "unreachable"
+					ResetsAtUnix  int64  `json:"resets_at_unix"`
+					Bucket        string `json:"bucket"`         // "five_hour" | "weekly" | "unknown"
+					FailureReason string `json:"failure_reason"` // agent.FailureReason* on agent.failed
 				} `json:"payload"`
 			}
 			if err := json.Unmarshal(data, &evt); err != nil {
@@ -457,9 +515,11 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 			case "agent.failed":
 				// M4: rate_limit failures are delivered as stream events before
 				// agent.failed; if we received a rate_limit event earlier, it was
-				// already sent to done. Otherwise treat as a generic failure.
+				// already sent to done. Otherwise treat as a generic failure,
+				// carrying the classified failure reason (if any) so the
+				// dispatcher can resolve the switchover event -> action policy.
 				select {
-				case done <- runResult{kind: "failed", reason: evt.Payload.Status}:
+				case done <- runResult{kind: "failed", reason: evt.Payload.Status, FailureReason: evt.Payload.FailureReason}:
 				default:
 				}
 				return
@@ -470,6 +530,7 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 					rawText:      evt.Payload.RawText,
 					rlKind:       evt.Payload.Kind,
 					ResetsAtUnix: evt.Payload.ResetsAtUnix,
+					Bucket:       evt.Payload.Bucket,
 				}:
 				default:
 				}
@@ -485,71 +546,112 @@ func (d *Dispatcher) watchRunEvents(ctx context.Context, evCh chan []byte, h *hu
 	}
 }
 
-// tryFailover attempts automated provider failover for a rate_limit /
-// overloaded / unreachable job failure (switch-provider-3-be Milestone 3).
-// When engaged it marks the job failed with reason "failover_triggered",
-// immediately re-enqueues it at the head of the queue (bypassing the queue
-// pause entirely — the whole point of failover is to keep the queue moving),
-// and returns true so the caller skips handleRateLimit. It returns false
-// (falling through to the standard rate-limit pause) when: the project
-// doesn't wire failover support, the policy is disabled/manual, the failure
-// kind isn't configured to trigger it, the agent has no fallback provider,
-// the run has already exhausted max_failovers_per_run, or the fallback
-// provider fails its pre-switch health probe.
-func (d *Dispatcher) tryFailover(ctx context.Context, job *Job, pa ProjectAccess, result runResult) bool {
-	if pa.FailoverPolicy == nil || pa.AgentFailoverInfo == nil || pa.ProbeProviderHealth == nil || pa.SwitchAgentProvider == nil {
+// handleClassifiedFailure resolves the agent-switchover-and-failover event
+// -> action policy for reason and dispatches accordingly (Milestone 4):
+//   - "failover": attempt project-wide failover (tryProjectWideFailover);
+//     falls through to the pause_queue behaviour if it can't engage.
+//   - "pause_queue": the standard pause-preserving-order-and-restart-first
+//     path (handleRateLimit works for any reason, not just rate limits).
+//   - "retry_in_place": the in-loop backoff retry already happened inside
+//     the run (Milestone 5); reaching the dispatcher as a terminal failure
+//     means that budget was exhausted — re-enqueue immediately without
+//     pausing, same as an auth-token rotation.
+//   - "fail_run": fail the job outright — no switch, no re-enqueue, no pause.
+//
+// When the project doesn't wire FailoverPolicy at all (e.g. tests), this
+// defaults to pause_queue — the safest fail-closed behaviour, and exactly
+// the dispatcher's pre-Milestone-3 default when failover wasn't configured.
+func (d *Dispatcher) handleClassifiedFailure(ctx context.Context, job *Job, pa ProjectAccess, reason string, result runResult) {
+	action := "pause_queue"
+	if pa.FailoverPolicy != nil {
+		action = pa.FailoverPolicy().ActionFor(reason)
+	}
+
+	switch action {
+	case "failover":
+		if d.tryProjectWideFailover(ctx, job, pa, reason, result) {
+			return
+		}
+		d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
+	case "retry_in_place":
+		d.handleAuthError(job) // immediate re-enqueue, no pause
+	case "fail_run":
+		_ = d.store.MarkTerminal(job.ID, StateFailed, reason)
+		d.broadcastJobEvent("queue.finished", job, "failed")
+	default: // "pause_queue"
+		d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
+	}
+}
+
+// tryProjectWideFailover attempts automated, project-wide provider failover
+// (FR-3): every agent whose effective active provider matches the failing
+// job's agent's provider moves to its own secondary in one action. It
+// returns true when failover engaged (whether or not job.AgentName itself
+// had a secondary — see below), so the caller skips the pause_queue
+// fallback. It returns false — falling through to pause_queue — when: the
+// project doesn't wire project-wide failover support, the triggering
+// agent's active provider can't be resolved, the triggering agent is
+// already in a failover state (NFR-6 one-level cap: a second failure for an
+// already-failed-over agent must pause, not fail over again), or the
+// project-wide switch errors.
+func (d *Dispatcher) tryProjectWideFailover(ctx context.Context, job *Job, pa ProjectAccess, reason string, result runResult) bool {
+	if pa.AgentActiveProvider == nil || pa.IsAgentFailedOver == nil || pa.FailoverProviderWide == nil {
 		return false
 	}
 
-	kind := result.rlKind
-	if kind == "" {
-		kind = "rate_limit"
-	}
-
-	policy := pa.FailoverPolicy()
-	if !policy.Enabled || !policy.AutoSwitch {
+	provider, ok := pa.AgentActiveProvider(job.AgentName)
+	if !ok || provider == "" {
 		return false
 	}
-	if !slices.Contains(policy.SwitchOnKinds, kind) {
-		return false
-	}
-
-	info, ok := pa.AgentFailoverInfo(job.AgentName)
-	if !ok || info.FallbackProvider == "" {
+	if pa.IsAgentFailedOver(job.AgentName) {
+		// One-level cap (FR-3.5/NFR-6): the secondary also failed — no third
+		// target exists, so this falls through to pause_queue.
+		slog.Info("queue: agent already failed over; failover capped at one level, falling back to pause",
+			"job_id", job.ID, "agent", job.AgentName, "provider", provider)
 		return false
 	}
 
-	if job.Attempts > policy.MaxFailoversPerRun {
-		slog.Info("queue: max_failovers_per_run exceeded; falling back to standard pause",
-			"job_id", job.ID, "agent", job.AgentName, "attempts", job.Attempts, "max", policy.MaxFailoversPerRun)
-		return false
+	// Cheap pre-switch guard: probe the triggering agent's own secondary
+	// before committing the whole project to switching. Other agents bound
+	// to provider may have different secondaries (each is switched to its
+	// own configured fallback inside FailoverProviderWide); an unhealthy
+	// secondary for any one of them is caught the same way on its own next
+	// failure, via the one-level cap above.
+	if pa.AgentFailoverInfo != nil && pa.ProbeProviderHealth != nil {
+		if info, ok := pa.AgentFailoverInfo(job.AgentName); ok && info.FallbackProvider != "" {
+			probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			healthy := pa.ProbeProviderHealth(probeCtx, info.FallbackProvider)
+			cancel()
+			if !healthy {
+				slog.Warn("queue: fallback provider failed pre-switch health probe; falling back to standard pause",
+					"job_id", job.ID, "agent", job.AgentName, "fallback_provider", info.FallbackProvider)
+				return false
+			}
+		}
 	}
 
-	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-	if !pa.ProbeProviderHealth(probeCtx, info.FallbackProvider) {
-		slog.Warn("queue: fallback provider failed pre-switch health probe; falling back to standard pause",
-			"job_id", job.ID, "agent", job.AgentName, "fallback_provider", info.FallbackProvider)
+	switched, noSecondary, err := pa.FailoverProviderWide(provider, reason, result.ResetsAtUnix, result.Bucket)
+	if err != nil {
+		slog.Error("queue: project-wide failover failed; falling back to standard pause",
+			"job_id", job.ID, "agent", job.AgentName, "provider", provider, "err", err)
 		return false
 	}
-
-	reason := result.rawText
-	if reason == "" {
-		reason = fmt.Sprintf("failure kind=%s", kind)
-	}
-	if err := pa.SwitchAgentProvider(job.AgentName, info.FallbackProvider, info.FallbackModel, reason, true); err != nil {
-		slog.Error("queue: automated provider switch failed; falling back to standard pause",
-			"job_id", job.ID, "agent", job.AgentName, "err", err)
+	if len(switched) == 0 && len(noSecondary) == 0 {
+		// job.AgentName was supposedly bound to provider but nothing moved —
+		// treat as failover not having engaged.
 		return false
 	}
 
 	now := d.cfg.clock()
 
-	// 1. Mark current job failed.
+	// 1. Mark the interrupted job failed.
 	_ = d.store.MarkTerminal(job.ID, StateFailed, "failover_triggered")
 	d.broadcastJobEvent("queue.finished", job, "failed")
 
-	// 2. Immediately re-enqueue at head — do NOT pause the queue.
+	// 2. Restart it (FR-3.2). If the triggering agent itself had no
+	// secondary (FR-3.4), it's now partially paused — SetBlockedAgentsFunc
+	// will keep Dequeue from serving its jobs, so re-enqueueing normally
+	// (rather than skipping) is enough; other agents' work still proceeds.
 	requeue := *job
 	requeue.ID = newID()
 	requeue.State = StatePending
@@ -557,7 +659,7 @@ func (d *Dispatcher) tryFailover(ctx context.Context, job *Job, pa ProjectAccess
 	requeue.Position = d.store.MinPosition() - 1
 	requeue.EnqueuedAt = now
 	if err := d.store.EnqueueDirect(requeue); err != nil {
-		slog.Error("queue: re-enqueue after failover failed", "err", err)
+		slog.Error("queue: re-enqueue after project-wide failover failed", "err", err)
 	} else {
 		d.broadcast("queue.added", map[string]any{
 			"id":       requeue.ID,
@@ -567,8 +669,9 @@ func (d *Dispatcher) tryFailover(ctx context.Context, job *Job, pa ProjectAccess
 		})
 	}
 
-	slog.Info("queue: automated failover engaged; re-enqueued without pausing",
-		"job_id", job.ID, "agent", job.AgentName, "fallback_provider", info.FallbackProvider, "attempts", requeue.Attempts)
+	slog.Info("queue: project-wide automated failover engaged",
+		"job_id", job.ID, "provider", provider, "reason", reason,
+		"switched", switched, "paused_no_secondary", noSecondary)
 	return true
 }
 

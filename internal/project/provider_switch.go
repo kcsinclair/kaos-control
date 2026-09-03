@@ -267,6 +267,153 @@ func (p *Project) RestoreAllAgentProviders() (int, error) {
 	return len(restoredNames), nil
 }
 
+// EffectiveAgentProvider returns agentName's current effective active
+// provider/model: an operations.yaml override if recorded, else the
+// agent's config-declared provider/model. ok is false when agentName is not
+// a configured agent.
+func (p *Project) EffectiveAgentProvider(agentName string) (provider, model string, ok bool) {
+	ag, found := findAgentConfig(p.Config(), agentName)
+	if !found {
+		return "", "", false
+	}
+	if state, hasState := p.Operations().AgentState(agentName); hasState {
+		return state.Active.Provider, state.Active.Model, true
+	}
+	return ag.Provider, ag.Model, true
+}
+
+// IsAgentFailedOver reports whether agentName currently has an
+// operations.yaml override recording it as switched away from its primary
+// (NFR-6's one-level cap check).
+func (p *Project) IsAgentFailedOver(agentName string) bool {
+	state, ok := p.Operations().AgentState(agentName)
+	return ok && state.IsFailedOver()
+}
+
+// FailoverProviderWide performs FR-3.1: every agent whose effective active
+// provider is fromProvider moves to its own configured fallback
+// provider/model in a single action — agents may differ in secondary, so
+// each uses its own fallback_provider/fallback_model. An agent with no
+// fallback_provider configured cannot fail over; it is recorded as
+// partially paused (FR-3.4) instead, so the queue dispatcher can pause its
+// jobs while other agents proceed. An agent already in a failover state
+// (the one-level cap, NFR-6) is left untouched — callers are expected to
+// have already routed a repeated failure for an already-failed-over agent
+// to pause_queue before calling this. Returns the agent names actually
+// switched and the agent names left partially paused.
+func (p *Project) FailoverProviderWide(fromProvider, reason string, resetsAtUnix int64, bucket string) (switched, noSecondary []string, err error) {
+	p.switchMu.Lock()
+	defer p.switchMu.Unlock()
+
+	cfg := p.Config()
+	now := time.Now()
+
+	for _, ag := range cfg.Agents {
+		state, hasState := p.Operations().AgentState(ag.Name)
+		activeProvider := ag.Provider
+		if hasState {
+			activeProvider = state.Active.Provider
+		}
+		if activeProvider != fromProvider {
+			continue
+		}
+		if hasState && state.IsFailedOver() {
+			// One-level cap (NFR-6): already on a secondary — a further
+			// failure for this agent must pause rather than fail over again.
+			continue
+		}
+
+		if ag.FallbackProvider == "" {
+			// FR-3.4: no secondary configured — partial pause while other
+			// agents proceed. The active provider/model are left as the
+			// (unreachable) primary; PartialPause records that its jobs
+			// should be skipped by the dispatcher until restored.
+			pausedState := AgentOperationalState{
+				Agent:        ag.Name,
+				Primary:      ProviderModel{Provider: ag.Provider, Model: ag.Model},
+				Active:       ProviderModel{Provider: ag.Provider, Model: ag.Model},
+				PartialPause: true,
+				Reason:       reason,
+				SwitchedAt:   now.Unix(),
+			}
+			if err := p.Operations().SetAgentState(pausedState); err != nil {
+				return switched, noSecondary, fmt.Errorf("recording partial pause for %q: %w", ag.Name, err)
+			}
+			_ = p.Operations().AppendHistory(FailoverHistoryEntry{
+				At: now.Unix(), Agent: ag.Name, Action: "pause_queue",
+				FromProvider: fromProvider, Reason: reason,
+			})
+			noSecondary = append(noSecondary, ag.Name)
+			continue
+		}
+
+		primary := ProviderModel{Provider: ag.Provider, Model: ag.Model}
+		newState := AgentOperationalState{
+			Agent:        ag.Name,
+			Primary:      primary,
+			Active:       ProviderModel{Provider: ag.FallbackProvider, Model: ag.FallbackModel},
+			SwitchedAt:   now.Unix(),
+			Reason:       reason,
+			ResetsAtUnix: resetsAtUnix,
+			Bucket:       bucket,
+		}
+		if err := p.Operations().SetAgentState(newState); err != nil {
+			return switched, noSecondary, fmt.Errorf("failing over %q: %w", ag.Name, err)
+		}
+		_ = p.Operations().AppendHistory(FailoverHistoryEntry{
+			At: now.Unix(), Agent: ag.Name, Action: "failover",
+			FromProvider: primary.Provider, ToProvider: ag.FallbackProvider, Reason: reason,
+		})
+
+		p.insertFeedEvent("provider_switched", fmt.Sprintf(
+			"Agent %s failed over from %s to %s/%s (reason: %s)", ag.Name, primary.Provider, ag.FallbackProvider, ag.FallbackModel, reason))
+		p.Hub.Broadcast(hub.Event{
+			Type: "provider.switched",
+			Payload: map[string]any{
+				"agent":            ag.Name,
+				"provider":         ag.FallbackProvider,
+				"model":            ag.FallbackModel,
+				"reason":           reason,
+				"is_failover":      true,
+				"primary_provider": primary.Provider,
+				"primary_model":    primary.Model,
+			},
+		})
+		switched = append(switched, ag.Name)
+	}
+
+	if len(switched) > 0 || len(noSecondary) > 0 {
+		p.insertFeedEvent("provider_failover_project_wide", fmt.Sprintf(
+			"Project-wide failover from %s (reason: %s): %d agent(s) switched, %d agent(s) paused (no secondary)",
+			fromProvider, reason, len(switched), len(noSecondary)))
+		p.Hub.Broadcast(hub.Event{
+			Type: "provider.failover_project_wide",
+			Payload: map[string]any{
+				"from_provider": fromProvider,
+				"reason":        reason,
+				"switched":      switched,
+				"no_secondary":  noSecondary,
+			},
+		})
+	}
+
+	return switched, noSecondary, nil
+}
+
+// PartiallyPausedAgents returns the names of agents currently recorded with
+// PartialPause set (FR-3.4: bound to a failed provider with no secondary to
+// fail over to) — used by the queue dispatcher to skip their jobs while
+// other agents' work proceeds.
+func (p *Project) PartiallyPausedAgents() []string {
+	var names []string
+	for name, state := range p.Operations().AllAgentStates() {
+		if state.PartialPause {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
 // insertFeedEvent records a system-actor feed event and broadcasts feed.new,
 // mirroring the pattern used by the agent run supervisor.
 func (p *Project) insertFeedEvent(eventType, summary string) {

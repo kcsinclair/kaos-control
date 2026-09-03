@@ -14,19 +14,25 @@ import (
 
 // failoverTestHarness wires a Dispatcher whose lookup broadcasts a
 // queue.rate_limit event (kind "overloaded") shortly after StartRun, so the
-// dispatcher's failover path is exercised deterministically.
+// dispatcher's project-wide failover path (Milestone 4) is exercised
+// deterministically.
 type failoverTestHarness struct {
-	store              *Store
-	appHub             *hub.Hub
-	projHub            *hub.Hub
-	switchCalls        atomic.Int32
-	lastSwitchProvider atomic.Value // string
-	startRunCalls      atomic.Int32
-	failoverPolicy     FailoverPolicy
-	fallbackProvider   string
-	fallbackModel      string
-	agentHasFallback   bool
-	providerHealthy    bool
+	store                *Store
+	appHub               *hub.Hub
+	projHub              *hub.Hub
+	failoverWideCalls    atomic.Int32
+	lastFailoverProvider atomic.Value // string — the "from" provider passed to FailoverProviderWide
+	startRunCalls        atomic.Int32
+	failoverPolicy       FailoverPolicy
+	activeProvider       string
+	fallbackProvider     string
+	fallbackModel        string
+	agentHasFallback     bool
+	agentAlreadyFailed   bool // simulates NFR-6's one-level cap via IsAgentFailedOver
+	providerHealthy      bool
+	failoverWideErr      error
+	switchedAgents       []string
+	noSecondaryAgents    []string
 }
 
 func newFailoverTestHarness(t *testing.T) *failoverTestHarness {
@@ -42,10 +48,12 @@ func newFailoverTestHarness(t *testing.T) *failoverTestHarness {
 		store:            s,
 		appHub:           hub.New(),
 		projHub:          hub.New(),
+		activeProvider:   "anthropic-cloud",
 		fallbackProvider: "gemini-cloud",
 		fallbackModel:    "gemini-2.5-flash",
 		agentHasFallback: true,
 		providerHealthy:  true,
+		switchedAgents:   []string{"analyst"},
 	}
 	return h
 }
@@ -90,10 +98,19 @@ func (h *failoverTestHarness) lookup(name string) (ProjectAccess, bool) {
 		ProbeProviderHealth: func(ctx context.Context, providerName string) bool {
 			return h.providerHealthy
 		},
-		SwitchAgentProvider: func(agentName, provider, model, reason string, isFailover bool) error {
-			h.switchCalls.Add(1)
-			h.lastSwitchProvider.Store(provider)
-			return nil
+		AgentActiveProvider: func(agentName string) (string, bool) {
+			return h.activeProvider, true
+		},
+		IsAgentFailedOver: func(agentName string) bool {
+			return h.agentAlreadyFailed
+		},
+		FailoverProviderWide: func(provider, reason string, resetsAtUnix int64, bucket string) ([]string, []string, error) {
+			h.failoverWideCalls.Add(1)
+			h.lastFailoverProvider.Store(provider)
+			if h.failoverWideErr != nil {
+				return nil, nil, h.failoverWideErr
+			}
+			return h.switchedAgents, h.noSecondaryAgents, nil
 		},
 	}, true
 }
@@ -140,16 +157,14 @@ func waitForFailedAndPending(t *testing.T, s *Store) (failed, pending []*Job) {
 }
 
 // TestDispatcher_AutoSwitchWithHealthyFallback verifies that a 529/overloaded
-// failure with auto_switch enabled and a healthy fallback provider triggers
-// SwitchAgentProvider, re-enqueues the job at the head without pausing the
-// queue, and does not emit queue.paused.
+// failure with the "overloaded" reason resolved to "failover" and a healthy
+// fallback provider triggers a project-wide FailoverProviderWide call,
+// re-enqueues the job at the head without pausing the queue, and does not
+// emit queue.paused.
 func TestDispatcher_AutoSwitchWithHealthyFallback(t *testing.T) {
 	h := newFailoverTestHarness(t)
 	h.failoverPolicy = FailoverPolicy{
-		Enabled:            true,
-		AutoSwitch:         true,
-		SwitchOnKinds:      []string{"overloaded", "rate_limit", "unreachable"},
-		MaxFailoversPerRun: 1,
+		Actions: map[string]string{"overloaded": "failover"},
 	}
 	d := h.dispatcher(time.Now())
 
@@ -190,11 +205,11 @@ func TestDispatcher_AutoSwitchWithHealthyFallback(t *testing.T) {
 		t.Errorf("re-queued position %d should be less than failed position %d", requeued[0].Position, failed[0].Position)
 	}
 
-	if h.switchCalls.Load() != 1 {
-		t.Errorf("expected SwitchAgentProvider called once, got %d", h.switchCalls.Load())
+	if h.failoverWideCalls.Load() != 1 {
+		t.Errorf("expected FailoverProviderWide called once, got %d", h.failoverWideCalls.Load())
 	}
-	if v, _ := h.lastSwitchProvider.Load().(string); v != "gemini-cloud" {
-		t.Errorf("expected switch to gemini-cloud, got %q", v)
+	if v, _ := h.lastFailoverProvider.Load().(string); v != "anthropic-cloud" {
+		t.Errorf("expected project-wide failover triggered from anthropic-cloud, got %q", v)
 	}
 
 	paused, _, _, err := h.store.GetPauseState()
@@ -210,16 +225,14 @@ func TestDispatcher_AutoSwitchWithHealthyFallback(t *testing.T) {
 	}
 }
 
-// TestDispatcher_AutoSwitchDisabled_FallsBackToPause verifies that with
-// auto_switch: false the standard rate-limit pause path runs unchanged and
-// SwitchAgentProvider is never called.
-func TestDispatcher_AutoSwitchDisabled_FallsBackToPause(t *testing.T) {
+// TestDispatcher_ActionPauseQueue_FallsBackToPause verifies that when the
+// resolved action for the failure reason is "pause_queue" (e.g. automated
+// switchover disabled), the standard rate-limit pause path runs unchanged
+// and FailoverProviderWide is never called.
+func TestDispatcher_ActionPauseQueue_FallsBackToPause(t *testing.T) {
 	h := newFailoverTestHarness(t)
 	h.failoverPolicy = FailoverPolicy{
-		Enabled:            true,
-		AutoSwitch:         false,
-		SwitchOnKinds:      []string{"overloaded", "rate_limit", "unreachable"},
-		MaxFailoversPerRun: 1,
+		Actions: map[string]string{"overloaded": "pause_queue"},
 	}
 	d := h.dispatcher(time.Now())
 
@@ -240,8 +253,8 @@ func TestDispatcher_AutoSwitchDisabled_FallsBackToPause(t *testing.T) {
 		t.Errorf("failed job reason: got %q, want %q", failed[0].Reason, "rate_limit")
 	}
 
-	if h.switchCalls.Load() != 0 {
-		t.Errorf("expected SwitchAgentProvider never called, got %d", h.switchCalls.Load())
+	if h.failoverWideCalls.Load() != 0 {
+		t.Errorf("expected FailoverProviderWide never called, got %d", h.failoverWideCalls.Load())
 	}
 
 	paused, _, _, err := h.store.GetPauseState()
@@ -249,7 +262,7 @@ func TestDispatcher_AutoSwitchDisabled_FallsBackToPause(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !paused {
-		t.Error("expected queue to be paused when auto_switch is disabled")
+		t.Error("expected queue to be paused when the resolved action is pause_queue")
 	}
 	stopCollect()
 	if !containsEvent(events, "queue.paused") {
@@ -258,15 +271,13 @@ func TestDispatcher_AutoSwitchDisabled_FallsBackToPause(t *testing.T) {
 }
 
 // TestDispatcher_UnhealthyFallback_FallsBackToPause verifies that a failed
-// pre-switch health probe on the fallback provider prevents failover and
-// falls back to the standard pause, without calling SwitchAgentProvider.
+// pre-switch health probe on the triggering agent's own fallback provider
+// prevents project-wide failover from engaging and falls back to the
+// standard pause, without calling FailoverProviderWide.
 func TestDispatcher_UnhealthyFallback_FallsBackToPause(t *testing.T) {
 	h := newFailoverTestHarness(t)
 	h.failoverPolicy = FailoverPolicy{
-		Enabled:            true,
-		AutoSwitch:         true,
-		SwitchOnKinds:      []string{"overloaded", "rate_limit", "unreachable"},
-		MaxFailoversPerRun: 1,
+		Actions: map[string]string{"overloaded": "failover"},
 	}
 	h.providerHealthy = false
 	d := h.dispatcher(time.Now())
@@ -287,8 +298,8 @@ func TestDispatcher_UnhealthyFallback_FallsBackToPause(t *testing.T) {
 	if failed[0].Reason != "rate_limit" {
 		t.Errorf("failed job reason: got %q, want %q (unhealthy fallback should not trigger failover)", failed[0].Reason, "rate_limit")
 	}
-	if h.switchCalls.Load() != 0 {
-		t.Errorf("expected SwitchAgentProvider never called when fallback is unhealthy, got %d", h.switchCalls.Load())
+	if h.failoverWideCalls.Load() != 0 {
+		t.Errorf("expected FailoverProviderWide never called when fallback is unhealthy, got %d", h.failoverWideCalls.Load())
 	}
 
 	stopCollect()
@@ -297,25 +308,23 @@ func TestDispatcher_UnhealthyFallback_FallsBackToPause(t *testing.T) {
 	}
 }
 
-// TestDispatcher_MaxFailoversPerRunExceeded verifies that once a job's
-// Attempts already exceeds max_failovers_per_run, a further rate-limit
+// TestDispatcher_AgentAlreadyFailedOver_CapsAtOneLevel verifies the NFR-6
+// one-level failover cap: when the triggering agent is already in a
+// failover state (its secondary just failed too), a further transient
 // failure does not trigger another failover and instead falls back to the
-// standard pause — cascading failover is bounded.
-func TestDispatcher_MaxFailoversPerRunExceeded(t *testing.T) {
+// standard pause — no third target, no cyclic switching.
+func TestDispatcher_AgentAlreadyFailedOver_CapsAtOneLevel(t *testing.T) {
 	h := newFailoverTestHarness(t)
 	h.failoverPolicy = FailoverPolicy{
-		Enabled:            true,
-		AutoSwitch:         true,
-		SwitchOnKinds:      []string{"overloaded", "rate_limit", "unreachable"},
-		MaxFailoversPerRun: 1,
+		Actions: map[string]string{"overloaded": "failover"},
 	}
+	h.agentAlreadyFailed = true
 	d := h.dispatcher(time.Now())
 
 	events, stopCollect := collectAppEvents(t, h.appHub)
 	defer stopCollect()
 
-	// Attempts=2 already exceeds MaxFailoversPerRun=1 (job.Attempts > policy.MaxFailoversPerRun).
-	h.enqueue(t, 2)
+	h.enqueue(t, 1)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -326,10 +335,10 @@ func TestDispatcher_MaxFailoversPerRunExceeded(t *testing.T) {
 		t.Fatal("expected a failed job")
 	}
 	if failed[0].Reason != "rate_limit" {
-		t.Errorf("failed job reason: got %q, want %q (max_failovers_per_run exceeded should not trigger failover)", failed[0].Reason, "rate_limit")
+		t.Errorf("failed job reason: got %q, want %q (one-level cap should not trigger a second failover)", failed[0].Reason, "rate_limit")
 	}
-	if h.switchCalls.Load() != 0 {
-		t.Errorf("expected SwitchAgentProvider never called once max_failovers_per_run is exceeded, got %d", h.switchCalls.Load())
+	if h.failoverWideCalls.Load() != 0 {
+		t.Errorf("expected FailoverProviderWide never called once the agent is already failed over, got %d", h.failoverWideCalls.Load())
 	}
 
 	stopCollect()

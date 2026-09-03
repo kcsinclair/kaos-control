@@ -373,9 +373,32 @@ func run() error {
 				SwitchAgentProvider: func(agentName, provider, model, reason string, isFailover bool) error {
 					return p.SwitchAgentProvider(agentName, provider, model, reason, isFailover)
 				},
+				AgentActiveProvider: func(agentName string) (string, bool) {
+					provider, _, ok := p.EffectiveAgentProvider(agentName)
+					return provider, ok
+				},
+				IsAgentFailedOver: func(agentName string) bool {
+					return p.IsAgentFailedOver(agentName)
+				},
+				FailoverProviderWide: func(provider, reason string, resetsAtUnix int64, bucket string) ([]string, []string, error) {
+					return p.FailoverProviderWide(provider, reason, resetsAtUnix, bucket)
+				},
 			}, true
 		}
 		queueDispatcher = queue.New(queueStore, projectLookup, appHub, queue.Config{})
+		queueDispatcher.SetBlockedAgentsFunc(func() []queue.AgentKey {
+			var blocked []queue.AgentKey
+			for _, name := range srv.ProjectNames() {
+				p, ok := srv.GetProject(name)
+				if !ok {
+					continue
+				}
+				for _, agentName := range p.PartiallyPausedAgents() {
+					blocked = append(blocked, queue.AgentKey{Project: name, Agent: agentName})
+				}
+			}
+			return blocked
+		})
 		queueDispatcher.Start(ctx)
 		// Wire PauseQueue into startup projects and into the server so that
 		// future RegisterProject calls also wire new projects automatically.
