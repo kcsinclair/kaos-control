@@ -203,6 +203,24 @@ func (o *Operations) AllAgentStates() map[string]AgentOperationalState {
 	return out
 }
 
+// SetAwaitingOperatorDecision records that agentName's job jobID was
+// interrupted with a suspected partial commit and must not be
+// auto-restarted or auto-rolled-back until an operator decides (FR-7.3).
+// Any existing primary/active provider state for the agent is preserved.
+func (o *Operations) SetAwaitingOperatorDecision(agentName, jobID string) error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.Agents == nil {
+		o.Agents = make(map[string]AgentOperationalState)
+	}
+	state := o.Agents[agentName]
+	state.Agent = agentName
+	state.AwaitingOperatorDecision = true
+	state.AwaitingDecisionJobID = jobID
+	o.Agents[agentName] = state
+	return o.saveLocked()
+}
+
 // Reachability returns the last-probed reachability of the named provider,
 // or ok=false when it has never been probed.
 func (o *Operations) GetReachability(provider string) (ProviderReachability, bool) {

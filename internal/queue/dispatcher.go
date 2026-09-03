@@ -137,6 +137,20 @@ type ProjectAccess struct {
 	// Optional — nil disables the threshold override, leaving
 	// "provider_disconnected" resolved as plain retry_in_place always.
 	ProviderDisconnectCountLastHour func(providerName string) int
+
+	// ---- restart semantics & the partial-commit race (Milestone 7) ----
+
+	// DetectPartialCommit reports whether the project's repository shows any
+	// commits authored at or after sinceUnix (an interrupted job's
+	// StartedAt) — evidence the run reached its commit step before failing
+	// (FR-7.1). Optional; nil (or a job with a zero StartedAt) always
+	// results in a clean restart (FR-7.2), the pre-Milestone-7 behaviour.
+	DetectPartialCommit func(sinceUnix int64) (bool, error)
+	// MarkAwaitingOperatorDecision records that jobID for agentName was held
+	// instead of auto-restarted because DetectPartialCommit found a
+	// suspected partial commit (FR-7.3). Only called when DetectPartialCommit
+	// is set and returns true.
+	MarkAwaitingOperatorDecision func(agentName, jobID string) error
 }
 
 // FailoverPolicy is the subset of config.ProviderFailoverConfig /
@@ -415,7 +429,7 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 		// FailureReasonAuthError (expired/invalid API key), which is
 		// handled via the "failed" branch below. Always retry immediately
 		// without pausing; the freshly-rotated token applies to the next run.
-		d.handleAuthError(job)
+		d.handleAuthError(job, pa)
 	case "cancelled":
 		_ = d.store.MarkTerminal(job.ID, StateFailed, "cancelled")
 		d.broadcastJobEvent("queue.finished", job, "failed")
@@ -584,7 +598,7 @@ func (d *Dispatcher) handleClassifiedFailure(ctx context.Context, job *Job, pa P
 		if d.tryProjectWideFailover(ctx, job, pa, reason, result) {
 			return
 		}
-		d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
+		d.handleRateLimit(job, pa, result.rawText, result.rlKind, result.ResetsAtUnix)
 	case "retry_in_place":
 		// FR-6.3: more than 3 provider_disconnected occurrences for this
 		// provider within a rolling hour pauses the queue instead of
@@ -593,16 +607,16 @@ func (d *Dispatcher) handleClassifiedFailure(ctx context.Context, job *Job, pa P
 		// terminal-failure path; this is the queue-level bound on top of it.
 		if reason == "provider_disconnected" && pa.ProviderDisconnectCountLastHour != nil && pa.AgentActiveProvider != nil {
 			if provider, ok := pa.AgentActiveProvider(job.AgentName); ok && pa.ProviderDisconnectCountLastHour(provider) > providerDisconnectThreshold {
-				d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
+				d.handleRateLimit(job, pa, result.rawText, result.rlKind, result.ResetsAtUnix)
 				return
 			}
 		}
-		d.handleImmediateRetry(job, reason, reason+"_retry") // immediate re-enqueue, no pause
+		d.handleImmediateRetry(job, pa, reason, reason+"_retry") // immediate re-enqueue, no pause
 	case "fail_run":
 		_ = d.store.MarkTerminal(job.ID, StateFailed, reason)
 		d.broadcastJobEvent("queue.finished", job, "failed")
 	default: // "pause_queue"
-		d.handleRateLimit(job, result.rawText, result.rlKind, result.ResetsAtUnix)
+		d.handleRateLimit(job, pa, result.rawText, result.rlKind, result.ResetsAtUnix)
 	}
 }
 
@@ -671,31 +685,73 @@ func (d *Dispatcher) tryProjectWideFailover(ctx context.Context, job *Job, pa Pr
 	_ = d.store.MarkTerminal(job.ID, StateFailed, "failover_triggered")
 	d.broadcastJobEvent("queue.finished", job, "failed")
 
-	// 2. Restart it (FR-3.2). If the triggering agent itself had no
-	// secondary (FR-3.4), it's now partially paused — SetBlockedAgentsFunc
-	// will keep Dequeue from serving its jobs, so re-enqueueing normally
-	// (rather than skipping) is enough; other agents' work still proceeds.
-	requeue := *job
-	requeue.ID = newID()
-	requeue.State = StatePending
-	requeue.Attempts = job.Attempts + 1
-	requeue.Position = d.store.MinPosition() - 1
-	requeue.EnqueuedAt = now
-	if err := d.store.EnqueueDirect(requeue); err != nil {
-		slog.Error("queue: re-enqueue after project-wide failover failed", "err", err)
-	} else {
-		d.broadcast("queue.added", map[string]any{
-			"id":       requeue.ID,
-			"position": requeue.Position,
-			"attempts": requeue.Attempts,
-			"reason":   "failover_retry",
-		})
+	// 2. Restart it (FR-3.2, subject to FR-7's partial-commit check). If the
+	// triggering agent itself had no secondary (FR-3.4), it's now partially
+	// paused — SetBlockedAgentsFunc will keep Dequeue from serving its jobs,
+	// so re-enqueueing normally (rather than skipping) is enough; other
+	// agents' work still proceeds. The failover itself has already engaged
+	// regardless of the partial-commit outcome below — only the interrupted
+	// job's automatic restart is gated.
+	if d.restartOrHold(job, pa) {
+		requeue := *job
+		requeue.ID = newID()
+		requeue.State = StatePending
+		requeue.Attempts = job.Attempts + 1
+		requeue.Position = d.store.MinPosition() - 1
+		requeue.EnqueuedAt = now
+		if err := d.store.EnqueueDirect(requeue); err != nil {
+			slog.Error("queue: re-enqueue after project-wide failover failed", "err", err)
+		} else {
+			d.broadcast("queue.added", map[string]any{
+				"id":       requeue.ID,
+				"position": requeue.Position,
+				"attempts": requeue.Attempts,
+				"reason":   "failover_retry",
+			})
+		}
 	}
 
 	slog.Info("queue: project-wide automated failover engaged",
 		"job_id", job.ID, "provider", provider, "reason", reason,
 		"switched", switched, "paused_no_secondary", noSecondary)
 	return true
+}
+
+// restartOrHold implements the FR-7 partial-commit race check that must run
+// before any automatic re-run of an interrupted job: an agent may complete
+// and commit work moments before its process dies, and blindly re-running
+// would duplicate that work. When pa.DetectPartialCommit finds evidence the
+// run reached its commit step before failing, the job is held for an
+// operator decision (FR-7.3) instead of being re-enqueued — neither
+// auto-rerun nor auto-rollback. It returns true when the caller should
+// proceed with its normal clean restart (FR-7.2), including when the check
+// is unavailable (pa.DetectPartialCommit is nil, or job.StartedAt is zero,
+// e.g. a test harness that doesn't wire it) or errors — those cases can't
+// distinguish "partial" from "clean", and a clean restart is the
+// pre-Milestone-7 default.
+func (d *Dispatcher) restartOrHold(job *Job, pa ProjectAccess) bool {
+	if pa.DetectPartialCommit == nil || job.StartedAt.IsZero() {
+		return true
+	}
+	suspected, err := pa.DetectPartialCommit(job.StartedAt.Unix())
+	if err != nil {
+		slog.Warn("queue: partial-commit detection failed; restarting normally",
+			"job_id", job.ID, "agent", job.AgentName, "err", err)
+		return true
+	}
+	if !suspected {
+		return true
+	}
+
+	slog.Warn("queue: suspected partial commit; holding job for operator decision instead of auto-restarting",
+		"job_id", job.ID, "agent", job.AgentName)
+	if pa.MarkAwaitingOperatorDecision != nil {
+		if err := pa.MarkAwaitingOperatorDecision(job.AgentName, job.ID); err != nil {
+			slog.Error("queue: recording awaiting-operator-decision failed", "job_id", job.ID, "err", err)
+		}
+	}
+	d.broadcastJobEvent("queue.awaiting_operator_decision", job, "awaiting_operator_decision")
+	return false
 }
 
 // handleRateLimit processes a rate-limit / overloaded failure: marks the job
@@ -707,7 +763,7 @@ func (d *Dispatcher) tryProjectWideFailover(ctx context.Context, job *Job, pa Pr
 // get OverloadPause (default 5 min) since they typically clear within
 // minutes; rate limits and quotas get FallbackPause (default 30 min) since
 // those usually align with hourly / daily reset cycles.
-func (d *Dispatcher) handleRateLimit(job *Job, rawText, kind string, resetsAtUnix int64) {
+func (d *Dispatcher) handleRateLimit(job *Job, pa ProjectAccess, rawText, kind string, resetsAtUnix int64) {
 	now := d.cfg.clock()
 	var resetTime time.Time
 	if resetsAtUnix > 0 {
@@ -730,7 +786,8 @@ func (d *Dispatcher) handleRateLimit(job *Job, rawText, kind string, resetsAtUni
 	// 1. Mark current job failed.
 	_ = d.store.MarkTerminal(job.ID, StateFailed, "rate_limit")
 
-	// 2. Re-enqueue at head if within max-attempts.
+	// 2. Re-enqueue at head if within max-attempts and no partial commit is
+	// suspected (FR-7).
 	if job.Attempts >= d.cfg.maxAttempts() {
 		slog.Warn("queue: job exceeded max attempts; not re-enqueueing",
 			"job_id", job.ID, "attempts", job.Attempts, "max", d.cfg.maxAttempts())
@@ -738,7 +795,7 @@ func (d *Dispatcher) handleRateLimit(job *Job, rawText, kind string, resetsAtUni
 			"id":     job.ID,
 			"reason": "max_attempts",
 		})
-	} else {
+	} else if d.restartOrHold(job, pa) {
 		requeue := *job
 		requeue.ID = newID()
 		requeue.State = StatePending
@@ -776,8 +833,8 @@ func (d *Dispatcher) handleRateLimit(job *Job, rawText, kind string, resetsAtUni
 // failed and re-enqueues it immediately (bounded by max-attempts) without
 // pausing the queue. An auth rotation is transient and per-run — subsequent
 // runs will pick up the freshly-rotated token, so no queue-wide pause is needed.
-func (d *Dispatcher) handleAuthError(job *Job) {
-	d.handleImmediateRetry(job, "auth_error", "auth_error_retry")
+func (d *Dispatcher) handleAuthError(job *Job, pa ProjectAccess) {
+	d.handleImmediateRetry(job, pa, "auth_error", "auth_error_retry")
 }
 
 // handleImmediateRetry marks job failed with reason, re-enqueues it at the
@@ -788,13 +845,14 @@ func (d *Dispatcher) handleAuthError(job *Job) {
 // driver's own in-loop backoff retry has been exhausted. requeueReason
 // labels the queue.added broadcast so the two callers stay distinguishable
 // in the event stream.
-func (d *Dispatcher) handleImmediateRetry(job *Job, reason, requeueReason string) {
+func (d *Dispatcher) handleImmediateRetry(job *Job, pa ProjectAccess, reason, requeueReason string) {
 	now := d.cfg.clock()
 
 	// 1. Mark current job failed.
 	_ = d.store.MarkTerminal(job.ID, StateFailed, reason)
 
-	// 2. Re-enqueue at head if within max-attempts.
+	// 2. Re-enqueue at head if within max-attempts and no partial commit is
+	// suspected (FR-7).
 	if job.Attempts >= d.cfg.maxAttempts() {
 		slog.Warn("queue: job exceeded max attempts; not re-enqueueing",
 			"job_id", job.ID, "reason", reason, "attempts", job.Attempts, "max", d.cfg.maxAttempts())
@@ -802,7 +860,7 @@ func (d *Dispatcher) handleImmediateRetry(job *Job, reason, requeueReason string
 			"id":     job.ID,
 			"reason": "max_attempts",
 		})
-	} else {
+	} else if d.restartOrHold(job, pa) {
 		requeue := *job
 		requeue.ID = newID()
 		requeue.State = StatePending

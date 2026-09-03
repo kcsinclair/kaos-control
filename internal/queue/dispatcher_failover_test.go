@@ -41,6 +41,16 @@ type failoverTestHarness struct {
 	disconnectCountLastHour int
 	simulateAgentFailed     bool
 	simulateFailureReason   string
+
+	// partialCommitSuspected, when true, wires DetectPartialCommit to report
+	// a suspected partial commit (Milestone 7, FR-7.1) instead of the
+	// default clean-restart (FR-7.2) behaviour.
+	partialCommitSuspected    bool
+	partialCommitErr          error
+	detectPartialCommitCalls  atomic.Int32
+	awaitingDecisionCalls     atomic.Int32
+	lastAwaitingDecisionAgent atomic.Value // string
+	lastAwaitingDecisionJobID atomic.Value // string
 }
 
 func newFailoverTestHarness(t *testing.T) *failoverTestHarness {
@@ -132,6 +142,19 @@ func (h *failoverTestHarness) lookup(name string) (ProjectAccess, bool) {
 		},
 		ProviderDisconnectCountLastHour: func(providerName string) int {
 			return h.disconnectCountLastHour
+		},
+		DetectPartialCommit: func(sinceUnix int64) (bool, error) {
+			h.detectPartialCommitCalls.Add(1)
+			if h.partialCommitErr != nil {
+				return false, h.partialCommitErr
+			}
+			return h.partialCommitSuspected, nil
+		},
+		MarkAwaitingOperatorDecision: func(agentName, jobID string) error {
+			h.awaitingDecisionCalls.Add(1)
+			h.lastAwaitingDecisionAgent.Store(agentName)
+			h.lastAwaitingDecisionJobID.Store(jobID)
+			return nil
 		},
 	}, true
 }
@@ -465,5 +488,122 @@ func TestDispatcher_ProviderDisconnected_PausesOnceThresholdExceeded(t *testing.
 	stopCollect()
 	if !containsEvent(events, "queue.paused") {
 		t.Errorf("expected queue.paused broadcast; got %v", events())
+	}
+}
+
+// TestDispatcher_PartialCommitSuspected_PauseQueuePath verifies FR-7.1/7.3:
+// when DetectPartialCommit finds evidence the interrupted run committed
+// before failing, the standard pause_queue restart-first path does NOT
+// re-enqueue the job — it's held for an operator decision instead — while
+// the queue-wide pause itself still happens unchanged.
+func TestDispatcher_PartialCommitSuspected_PauseQueuePath(t *testing.T) {
+	h := newFailoverTestHarness(t)
+	h.failoverPolicy = FailoverPolicy{
+		Actions: map[string]string{"overloaded": "pause_queue"},
+	}
+	h.partialCommitSuspected = true
+	d := h.dispatcher(time.Now())
+
+	events, stopCollect := collectAppEvents(t, h.appHub)
+	defer stopCollect()
+
+	h.enqueue(t, 1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	d.Start(ctx)
+
+	deadline := time.Now().Add(3 * time.Second)
+	var failed []*Job
+	for time.Now().Before(deadline) {
+		failed, _ = h.store.ListByState(StateFailed)
+		if len(failed) > 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if len(failed) == 0 {
+		t.Fatal("expected a failed job")
+	}
+
+	// Give the dispatcher a moment to have acted on any (incorrect) re-enqueue.
+	time.Sleep(100 * time.Millisecond)
+	pending, _ := h.store.ListByState(StatePending)
+	if len(pending) != 0 {
+		t.Errorf("expected no re-enqueued job while a partial commit is suspected, got %d", len(pending))
+	}
+
+	if h.detectPartialCommitCalls.Load() == 0 {
+		t.Error("expected DetectPartialCommit to be called")
+	}
+	if h.awaitingDecisionCalls.Load() != 1 {
+		t.Errorf("expected MarkAwaitingOperatorDecision called once, got %d", h.awaitingDecisionCalls.Load())
+	}
+	if agent, _ := h.lastAwaitingDecisionAgent.Load().(string); agent != "analyst" {
+		t.Errorf("expected awaiting-decision agent %q, got %q", "analyst", agent)
+	}
+	if jobID, _ := h.lastAwaitingDecisionJobID.Load().(string); jobID != failed[0].ID {
+		t.Errorf("expected awaiting-decision job id %q, got %q", failed[0].ID, jobID)
+	}
+
+	paused, _, _, err := h.store.GetPauseState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !paused {
+		t.Error("expected the queue-wide pause to still happen even when the job itself is held")
+	}
+	stopCollect()
+	if !containsEvent(events, "queue.awaiting_operator_decision") {
+		t.Errorf("expected queue.awaiting_operator_decision broadcast; got %v", events())
+	}
+}
+
+// TestDispatcher_PartialCommitSuspected_FailoverPath verifies that a
+// suspected partial commit holds the interrupted job for an operator
+// decision even on the failover path — the project-wide failover itself
+// still engages (other agents' work proceeds on the secondary); only the
+// automatic restart of this specific job is withheld.
+func TestDispatcher_PartialCommitSuspected_FailoverPath(t *testing.T) {
+	h := newFailoverTestHarness(t)
+	h.failoverPolicy = FailoverPolicy{
+		Actions: map[string]string{"overloaded": "failover"},
+	}
+	h.partialCommitSuspected = true
+	d := h.dispatcher(time.Now())
+
+	h.enqueue(t, 1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	d.Start(ctx)
+
+	deadline := time.Now().Add(3 * time.Second)
+	var failed []*Job
+	for time.Now().Before(deadline) {
+		failed, _ = h.store.ListByState(StateFailed)
+		if len(failed) > 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if len(failed) == 0 {
+		t.Fatal("expected a failed job")
+	}
+	if failed[0].Reason != "failover_triggered" {
+		t.Errorf("failed job reason: got %q, want %q", failed[0].Reason, "failover_triggered")
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	pending, _ := h.store.ListByState(StatePending)
+	if len(pending) != 0 {
+		t.Errorf("expected no re-enqueued job while a partial commit is suspected, got %d", len(pending))
+	}
+
+	if h.failoverWideCalls.Load() != 1 {
+		t.Errorf("expected the failover itself to still engage, got %d calls", h.failoverWideCalls.Load())
+	}
+	if h.awaitingDecisionCalls.Load() != 1 {
+		t.Errorf("expected MarkAwaitingOperatorDecision called once, got %d", h.awaitingDecisionCalls.Load())
 	}
 }

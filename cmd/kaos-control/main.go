@@ -386,6 +386,19 @@ func run() error {
 				ProviderDisconnectCountLastHour: func(providerName string) int {
 					return p.Operations().DisconnectCountSince(providerName, time.Now().Add(-1*time.Hour))
 				},
+				DetectPartialCommit: func(sinceUnix int64) (bool, error) {
+					if p.Git == nil {
+						return false, nil
+					}
+					commits, err := p.Git.CommitsSince(time.Unix(sinceUnix, 0))
+					if err != nil {
+						return false, err
+					}
+					return len(commits) > 0, nil
+				},
+				MarkAwaitingOperatorDecision: func(agentName, jobID string) error {
+					return p.Operations().SetAwaitingOperatorDecision(agentName, jobID)
+				},
 			}, true
 		}
 		queueDispatcher = queue.New(queueStore, projectLookup, appHub, queue.Config{})
