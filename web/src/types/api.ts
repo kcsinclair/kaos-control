@@ -561,6 +561,8 @@ export type WsEventType =
   | 'provider.switched'
   | 'provider.restored'
   | 'provider.primary_recovered'
+  | 'provider.failover_project_wide'
+  | 'queue.awaiting_operator_decision'
   | 'config.reloaded'
 
 /** Payload for the `agent.quota_status` WS event (mirrors the backend wire shape verbatim). */
