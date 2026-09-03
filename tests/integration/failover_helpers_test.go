@@ -95,6 +95,15 @@ func newFailoverTestEnv(t *testing.T, cfgYAML string, providers []config.Provide
 		t.Fatal(err)
 	}
 
+	// operations.yaml is the git-ignored runtime-state store (Milestone 1):
+	// every kaos-control-managed project is expected to gitignore it at the
+	// root, mirroring this repo's own .gitignore. Seed that convention here
+	// so tests can assert the framework never fights it.
+	gitignorePath := filepath.Join(root, ".gitignore")
+	if err := os.WriteFile(gitignorePath, []byte("operations.yaml\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
 	repo, err := git.PlainInit(root, false)
 	if err != nil {
 		t.Fatal(err)
@@ -110,6 +119,9 @@ func newFailoverTestEnv(t *testing.T, cfgYAML string, providers []config.Provide
 		t.Fatal(err)
 	}
 	if _, err := wt.Add("lifecycle/config.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := wt.Add(".gitignore"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -134,6 +146,15 @@ func newFailoverTestEnv(t *testing.T, cfgYAML string, providers []config.Provide
 	if ref, err := repo.Head(); err == nil && ref.Name().Short() != "main" {
 		_ = repo.CreateBranch(&gitconfig.Branch{Name: "main", Remote: ""})
 	}
+
+	// DetectPartialCommit (Milestone 7) compares a job's StartedAt against
+	// commit author times at whole-second (Unix) resolution. Without this
+	// gap, the initial scaffolding commit above can land in the same wall-
+	// clock second as a job started moments later, making it look like a
+	// suspected partial commit for the run itself. Real projects always have
+	// far more than a second between project setup and their first queued
+	// job; tests need to force that same separation explicitly.
+	time.Sleep(1100 * time.Millisecond)
 
 	appCfg := &config.App{
 		Server:    config.ServerConfig{Listen: "127.0.0.1:0"},
@@ -200,13 +221,18 @@ func newFailoverTestEnv(t *testing.T, cfgYAML string, providers []config.Provide
 				return row.Status
 			},
 			Hub: proj.Hub,
+			// FailoverPolicy mirrors cmd/kaos-control/main.go's wiring: the
+			// event -> action policy (agent-switchover-and-failover Milestone
+			// 3/4) layered on top of the legacy provider_failover fields.
 			FailoverPolicy: func() queue.FailoverPolicy {
 				eff := proj.Config().EffectiveFailoverConfig()
+				switchover := proj.Config().EffectiveSwitchoverPolicy()
 				return queue.FailoverPolicy{
 					Enabled:            eff.Enabled != nil && *eff.Enabled,
-					AutoSwitch:         eff.AutoSwitch != nil && *eff.AutoSwitch,
+					AutoSwitch:         switchover.AutomatedSwitchover,
 					SwitchOnKinds:      eff.SwitchOnKinds,
 					MaxFailoversPerRun: eff.MaxFailoversPerRun,
+					Actions:            switchover.Actions,
 				}
 			},
 			AgentFailoverInfo: func(agentName string) (queue.AgentFailoverInfo, bool) {
@@ -227,10 +253,52 @@ func newFailoverTestEnv(t *testing.T, cfgYAML string, providers []config.Provide
 			SwitchAgentProvider: func(agentName, providerName, model, reason string, isFailover bool) error {
 				return proj.SwitchAgentProvider(agentName, providerName, model, reason, isFailover)
 			},
+			// ---- project-wide failover (Milestone 4) ----
+			AgentActiveProvider: func(agentName string) (string, bool) {
+				provider, _, ok := proj.EffectiveAgentProvider(agentName)
+				return provider, ok
+			},
+			IsAgentFailedOver: func(agentName string) bool {
+				return proj.IsAgentFailedOver(agentName)
+			},
+			FailoverProviderWide: func(providerName, reason string, resetsAtUnix int64, bucket string) ([]string, []string, error) {
+				return proj.FailoverProviderWide(providerName, reason, resetsAtUnix, bucket)
+			},
+			ProviderDisconnectCountLastHour: func(providerName string) int {
+				return proj.Operations().DisconnectCountSince(providerName, time.Now().Add(-1*time.Hour))
+			},
+			// ---- restart semantics & the partial-commit race (Milestone 7) ----
+			DetectPartialCommit: func(sinceUnix int64) (bool, error) {
+				if proj.Git == nil {
+					return false, nil
+				}
+				commits, err := proj.Git.CommitsSince(time.Unix(sinceUnix, 0))
+				if err != nil {
+					return false, err
+				}
+				return len(commits) > 0, nil
+			},
+			MarkAwaitingOperatorDecision: func(agentName, jobID string) error {
+				return proj.Operations().SetAwaitingOperatorDecision(agentName, jobID)
+			},
 		}, true
 	}
 
-	dispatcher := queue.New(queueStore, projectLookup, appHub, queue.Config{TickInterval: 50 * time.Millisecond})
+	// TickInterval is deliberately more generous than the 50ms some other
+	// integration suites use: an immediate-retry failover (Milestone 2/5)
+	// re-enqueues at the head as soon as the triggering stream event is
+	// parsed, which can race the origin run's own post-run cleanup
+	// (lineage-lock release included) if the next tick comes too soon —
+	// production's default tick interval is a full second, giving that
+	// cleanup ample time; tests need a smaller but still comfortable margin.
+	dispatcher := queue.New(queueStore, projectLookup, appHub, queue.Config{TickInterval: 300 * time.Millisecond})
+	dispatcher.SetBlockedAgentsFunc(func() []queue.AgentKey {
+		var blocked []queue.AgentKey
+		for _, agentName := range proj.PartiallyPausedAgents() {
+			blocked = append(blocked, queue.AgentKey{Project: "testproject", Agent: agentName})
+		}
+		return blocked
+	})
 	dispatcher.Start(ctx)
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -395,6 +463,58 @@ func (e *failoverTestEnv) gitLogMessages(n int) []string {
 		msgs = append(msgs, c.Message)
 	}
 	return msgs
+}
+
+// headSHA returns the short SHA of the project repo's current HEAD commit,
+// for before/after comparisons proving no new commit was made.
+func (e *failoverTestEnv) headSHA() string {
+	e.t.Helper()
+	status, err := e.proj.Git.Status()
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return status.HeadSHA
+}
+
+// seedFailoverState pre-seeds agentName's operations.yaml override directly
+// (bypassing the queue/dispatcher), for tests that need an agent to already
+// be in a failover state before the scenario under test begins. Mirrors what
+// an automated failover or manual switch would have recorded.
+func (e *failoverTestEnv) seedFailoverState(agentName, provider, model, reason string) {
+	e.t.Helper()
+	if err := e.proj.SwitchAgentProvider(agentName, provider, model, reason, true); err != nil {
+		e.t.Fatalf("seeding failover state for %s: %v", agentName, err)
+	}
+}
+
+// operationsYAMLPath returns the absolute path to the project's
+// operations.yaml runtime-state store.
+func (e *failoverTestEnv) operationsYAMLPath() string {
+	return filepath.Join(e.projectRoot, "operations.yaml")
+}
+
+// readOperationsYAML reads the raw operations.yaml off disk. Fails the test
+// if the file doesn't exist yet — callers should only call this once at
+// least one switch/failover has happened.
+func (e *failoverTestEnv) readOperationsYAML() string {
+	e.t.Helper()
+	b, err := os.ReadFile(e.operationsYAMLPath())
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return string(b)
+}
+
+// modifiedFiles returns the set of untracked/modified/staged paths in the
+// project's working tree (go-git's Status, which honours .gitignore) — used
+// to prove operations.yaml never shows up in git status (Milestone 1).
+func (e *failoverTestEnv) modifiedFiles() []string {
+	e.t.Helper()
+	files, err := e.proj.Git.ModifiedFiles(nil)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return files
 }
 
 // projectWSClient is a buffered WebSocket subscriber on the project hub

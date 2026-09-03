@@ -4,20 +4,22 @@
 
 package integration
 
-// Suite 2.2 — Provider switching REST API integration tests (SA1-SA6).
+// Suite 2.2 — Provider switching REST API integration tests (SA1-SA6), plus
+// Milestone 4 (policy inspection) and Milestone 8 (in-flight-run guard)
+// coverage.
 //
 // providerSwitchAPICfgYAML wires four agents against three app-level
 // providers (anthropic-cloud, gemini-cloud, local-ollama):
 //   - agent-a: on its normal (primary) provider, not in failover.
-//   - agent-b, agent-c, agent-d: already in a failover state (provider =
-//     gemini-cloud, primary_provider = anthropic-cloud stashed), so
-//     restore-all has three agents to act on atomically (SA4).
+//   - agent-b, agent-c, agent-d: declared on anthropic-cloud too; tests that
+//     need them already in a failover state seed that directly into
+//     operations.yaml via newProviderSwitchAPIEnv, so restore-all has three
+//     agents to act on atomically (SA4).
 //
 // A "local-ai" provider_templates entry maps all four agents to
 // local-ollama/llama3 for the template-apply test (SA5).
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -83,10 +85,8 @@ agents:
   - name: agent-b
     role: [analyst]
     driver: claude-code-cli
-    provider: gemini-cloud
-    model: gemini-2.5-flash
-    primary_provider: anthropic-cloud
-    primary_model: claude-3-7-sonnet
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
     allowed_write_paths: [lifecycle/requirements]
     git_identity:
       name: Agent B
@@ -96,10 +96,8 @@ agents:
   - name: agent-c
     role: [analyst]
     driver: claude-code-cli
-    provider: gemini-cloud
-    model: gemini-2.5-flash
-    primary_provider: anthropic-cloud
-    primary_model: claude-3-7-sonnet
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
     allowed_write_paths: [lifecycle/requirements]
     git_identity:
       name: Agent C
@@ -109,10 +107,8 @@ agents:
   - name: agent-d
     role: [analyst]
     driver: claude-code-cli
-    provider: gemini-cloud
-    model: gemini-2.5-flash
-    primary_provider: anthropic-cloud
-    primary_model: claude-3-7-sonnet
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
     allowed_write_paths: [lifecycle/requirements]
     git_identity:
       name: Agent D
@@ -136,11 +132,25 @@ func providerSwitchAPIProviders(t *testing.T) []config.Provider {
 	}
 }
 
+// newProviderSwitchAPIEnv builds the SA1-SA6 test environment and, unless
+// noSeed is set, seeds agent-b/c/d as already failed over to gemini-cloud
+// (operations.yaml override, Milestone 2/8) so restore-all has three agents
+// to act on atomically (SA4) and GetStatus has failover state to report
+// (SA1).
+func newProviderSwitchAPIEnv(t *testing.T, seeds ...seedArtifact) *failoverTestEnv {
+	t.Helper()
+	env := newFailoverTestEnv(t, providerSwitchAPICfgYAML, providerSwitchAPIProviders(t), seeds)
+	for _, name := range []string{"agent-b", "agent-c", "agent-d"} {
+		env.seedFailoverState(name, "gemini-cloud", "gemini-2.5-flash", "seed")
+	}
+	return env
+}
+
 // TestProviderSwitchAPI_GetStatus (SA1): GET .../provider-switch/status
 // reports failover_active, per-agent is_failover flags, and active vs
 // primary targets for an agent currently in failover.
 func TestProviderSwitchAPI_GetStatus(t *testing.T) {
-	env := newFailoverTestEnv(t, providerSwitchAPICfgYAML, providerSwitchAPIProviders(t), nil)
+	env := newProviderSwitchAPIEnv(t)
 
 	resp := env.doRequest("GET", "/api/p/testproject/provider-switch/status", nil)
 	requireStatus(t, resp, 200)
@@ -185,10 +195,13 @@ func TestProviderSwitchAPI_GetStatus(t *testing.T) {
 
 // TestProviderSwitchAPI_ManualSwitch (SA2): POST
 // .../agents/{name}/switch-provider manually switches agent-a (not
-// currently in failover). Asserts disk updated, git commit created, and the
-// provider.switched WS event broadcast.
+// currently in failover). Asserts the switch lands in operations.yaml only
+// — lifecycle/config.yaml and git are untouched — and the provider.switched
+// WS event is broadcast with is_failover=false.
 func TestProviderSwitchAPI_ManualSwitch(t *testing.T) {
-	env := newFailoverTestEnv(t, providerSwitchAPICfgYAML, providerSwitchAPIProviders(t), nil)
+	env := newProviderSwitchAPIEnv(t)
+	beforeSHA := env.headSHA()
+	beforeCfg := env.readConfigYAML()
 	ws := env.connectProjectWS()
 
 	// Switch to local-ollama (not agent-a's own fallback_provider, which
@@ -204,23 +217,13 @@ func TestProviderSwitchAPI_ManualSwitch(t *testing.T) {
 		t.Errorf("response provider: got %v, want local-ollama", body["provider"])
 	}
 
-	ag, ok := findFailoverAgentConfig(env.loadConfig(), "agent-a")
-	if !ok {
-		t.Fatal("agent-a missing from disk config after switch")
-	}
-	if ag.Provider != "local-ollama" || ag.Model != "llama3" {
-		t.Errorf("agent-a provider/model: got %s/%s, want local-ollama/llama3", ag.Provider, ag.Model)
-	}
+	assertAgentFailedOverTo(t, env, "agent-a", "anthropic-cloud", "local-ollama")
 
-	found := false
-	for _, msg := range env.gitLogMessages(10) {
-		if strings.Contains(msg, "switch(agent):") {
-			found = true
-			break
-		}
+	if got := env.readConfigYAML(); got != beforeCfg {
+		t.Error("expected lifecycle/config.yaml to be byte-for-byte unchanged after a manual switch")
 	}
-	if !found {
-		t.Error("expected a switch(agent): commit in lifecycle/config.yaml history")
+	if got := env.headSHA(); got != beforeSHA {
+		t.Errorf("expected no new git commit after a manual switch, HEAD moved from %s to %s", beforeSHA, got)
 	}
 
 	payload := ws.waitForEventType(t, 5*time.Second, "provider.switched")
@@ -234,10 +237,11 @@ func TestProviderSwitchAPI_ManualSwitch(t *testing.T) {
 
 // TestProviderSwitchAPI_RestoreAgent (SA3): POST
 // .../agents/{name}/restore-provider restores agent-b (already in
-// failover) to its stashed primary, clearing primary_provider on disk and
-// committing the change.
+// failover) to its stashed primary, clearing its operations.yaml override.
+// lifecycle/config.yaml and git are untouched throughout.
 func TestProviderSwitchAPI_RestoreAgent(t *testing.T) {
-	env := newFailoverTestEnv(t, providerSwitchAPICfgYAML, providerSwitchAPIProviders(t), nil)
+	env := newProviderSwitchAPIEnv(t)
+	beforeSHA := env.headSHA()
 
 	resp := env.doRequest("POST", "/api/p/testproject/agents/agent-b/restore-provider", nil)
 	requireStatus(t, resp, 200)
@@ -246,26 +250,19 @@ func TestProviderSwitchAPI_RestoreAgent(t *testing.T) {
 		t.Errorf("response provider: got %v, want anthropic-cloud", body["provider"])
 	}
 
-	ag, ok := findFailoverAgentConfig(env.loadConfig(), "agent-b")
-	if !ok {
-		t.Fatal("agent-b missing from disk config after restore")
-	}
-	if ag.PrimaryProvider != "" || ag.PrimaryModel != "" {
-		t.Errorf("expected primary_provider/model cleared for agent-b after restore, got %q/%q", ag.PrimaryProvider, ag.PrimaryModel)
-	}
-	if ag.Provider != "anthropic-cloud" || ag.Model != "claude-3-7-sonnet" {
-		t.Errorf("expected agent-b restored to anthropic-cloud/claude-3-7-sonnet, got %s/%s", ag.Provider, ag.Model)
+	if _, hasState := env.proj.Operations().AgentState("agent-b"); hasState {
+		t.Error("expected agent-b's operations.yaml override cleared after restore")
 	}
 
-	found := false
-	for _, msg := range env.gitLogMessages(10) {
-		if strings.Contains(msg, "restore(agent):") {
-			found = true
-			break
-		}
+	ag, ok := findFailoverAgentConfig(env.loadConfig(), "agent-b")
+	if !ok {
+		t.Fatal("agent-b missing from disk config")
 	}
-	if !found {
-		t.Error("expected a restore(agent): commit in lifecycle/config.yaml history")
+	if ag.Provider != "anthropic-cloud" || ag.Model != "claude-3-7-sonnet" {
+		t.Errorf("expected agent-b's declared config to remain anthropic-cloud/claude-3-7-sonnet, got %s/%s", ag.Provider, ag.Model)
+	}
+	if got := env.headSHA(); got != beforeSHA {
+		t.Errorf("expected no new git commit after restore, HEAD moved from %s to %s", beforeSHA, got)
 	}
 }
 
@@ -274,7 +271,7 @@ func TestProviderSwitchAPI_RestoreAgent(t *testing.T) {
 // failover (agent-b, agent-c, agent-d) atomically in one call, leaving
 // agent-a untouched.
 func TestProviderSwitchAPI_RestoreAll(t *testing.T) {
-	env := newFailoverTestEnv(t, providerSwitchAPICfgYAML, providerSwitchAPIProviders(t), nil)
+	env := newProviderSwitchAPIEnv(t)
 
 	resp := env.doRequest("POST", "/api/p/testproject/provider-switch/restore-all", nil)
 	requireStatus(t, resp, 200)
@@ -296,7 +293,8 @@ func TestProviderSwitchAPI_RestoreAll(t *testing.T) {
 // .../provider-templates/apply switches every mapped agent to the named
 // template's provider/model in one atomic write.
 func TestProviderSwitchAPI_ApplyTemplate(t *testing.T) {
-	env := newFailoverTestEnv(t, providerSwitchAPICfgYAML, providerSwitchAPIProviders(t), nil)
+	env := newProviderSwitchAPIEnv(t)
+	beforeCfg := env.readConfigYAML()
 
 	resp := env.doRequest("POST", "/api/p/testproject/provider-templates/apply", map[string]any{
 		"template": "local-ai",
@@ -308,15 +306,11 @@ func TestProviderSwitchAPI_ApplyTemplate(t *testing.T) {
 		t.Errorf("updated_agents: got %v, want 4", updated)
 	}
 
-	cfg := env.loadConfig()
 	for _, name := range []string{"agent-a", "agent-b", "agent-c", "agent-d"} {
-		ag, ok := findFailoverAgentConfig(cfg, name)
-		if !ok {
-			t.Fatalf("%s missing from disk config after template apply", name)
-		}
-		if ag.Provider != "local-ollama" || ag.Model != "llama3" {
-			t.Errorf("%s provider/model: got %s/%s, want local-ollama/llama3", name, ag.Provider, ag.Model)
-		}
+		assertAgentFailedOverTo(t, env, name, "anthropic-cloud", "local-ollama")
+	}
+	if got := env.readConfigYAML(); got != beforeCfg {
+		t.Error("expected lifecycle/config.yaml to be byte-for-byte unchanged after a template apply")
 	}
 }
 
@@ -324,7 +318,7 @@ func TestProviderSwitchAPI_ApplyTemplate(t *testing.T) {
 // roles (qa@test.local, role=analyst only) receives 403 Forbidden on
 // provider-switch mutation endpoints.
 func TestProviderSwitchAPI_RoleAuth(t *testing.T) {
-	env := newFailoverTestEnv(t, providerSwitchAPICfgYAML, providerSwitchAPIProviders(t), nil)
+	env := newProviderSwitchAPIEnv(t)
 	env.login("qa@test.local", "qa-pass-123")
 
 	resp := env.doRequest("POST", "/api/p/testproject/agents/agent-a/switch-provider", map[string]any{
@@ -337,4 +331,77 @@ func TestProviderSwitchAPI_RoleAuth(t *testing.T) {
 	resp2 := env.doRequest("POST", "/api/p/testproject/provider-switch/restore-all", nil)
 	requireStatus(t, resp2, 403)
 	resp2.Body.Close()
+}
+
+// TestProviderSwitchAPI_GetPolicy (Milestone 4/FR-2.4): GET
+// .../provider-switch/policy returns automated_switchover plus an explicit
+// action for every classified reason the system knows about — no reason is
+// allowed to fall through to an implicit default.
+func TestProviderSwitchAPI_GetPolicy(t *testing.T) {
+	env := newProviderSwitchAPIEnv(t)
+
+	resp := env.doRequest("GET", "/api/p/testproject/provider-switch/policy", nil)
+	requireStatus(t, resp, 200)
+	data := readJSON(t, resp)
+
+	if _, ok := data["automated_switchover"].(bool); !ok {
+		t.Fatal("expected automated_switchover bool in policy response")
+	}
+	actions, ok := data["actions"].(map[string]any)
+	if !ok {
+		t.Fatal("expected actions map in policy response")
+	}
+	if len(actions) != len(config.SwitchoverReasons) {
+		t.Errorf("actions map has %d entries, want %d (one per SwitchoverReasons entry)", len(actions), len(config.SwitchoverReasons))
+	}
+	for _, reason := range config.SwitchoverReasons {
+		action, ok := actions[reason].(string)
+		if !ok || action == "" {
+			t.Errorf("expected a non-empty action for reason %q, got %v", reason, actions[reason])
+		}
+	}
+}
+
+// TestProviderSwitchAPI_ManualSwitchRejectedWhileRunning (Milestone 8/FR-8.2):
+// a manual switch attempted while a run is in flight for the project is
+// rejected with 409 and the running jobs named, rather than racing the
+// live run's own provider.
+func TestProviderSwitchAPI_ManualSwitchRejectedWhileRunning(t *testing.T) {
+	setupFakeClaudeWithScript(t, "sleep 5\n"+fakeClaudeSuccessEvents+"exit 0\n")
+
+	env := newProviderSwitchAPIEnv(t, seedArtifact{
+		relPath: "lifecycle/ideas/running-idea.md",
+		content: makeApprovedArtifact("Running Idea", "idea", "running-idea"),
+	})
+
+	env.enqueue("lifecycle/ideas/running-idea.md", "agent-a")
+	env.waitFor(5*time.Second, "job to start running", func() bool {
+		snap := env.queueSnapshot()
+		running, _ := snap["running"].(map[string]any)
+		return running != nil && running["artifact_path"] == "lifecycle/ideas/running-idea.md"
+	})
+
+	resp := env.doRequest("POST", "/api/p/testproject/agents/agent-a/switch-provider", map[string]any{
+		"provider": "gemini-cloud",
+		"model":    "gemini-2.5-flash",
+	})
+	requireStatus(t, resp, 409)
+	body := readJSON(t, resp)
+	apiErr, _ := body["error"].(map[string]any)
+	if apiErr["code"] != "runs_in_progress" {
+		t.Errorf("error code: got %v, want runs_in_progress", apiErr["code"])
+	}
+	runningJobs, _ := body["running_jobs"].([]any)
+	if len(runningJobs) != 1 {
+		t.Fatalf("running_jobs: got %d entries, want 1", len(runningJobs))
+	}
+	job, _ := runningJobs[0].(map[string]any)
+	if job["agent"] != "agent-a" || job["artifact_path"] != "lifecycle/ideas/running-idea.md" {
+		t.Errorf("running_jobs[0]: got %v", job)
+	}
+
+	// The rejected switch must not have engaged.
+	if _, hasState := env.proj.Operations().AgentState("agent-a"); hasState {
+		t.Error("expected no operations.yaml override for agent-a after a rejected switch")
+	}
 }
