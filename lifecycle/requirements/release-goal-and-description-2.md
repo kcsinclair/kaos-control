@@ -1,7 +1,7 @@
 ---
 title: Release Goal and Description Fields
 type: requirement
-status: approved
+status: planning
 lineage: release-goal-and-description
 created: "2026-08-26T11:45:00+10:00"
 priority: normal
