@@ -249,6 +249,8 @@ than resolved here.
    display-only?** This requirement scopes it as display-only; promoting it to a
    sortable/filterable column would extend `buildOrderBy` and the list query.
 
+> Display only at this time.
+
 3. **Soft cap for `goal` length** — is 120 characters (matching the release
    `name` bound) the right UI maxlength, or should it be shorter to guarantee
    single-line rendering across the list/kanban chips?
