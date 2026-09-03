@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-09-03** — Closed [[agents-md-primary-directives-2]] (blocked → done) and its parent idea (clarifying → done). The work had shipped without the statuses being updated: `AGENTS.md` is the canonical directive file, `CLAUDE.md`/`GEMINI.md` are 11-byte `@AGENTS.md` imports, `migrate-directives` and `init --refresh-directives` both exist, and this repo is itself migrated. All four Open Questions were answered by the implementation and are recorded with their resolutions.
+
 - **2026-09-03** — Unblocked [[project-queue-view-3-be]]. Its three Open Questions were accurate on 2026-07-14 but have since been fixed in the dispatcher: `Enqueue` now broadcasts `queue.added` with the full job record and `Cancel` broadcasts `queue.cancelled`, both carrying `project`. Milestone 1 verified — client-side filter is sufficient, no endpoint required, no `internal/` changes. Milestone 2 marked not required. Status blocked → done.
 
 - **2026-09-03** — Closed the review cycle on [[agent-switchover-and-failover]]: all nine gaps answered, retry-with-backoff decided for `provider_disconnected` (pause after 3 disconnects in an hour), and failover state moved out of `lifecycle/config.yaml` to a gitignored `operations.yaml` at the project root. `operations.yaml` added to `.gitignore` and to the init template so scaffolded projects ignore it from the outset. [[automated-failover-always-rejected]] abandoned — the design removes the condition that caused it.
