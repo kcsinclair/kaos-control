@@ -1,7 +1,7 @@
 ---
 title: Backend Plan — Release Goal and Description Fields
 type: plan-backend
-status: approved
+status: in-development
 lineage: release-goal-and-description
 parent: lifecycle/requirements/release-goal-and-description-2.md
 created: "2026-09-03T11:15:00Z"
