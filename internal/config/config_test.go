@@ -1952,3 +1952,184 @@ func TestProviderTemplates_ParseAndValidate(t *testing.T) {
 		}
 	})
 }
+
+func TestEffectiveSwitchoverPolicy_CompleteByConstruction(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, "")
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveSwitchoverPolicy()
+	if eff.AutomatedSwitchover {
+		t.Error("expected automated_switchover disabled by default (FR-2.1)")
+	}
+	if len(eff.Actions) != len(SwitchoverReasons) {
+		t.Fatalf("expected one action per known reason, got %d actions for %d reasons", len(eff.Actions), len(SwitchoverReasons))
+	}
+	for _, reason := range SwitchoverReasons {
+		action, ok := eff.Actions[reason]
+		if !ok {
+			t.Errorf("missing action for reason %q", reason)
+			continue
+		}
+		if !validSwitchoverActions[action] {
+			t.Errorf("reason %q: unrecognized action %q", reason, action)
+		}
+	}
+	// FR-2.3 "else" columns: with automated switchover disabled, every
+	// would-be-failover reason defaults to pause_queue.
+	for _, reason := range []string{SwitchoverReasonRateLimit, SwitchoverReasonOverloaded, SwitchoverReasonUnreachable, SwitchoverReasonAuthError} {
+		if eff.Actions[reason] != SwitchoverActionPauseQueue {
+			t.Errorf("reason %q: expected pause_queue when disabled, got %q", reason, eff.Actions[reason])
+		}
+	}
+	if eff.Actions[SwitchoverReasonProviderDisconnected] != SwitchoverActionRetryInPlace {
+		t.Errorf("provider_disconnected: expected retry_in_place, got %q", eff.Actions[SwitchoverReasonProviderDisconnected])
+	}
+	for _, reason := range []string{SwitchoverReasonModelNotFound, SwitchoverReasonModelUnloaded, SwitchoverReasonToolsUnsupported, SwitchoverReasonContextWindowExceeded, SwitchoverReasonTurnTokenCeiling, SwitchoverReasonMaxIterationsReached, SwitchoverReasonTimeout} {
+		if eff.Actions[reason] != SwitchoverActionFailRun {
+			t.Errorf("reason %q: expected fail_run, got %q", reason, eff.Actions[reason])
+		}
+	}
+}
+
+func TestEffectiveSwitchoverPolicy_EnabledDefaultsToFailover(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `switchover:
+  automated_switchover: true
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveSwitchoverPolicy()
+	if !eff.AutomatedSwitchover {
+		t.Error("expected automated_switchover enabled")
+	}
+	for _, reason := range []string{SwitchoverReasonRateLimit, SwitchoverReasonOverloaded, SwitchoverReasonUnreachable, SwitchoverReasonAuthError} {
+		if eff.Actions[reason] != SwitchoverActionFailover {
+			t.Errorf("reason %q: expected failover when enabled, got %q", reason, eff.Actions[reason])
+		}
+	}
+}
+
+func TestEffectiveSwitchoverPolicy_EventsOverrideDefaults(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `switchover:
+  automated_switchover: true
+  events:
+    rate_limit: pause_queue
+    timeout: retry_in_place
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveSwitchoverPolicy()
+	if eff.Actions[SwitchoverReasonRateLimit] != SwitchoverActionPauseQueue {
+		t.Errorf("rate_limit override: got %q", eff.Actions[SwitchoverReasonRateLimit])
+	}
+	if eff.Actions[SwitchoverReasonTimeout] != SwitchoverActionRetryInPlace {
+		t.Errorf("timeout override: got %q", eff.Actions[SwitchoverReasonTimeout])
+	}
+	// Reasons not overridden still get the enabled-default.
+	if eff.Actions[SwitchoverReasonOverloaded] != SwitchoverActionFailover {
+		t.Errorf("overloaded (not overridden): got %q", eff.Actions[SwitchoverReasonOverloaded])
+	}
+}
+
+func TestEffectiveSwitchoverPolicy_LegacyBackCompat(t *testing.T) {
+	t.Run("legacy auto_switch enables failover when switchover block unset", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_failover:
+  auto_switch: true
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		eff := cfg.EffectiveSwitchoverPolicy()
+		if !eff.AutomatedSwitchover {
+			t.Error("expected legacy auto_switch to enable automated_switchover")
+		}
+		if eff.Actions[SwitchoverReasonOverloaded] != SwitchoverActionFailover {
+			t.Errorf("overloaded: got %q", eff.Actions[SwitchoverReasonOverloaded])
+		}
+	})
+
+	t.Run("new switchover block supersedes legacy auto_switch", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_failover:
+  auto_switch: true
+switchover:
+  automated_switchover: false
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		eff := cfg.EffectiveSwitchoverPolicy()
+		if eff.AutomatedSwitchover {
+			t.Error("expected switchover.automated_switchover=false to supersede legacy auto_switch=true")
+		}
+	})
+
+	t.Run("legacy switch_on_kinds restricts which reasons fail over", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_failover:
+  auto_switch: true
+  switch_on_kinds: [overloaded]
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		eff := cfg.EffectiveSwitchoverPolicy()
+		if eff.Actions[SwitchoverReasonOverloaded] != SwitchoverActionFailover {
+			t.Errorf("overloaded (in switch_on_kinds): got %q", eff.Actions[SwitchoverReasonOverloaded])
+		}
+		if eff.Actions[SwitchoverReasonRateLimit] != SwitchoverActionPauseQueue {
+			t.Errorf("rate_limit (excluded from switch_on_kinds): got %q", eff.Actions[SwitchoverReasonRateLimit])
+		}
+		// auth_error isn't part of the legacy switch_on_kinds vocabulary, so
+		// it is unaffected by the restriction.
+		if eff.Actions[SwitchoverReasonAuthError] != SwitchoverActionFailover {
+			t.Errorf("auth_error (not in legacy vocabulary): got %q", eff.Actions[SwitchoverReasonAuthError])
+		}
+	})
+}
+
+func TestValidateProject_SwitchoverEvents(t *testing.T) {
+	t.Run("unrecognized reason rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `switchover:
+  events:
+    bogus_reason: fail_run
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "unrecognized reason") {
+			t.Fatalf("expected unrecognized reason error, got: %v", err)
+		}
+	})
+
+	t.Run("unrecognized action rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `switchover:
+  events:
+    timeout: reboot_the_server
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "unrecognized action") {
+			t.Fatalf("expected unrecognized action error, got: %v", err)
+		}
+	})
+
+	t.Run("valid events parse", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `switchover:
+  automated_switchover: true
+  events:
+    timeout: fail_run
+    provider_disconnected: retry_in_place
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if cfg.Switchover.Events["timeout"] != "fail_run" {
+			t.Errorf("expected events round-trip, got %+v", cfg.Switchover.Events)
+		}
+	})
+}

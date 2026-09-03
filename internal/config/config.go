@@ -850,7 +850,14 @@ type Project struct {
 	ArchitectureWizard ArchitectureWizardConfig `yaml:"architecture_wizard,omitempty" json:"architecture_wizard,omitempty"`
 
 	// ProviderFailover is the project-level automated-failover policy.
+	// Deprecated: superseded by Switchover (agent-switchover-and-failover
+	// Milestone 3) — auto_switch maps onto switchover.automated_switchover
+	// and switch_on_kinds onto switchover.events when the new block is
+	// unset, so existing configs keep behaving the same way. Still read for
+	// that back-compat mapping; new configs should use Switchover.
 	ProviderFailover ProviderFailoverConfig `yaml:"provider_failover,omitempty" json:"provider_failover,omitempty"`
+	// Switchover is the project-level event -> action policy (FR-2).
+	Switchover SwitchoverConfig `yaml:"switchover,omitempty" json:"switchover,omitempty"`
 	// ProviderTemplates is a catalog of named multi-agent provider presets.
 	ProviderTemplates []ProviderTemplate `yaml:"provider_templates,omitempty" json:"provider_templates,omitempty"`
 
@@ -926,6 +933,156 @@ func (p *Project) EffectiveFailoverConfig() ProviderFailoverConfig {
 		MaxFailoversPerRun:   maxFailovers,
 		ProbeIntervalSeconds: probeInterval,
 	}
+}
+
+// Switchover policy action verbs (FR-2.2). Mirrored as plain strings in
+// internal/agent (SwitchoverAction*) and internal/queue (FailoverPolicy) —
+// this package intentionally does not import internal/agent (internal/agent
+// already imports this package, so the reverse would cycle) — so the verb
+// text must stay in sync across all three.
+const (
+	SwitchoverActionFailover     = "failover"
+	SwitchoverActionPauseQueue   = "pause_queue"
+	SwitchoverActionRetryInPlace = "retry_in_place"
+	SwitchoverActionFailRun      = "fail_run"
+)
+
+var validSwitchoverActions = map[string]bool{
+	SwitchoverActionFailover:     true,
+	SwitchoverActionPauseQueue:   true,
+	SwitchoverActionRetryInPlace: true,
+	SwitchoverActionFailRun:      true,
+}
+
+// Switchover policy failure reasons (FR-2.3). Mirrored as
+// agent.SwitchoverReasons for the same import-cycle reason described above.
+const (
+	SwitchoverReasonRateLimit             = "rate_limit"
+	SwitchoverReasonOverloaded            = "overloaded"
+	SwitchoverReasonUnreachable           = "unreachable"
+	SwitchoverReasonAuthError             = "auth_error"
+	SwitchoverReasonProviderDisconnected  = "provider_disconnected"
+	SwitchoverReasonModelNotFound         = "model_not_found"
+	SwitchoverReasonModelUnloaded         = "model_unloaded"
+	SwitchoverReasonToolsUnsupported      = "tools_unsupported"
+	SwitchoverReasonContextWindowExceeded = "context_window_exceeded"
+	SwitchoverReasonTurnTokenCeiling      = "turn_token_ceiling"
+	SwitchoverReasonMaxIterationsReached  = "max_iterations_reached"
+	SwitchoverReasonTimeout               = "timeout"
+)
+
+// SwitchoverReasons is the canonical, complete list of failure reasons the
+// event -> action policy must cover (FR-2.1, FR-2.3) — every reason the
+// system already classifies. EffectiveSwitchoverPolicy fills one entry per
+// reason so the resolved policy is complete by construction.
+var SwitchoverReasons = []string{
+	SwitchoverReasonRateLimit,
+	SwitchoverReasonOverloaded,
+	SwitchoverReasonUnreachable,
+	SwitchoverReasonAuthError,
+	SwitchoverReasonProviderDisconnected,
+	SwitchoverReasonModelNotFound,
+	SwitchoverReasonModelUnloaded,
+	SwitchoverReasonToolsUnsupported,
+	SwitchoverReasonContextWindowExceeded,
+	SwitchoverReasonTurnTokenCeiling,
+	SwitchoverReasonMaxIterationsReached,
+	SwitchoverReasonTimeout,
+}
+
+// legacySwitchOnKindReasons is the subset of SwitchoverReasons the old
+// provider_failover.switch_on_kinds list could restrict (validSwitchOnKinds
+// above) — used only for the back-compat mapping in EffectiveSwitchoverPolicy.
+var legacySwitchOnKindReasons = map[string]bool{
+	SwitchoverReasonRateLimit:   true,
+	SwitchoverReasonOverloaded:  true,
+	SwitchoverReasonUnreachable: true,
+}
+
+func isKnownSwitchoverReason(reason string) bool {
+	for _, r := range SwitchoverReasons {
+		if r == reason {
+			return true
+		}
+	}
+	return false
+}
+
+// defaultSwitchoverAction returns the FR-2.3 default action for reason,
+// given whether automated switchover is enabled project-wide.
+func defaultSwitchoverAction(reason string, automatedSwitchoverEnabled bool) string {
+	switch reason {
+	case SwitchoverReasonRateLimit, SwitchoverReasonOverloaded, SwitchoverReasonUnreachable, SwitchoverReasonAuthError:
+		if automatedSwitchoverEnabled {
+			return SwitchoverActionFailover
+		}
+		return SwitchoverActionPauseQueue
+	case SwitchoverReasonProviderDisconnected:
+		return SwitchoverActionRetryInPlace
+	default:
+		return SwitchoverActionFailRun
+	}
+}
+
+// SwitchoverConfig is the project-level event -> action policy (FR-2).
+type SwitchoverConfig struct {
+	// AutomatedSwitchover toggles automated failover project-wide. Disabled
+	// by default (FR-2.1) — an operator must opt in.
+	AutomatedSwitchover *bool `yaml:"automated_switchover,omitempty" json:"automated_switchover"`
+	// Events maps a classified failure reason to an action, overriding the
+	// FR-2.3 default for that reason. Reasons not listed here use the
+	// default; see EffectiveSwitchoverPolicy.
+	Events map[string]string `yaml:"events,omitempty" json:"events,omitempty"`
+}
+
+// EffectiveSwitchoverPolicy is the fully-resolved event -> action policy:
+// one explicit action per SwitchoverReasons entry (FR-2.4).
+type EffectiveSwitchoverPolicy struct {
+	AutomatedSwitchover bool              `json:"automated_switchover"`
+	Actions             map[string]string `json:"actions"` // reason -> action, one entry per SwitchoverReasons
+}
+
+// EffectiveSwitchoverPolicy resolves the project's event -> action policy
+// (FR-2): AutomatedSwitchover defaults to disabled, and every reason in
+// SwitchoverReasons is assigned an explicit action — the project's
+// configured override when set, else the FR-2.3 default — so the returned
+// map is complete by construction (FR-2.4).
+//
+// Back-compat: when switchover.automated_switchover is unset, the legacy
+// provider_failover.auto_switch flag applies instead, so an existing
+// project keeps its prior enabled/disabled state until migrated. Likewise,
+// when a reason has no switchover.events override and would default to
+// "failover", a legacy provider_failover.switch_on_kinds that excludes that
+// reason downgrades it to "pause_queue" — the same restriction switch_on_kinds
+// enforced before switchover.events existed.
+func (p *Project) EffectiveSwitchoverPolicy() EffectiveSwitchoverPolicy {
+	enabled := false
+	if p.Switchover.AutomatedSwitchover != nil {
+		enabled = *p.Switchover.AutomatedSwitchover
+	} else if p.ProviderFailover.AutoSwitch != nil {
+		enabled = *p.ProviderFailover.AutoSwitch
+	}
+
+	legacyKinds := make(map[string]bool)
+	for _, k := range p.EffectiveFailoverConfig().SwitchOnKinds {
+		legacyKinds[k] = true
+	}
+
+	actions := make(map[string]string, len(SwitchoverReasons))
+	for _, reason := range SwitchoverReasons {
+		action := defaultSwitchoverAction(reason, enabled)
+		if action == SwitchoverActionFailover && legacySwitchOnKindReasons[reason] && !legacyKinds[reason] {
+			action = SwitchoverActionPauseQueue
+		}
+		actions[reason] = action
+	}
+	for reason, action := range p.Switchover.Events {
+		if isKnownSwitchoverReason(reason) {
+			actions[reason] = action
+		}
+	}
+
+	return EffectiveSwitchoverPolicy{AutomatedSwitchover: enabled, Actions: actions}
 }
 
 // ProviderTemplateAgentBinding pins one agent to a provider+model within a ProviderTemplate.
@@ -1318,6 +1475,14 @@ func validateProject(cfg *Project) error {
 	for _, kind := range cfg.ProviderFailover.SwitchOnKinds {
 		if !validSwitchOnKinds[kind] {
 			return fmt.Errorf("project config: provider_failover.switch_on_kinds: unrecognized kind %q (accepted: overloaded, rate_limit, unreachable)", kind)
+		}
+	}
+	for reason, action := range cfg.Switchover.Events {
+		if !isKnownSwitchoverReason(reason) {
+			return fmt.Errorf("project config: switchover.events: unrecognized reason %q (accepted: %s)", reason, strings.Join(SwitchoverReasons, ", "))
+		}
+		if !validSwitchoverActions[action] {
+			return fmt.Errorf("project config: switchover.events[%s]: unrecognized action %q (accepted: failover, pause_queue, retry_in_place, fail_run)", reason, action)
 		}
 	}
 	seenTemplateNames := make(map[string]bool, len(cfg.ProviderTemplates))

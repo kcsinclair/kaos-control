@@ -346,11 +346,13 @@ func run() error {
 				Hub: p.Hub,
 				FailoverPolicy: func() queue.FailoverPolicy {
 					eff := p.Config().EffectiveFailoverConfig()
+					switchover := p.Config().EffectiveSwitchoverPolicy()
 					return queue.FailoverPolicy{
 						Enabled:            eff.Enabled != nil && *eff.Enabled,
-						AutoSwitch:         eff.AutoSwitch != nil && *eff.AutoSwitch,
+						AutoSwitch:         switchover.AutomatedSwitchover,
 						SwitchOnKinds:      eff.SwitchOnKinds,
 						MaxFailoversPerRun: eff.MaxFailoversPerRun,
+						Actions:            switchover.Actions,
 					}
 				},
 				AgentFailoverInfo: func(agentName string) (queue.AgentFailoverInfo, bool) {

@@ -113,14 +113,31 @@ type ProjectAccess struct {
 	SwitchAgentProvider func(agentName, provider, model, reason string, isFailover bool) error
 }
 
-// FailoverPolicy is the subset of config.ProviderFailoverConfig the
-// dispatcher needs, decoupled from the config package so this package has no
-// dependency on it.
+// FailoverPolicy is the subset of config.ProviderFailoverConfig /
+// config.EffectiveSwitchoverPolicy the dispatcher needs, decoupled from the
+// config package so this package has no dependency on it.
 type FailoverPolicy struct {
 	Enabled            bool
 	AutoSwitch         bool
 	SwitchOnKinds      []string
 	MaxFailoversPerRun int
+	// Actions maps a classified failure reason to its resolved action
+	// (agent-switchover-and-failover Milestone 3): "failover", "pause_queue",
+	// "retry_in_place", or "fail_run" — mirrors
+	// config.EffectiveSwitchoverPolicy().Actions, complete by construction
+	// (one entry per reason the system classifies).
+	Actions map[string]string
+}
+
+// ActionFor returns the resolved action for reason, defaulting to
+// "pause_queue" — the safest fail-closed behaviour — if reason is absent
+// from Actions (e.g. Actions is unset because the project doesn't wire
+// switchover policy at all).
+func (fp FailoverPolicy) ActionFor(reason string) string {
+	if a, ok := fp.Actions[reason]; ok {
+		return a
+	}
+	return "pause_queue"
 }
 
 // AgentFailoverInfo is the subset of config.AgentConfig the dispatcher needs
