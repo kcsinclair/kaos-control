@@ -737,6 +737,21 @@ func (a *AgentConfig) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// EffectiveProvider resolves an agent's effective active provider/model:
+// the operations-store override when set, else the agent's declared-intent
+// Provider/Model from lifecycle/config.yaml. FindAgentConfig (via AgentConfig
+// itself) remains the source of declared intent; this helper only decides
+// which of the two values a run should actually use. overrideProvider/
+// overrideModel come from the project's operations.yaml active state (see
+// internal/project.Operations.AgentState) — this package does not depend on
+// internal/project to avoid an import cycle, so callers pass the override in.
+func EffectiveProvider(ag AgentConfig, overrideProvider, overrideModel string) (provider, model string) {
+	if overrideProvider != "" {
+		return overrideProvider, overrideModel
+	}
+	return ag.Provider, ag.Model
+}
+
 // GitIdentity is the git author identity for an agent or user commit.
 type GitIdentity struct {
 	Name  string `yaml:"name"`

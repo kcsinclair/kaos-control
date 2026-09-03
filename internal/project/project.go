@@ -68,6 +68,11 @@ type Project struct {
 	// StartRecoveryProber is called.
 	RecoveryProber *RecoveryProber
 
+	// operations is the git-ignored runtime-state store (operations.yaml) —
+	// active-vs-primary provider state, reachability, disconnect counters,
+	// and failover history. Access it via Operations().
+	operations *Operations
+
 	// watcherDone is closed when the watcher goroutine exits.
 	// Close() waits on this before closing the index DB.
 	watcherDone <-chan struct{}
@@ -116,6 +121,11 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	}
 	if err := config.ValidateAgentProviders(cfg, opts.Providers); err != nil {
 		return nil, fmt.Errorf("project %q: %w", entry.Name, err)
+	}
+
+	ops, err := LoadOperations(entry.Path)
+	if err != nil {
+		return nil, fmt.Errorf("project %q: loading operations state: %w", entry.Name, err)
 	}
 
 	// Retrofit lifecycle/architecture/ for existing projects that predate it
@@ -347,6 +357,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		TriageMgr:      triageMgr,
 		ReleaseSync:    releaseSync,
 		Providers:      opts.Providers,
+		operations:     ops,
 	}
 	p.RecoveryProber = newRecoveryProber(p)
 
@@ -457,6 +468,13 @@ func (p *Project) Close() error {
 // LifecycleDir returns the absolute path to the lifecycle/ directory.
 func (p *Project) LifecycleDir() string {
 	return filepath.Join(p.Entry.Path, "lifecycle")
+}
+
+// Operations returns the project's runtime-state store (operations.yaml) —
+// active-vs-primary provider state, reachability, disconnect counters, and
+// failover history. Always non-nil after Open.
+func (p *Project) Operations() *Operations {
+	return p.operations
 }
 
 // Config returns the current lifecycle/config.yaml snapshot. Callers must use
