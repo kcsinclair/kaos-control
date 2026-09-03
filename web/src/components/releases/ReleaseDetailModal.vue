@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import * as releasesApi from '@/api/releases'
 import type { ReleaseDetail } from '@/types/release'
 import type { ArtifactRow } from '@/types/api'
+import MarkdownPreview from '@/components/artifact/MarkdownPreview.vue'
 
 const props = defineProps<{
   releaseId: number
@@ -82,7 +83,10 @@ onMounted(load)
   <div class="modal-overlay">
     <div class="modal-panel" role="dialog" aria-modal="true" aria-label="Release detail">
       <div class="modal-header">
-        <h3 class="modal-title">{{ detail?.name ?? 'Release' }}</h3>
+        <div class="modal-title-group">
+          <h3 class="modal-title">{{ detail?.name ?? 'Release' }}</h3>
+          <p v-if="detail?.goal" class="modal-subtitle">{{ detail.goal }}</p>
+        </div>
         <button class="btn-icon" aria-label="Close" @click="emit('close')">✕</button>
       </div>
 
@@ -118,6 +122,11 @@ onMounted(load)
               <span class="meta-label">File</span>
               <button class="file-path-link" @click="openFile">{{ detail.file_path }}</button>
             </div>
+          </div>
+
+          <div v-if="detail.description" class="description-section">
+            <h4 class="description-heading">Description</h4>
+            <MarkdownPreview :source="detail.description" :project="project" />
           </div>
 
           <div class="artifacts-section">
@@ -181,11 +190,22 @@ onMounted(load)
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
+.modal-title-group {
+  min-width: 0;
+}
 .modal-title {
   font-size: var(--text-lg);
   font-weight: 600;
   margin: 0;
   color: var(--color-text);
+}
+.modal-subtitle {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .btn-icon {
   background: none;
@@ -269,6 +289,13 @@ onMounted(load)
 .file-path-link:hover {
   background: var(--color-bg);
   text-decoration-style: solid;
+}
+.description-section { display: flex; flex-direction: column; gap: var(--space-2); }
+.description-heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
 }
 .artifacts-section { display: flex; flex-direction: column; gap: var(--space-2); }
 .artifacts-heading {
