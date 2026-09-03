@@ -1,7 +1,7 @@
 ---
 title: agent switchover and failover
 type: idea
-status: draft
+status: approved
 lineage: agent-switchover-and-failover
 created: "2026-08-28T00:00:00+10:00"
 labels:
