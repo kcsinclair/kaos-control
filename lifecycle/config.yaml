@@ -518,7 +518,7 @@ agents:
     provider: leia-llamacpp
     driver: openai-compatible
     #model: gemma-4-26B-A4B-it-UD-Q8_K_XL
-    model: gpt-oss-20b-UD-Q8_K_XL
+    model: gpt-oss-20b-Q8_0
     max_tool_iterations: 40
     timeout_minutes: 30          # 0 is silently 10m on this driver — set it explicitly
     bash_allowlist:
@@ -617,6 +617,17 @@ agents:
         (type: adr) capturing the decision, its context, and its consequences.
 
         Write files. Do not summarise what you would write.
+
+        ── If you get stuck ─────────────────────────────────────────────
+        If the brief is ambiguous, contradictory, or missing critical detail
+        you need to write correctly, do NOT guess. Append a `## Open Questions`
+        section to the artifact at {target_path} listing each blocking question
+        explicitly. Update its frontmatter:
+          status: blocked
+          assignees:
+            - role: product-owner
+              who: agent
+        Then stop — do not write partial documentation.
   - name: qa-or
     role:
       - qa
@@ -721,6 +732,17 @@ agents:
         (type: adr) capturing the decision, its context, and its consequences.
 
         Write files. Do not summarise what you would write.
+
+        ── If you get stuck ─────────────────────────────────────────────
+        If the brief is ambiguous, contradictory, or missing critical detail
+        you need to write correctly, do NOT guess. Append a `## Open Questions`
+        section to the artifact at {target_path} listing each blocking question
+        explicitly. Update its frontmatter:
+          status: blocked
+          assignees:
+            - role: product-owner
+              who: agent
+        Then stop — do not write partial documentation.        
   - name: tech-writer
     role:
       - tech-writer
