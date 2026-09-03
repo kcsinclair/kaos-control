@@ -24,6 +24,8 @@ const isEdit = computed(() => props.release !== undefined)
 
 const name = ref('')
 const status = ref<ReleaseStatus>('planned')
+const goal = ref('')
+const description = ref('')
 const isScheduled = ref(true)
 const startDate = ref('')
 const durationValue = ref<number>(7)
@@ -113,6 +115,8 @@ onMounted(() => {
   if (props.release) {
     name.value = props.release.name
     status.value = props.release.status
+    goal.value = props.release.goal
+    description.value = props.release.description
     if (props.release.start_date && props.release.end_date) {
       isScheduled.value = true
       startDate.value = formatDateForInput(props.release.start_date)
@@ -166,6 +170,8 @@ async function submit() {
     const payload = {
       name: name.value.trim(),
       status: status.value,
+      goal: goal.value.trim(),
+      description: description.value.trim(),
       start_date: isScheduled.value ? startDate.value : null,
       end_date: isScheduled.value ? endDate.value : null,
     }
@@ -231,6 +237,30 @@ async function submit() {
             <option value="shipped">shipped</option>
             <option value="unscheduled">unscheduled</option>
           </select>
+        </div>
+
+        <div class="form-field">
+          <label class="field-label" for="rel-goal">Goal</label>
+          <input
+            id="rel-goal"
+            v-model="goal"
+            class="field-input"
+            type="text"
+            maxlength="120"
+            placeholder="One-line goal for this release"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="form-field">
+          <label class="field-label" for="rel-description">Description</label>
+          <textarea
+            id="rel-description"
+            v-model="description"
+            class="field-input field-textarea"
+            rows="4"
+            placeholder="Markdown description shown in the release detail view"
+          />
         </div>
 
         <div class="form-field form-field--row">
@@ -400,6 +430,11 @@ async function submit() {
 }
 .field-input:focus { outline: none; border-color: var(--color-accent); }
 .field-input--error { border-color: #dc2626; }
+.field-textarea {
+  resize: vertical;
+  font-family: inherit;
+  min-height: 5em;
+}
 .field-select {
   appearance: none;
   -webkit-appearance: none;
