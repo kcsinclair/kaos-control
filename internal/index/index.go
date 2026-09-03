@@ -41,7 +41,9 @@ type Transitioner interface {
 // would never reach them (e.g. a draft with "## Open questions" stays unblocked).
 // Bumped to 7 to back-fill the new rice_score column for every existing
 // artifact — the mtime/SHA guards would otherwise skip unchanged files.
-const schemaVersion = 7
+// Bumped to 8 to add the goal/description columns to releases, rebuilt
+// from disk rather than an in-place ALTER TABLE (index is a cache).
+const schemaVersion = 8
 
 // Index wraps the SQLite database for one project.
 type Index struct {
@@ -2133,6 +2135,8 @@ CREATE TABLE releases (
     name        TEXT NOT NULL,
     slug        TEXT NOT NULL DEFAULT '',
     status      TEXT NOT NULL DEFAULT 'planned',
+    goal        TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
     start_date  TEXT,
     end_date    TEXT,
     created_at  TEXT NOT NULL,
