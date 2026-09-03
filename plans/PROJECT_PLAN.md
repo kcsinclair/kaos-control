@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-09-03** — Unblocked [[project-queue-view-3-be]]. Its three Open Questions were accurate on 2026-07-14 but have since been fixed in the dispatcher: `Enqueue` now broadcasts `queue.added` with the full job record and `Cancel` broadcasts `queue.cancelled`, both carrying `project`. Milestone 1 verified — client-side filter is sufficient, no endpoint required, no `internal/` changes. Milestone 2 marked not required. Status blocked → done.
+
 - **2026-09-03** — Closed the review cycle on [[agent-switchover-and-failover]]: all nine gaps answered, retry-with-backoff decided for `provider_disconnected` (pause after 3 disconnects in an hour), and failover state moved out of `lifecycle/config.yaml` to a gitignored `operations.yaml` at the project root. `operations.yaml` added to `.gitignore` and to the init template so scaffolded projects ignore it from the outset. [[automated-failover-always-rejected]] abandoned — the design removes the condition that caused it.
 
 - **2026-09-03** — Hardened the `grep` agent tool after run `ec4f45c70ba0b39a`, where the qa agent called `grep("FAIL", "")`, walked the whole repository including minified `web/dist` bundles, got 82 KB back and reasoned over its own grep hits as if they were test results. `path` is now required (and required in the tool schema, which previously said it defaulted to `.`), build/vendor directories are skipped, long lines are capped, binaries are skipped, and total output is capped. Both qa prompts updated to match.
