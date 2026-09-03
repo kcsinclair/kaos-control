@@ -393,6 +393,15 @@ func (d *Dispatcher) processNext(ctx context.Context) {
 		return
 	}
 
+	// StartRun may itself commit (e.g. an active-status transition) before
+	// returning. Re-stamp StartedAt to now, after that commit has already
+	// landed, so the Milestone 7 partial-commit check (FR-7.1) only looks at
+	// commits made by the run itself — not this framework bookkeeping
+	// commit, which would otherwise be indistinguishable from "the run
+	// committed its own work" and wrongly hold every retry for an operator
+	// decision.
+	job.StartedAt = d.cfg.clock()
+
 	// Hand the run_id to the watcher so it can start accepting events.
 	if pa.Hub != nil {
 		runIDCh <- runID
