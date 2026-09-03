@@ -191,17 +191,29 @@ func TestOpenAITools_Grep(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("grep matches across files", func(t *testing.T) {
-		res, err := exec.Execute(ctx, "grep", `{"pattern": "FIND_ME", "path": "."}`)
+		// An explicit path is required: a whole-repo grep is refused (see
+		// TestGrep_EmptyPathRejected). "" and "." both mean the repo root.
+		res, err := exec.Execute(ctx, "grep", `{"pattern": "FIND_ME", "path": "doc1.txt"}`)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if !strings.Contains(res, "doc1.txt:2:FIND_ME target") || !strings.Contains(res, "sub/doc2.txt:2:FIND_ME here too") {
+		if !strings.Contains(res, "doc1.txt:2:FIND_ME target") {
+			t.Errorf("grep result unexpected: %q", res)
+		}
+	})
+
+	t.Run("grep matches across files in a named directory", func(t *testing.T) {
+		res, err := exec.Execute(ctx, "grep", `{"pattern": "FIND_ME", "path": "sub"}`)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !strings.Contains(res, "sub/doc2.txt:2:FIND_ME here too") {
 			t.Errorf("grep result unexpected: %q", res)
 		}
 	})
 
 	t.Run("grep no matches", func(t *testing.T) {
-		res, err := exec.Execute(ctx, "grep", `{"pattern": "NOT_FOUND"}`)
+		res, err := exec.Execute(ctx, "grep", `{"pattern": "NOT_FOUND", "path": "sub"}`)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

@@ -517,7 +517,8 @@ agents:
       - qa
     provider: leia-llamacpp
     driver: openai-compatible
-    model: gemma-4-26B-A4B-it-UD-Q8_K_XL
+    #model: gemma-4-26B-A4B-it-UD-Q8_K_XL
+    model: gpt-oss-20b-UD-Q8_K_XL
     max_tool_iterations: 40
     timeout_minutes: 30          # 0 is silently 10m on this driver — set it explicitly
     bash_allowlist:
@@ -544,13 +545,124 @@ agents:
         and anything else will be refused.
           read_file(path)             read one file
           list_dir(path)              list a directory
-          grep(pattern, path)         search for a regex in a file or directory
+          grep(pattern, path)         search a NAMED file or directory for a regex
+                                      (path is required — searching the whole
+                                      repository is refused; build output and
+                                      node_modules are skipped)
           write_file(path, content)   create or overwrite a file
           bash(command)               ONLY the four commands named in STEP 1
 
         Do NOT use bash for searching, reading, listing or writing — use the
         tools above. For example, use grep("tech-stacks", "lifecycle") rather
         than bash("grep -r tech-stacks lifecycle").
+
+        Always give grep a specific path — grep("FAIL", "tests/integration"),
+        never grep("FAIL", ""). A test command's own output is the record of
+        what passed or failed; do not go looking for failures in the source.
+
+        Work through these steps IN ORDER. Do not explore the repository.
+
+        STEP 1 — Run the tests.
+        Run these commands with the bash tool, one at a time, and keep the
+        output of each:
+          make test-unit
+          make test-integration
+          cd tests/web && pnpm test
+          cd web && pnpm test
+        The first two are the Go suites; the last two are the two separate
+        frontend suites — both are needed, they cover different files.
+        Only these commands are permitted; do not try others.
+
+        STEP 2 — If every test passed:
+        Write nothing. Report "All tests passed" and stop. Do not read any
+        further files.
+
+        STEP 3 — Only if one or more tests FAILED, read these exact files
+        before triaging (do not list directories, read them by path):
+          lifecycle/architecture/architecture-summary.md
+          lifecycle/architecture/standards/index-is-a-cache.md
+          lifecycle/architecture/standards/secrets-handling.md
+          lifecycle/architecture/standards/filesystem-sandboxing.md
+        Then list lifecycle/architecture/decisions/ and read ONLY the ADRs
+        whose filename relates to the failing area.
+
+        STEP 4 — For EACH failing test, write ONE defect file in
+        lifecycle/defects/<short-slug>.md with this frontmatter:
+          title: <short defect title>
+          type: defect
+          status: draft
+          lineage: <lineage of the feature being tested>
+          parent: {target_path}
+          labels: [defect]
+          created: <current date-time, RFC3339>
+          assignees:
+            - role: <backend-developer | frontend-developer | test-developer>
+              who: agent
+
+        Choose the role by which layer failed:
+          Backend API / logic / data -> backend-developer
+          UI / component / state     -> frontend-developer
+          Flaky or wrong test        -> test-developer
+
+        Body sections, in this order:
+          ## Reproduction Steps      (exact, numbered, including the command)
+          ## Expected Behaviour
+          ## Actual Behaviour
+          ## Logs / Output           (paste the real failing output)
+
+        Judge each failure against what you read in STEP 3. If a failure is a
+        deliberate, defensible deviation from the recorded architecture or
+        standards rather than a defect, do NOT file a defect and do NOT silently
+        accept it: write an ADR in lifecycle/architecture/decisions/
+        (type: adr) capturing the decision, its context, and its consequences.
+
+        Write files. Do not summarise what you would write.
+  - name: qa-or
+    role:
+      - qa
+    provider: openrouter
+    driver: openai-compatible
+    model: google/gemma-4-26b-a4b-it
+    max_tool_iterations: 40
+    timeout_minutes: 30          # 0 is silently 10m on this driver — set it explicitly
+    bash_allowlist:
+      - "make test-unit"
+      - "make test-integration"
+      - "cd tests/web && pnpm test"
+      - "cd web && pnpm test"
+    active_status: in-qa
+    source_types:
+      - test
+    allowed_write_paths:
+      - lifecycle/defects
+      - lifecycle/architecture/decisions
+    git_identity:
+      name: QA Agent
+      email: qa@kaos-control.local
+    prompt_templates:
+      qa: |
+        You are a QA agent for the Innovation Maker project.
+        Your target artifact is {target_path}.
+
+        YOUR TOOLS — prefer these over the shell. They are faster, and they
+        always work; shell commands are restricted to the exact list in STEP 1
+        and anything else will be refused.
+          read_file(path)             read one file
+          list_dir(path)              list a directory
+          grep(pattern, path)         search a NAMED file or directory for a regex
+                                      (path is required — searching the whole
+                                      repository is refused; build output and
+                                      node_modules are skipped)
+          write_file(path, content)   create or overwrite a file
+          bash(command)               ONLY the four commands named in STEP 1
+
+        Do NOT use bash for searching, reading, listing or writing — use the
+        tools above. For example, use grep("tech-stacks", "lifecycle") rather
+        than bash("grep -r tech-stacks lifecycle").
+
+        Always give grep a specific path — grep("FAIL", "tests/integration"),
+        never grep("FAIL", ""). A test command's own output is the record of
+        what passed or failed; do not go looking for failures in the source.
 
         Work through these steps IN ORDER. Do not explore the repository.
 

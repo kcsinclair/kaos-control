@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-09-03** — Hardened the `grep` agent tool after run `ec4f45c70ba0b39a`, where the qa agent called `grep("FAIL", "")`, walked the whole repository including minified `web/dist` bundles, got 82 KB back and reasoned over its own grep hits as if they were test results. `path` is now required (and required in the tool schema, which previously said it defaulted to `.`), build/vendor directories are skipped, long lines are capped, binaries are skipped, and total output is capped. Both qa prompts updated to match.
+
 - **2026-08-30** — Instrumented the openai-compatible request cycle so a `provider_disconnected` is self-diagnosing: the run log now records when each turn's request was sent, how long response headers took, and on a stream failure how long it survived plus how many SSE lines arrived. Establishing those facts for run `97078a4c1bf40c04` previously required server-log forensics on the provider host.
 
 - **2026-08-30** — Corrected the `provider_disconnected` remediation, which blamed model swapping. Server-log forensics on run `97078a4c1bf40c04` disproved that: the llama.cpp backend logged no error, cancel, timeout, eviction, swap or restart, and the final request completed normally, while the client received zero bytes and a reset on the router port. The drop was in the router hop, not the model.

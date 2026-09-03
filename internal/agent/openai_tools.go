@@ -106,7 +106,7 @@ func DefaultOpenAITools() []OpenAITool {
 			Type: "function",
 			Function: OpenAIFunctionDesc{
 				Name:        "grep",
-				Description: "Search for a regex pattern in files within a project directory or file.",
+				Description: "Search for a regex pattern within one directory or file. Build output and dependencies (web/dist, node_modules, vendor) are skipped.",
 				Parameters: map[string]any{
 					"type": "object",
 					"properties": map[string]any{
@@ -116,10 +116,10 @@ func DefaultOpenAITools() []OpenAITool {
 						},
 						"path": map[string]any{
 							"type":        "string",
-							"description": "The relative path to search within (defaults to '.').",
+							"description": "REQUIRED. The directory or file to search, relative to the project root — for example \"lifecycle\" or \"internal/agent\". Searching the whole repository is not supported, so narrow the path to the area you care about.",
 						},
 					},
-					"required": []string{"pattern"},
+					"required": []string{"pattern", "path"},
 				},
 			},
 		},
@@ -368,8 +368,13 @@ func (e *ToolExecutor) grep(pattern string, relPath string) (string, error) {
 		return fmt.Sprintf("invalid regex: %v", err), nil
 	}
 	cleanPath := strings.TrimPrefix(relPath, "/")
-	if cleanPath == "" {
-		cleanPath = "."
+	if cleanPath == "" || cleanPath == "." {
+		// A whole-repo grep is almost never what the agent wants and is an
+		// active trap for weaker models. In run ec4f45c70ba0b39a the qa agent
+		// called grep("FAIL", "") after its test output was truncated, got 82 KB
+		// back — mostly minified JS from web/dist — and reasoned over its own
+		// grep hits as though they were test results, never recovering.
+		return "path is required: name a directory or file to search, e.g. \"lifecycle\" or \"internal/agent\". Searching the whole repository is not supported.", nil
 	}
 	resolved, err := sandbox.Resolve(e.ProjectRoot, cleanPath)
 	if err != nil {
@@ -398,8 +403,11 @@ func (e *ToolExecutor) grep(pattern string, relPath string) (string, error) {
 		lineNum := 1
 		for scanner.Scan() {
 			line := scanner.Text()
+			if lineNum == 1 && strings.ContainsRune(line, 0) {
+				return nil // binary file
+			}
 			if re.MatchString(line) {
-				results = append(results, fmt.Sprintf("%s:%d:%s", displayPath, lineNum, line))
+				results = append(results, fmt.Sprintf("%s:%d:%s", displayPath, lineNum, truncateGrepLine(line)))
 				if len(results) >= maxMatches {
 					return fmt.Errorf("limit reached")
 				}
@@ -421,7 +429,7 @@ func (e *ToolExecutor) grep(pattern string, relPath string) (string, error) {
 				return nil
 			}
 			if info.IsDir() {
-				if info.Name() == ".git" {
+				if skipGrepDir(info.Name()) {
 					return filepath.SkipDir
 				}
 				return nil
@@ -440,7 +448,34 @@ func (e *ToolExecutor) grep(pattern string, relPath string) (string, error) {
 	if len(results) == 0 {
 		return "(no matches found)", nil
 	}
-	return strings.Join(results, "\n"), nil
+	return truncateCommandOutput(strings.Join(results, "\n")), nil
+}
+
+// grepSkipDirs are directories never worth searching: build output, vendored
+// dependencies and VCS metadata. Before this existed only .git was skipped, so
+// a grep over "." pulled in minified bundles from web/dist and the whole of
+// node_modules.
+var grepSkipDirs = map[string]bool{
+	".git": true, "node_modules": true, "dist": true, "vendor": true,
+	".cache": true, "coverage": true, ".venv": true, "__pycache__": true,
+	".pnpm-store": true, ".next": true, "target": true,
+}
+
+func skipGrepDir(name string) bool { return grepSkipDirs[name] }
+
+// grepLineLimit caps a single reported match. One minified JS line can be tens
+// of kilobytes on its own, which crowds out every other result.
+const grepLineLimit = 400
+
+func truncateGrepLine(line string) string {
+	if len(line) <= grepLineLimit {
+		return line
+	}
+	cut := grepLineLimit
+	for cut > 0 && !utf8.RuneStart(line[cut]) {
+		cut--
+	}
+	return line[:cut] + fmt.Sprintf(" … [line truncated, %d bytes total]", len(line))
 }
 
 // truncateCommandOutput caps command output fed back to the model, keeping both
