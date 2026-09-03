@@ -12,6 +12,7 @@ import { useOpenQuestionsStore } from '@/stores/openQuestions'
 import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import { ApiError } from '@/api/client'
 import { Menu, AlertTriangle } from 'lucide-vue-next'
+import SwitchoverStatusButton from '@/components/provider/SwitchoverStatusButton.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -95,6 +96,7 @@ async function handleLogout() {
         <span v-else class="queue-count">{{ queueStore.pendingCount }}</span>
         <span class="queue-label"> pending</span>
       </RouterLink>
+      <SwitchoverStatusButton v-if="project" :project="project" />
       <button
         v-if="project && providerSwitchStore.isFailoverActive"
         type="button"

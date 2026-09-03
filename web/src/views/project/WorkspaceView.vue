@@ -47,6 +47,10 @@ async function syncProject() {
   void openQuestionsStore.fetchAwaitingAnswersCount(name)
   void providerSwitchStore.fetchStatus(name)
   void providerSwitchStore.fetchTemplates(name)
+  // Primes agentsStore.agents so the header's switchover status button
+  // (hasSecondaryConfigured) has real data on every project page, not just
+  // once the user has visited the Agents tab.
+  void agentsStore.fetchAgents(name)
 }
 
 function scheduleReadyCountRefresh(project: string) {
