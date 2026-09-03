@@ -319,6 +319,7 @@ func (s *Server) buildRouter() chi.Router {
 
 				// Reports
 				r.Get("/reports/agent-usage", s.handleGetAgentUsageReport)
+				r.Get("/reports/failover", s.handleGetFailoverReport)
 
 				// Locks
 				r.Get("/locks", s.handleListLocks)

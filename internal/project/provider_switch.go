@@ -4,6 +4,7 @@ package project
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/kaos-control/kaos-control/internal/config"
@@ -66,6 +67,13 @@ func (p *Project) SwitchAgentProvider(agentName, newProvider, newModel, reason s
 		FromProvider: primary.Provider, ToProvider: newProvider, Reason: reason,
 	})
 
+	// FR-10.1: every switchover/failover transition is logged (provider/model
+	// names only — never secret material, NFR-1) in addition to being
+	// recorded in operations.yaml above.
+	slog.Info("project: agent provider switched", "project", p.Entry.Name, "agent", agentName,
+		"action", action, "from_provider", primary.Provider, "from_model", primary.Model,
+		"to_provider", newProvider, "to_model", newModel, "reason", reason)
+
 	p.insertFeedEvent("provider_switched", summary)
 	p.Hub.Broadcast(hub.Event{
 		Type: "provider.switched",
@@ -108,6 +116,10 @@ func (p *Project) RestoreAgentProvider(agentName string) error {
 		At: time.Now().Unix(), Agent: agentName, Action: "restore",
 		FromProvider: state.Active.Provider, ToProvider: ag.Provider,
 	})
+
+	slog.Info("project: agent provider restored", "project", p.Entry.Name, "agent", agentName,
+		"from_provider", state.Active.Provider, "from_model", state.Active.Model,
+		"to_provider", ag.Provider, "to_model", ag.Model)
 
 	p.insertFeedEvent("provider_restored", fmt.Sprintf("Agent %s restored to primary provider %s/%s", agentName, ag.Provider, ag.Model))
 	p.Hub.Broadcast(hub.Event{
@@ -165,6 +177,8 @@ func (p *Project) ApplyProviderTemplate(templateName string) (int, error) {
 		count++
 	}
 
+	slog.Info("project: provider template applied", "project", p.Entry.Name, "template", templateName, "updated_agents", count)
+
 	p.insertFeedEvent("provider_template_applied", fmt.Sprintf("Provider template %q applied to %d agent(s)", templateName, count))
 	p.Hub.Broadcast(hub.Event{
 		Type: "provider.switched",
@@ -212,6 +226,10 @@ func (p *Project) SwitchAllAgentProviders(fromProvider, toProvider, toModel, rea
 		return 0, nil
 	}
 
+	slog.Info("project: all agent providers switched", "project", p.Entry.Name,
+		"from_provider", fromProvider, "to_provider", toProvider, "to_model", toModel,
+		"reason", reason, "count", count)
+
 	p.insertFeedEvent("provider_switched", fmt.Sprintf("Switched %d agent(s) from %s to %s/%s (reason: %s)", count, fromProvider, toProvider, toModel, reason))
 	p.Hub.Broadcast(hub.Event{
 		Type: "provider.switched",
@@ -255,6 +273,8 @@ func (p *Project) RestoreAllAgentProviders() (int, error) {
 	if len(restoredNames) == 0 {
 		return 0, nil
 	}
+
+	slog.Info("project: all agent providers restored", "project", p.Entry.Name, "agents", restoredNames, "count", len(restoredNames))
 
 	p.insertFeedEvent("provider_restored", fmt.Sprintf("Restored %d agent(s) to primary provider", len(restoredNames)))
 	p.Hub.Broadcast(hub.Event{
@@ -343,6 +363,8 @@ func (p *Project) FailoverProviderWide(fromProvider, reason string, resetsAtUnix
 				At: now.Unix(), Agent: ag.Name, Action: "pause_queue",
 				FromProvider: fromProvider, Reason: reason,
 			})
+			slog.Info("project: agent partially paused (no secondary)", "project", p.Entry.Name,
+				"agent", ag.Name, "from_provider", fromProvider, "reason", reason)
 			noSecondary = append(noSecondary, ag.Name)
 			continue
 		}
@@ -364,6 +386,9 @@ func (p *Project) FailoverProviderWide(fromProvider, reason string, resetsAtUnix
 			At: now.Unix(), Agent: ag.Name, Action: "failover",
 			FromProvider: primary.Provider, ToProvider: ag.FallbackProvider, Reason: reason,
 		})
+		slog.Info("project: agent failed over", "project", p.Entry.Name, "agent", ag.Name,
+			"from_provider", primary.Provider, "from_model", primary.Model,
+			"to_provider", ag.FallbackProvider, "to_model", ag.FallbackModel, "reason", reason)
 
 		p.insertFeedEvent("provider_switched", fmt.Sprintf(
 			"Agent %s failed over from %s to %s/%s (reason: %s)", ag.Name, primary.Provider, ag.FallbackProvider, ag.FallbackModel, reason))
@@ -383,6 +408,9 @@ func (p *Project) FailoverProviderWide(fromProvider, reason string, resetsAtUnix
 	}
 
 	if len(switched) > 0 || len(noSecondary) > 0 {
+		slog.Info("project: project-wide failover engaged", "project", p.Entry.Name,
+			"from_provider", fromProvider, "reason", reason, "switched", switched, "no_secondary", noSecondary)
+
 		p.insertFeedEvent("provider_failover_project_wide", fmt.Sprintf(
 			"Project-wide failover from %s (reason: %s): %d agent(s) switched, %d agent(s) paused (no secondary)",
 			fromProvider, reason, len(switched), len(noSecondary)))

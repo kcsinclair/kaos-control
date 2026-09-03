@@ -244,8 +244,17 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 			return state.Active.Provider, state.Active.Model, true
 		}
 		agentMgr.OnProviderDisconnect = func(providerName string, at time.Time) {
-			if _, err := ops.RecordDisconnect(providerName, at, agent.ProviderDisconnectCollapseWindow); err != nil {
+			recorded, err := ops.RecordDisconnect(providerName, at, agent.ProviderDisconnectCollapseWindow)
+			if err != nil {
 				slog.Warn("project: recording provider disconnect", "name", entry.Name, "provider", providerName, "err", err)
+				return
+			}
+			if recorded {
+				// FR-10.1: a new (non-collapsed) occurrence — logged distinctly
+				// from a disconnect that collapsed into the active backoff
+				// window (Resolved Question 1), which doesn't move the
+				// rolling-hour counter.
+				slog.Info("project: provider disconnect recorded", "name", entry.Name, "provider", providerName)
 			}
 		}
 	}

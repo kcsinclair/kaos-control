@@ -22,20 +22,6 @@ func (s *Server) providerExists(name string) bool {
 	return findProvider(s.appCfg.Providers, name) >= 0
 }
 
-// providerConfig returns the named app-level provider config, or ok=false.
-func (s *Server) providerConfig(name string) (config.Provider, bool) {
-	if s.appCfg == nil {
-		return config.Provider{}, false
-	}
-	s.appCfgMu.RLock()
-	defer s.appCfgMu.RUnlock()
-	idx := findProvider(s.appCfg.Providers, name)
-	if idx < 0 {
-		return config.Provider{}, false
-	}
-	return s.appCfg.Providers[idx], true
-}
-
 // providerSwitchAgentStatus is one agent's entry in the
 // GET .../provider-switch/status response — built entirely from
 // operations.yaml (agent-switchover-and-failover Milestone 8), never from a

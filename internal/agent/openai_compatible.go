@@ -559,6 +559,12 @@ func (d *OpenAICompatibleDriver) Start(ctx context.Context, run Run) (Process, e
 				if run.OnProviderDisconnect != nil {
 					run.OnProviderDisconnect(prov.Name, time.Now())
 				}
+				// FR-10.1: every provider_disconnected transition is logged to
+				// the application log (provider name only — never secret
+				// material, NFR-1), in addition to the per-run log below.
+				slog.Warn("agent: provider disconnected mid-stream", "run_id", run.RunID,
+					"provider", prov.Name, "post_first_token", postFirstToken, "sse_lines", sseLines,
+					"attempt", attempt+1, "max_attempts", len(providerDisconnectBackoff))
 				writeLog(fmt.Sprintf(
 					"# provider_disconnected: %s (post_first_token=%v, %d SSE lines this attempt, stream died %s after headers, %s after send)",
 					scanErr.Error(), postFirstToken, sseLines,
