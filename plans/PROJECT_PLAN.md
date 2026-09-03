@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-09-03** — Abandoned the three blocked artifacts in [[requirements-analyst-suppress-empty-open-questions]] (`-3-be`, `-5-test`, `-6-test`). They stalled on a role/write-scope mismatch, not a product question: their milestones target `lifecycle/config.yaml` and `internal/**/*_test.go`, which no agent role may write. The Go backstop shipped and contains the harm; only the prompt half is undone. Headings renamed Open → Discarded Questions, without which the auto-block reverted the status within seconds.
+
 - **2026-09-03** — Closed [[agents-md-primary-directives-2]] (blocked → done) and its parent idea (clarifying → done). The work had shipped without the statuses being updated: `AGENTS.md` is the canonical directive file, `CLAUDE.md`/`GEMINI.md` are 11-byte `@AGENTS.md` imports, `migrate-directives` and `init --refresh-directives` both exist, and this repo is itself migrated. All four Open Questions were answered by the implementation and are recorded with their resolutions.
 
 - **2026-09-03** — Unblocked [[project-queue-view-3-be]]. Its three Open Questions were accurate on 2026-07-14 but have since been fixed in the dispatcher: `Enqueue` now broadcasts `queue.added` with the full job record and `Cancel` broadcasts `queue.cancelled`, both carrying `project`. Milestone 1 verified — client-side filter is sufficient, no endpoint required, no `internal/` changes. Milestone 2 marked not required. Status blocked → done.

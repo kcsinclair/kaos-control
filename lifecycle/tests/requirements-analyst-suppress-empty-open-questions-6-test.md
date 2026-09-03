@@ -2,7 +2,7 @@
 created: "2026-08-15T11:03:28+10:00"
 title: Test Suite — Suppress Empty Open Questions Section
 type: test
-status: blocked
+status: abandoned
 lineage: requirements-analyst-suppress-empty-open-questions
 parent: lifecycle/test-plans/requirements-analyst-suppress-empty-open-questions-5-test.md
 assignees:
@@ -74,7 +74,7 @@ repository, SQLite index, auth store) already used throughout
 against the real `ArtifactEditorView` component with its heavy children
 stubbed, matching the existing file's conventions.
 
-## Open Questions
+## Discarded Questions
 
 - **Milestones 1 and 2 target files outside the test-developer role's write
   scope.** The test plan's own header states test code for this lineage
@@ -106,3 +106,64 @@ stubbed, matching the existing file's conventions.
   for cases like this? Milestones 3 and 4 above do not depend on this
   answer — they test already-implemented detector/autoblock behaviour and
   already-`done` frontend behaviour — so they are delivered now regardless.
+
+## Abandoned — blocked on role write-scope, and the harm is already contained
+
+**Status: abandoned 2026-09-03.** Not delivered. Reasoning recorded so it is not
+rediscovered later.
+
+### Why these stalled
+
+Not a product question — a **role/write-scope mismatch**. The work these
+artifacts describe cannot be performed by any configured agent:
+
+| Artifact | Target file | Problem |
+|---|---|---|
+| `-3-be` M1 | `lifecycle/config.yaml` | No role has it in `allowed_write_paths` — not backend-developer, nor either analyst. It is also not a Go change, so it does not fit the backend-developer role regardless of permissions. |
+| `-5-test` / `-6-test` M1–M2 | `internal/config/config_test.go`, `internal/artifact/artifact_test.go` | Outside test-developer's `allowed_write_paths` (`tests`, `web/src`, `lifecycle/tests`, `lifecycle/test-plans`, `lifecycle/architecture/decisions`). |
+
+The discarded questions below asked who should make these edits. In practice the
+answer is that prompt and config curation happens **by hand**, directly in
+`lifecycle/config.yaml`, rather than being routed through an agent — so these
+tickets were waiting on a workflow that does not exist.
+
+### Why abandoning is safe
+
+The Go half of this lineage shipped, and it is the half that mattered.
+`artifact.HasOpenQuestions` (`internal/artifact/artifact.go:334`) ignores
+placeholder content, treating these as "no real question":
+
+`none`, `n/a`, `na`, `nil`, `no open questions`, `no questions`, `tbd`
+
+It is wired into the auto-block transition (`internal/index/autoblock.go:34`)
+and the index write path (`internal/index/index.go:623`), with both packages'
+tests passing. So a hollow "Open Questions: None" does **not** wrongly force an
+artifact to `blocked` — the actual damage this lineage set out to stop.
+
+The prompt half was never done. Verified against `lifecycle/config.yaml` on
+2026-09-03: `requirements-analyst` still lists Open Questions as an
+unconditional body section, and neither analyst prompt carries an
+"omit when empty" instruction or a placeholder prohibition. Analysts therefore
+still emit the heading routinely and fill it with a sentinel — cosmetic noise,
+not a blocked artifact, which is why this is dropped rather than finished.
+
+### Residual risk if it needs reopening
+
+The sentinel list is **finite and literal**. A model writing anything outside it
+— "No outstanding questions.", "Nothing further at this stage." — does not
+match, so `HasOpenQuestions` returns true and `applyOpenQuestionTransition`
+auto-blocks the artifact. The prompt change was the belt to the detector's
+braces; without it, protection depends on the model phrasing its non-answer in
+one of seven exact ways.
+
+If spurious `blocked` statuses appear on analyst output, look here first. The
+fix is the M1 prompt edit described above, not extending the sentinel list.
+
+### Why the heading below was renamed
+
+`HasOpenQuestions` matches the `## Open Questions` heading exactly, and
+`applyOpenQuestionTransition` auto-blocks any artifact carrying one. While the
+heading read "Open Questions" this file could not be abandoned at all — the
+status reverted to `blocked` within seconds of every edit. Renaming it to
+`## Discarded Questions` releases that. Worth knowing if another lineage needs
+closing the same way.
