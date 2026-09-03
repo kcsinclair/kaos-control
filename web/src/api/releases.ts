@@ -18,6 +18,8 @@ function normaliseDates<T extends Release>(r: T): T {
     end_date: (r.end_date as string | null | undefined) ?? null,
     file_path: (r.file_path as string | undefined) ?? '',
     slug: (r.slug as string | undefined) ?? '',
+    goal: (r.goal as string | undefined) ?? '',
+    description: (r.description as string | undefined) ?? '',
   }
 }
 
