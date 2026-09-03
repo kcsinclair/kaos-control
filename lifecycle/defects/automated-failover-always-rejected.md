@@ -1,7 +1,7 @@
 ---
 title: "Automated provider failover can never succeed — the switch writes a config that fails its own validation"
 type: defect
-status: draft
+status: abandoned
 lineage: automated-failover-always-rejected
 created: "2026-08-28T12:20:00+10:00"
 priority: high
@@ -81,6 +81,32 @@ product is broken:
 - `TestFailover_AutoSwitch_HTTP529` — "queue should not pause on automated failover, but it did"
 - `TestFailover_AutoSwitch_RateLimitQuota` — same assertion
 - `TestSecrets_FailoverAudit` — times out waiting for the requeued job, which never runs
+
+## Abandoned — superseded by the failover requirement
+
+**Status: abandoned 2026-09-03.** Not because the bug is invalid — it is real and
+reproducible — but because the design decided in
+[[agent-switchover-and-failover]] removes the condition that causes it.
+
+That idea decides (item 7) that **configuration is not modified to support
+failover**: agent provider state stops being patched into
+`lifecycle/config.yaml` and moves to `operations.yaml` in the project root,
+gitignored as runtime state.
+
+If nothing patches the config, `PatchAgentProviders` is never called on the
+failover path, and the `fallback_provider must differ from provider` validation
+can no longer fire. The two fixes proposed below — clearing or swapping
+`fallback_provider` — both assume the config keeps being rewritten, so both are
+superseded rather than chosen.
+
+The three integration tests named below remain the correct acceptance check for
+the new design: `TestFailover_AutoSwitch_HTTP529`,
+`TestFailover_AutoSwitch_RateLimitQuota` and `TestSecrets_FailoverAudit` should
+pass once failover works, whatever mechanism delivers it. They should be carried
+into the requirement's acceptance criteria rather than left attached to an
+abandoned defect.
+
+**Do not implement either option below.**
 
 ## Proposed fix
 

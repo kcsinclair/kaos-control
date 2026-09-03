@@ -52,6 +52,24 @@ outcome failover exists to prevent. The condition is unavoidable, because
 failover only engages when `fallback_provider` is set. Nothing in this idea can
 be demonstrated until that is fixed.
 
+**But note how item 7 changes the fix.** That defect proposes either clearing or
+swapping `fallback_provider` so the patched config still validates. Both assume
+failover keeps rewriting `lifecycle/config.yaml`. Item 7 decides it must not:
+configuration is not modified for failover, and operational state moves to
+`operations.yaml` in the project root. If nothing patches the config, then
+`PatchAgentProviders` is never called and the `fallback_provider must differ from
+provider` rejection cannot arise — the defect is resolved as a consequence of the
+design rather than by either fix it proposes.
+
+The requirement should therefore absorb this defect rather than wait on it. The
+defect [[automated-failover-always-rejected]] has been **abandoned** on that
+basis (2026-09-03), and its two proposed options should not be implemented.
+
+Its three failing integration tests carry over as acceptance criteria for this
+requirement: `TestFailover_AutoSwitch_HTTP529`,
+`TestFailover_AutoSwitch_RateLimitQuota` and `TestSecrets_FailoverAudit` must
+pass once failover works.
+
 ### 1. Quota is per-account, but failover is per-agent
 
 `fallback_provider` is an **agent** field (`internal/config/config.go:649`), so
@@ -115,20 +133,22 @@ rather than `/v1/models`.
 
 > At this time failback will only be triggered manually.
 
-**STILL OPEN — what does the operator see when deciding?** Making failback manual
-removes the risk of switching back automatically on a bad signal, but the
-operator still has to judge when the primary is usable, and the signal available
-today is wrong for the quota case: `provider.primary_recovered` fires after two
-healthy probes of `GET /v1/models`, which is not quota-gated, so it reports
-recovery within roughly two minutes of any quota failover regardless of the
-actual reset.
+**Why this needs a UI answer.** Making failback manual removes the risk of
+switching back automatically on a bad signal, but the operator still has to judge
+when the primary is usable — and the signal available today is wrong for the
+quota case: `provider.primary_recovered` fires after two healthy probes of
+`GET /v1/models`, which is not quota-gated, so it reports recovery within roughly
+two minutes of any quota failover regardless of the actual reset.
 
-**Open question:** what should the UI show against a provider in failover? The
-authoritative data already arrives on the rate-limit event — `resets_at_unix`
-and a `bucket` of `five_hour` or `weekly`. Showing the expected reset time, and
-suppressing or qualifying the "recovered" indicator until it passes, would give
-the operator something true to act on. Without that, manual failback is a
-guess informed by a misleading green light.
+**Resolved by the answer below.** A status button showing "Primary Agents" or
+"Secondary Agents", plus a dedicated screen to inform the failback decision.
+
+**Constraint for that screen:** it must not simply surface
+`provider.primary_recovered`, or it reproduces the misleading green light in a
+new place. The authoritative data already arrives on the rate-limit event —
+`resets_at_unix` and a `bucket` of `five_hour` or `weekly` — so the screen should
+show the expected reset time, and qualify or suppress any "recovered" indicator
+until it has passed.
 
 > When primary and secondary agents are configured, the GUI should show which is the current state, e.g. "Primary Agents" or "Secondary Agents" in a status button the GUI.  An additional screen with the content described would be great to help assist when to failback.
 
@@ -153,7 +173,7 @@ Each needs an explicit decision: trigger failover, pause the queue, or fail hard
 
 > "Auth / credential failure" is operational, that should trigger a failover to secondary.  The other issues I consider these issues to be setup issues, e.g. when something is modified and the user should have verified they are working before setting up alot of work to be done.  
 
-**STILL OPEN — `provider_disconnected` does not fit the "setup issue" grouping.**
+**`provider_disconnected` does not fit the "setup issue" grouping.**
 Model-not-found and cannot-do-tool-calling are setup issues and are settled by
 the answer above and by item 5. A mid-stream disconnect is different: it has
 occurred twice on a correctly configured system with no change of any kind
@@ -167,12 +187,58 @@ between the working and failing runs.
 Today it neither triggers failover nor pauses the queue: the run simply fails and
 its work is discarded.
 
-**Open question:** what should happen on `provider_disconnected`? A retry in
-place looks safest where the stream died **before any token arrived** — nothing
-was consumed and no partial output exists, so repeating the request is free of
-side effects — escalating to pause or failover only if retries also fail. That
-distinction is now visible in the run log, which records the SSE line count at
-the point of failure.
+**Decided: retry in place, and pause only if it keeps happening.**
+
+> Retry when the provider disconnects. If it disconnects more than 3 times in
+> 1 hour, pause the queue.
+
+This supersedes the initial "pause the queue" answer below, which would have
+discarded a run's completed work on the first disconnect — in
+`97078a4c1bf40c04` that was nineteen turns.
+
+**Why a retry is safe and cheap.** The chat-completions API is stateless: the
+driver holds the conversation in its own memory and re-sends the entire
+`messages` array every turn (`internal/agent/openai_compatible.go:141`). A retry
+therefore sends a byte-identical request — the model receives exactly the
+context it would have had. There is no session to lose and nothing to restore.
+
+On a local provider the prompt cache also survives. From leia's own log, a
+request arriving after a **seven-minute** idle gap still matched its slot and
+reused 36,658 of 39,926 tokens:
+
+```
+checking sim = 0.918 (36658/39926) > 0.100
+selected slot by LCP similarity, f_sim_best = 0.918
+cached n_tokens = 36658
+```
+
+A retry moments after a disconnect has an identical prefix, so it should reuse
+more still. On a cloud provider the picture is weaker but still correct: the
+retry may be routed to a different upstream (OpenRouter re-evaluates routing
+roughly every five minutes), which means a cold cache and full prompt
+reprocessing — correct, but not free.
+
+**Implementation notes for the requirement:**
+
+- **Retry in place, inside the turn loop.** The current stream-error path does
+  `doneCh <- scanErr; return`, which exits the run goroutine — and `messages` is
+  local to it. Retrying after that point is impossible; the retry must happen
+  before the return, or the conversation really is gone.
+- **Retry is free only before the first token.** Once tokens have streamed, a
+  retry re-bills the whole prompt and discards partial output. The run log now
+  records the SSE line count at the point of failure, so this is decidable.
+- **The 3-per-hour counter needs a defined scope.** Disconnects are a property
+  of the provider, not of one run, so counting per provider over a rolling hour
+  is the natural reading — a run that succeeds after one retry still contributes
+  to the count. The counter is operational state and belongs in
+  `operations.yaml`, which also means it should survive a kaos-control restart.
+- **Backoff between attempts is required.** Without it, three retries can land
+  within a second and pause the queue on what was really a single incident —
+  spending the whole hourly budget instantly and defeating the intent of
+  "3 times in 1 hour". The requirement should specify the schedule (an
+  exponential backoff, e.g. 2s / 8s / 30s, is the obvious starting point) and
+  state whether closely-spaced failures count once or individually toward the
+  hourly threshold.
 
 > provider_disconnected = Pause the queue.
 
@@ -214,22 +280,19 @@ intent?
 
 > Yes, operational state will not be committed to git.  The configuration should not be modified to support failover, the operational state should be tracked in a seperate file, e.g. operation.yaml in the lifecycle directory. How the system is currently operating will be maintained in that file.  The UI can use it to display current status and any other necessary messages for the user.
 
-**Settled details.** The file is named **`lifecycle/operations.yaml`** (item 9
-referred to it as `operations.yaml` and this item as `operation.yaml` — the
-plural is canonical). Two facts verified against the code:
+**Settled details.** The file is **`operations.yaml` in the project root**, not
+under `lifecycle/` (see the answer below; item 9 also used the plural spelling,
+which is canonical).
 
-- It will **not** be indexed as an artifact. Both the indexer and the watcher
-  filter on `.md` (`internal/index/index.go:375`, `:471`;
-  `internal/watcher/watcher.go:375`), so a `.yaml` under `lifecycle/` is ignored
-  by the artifact pipeline.
-- It **will** be committed unless explicitly excluded. Nothing in `.gitignore`
-  covers `lifecycle/`, so the file must be added there — otherwise the
-  requirement above ("operational state will not be committed to git") is not
-  met by placing it in that directory.
+Placing it at the root resolves the replication concern properly rather than
+working around it: `lifecycle/` is the tree that replicates through
+Obsidian/Unison, so live operational state kept there could be overwritten by an
+external sync. The root is outside that tree.
 
-It must also be excluded from the Obsidian/Unison replication, or the race this
-item exists to avoid returns in a new form: an external sync overwriting live
-operational state.
+One thing still required: **it must be added to `.gitignore`.** Nothing currently
+ignores it at the root any more than under `lifecycle/`, so without an explicit
+entry the requirement above — operational state is not committed to git — is not
+met.
 
 > Lets move operations.yaml to the root folder of the project, OUT of lifecyle.
 

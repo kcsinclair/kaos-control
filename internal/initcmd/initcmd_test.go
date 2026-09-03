@@ -176,6 +176,12 @@ func TestGitignoreContainsDBPattern(t *testing.T) {
 	if !contains(string(rendered), "lifecycle/.kaos-control.db") {
 		t.Error("gitignore.tmpl does not contain 'lifecycle/.kaos-control.db'")
 	}
+	// operations.yaml holds failover/switchover runtime state. The requirement
+	// is that it is never committed, so a scaffolded project must ignore it from
+	// the outset rather than relying on the operator noticing.
+	if !contains(string(rendered), "operations.yaml") {
+		t.Error("gitignore.tmpl does not contain 'operations.yaml'")
+	}
 }
 
 func contains(s, substr string) bool {
