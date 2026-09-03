@@ -2,14 +2,68 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useProvidersStore } from '@/stores/providers'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import { useUiStore } from '@/stores/ui'
 import { ApiError } from '@/api/client'
+import * as configApi from '@/api/config'
 import ProviderForm from '@/components/provider/ProviderForm.vue'
 import type { Provider, ProviderModel } from '@/types/api'
+import { SWITCHOVER_REASONS, SWITCHOVER_REASON_LABELS, SWITCHOVER_ACTION_LABELS } from '@/lib/failureReasons'
 
+const route = useRoute()
+const project = route.params.project as string
 const store = useProvidersStore()
+const providerSwitchStore = useProviderSwitchStore()
 const ui = useUiStore()
+
+// Raw switchover.events overrides (config.yaml) — used only to distinguish
+// an operator-set action from an FR-2.3 default in the inspector below; the
+// effective (resolved) action itself always comes from providerSwitchStore.policy.
+const configuredEventReasons = ref<Set<string>>(new Set())
+const policyLoading = ref(false)
+const savingToggle = ref(false)
+
+async function loadPolicy() {
+  policyLoading.value = true
+  try {
+    await providerSwitchStore.fetchPolicy(project)
+    const { raw } = await configApi.getConfig(project)
+    const cfg = configApi.parseConfigYaml(raw) as { switchover?: { events?: Record<string, string> } } | null
+    configuredEventReasons.value = new Set(Object.keys(cfg?.switchover?.events ?? {}))
+  } catch (e: unknown) {
+    ui.error(e instanceof Error ? e.message : 'Failed to load switchover policy')
+  } finally {
+    policyLoading.value = false
+  }
+}
+
+const policyRows = computed(() =>
+  SWITCHOVER_REASONS.map((reason) => {
+    const action = providerSwitchStore.policy?.actions[reason] ?? '—'
+    return {
+      reason,
+      label: SWITCHOVER_REASON_LABELS[reason],
+      action,
+      actionLabel: SWITCHOVER_ACTION_LABELS[action] ?? action,
+      isDefault: !configuredEventReasons.value.has(reason),
+    }
+  }),
+)
+
+async function handleToggleAutomatedSwitchover(e: Event) {
+  const enabled = (e.target as HTMLInputElement).checked
+  savingToggle.value = true
+  try {
+    await providerSwitchStore.setAutomatedSwitchover(project, enabled)
+    ui.success(`Automated switchover ${enabled ? 'enabled' : 'disabled'}`)
+  } catch (err: unknown) {
+    ui.error(err instanceof Error ? err.message : 'Failed to update automated switchover')
+  } finally {
+    savingToggle.value = false
+  }
+}
 
 const showModal = ref(false)
 const editTarget = ref<Provider | null>(null)
@@ -27,6 +81,7 @@ const existingNames = computed(() => store.providers.map((p) => p.name))
 onMounted(async () => {
   await store.fetchProviders()
   await store.probeAll()
+  await loadPolicy()
 })
 
 function openAdd() {
@@ -220,6 +275,56 @@ function getModelCount(name: string): number {
       </table>
     </div>
 
+    <!-- Switchover policy (agent-switchover-and-failover FR-2) -->
+    <div class="psv-section">
+      <div class="psv-section-header">
+        <h3 class="psv-section-title">Switchover Policy</h3>
+      </div>
+
+      <div class="switchover-toggle">
+        <label class="switchover-toggle-label">
+          <input
+            type="checkbox"
+            :checked="providerSwitchStore.policy?.automated_switchover ?? false"
+            :disabled="policyLoading || savingToggle"
+            @change="handleToggleAutomatedSwitchover"
+          />
+          <span>Automated switchover</span>
+        </label>
+        <span class="switchover-toggle-callout">
+          Disabled by default. When off, a would-be failover pauses the queue instead
+          of automatically switching agents to their secondary provider.
+        </span>
+      </div>
+
+      <div v-if="policyLoading" class="psv-state">Loading policy…</div>
+      <div v-else class="table-scroll">
+        <table class="psv-table">
+          <thead>
+            <tr>
+              <th>Reason</th>
+              <th>Effective action</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in policyRows" :key="row.reason">
+              <td>
+                <span class="cell-name">{{ row.label }}</span>
+                <div class="cell-muted">{{ row.reason }}</div>
+              </td>
+              <td>{{ row.actionLabel }}</td>
+              <td>
+                <span class="policy-source" :class="{ 'policy-source--default': row.isDefault }">
+                  {{ row.isDefault ? 'Default' : 'Operator-set' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Add / Edit modal -->
     <Teleport to="body">
       <div v-if="showModal" class="modal-overlay">
@@ -410,6 +515,59 @@ function getModelCount(name: string): number {
 .btn-models:hover {
   background: var(--color-surface);
   border-color: var(--color-accent);
+}
+
+.psv-section {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.psv-section-header {
+  margin-bottom: var(--space-3);
+}
+.psv-section-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text);
+}
+.switchover-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.switchover-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.switchover-toggle-callout {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.policy-source {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.policy-source--default {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
 }
 
 .btn-primary {

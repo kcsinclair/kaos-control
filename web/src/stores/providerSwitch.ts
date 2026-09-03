@@ -3,6 +3,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as providerSwitchApi from '@/api/providerSwitch'
+import * as configApi from '@/api/config'
 import { useAgentsStore } from '@/stores/agents'
 import type {
   FailoverAgent,
@@ -107,6 +108,21 @@ export const useProviderSwitchStore = defineStore('providerSwitch', () => {
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Failed to load switchover policy'
     }
+  }
+
+  // setAutomatedSwitchover persists the FR-2.1 toggle (disabled by default)
+  // via the raw-config round-trip: parse lifecycle/config.yaml, patch only
+  // switchover.automated_switchover, write it back. Mirrors the pattern used
+  // for agent config edits (AgentsRunsView.vue's handleAgentFormSubmit) so
+  // every other config key survives untouched.
+  async function setAutomatedSwitchover(project: string, enabled: boolean): Promise<void> {
+    const res = await configApi.getConfig(project)
+    const cfg = configApi.parseConfigYaml(res.raw) as Record<string, unknown>
+    const switchover = (cfg.switchover as Record<string, unknown> | undefined) ?? {}
+    switchover.automated_switchover = enabled
+    cfg.switchover = switchover
+    await configApi.updateConfig(project, configApi.dumpConfigYaml(cfg))
+    await fetchPolicy(project)
   }
 
   async function fetchTemplates(project: string): Promise<void> {
@@ -289,6 +305,7 @@ export const useProviderSwitchStore = defineStore('providerSwitch', () => {
     currentSide,
     fetchStatus,
     fetchPolicy,
+    setAutomatedSwitchover,
     fetchTemplates,
     switchAgent,
     restoreAgent,

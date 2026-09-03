@@ -101,3 +101,51 @@ export function getFailureReasonInfo(reason?: string | null): FailureReasonInfo 
   if (!reason) return null
   return FAILURE_REASON_INFO[reason as FailureReason] ?? null
 }
+
+/**
+ * The complete set of failure reasons the switchover event->action policy
+ * must cover (agent-switchover-and-failover FR-2.1/FR-2.3) — mirrors
+ * internal/agent.SwitchoverReasons / internal/config.SwitchoverReasons
+ * verbatim so the policy inspector never shows a reason the backend
+ * wouldn't also resolve.
+ */
+export const SWITCHOVER_REASONS = [
+  'rate_limit',
+  'overloaded',
+  'unreachable',
+  'auth_error',
+  'provider_disconnected',
+  'model_not_found',
+  'model_unloaded',
+  'tools_unsupported',
+  'context_window_exceeded',
+  'turn_token_ceiling',
+  'max_iterations_reached',
+  'timeout',
+] as const
+
+export type SwitchoverReasonCode = (typeof SWITCHOVER_REASONS)[number]
+
+/** Human-readable label for each classified reason, for the policy inspector. */
+export const SWITCHOVER_REASON_LABELS: Record<SwitchoverReasonCode, string> = {
+  rate_limit: 'Rate limit / quota exceeded (429)',
+  overloaded: 'Provider overloaded (HTTP 529)',
+  unreachable: 'Provider unreachable (connection refused, 502/503/504)',
+  auth_error: 'Authentication failed (401/403)',
+  provider_disconnected: 'Mid-stream disconnect',
+  model_not_found: 'Model not found on provider',
+  model_unloaded: 'Model failed to load',
+  tools_unsupported: 'Model does not support tool calling',
+  context_window_exceeded: 'Context window exceeded',
+  turn_token_ceiling: 'Turn token ceiling reached',
+  max_iterations_reached: 'Max tool iterations reached',
+  timeout: 'Run timed out',
+}
+
+/** Human-readable label for each switchover policy action verb (FR-2.2). */
+export const SWITCHOVER_ACTION_LABELS: Record<string, string> = {
+  failover: 'Switch to secondary',
+  pause_queue: 'Pause queue',
+  retry_in_place: 'Retry in place',
+  fail_run: 'Fail run',
+}
