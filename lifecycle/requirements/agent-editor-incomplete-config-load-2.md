@@ -1,10 +1,11 @@
 ---
-created: "2026-07-14T19:34:44+10:00"
 title: Agent Editor Loads and Preserves All config.yaml Fields
 type: requirement
 status: blocked
 lineage: agent-editor-incomplete-config-load
+created: "2026-07-14T19:34:44+10:00"
 parent: lifecycle/defects/agent-editor-incomplete-config-load.md
+release: KC-Release7
 assignees:
     - role: product-owner
       who: agent
