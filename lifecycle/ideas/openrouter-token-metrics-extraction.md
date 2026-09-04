@@ -1,15 +1,16 @@
 ---
 title: Extract Full Token Metrics from OpenRouter Driver
 type: idea
-status: approved
+status: clarifying
 lineage: openrouter-token-metrics-extraction
 created: "2026-09-04T10:30:50+10:00"
-priority: normal
+priority: high
 labels:
     - driver
     - provider
     - observability
     - cost
+release: KC-Release6
 ---
 
 # Extract Full Token Metrics from OpenRouter Driver
