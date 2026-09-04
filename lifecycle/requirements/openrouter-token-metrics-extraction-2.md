@@ -503,6 +503,8 @@ Map accumulated OpenAI/OpenRouter usage onto the existing `RunResult` /
    Settings, or is the per-run log note plus `slog.Warn` enough?
    ([[switch-provider]], [[open-provider-support]])
 
+> per-run log note plus slog.Warn is enough
+
 6. **Backfill.** Historical `openai-compatible` runs can never have usage (it
    was never requested), so no backfill is possible. Confirm that leaving them
    as `metrics_available = 0` — rather than deleting or annotating the rows — is
