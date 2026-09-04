@@ -496,6 +496,8 @@ Map accumulated OpenAI/OpenRouter usage onto the existing `RunResult` /
    Should the report show gateway cost only (v1), the sum, or both as separate
    figures?
 
+> Show both.
+
 5. **`stream_options` and switchover.** Should a provider that rejects the usage
    parameters (FR-2 fallback) be surfaced as a capability warning in Provider
    Settings, or is the per-run log note plus `slog.Warn` enough?
