@@ -486,6 +486,11 @@ Map accumulated OpenAI/OpenRouter usage onto the existing `RunResult` /
    correct. Add the 5-family prices (accepting the staleness risk the file's own
    doc comment warns about), or leave the split blank for unknown families?
 
+> The dollar amounts are included in the final JSON output ,"cost":0.359644
+> 
+> Other cost data there as well.
+> {"id":"gen-1788480411-QupvqjgY3QEIOKbv4XPa","object":"chat.completion.chunk","created":1788480411,"model":"anthropic/claude-sonnet-5","provider":"Claude Platform on AWS","service_tier":"default","choices":[{"index":0,"delta":{"content":"","role":"assistant"},"finish_reason":"stop","native_finish_reason":"end_turn"}],"usage":{"prompt_tokens":164082,"completion_tokens":3148,"total_tokens":167230,"cost":0.359644,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0.359644,"upstream_inference_prompt_cost":0.328164,"upstream_inference_completions_cost":0.03148},"completion_tokens_details":{"reasoning_tokens":2124,"image_tokens":0,"audio_tokens":0}}}
+
 4. **BYOK / upstream cost.** When `is_byok` is true, OpenRouter's `cost` is the
    gateway fee, not the model spend (`cost_details.upstream_inference_cost`).
    Should the report show gateway cost only (v1), the sum, or both as separate
