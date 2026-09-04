@@ -477,6 +477,8 @@ Map accumulated OpenAI/OpenRouter usage onto the existing `RunResult` /
    real response and map it if a stable key exists, accepting a
    provider-specific special case in a generic driver?
 
+> Yes.
+
 3. **Claude-5-family list prices.** `internal/reports/pricing.go` only knows
    `claude-{opus,sonnet,haiku}-4`, while this project runs
    `anthropic/claude-{opus,sonnet}-5` — so even after vendor-prefix stripping
