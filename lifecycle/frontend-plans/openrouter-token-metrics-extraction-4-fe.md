@@ -1,7 +1,7 @@
 ---
 title: "Token, cost and usage metrics for openai-compatible (OpenRouter) runs"
 type: plan-frontend
-status: in-development
+status: done
 lineage: openrouter-token-metrics-extraction
 parent: lifecycle/requirements/openrouter-token-metrics-extraction-2.md
 created: "2026-09-04T12:00:00Z"

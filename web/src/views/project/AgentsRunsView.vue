@@ -64,10 +64,10 @@ function runDriverLabel(run: AgentRunRow, agents: AgentSummary[]): string {
   return driver ? driverLabel(driver) : ''
 }
 
-function agentHasTokenMetrics(agentName: string): boolean {
-  const driver = store.agents.find((ag) => ag.name === agentName)?.driver
+function agentHasTokenMetrics(run: AgentRunRow): boolean {
+  const driver = runDriverId(run, store.agents)
   if (!driver) return true
-  return driver === 'claude-code-cli' || driver === 'claude-mediated'
+  return driver === 'claude-code-cli' || driver === 'claude-mediated' || driver === 'openai-compatible'
 }
 
 const route = useRoute()
@@ -455,7 +455,7 @@ onMounted(() => {
                     <RunSummaryCard
                       v-else
                       :result="store.runResults.get(run.run_id) ?? null"
-                      :driver-available="agentHasTokenMetrics(run.agent_name)"
+                      :driver-available="agentHasTokenMetrics(run)"
                     />
                   </div>
                   <!-- Full log — opens in a full-height modal (same component

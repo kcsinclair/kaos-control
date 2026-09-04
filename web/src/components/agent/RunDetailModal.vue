@@ -164,7 +164,7 @@ function runDriverDisplay(r: AgentRunRow): string {
 function agentHasTokenMetrics(r: AgentRunRow): boolean {
   const driver = runDriverId(r)
   if (!driver) return true
-  return driver === 'claude-code-cli' || driver === 'claude-mediated'
+  return driver === 'claude-code-cli' || driver === 'claude-mediated' || driver === 'openai-compatible'
 }
 
 // Recorded run.provider (immutable) takes precedence over the agent's

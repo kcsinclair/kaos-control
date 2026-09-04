@@ -670,6 +670,12 @@ export interface RunResult {
   usage: RunResultUsage
   permission_denials: unknown[]
   session_id: string
+  /** Diagnostic source of usage metrics: "provider_stream" | "none" */
+  usage_source?: 'provider_stream' | 'none' | string
+  /** False if provider did not report cost; cost renders as '—' instead of '$0.0000' */
+  cost_reported?: boolean
+  driver?: string
+  provider?: string
 }
 
 // agy (gemini-cli) stream-json progress events, discriminated by `event`
