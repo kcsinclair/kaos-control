@@ -1,7 +1,7 @@
 ---
 title: Enable OpenRouter Content Caching for Google and Anthropic
 type: idea
-status: draft
+status: approved
 lineage: openrouter-content-caching
 created: "2026-09-04T19:01:25+10:00"
 priority: normal
