@@ -1,7 +1,7 @@
 ---
 title: Extract Full Token Metrics from OpenRouter Driver
 type: idea
-status: draft
+status: approved
 lineage: openrouter-token-metrics-extraction
 created: "2026-09-04T10:30:50+10:00"
 priority: normal
