@@ -207,7 +207,8 @@ agents:
       - analyst
     provider: openrouter
     driver: openai-compatible
-    model: anthropic/claude-opus-5
+    #model: anthropic/claude-opus-5
+    model: google/gemini-3.8-flash
     max_tool_iterations: 500
     #driver: claude-mediated
     #model: opus
@@ -245,7 +246,7 @@ agents:
 
         Produce a detailed requirement artifact in lifecycle/requirements/.
         The new file's filename, lineage index, and parent must follow the
-        lineage convention in CLAUDE.md.
+        lineage convention in AGENTS.md.
 
         Required frontmatter:
           title: <concise title>
@@ -289,7 +290,7 @@ agents:
     provider: openrouter
     driver: openai-compatible
     #model: anthropic/claude-opus-5
-    model: google/gemini-3.1-pro-preview
+    model: google/gemini-3.8-flash
     max_tool_iterations: 500
     #driver: claude-code-cli
     #model: opus
@@ -336,7 +337,7 @@ agents:
         have: description, files to change, and explicit acceptance criteria.
         Cross-link plans with [[slug]] where they interact.
 
-        Follow the lineage filename convention in CLAUDE.md. Indices are
+        Follow the lineage filename convention in AGENTS.md. Indices are
         monotonic per lineage across stages — never reuse an index.
 
         ── If you get stuck ─────────────────────────────────────────────
@@ -355,7 +356,7 @@ agents:
     provider: openrouter
     driver: openai-compatible
     #model: anthropic/claude-sonnet-5
-    model: google/gemini-3.7-flash
+    model: google/gemini-3.8-flash
     max_tool_iterations: 500
     #driver: claude-code-cli
     #model: sonnet
@@ -417,7 +418,7 @@ agents:
     provider: openrouter
     driver: openai-compatible
     #model: anthropic/claude-sonnet-5
-    model: google/gemini-3.7-flash
+    model: google/gemini-3.8-flash
     max_tool_iterations: 500
     #driver: claude-code-cli
     #model: sonnet
@@ -478,7 +479,7 @@ agents:
     provider: openrouter
     driver: openai-compatible
     #model: anthropic/claude-sonnet-5
-    model: google/gemini-3.7-flash
+    model: google/gemini-3.8-flash
     max_tool_iterations: 500
     #driver: claude-code-cli
     #model: sonnet
@@ -776,7 +777,7 @@ agents:
     provider: openrouter
     driver: openai-compatible
     #model: anthropic/claude-sonnet-5
-    model: google/gemini-3.7-flash
+    model: google/gemini-3.8-flash
     max_tool_iterations: 500
     #driver: claude-code-cli
     #model: sonnet
