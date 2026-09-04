@@ -38,10 +38,10 @@ type Project struct {
 	Cfg   *config.Project
 	cfgMu sync.RWMutex
 
-	// configWriteMu serialises AST-based lifecycle/config.yaml mutations
-	// (provider switch/restore/template-apply) so concurrent callers cannot
-	// race a read-patch-write cycle against each other and corrupt the file.
-	configWriteMu sync.Mutex
+	// switchMu serialises provider switch/restore/template-apply operations
+	// (each a read-decide-write cycle against operations.yaml) so concurrent
+	// callers cannot race and clobber each other's operations state.
+	switchMu sync.Mutex
 
 	Idx            *index.Index
 	Git            *kgit.Repo // nil if the project directory is not a git repo
@@ -67,6 +67,11 @@ type Project struct {
 	// primary provider becomes reachable again. Not started until
 	// StartRecoveryProber is called.
 	RecoveryProber *RecoveryProber
+
+	// operations is the git-ignored runtime-state store (operations.yaml) —
+	// active-vs-primary provider state, reachability, disconnect counters,
+	// and failover history. Access it via Operations().
+	operations *Operations
 
 	// watcherDone is closed when the watcher goroutine exits.
 	// Close() waits on this before closing the index DB.
@@ -116,6 +121,11 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	}
 	if err := config.ValidateAgentProviders(cfg, opts.Providers); err != nil {
 		return nil, fmt.Errorf("project %q: %w", entry.Name, err)
+	}
+
+	ops, err := LoadOperations(entry.Path)
+	if err != nil {
+		return nil, fmt.Errorf("project %q: loading operations state: %w", entry.Name, err)
 	}
 
 	// Retrofit lifecycle/architecture/ for existing projects that predate it
@@ -225,6 +235,27 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, wf, entry.Path, runsLogDir, providers, opts.AgentCfg)
 		if opts.HookServerAddr != "" {
 			agentMgr.ConfigureHookDriver(opts.HookServerAddr, opts.HookBinaryPath)
+		}
+		agentMgr.EffectiveProvider = func(agentName string) (provider, model string, ok bool) {
+			state, ok := ops.AgentState(agentName)
+			if !ok {
+				return "", "", false
+			}
+			return state.Active.Provider, state.Active.Model, true
+		}
+		agentMgr.OnProviderDisconnect = func(providerName string, at time.Time) {
+			recorded, err := ops.RecordDisconnect(providerName, at, agent.ProviderDisconnectCollapseWindow)
+			if err != nil {
+				slog.Warn("project: recording provider disconnect", "name", entry.Name, "provider", providerName, "err", err)
+				return
+			}
+			if recorded {
+				// FR-10.1: a new (non-collapsed) occurrence — logged distinctly
+				// from a disconnect that collapsed into the active backoff
+				// window (Resolved Question 1), which doesn't move the
+				// rolling-hour counter.
+				slog.Info("project: provider disconnect recorded", "name", entry.Name, "provider", providerName)
+			}
 		}
 	}
 
@@ -347,6 +378,7 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		TriageMgr:      triageMgr,
 		ReleaseSync:    releaseSync,
 		Providers:      opts.Providers,
+		operations:     ops,
 	}
 	p.RecoveryProber = newRecoveryProber(p)
 
@@ -457,6 +489,13 @@ func (p *Project) Close() error {
 // LifecycleDir returns the absolute path to the lifecycle/ directory.
 func (p *Project) LifecycleDir() string {
 	return filepath.Join(p.Entry.Path, "lifecycle")
+}
+
+// Operations returns the project's runtime-state store (operations.yaml) —
+// active-vs-primary provider state, reachability, disconnect counters, and
+// failover history. Always non-nil after Open.
+func (p *Project) Operations() *Operations {
+	return p.operations
 }
 
 // Config returns the current lifecycle/config.yaml snapshot. Callers must use

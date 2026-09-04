@@ -102,6 +102,7 @@ func TestRehydrateOnEmptyDB_200FilesPerformance(t *testing.T) {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			project_id TEXT NOT NULL, name TEXT NOT NULL,
 			slug TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'planned',
+			goal TEXT NOT NULL DEFAULT '', description TEXT NOT NULL DEFAULT '',
 			start_date TEXT, end_date TEXT,
 			created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
 			UNIQUE(project_id, name)

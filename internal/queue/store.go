@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -172,19 +173,53 @@ func (s *Store) MinPosition() int64 {
 // Dequeue selects the head pending job, marks it running, and returns it.
 // Returns (nil, nil) when the queue is empty.
 func (s *Store) Dequeue() (*Job, error) {
+	return s.dequeueWhere("", nil)
+}
+
+// AgentKey identifies one agent within one project — used to scope the
+// FR-3.4 partial-pause skip list to a specific project's agent, since the
+// jobs table spans every project.
+type AgentKey struct {
+	Project string
+	Agent   string
+}
+
+// DequeueSkipping behaves like Dequeue but excludes jobs belonging to any
+// (project, agent) pair in blocked (agent-switchover-and-failover FR-3.4:
+// an agent with no secondary to fail over to has its jobs paused while
+// other agents' work proceeds). An empty blocked behaves exactly like
+// Dequeue.
+func (s *Store) DequeueSkipping(blocked []AgentKey) (*Job, error) {
+	if len(blocked) == 0 {
+		return s.Dequeue()
+	}
+	var clause strings.Builder
+	args := make([]any, 0, len(blocked)*2)
+	for _, k := range blocked {
+		clause.WriteString(" AND NOT (project = ? AND agent_name = ?)")
+		args = append(args, k.Project, k.Agent)
+	}
+	return s.dequeueWhere(clause.String(), args)
+}
+
+// dequeueWhere is the shared Dequeue/DequeueSkipping implementation: selects
+// the head pending job matching an optional extra WHERE clause, marks it
+// running, and returns it. Returns (nil, nil) when nothing matches.
+func (s *Store) dequeueWhere(extraWhere string, extraArgs []any) (*Job, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("queue: dequeue begin: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	row := tx.QueryRow(`
+	query := `
 		SELECT id, project, artifact_path, agent_name, state, COALESCE(reason,''),
 		       attempts, enqueued_at, started_at, finished_at, position, enqueued_by
 		FROM jobs
-		WHERE state = 'pending'
+		WHERE state = 'pending'` + extraWhere + `
 		ORDER BY position ASC
-		LIMIT 1`)
+		LIMIT 1`
+	row := tx.QueryRow(query, extraArgs...)
 
 	j, err := scanJob(row)
 	if err == sql.ErrNoRows {
@@ -396,10 +431,10 @@ type scanner interface {
 func scanJob(row scanner) (*Job, error) {
 	var (
 		id, project, artifactPath, agentName, state, reason, enqueuedBy string
-		attempts                                                         int
-		enqueuedAt                                                       int64
-		startedAt, finishedAt                                            sql.NullInt64
-		position                                                         int64
+		attempts                                                        int
+		enqueuedAt                                                      int64
+		startedAt, finishedAt                                           sql.NullInt64
+		position                                                        int64
 	)
 	err := row.Scan(&id, &project, &artifactPath, &agentName, &state, &reason,
 		&attempts, &enqueuedAt, &startedAt, &finishedAt, &position, &enqueuedBy)

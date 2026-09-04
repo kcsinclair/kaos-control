@@ -1,9 +1,9 @@
 ---
-created: "2026-07-14T19:34:44+10:00"
 title: Project Queue View — Backend Plan
 type: plan-backend
-status: blocked
+status: done
 lineage: project-queue-view
+created: "2026-07-14T19:34:44+10:00"
 parent: lifecycle/requirements/project-queue-view-2.md
 assignees:
     - role: product-owner
@@ -64,24 +64,32 @@ frontend can filter client-side and the backend stays untouched.
   `state`.
 
 **Acceptance criteria.**
-- [ ] `GET /api/queue` returns each job with a non-empty `project` field for
-      running, pending, and recent slots (asserted by an integration test —
-      see `project-queue-view-5-test` M1).
-- [ ] `queue.added` / `queue.started` / `queue.finished` / `queue.cancelled`
-      events allow a client to determine the affected job's project (either the
-      payload carries `project`, or it carries an `id` already present in the
-      client's project-filtered snapshot).
-- [ ] `DELETE /api/queue/{id}` cancels a pending job irrespective of the caller's
-      current project route, and emits `queue.cancelled` (existing behaviour,
-      re-asserted).
-- [ ] A written note is added to this plan (or the test plan) recording the
-      verification result: **"client-side filter is sufficient — no endpoint
-      required"** OR **"insufficient because X — proceed to Milestone 2"**.
-- [ ] No files under `internal/` are modified.
+- [x] `GET /api/queue` returns each job with a non-empty `project` field for
+      running, pending, and recent slots. `Job.Project` is serialised as
+      `json:"project"` (`internal/queue/types.go:36`) and asserted throughout
+      `tests/integration/queue_api_test.go`.
+- [x] `queue.added` / `queue.started` / `queue.finished` / `queue.cancelled`
+      events allow a client to determine the affected job's project.
+      `broadcastJobEvent` carries `id`, `project`, `artifact_path` and
+      `agent_name` (`internal/queue/dispatcher.go:786-789`), and `queue.added`
+      broadcasts the full persisted job record.
+- [x] `DELETE /api/queue/{id}` cancels a pending job irrespective of the caller's
+      current project route, and emits `queue.cancelled`
+      (`internal/queue/dispatcher.go:698-706`; covered by
+      `TestQueue_Cancel_Pending` and `TestQueue_Cancel_Running`).
+- [x] Verification result recorded — see **Verification result** below.
+- [x] No files under `internal/` were modified by this plan.
 
 ---
 
-## Milestone 2 — CONTINGENCY: `GET /api/p/{project}/queue` (build only if M1 fails)
+## Milestone 2 — CONTINGENCY: `GET /api/p/{project}/queue` — NOT REQUIRED
+
+**Not built, and must not be.** Milestone 1 passed, so the contingency does not
+apply. No `/api/p/{project}/queue` route exists and none should be added; the
+plan's own stance is that building it speculatively would add an untested
+surface for no benefit. The description below is retained for the record only.
+
+### Original contingency description
 
 **Description.** *Only if* Milestone 1 shows the client-side filter cannot work
 (e.g. a WS event payload omits both `project` and a client-resolvable `id`, or
@@ -130,7 +138,44 @@ query path, new storage, or polling.
       frontend plan [[project-queue-view]] and test plan know which data source
       to wire against.
 
-## Open Questions
+## Verification result
+
+**Client-side filter is sufficient — no endpoint required.** (Verified 2026-09-03.)
+
+Milestone 1 passed on every criterion and no backend code was written, which was
+the plan's stated expected outcome. The feature shipped on option 1:
+`web/src/components/agent/ProjectQueuePanel.vue` filters the app-level queue
+store in the browser —
+
+```js
+return r && r.project === props.project ? r : null
+queueStore.snapshot.pending.filter((j) => j.project === props.project)
+```
+
+— and is mounted from `AgentsRunsView.vue`. Every sibling in this lineage
+(idea, requirement, frontend plan, test plan, and defects 6/7/8) is `done`.
+
+Evidence: all 14 queue integration tests pass, including
+`TestQueue_HappyPath_MultiProject`, `TestQueue_Cancel_Pending` and
+`TestQueue_Cancel_Running`.
+
+### The Open Questions below are resolved
+
+All three concerned missing WebSocket broadcasts. They were accurate when this
+plan was written on 2026-07-14 and have since been fixed in the dispatcher,
+independently of this plan:
+
+| Question | Resolution |
+|---|---|
+| `queue.added` not broadcast on the normal enqueue path | Fixed. `Dispatcher.Enqueue` broadcasts `queue.added` carrying the full persisted job record (`internal/queue/dispatcher.go:679-687`). |
+| `queue.cancelled` never broadcast anywhere | Fixed. `Dispatcher.Cancel` broadcasts it via `broadcastJobEvent` (`internal/queue/dispatcher.go:698-706`). |
+| Second client does not learn of enqueue/cancel in real time | Follows from the two above; both events now fire with `project` in the payload. |
+
+Consequently the product decision the questions asked for is no longer needed,
+and Milestone 1's criteria are satisfiable as written. The questions are kept
+below unedited as the record of why this plan was blocked.
+
+## Open Questions (resolved — see above)
 
 1. **`queue.added` is not broadcast on the normal enqueue path.**
    `POST /api/queue` (`internal/http/queue.go: handleEnqueue`) calls

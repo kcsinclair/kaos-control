@@ -66,13 +66,15 @@ func Rehydrate(ctx context.Context, store *Store, projectID, projectRoot string)
 		}
 
 		r := &Release{
-			ProjectID: projectID,
-			Name:      f.Title,
-			Slug:      f.Slug,
-			Status:    f.Status,
-			StartDate: f.StartDate,
-			EndDate:   f.EndDate,
-			UpdatedAt: f.UpdatedAt,
+			ProjectID:   projectID,
+			Name:        f.Title,
+			Slug:        f.Slug,
+			Status:      f.Status,
+			Goal:        f.Goal,
+			Description: f.Description,
+			StartDate:   f.StartDate,
+			EndDate:     f.EndDate,
+			UpdatedAt:   f.UpdatedAt,
 		}
 		if err := store.UpsertBySlug(r); err != nil {
 			result.Skipped++

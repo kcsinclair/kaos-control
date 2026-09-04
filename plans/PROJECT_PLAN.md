@@ -8,6 +8,34 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-09-03** — Abandoned the three blocked artifacts in [[requirements-analyst-suppress-empty-open-questions]] (`-3-be`, `-5-test`, `-6-test`). They stalled on a role/write-scope mismatch, not a product question: their milestones target `lifecycle/config.yaml` and `internal/**/*_test.go`, which no agent role may write. The Go backstop shipped and contains the harm; only the prompt half is undone. Headings renamed Open → Discarded Questions, without which the auto-block reverted the status within seconds.
+
+- **2026-09-03** — Closed [[agents-md-primary-directives-2]] (blocked → done) and its parent idea (clarifying → done). The work had shipped without the statuses being updated: `AGENTS.md` is the canonical directive file, `CLAUDE.md`/`GEMINI.md` are 11-byte `@AGENTS.md` imports, `migrate-directives` and `init --refresh-directives` both exist, and this repo is itself migrated. All four Open Questions were answered by the implementation and are recorded with their resolutions.
+
+- **2026-09-03** — Unblocked [[project-queue-view-3-be]]. Its three Open Questions were accurate on 2026-07-14 but have since been fixed in the dispatcher: `Enqueue` now broadcasts `queue.added` with the full job record and `Cancel` broadcasts `queue.cancelled`, both carrying `project`. Milestone 1 verified — client-side filter is sufficient, no endpoint required, no `internal/` changes. Milestone 2 marked not required. Status blocked → done.
+
+- **2026-09-03** — Closed the review cycle on [[agent-switchover-and-failover]]: all nine gaps answered, retry-with-backoff decided for `provider_disconnected` (pause after 3 disconnects in an hour), and failover state moved out of `lifecycle/config.yaml` to a gitignored `operations.yaml` at the project root. `operations.yaml` added to `.gitignore` and to the init template so scaffolded projects ignore it from the outset. [[automated-failover-always-rejected]] abandoned — the design removes the condition that caused it.
+
+- **2026-09-03** — Hardened the `grep` agent tool after run `ec4f45c70ba0b39a`, where the qa agent called `grep("FAIL", "")`, walked the whole repository including minified `web/dist` bundles, got 82 KB back and reasoned over its own grep hits as if they were test results. `path` is now required (and required in the tool schema, which previously said it defaulted to `.`), build/vendor directories are skipped, long lines are capped, binaries are skipped, and total output is capped. Both qa prompts updated to match.
+
+- **2026-08-30** — Instrumented the openai-compatible request cycle so a `provider_disconnected` is self-diagnosing: the run log now records when each turn's request was sent, how long response headers took, and on a stream failure how long it survived plus how many SSE lines arrived. Establishing those facts for run `97078a4c1bf40c04` previously required server-log forensics on the provider host.
+
+- **2026-08-30** — Corrected the `provider_disconnected` remediation, which blamed model swapping. Server-log forensics on run `97078a4c1bf40c04` disproved that: the llama.cpp backend logged no error, cancel, timeout, eviction, swap or restart, and the final request completed normally, while the client received zero bytes and a reset on the router port. The drop was in the router hop, not the model.
+
+- **2026-08-28** — Fixed the bash tool discarding the end of command output. It kept the first 16 KB and dropped the rest, but `go test` and `vitest` print their verdict last, so the qa agent never saw a pass/fail line for any suite over the cap. Run `8fe31d94d48f2b67` reported "All tests passed" while `make test-integration` had four failures. Truncation now keeps both ends.
+
+- **2026-08-28** — Moved code scanning from default to advanced setup so the analysis can load a config. Adds `.github/workflows/codeql.yml`, `.github/codeql/codeql-config.yml` and a local model pack declaring `sandbox.Resolve` and `config.ValidatePath` as `barrierModel` entries for the `path-injection` kind. All 116 open `go/path-injection` alerts trace through those sanitisers, which CodeQL does not model as barriers. Requires disabling default setup before the workflow takes effect.
+
+- **2026-08-28** — Triaged the 10 integration-test failures. Six were test-side and are fixed: `make lint` unbroken (gosec/gitleaks false positives), the five native-Ollama test files deleted (they stopped `tests/integration` compiling at all), `ollama` dropped from the drivers-must-load list, the two live-provider tests made opt-in via `KC_LIVE_PROVIDER_TESTS` with a run budget that matches their own timeout, provider DELETE corrected to 204, and the ADR write-path assertion changed to respect prefix matching. The remaining four are genuine product bugs, now raised as [[automated-failover-always-rejected]] and [[onboard-existing-project-rescaffolds]].
+
+- **2026-08-27** — Turn timeline now renders for `claude-code-cli` runs. `parseLogTurns` only understood the openai-compatible `# turn N` format, so every Claude Code run showed an empty timeline — a driver difference that looked like a success/failure difference. Added a stream-json parser (assistant text/thinking/tool_use + matching tool_result) behind a format check. Verified on real logs: 28 turns / 13 tool calls for a Claude Code run, 8 turns unchanged for an openai-compatible run.
+
+- **2026-08-27** — Fixed `App.UnmarshalYAML` discarding every app-level default when a config file exists. It decoded into a zero-valued `appRaw` and overwrote all fields, so a config omitting `auth:` got method `""` and was rejected by `validateApp` — the server refused to start on any minimal config. 33 integration tests each burned their full 15s readiness timeout as a result; integration failures drop 39 → 10.
+
+- **2026-08-27** — QA agent now runs the frontend suites: added `cd tests/web && pnpm test` and `cd web && pnpm test` to the qa allowlist and STEP 1 of its prompt. The agent previously ran only the two Go targets, so 149 frontend spec files were never exercised — including the frontend test plans it was being pointed at.
+
+- **2026-08-27** — Agent runs list gains a "View run details" button opening the structured `RunDetailModal` alongside the existing raw-log view; modal widened 600px → 900px.
+
 - **2026-08-25** — Milestone 6 — Agent Summary API & Project Agent Binding Integration ([[provider-model-for-agents-3-be]]): Update /api/p/{project}/agents serialization with provider, model, and configured flag, zeroing ready counts for unconfigured agents.
 
 - **2026-08-25** — Milestone 5 — Live Health Probing, Model Discovery & Extra Headers ([[provider-model-for-agents-3-be]]): Implement /health endpoint with 5-second timeout and latency tracking, wire /models discovery with extra headers and bearer token forwarding.

@@ -298,6 +298,7 @@ export type FailureReason =
   | 'model_unloaded'
   | 'endpoint_unreachable'
   | 'provider_disconnected'
+  | 'interrupted_by_restart'
   | 'context_window_exceeded'
   | 'turn_token_ceiling'
   | 'max_iterations_reached'
@@ -560,6 +561,8 @@ export type WsEventType =
   | 'provider.switched'
   | 'provider.restored'
   | 'provider.primary_recovered'
+  | 'provider.failover_project_wide'
+  | 'queue.awaiting_operator_decision'
   | 'config.reloaded'
 
 /** Payload for the `agent.quota_status` WS event (mirrors the backend wire shape verbatim). */
@@ -667,6 +670,12 @@ export interface RunResult {
   usage: RunResultUsage
   permission_denials: unknown[]
   session_id: string
+  /** Diagnostic source of usage metrics: "provider_stream" | "none" */
+  usage_source?: 'provider_stream' | 'none' | string
+  /** False if provider did not report cost; cost renders as '—' instead of '$0.0000' */
+  cost_reported?: boolean
+  driver?: string
+  provider?: string
 }
 
 // agy (gemini-cli) stream-json progress events, discriminated by `event`

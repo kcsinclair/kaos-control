@@ -358,8 +358,10 @@ func TestProviderAPI_Delete(t *testing.T) {
 	env.login("admin@test.local", "admin-pass-123")
 
 	resp := env.doRequest(http.MethodDelete, "/api/providers/deletable-prov", nil)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
+	// 204 No Content, per provider-model-for-agents-3-be: "DELETE
+	// /api/providers/{name} removes unreferenced provider with 204 No Content".
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected 204 No Content, got %d", resp.StatusCode)
 	}
 
 	savedCfg, _ := config.LoadApp(env.appCfgPath)

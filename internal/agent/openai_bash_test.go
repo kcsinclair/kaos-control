@@ -179,3 +179,60 @@ func TestRunContextFor_ZeroMeansUnlimited(t *testing.T) {
 		t.Error("unlimited run discarded the parent's deadline; it must inherit it")
 	}
 }
+
+// TestSummariseDenials names the tool and what it tried. Run 4d4f8110dbb59ee3
+// paused the queue with only "denied_tool_calls: run <id>" — the operator had
+// to query the database to discover that bash had been refused, and why.
+func TestSummariseDenials(t *testing.T) {
+	got := summariseDenials([]DenialRecord{{
+		ToolName: "bash",
+		Command:  `grep -r "tech-stacks/go-vue.md" .`,
+		Reason:   "command does not match any bash_allowlist pattern",
+		Rule:     "bash_allowlist",
+	}})
+	for _, want := range []string{"bash", "grep -r", "bash_allowlist"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("summary %q is missing %q — the operator cannot act on it", got, want)
+		}
+	}
+
+	if s := summariseDenials(nil); s == "" {
+		t.Error("empty denials produced an empty summary; the pause reason would end in a dangling separator")
+	}
+
+	// Many denials must stay readable in a pause banner.
+	many := make([]DenialRecord, 7)
+	for i := range many {
+		many[i] = DenialRecord{ToolName: "bash", Command: "cmd", Rule: "bash_allowlist"}
+	}
+	if s := summariseDenials(many); !strings.Contains(s, "and 4 more") {
+		t.Errorf("summary %q should truncate to 3 plus a count", s)
+	}
+}
+
+// TestDeniedByDenylist separates an agent guessing a command (allowlist miss —
+// routine, must not halt the queue) from an agent reaching for something
+// explicitly forbidden (denylist hit — always warrants a human).
+func TestDeniedByDenylist(t *testing.T) {
+	allowlistMiss := []DenialRecord{{ToolName: "bash", Rule: "bash_allowlist",
+		Command: `grep -r "tech-stacks/go-vue.md" .`}}
+	if deniedByDenylist(allowlistMiss) {
+		t.Error("an allowlist miss must NOT count as a denylist hit — it would pause the queue on routine guessing")
+	}
+
+	denylistHit := []DenialRecord{{ToolName: "bash", Rule: "bash_denylist",
+		Command: "sudo rm -rf /"}}
+	if !deniedByDenylist(denylistHit) {
+		t.Error("a denylist hit MUST be recognised — this is the case that always needs a human")
+	}
+
+	// Mixed: one forbidden attempt among routine misses still escalates.
+	mixed := append(append([]DenialRecord{}, allowlistMiss...), denylistHit...)
+	if !deniedByDenylist(mixed) {
+		t.Error("a denylist hit must not be masked by surrounding allowlist misses")
+	}
+
+	if deniedByDenylist(nil) {
+		t.Error("no denials must not be treated as a denylist hit")
+	}
+}

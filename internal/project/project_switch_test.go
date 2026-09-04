@@ -86,6 +86,28 @@ func agentByName(t *testing.T, p *Project, name string) config.AgentConfig {
 	return ag
 }
 
+// assertConfigYAMLUnchangedAndNoNewCommits confirms the central design shift
+// invariant: no switch/restore/template-apply operation writes
+// lifecycle/config.yaml or creates a git commit — declared intent is
+// untouched and all live state lives in operations.yaml.
+func assertConfigYAMLUnchangedAndNoNewCommits(t *testing.T, p *Project) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(p.Entry.Path, "lifecycle", "config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(raw) != providerSwitchTestConfig {
+		t.Error("expected lifecycle/config.yaml to be byte-for-byte unchanged")
+	}
+	commits, err := p.Git.Log("lifecycle/config.yaml", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(commits) != 1 {
+		t.Fatalf("expected only the initial commit to lifecycle/config.yaml, got %d: %+v", len(commits), commits)
+	}
+}
+
 func TestSwitchAgentProvider_ManualSwitch(t *testing.T) {
 	p := openTestProjectWithGit(t)
 
@@ -93,29 +115,24 @@ func TestSwitchAgentProvider_ManualSwitch(t *testing.T) {
 		t.Fatalf("SwitchAgentProvider: %v", err)
 	}
 
+	// Declared config is untouched — it remains the source of primary intent.
 	ag := agentByName(t, p, "analyst-agent")
-	if ag.Provider != "gemini-cloud" || ag.Model != "gemini-2.5-flash" {
-		t.Fatalf("expected switched provider/model, got %+v", ag)
-	}
-	if ag.PrimaryProvider != "" {
-		t.Errorf("manual switch (isFailover=false) should not stash a primary, got %q", ag.PrimaryProvider)
+	if ag.Provider != "anthropic-cloud" || ag.Model != "claude-3-7-sonnet" {
+		t.Fatalf("lifecycle/config.yaml must not be mutated by a switch, got %+v", ag)
 	}
 
-	raw, err := os.ReadFile(filepath.Join(p.Entry.Path, "lifecycle", "config.yaml"))
-	if err != nil {
-		t.Fatal(err)
+	state, ok := p.Operations().AgentState("analyst-agent")
+	if !ok {
+		t.Fatal("expected operations.yaml to record the active override")
 	}
-	if !strings.Contains(string(raw), "provider: gemini-cloud") {
-		t.Error("expected disk to reflect the switched provider")
+	if state.Active.Provider != "gemini-cloud" || state.Active.Model != "gemini-2.5-flash" {
+		t.Fatalf("expected switched active provider/model, got %+v", state)
+	}
+	if state.Primary.Provider != "anthropic-cloud" {
+		t.Errorf("expected primary snapshotted from declared config, got %q", state.Primary.Provider)
 	}
 
-	commits, err := p.Git.Log("lifecycle/config.yaml", 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(commits) == 0 || !strings.HasPrefix(commits[0].Message, "switch(agent): analyst-agent -> gemini-cloud/gemini-2.5-flash") {
-		t.Fatalf("expected a switch(agent) commit, got %+v", commits)
-	}
+	assertConfigYAMLUnchangedAndNoNewCommits(t, p)
 }
 
 func TestSwitchAgentProvider_FailoverStashesPrimary(t *testing.T) {
@@ -125,21 +142,26 @@ func TestSwitchAgentProvider_FailoverStashesPrimary(t *testing.T) {
 		t.Fatalf("SwitchAgentProvider: %v", err)
 	}
 
-	ag := agentByName(t, p, "analyst-agent")
-	if ag.Provider != "gemini-cloud" || ag.Model != "gemini-2.5-flash" {
-		t.Fatalf("expected switched provider/model, got %+v", ag)
+	state, ok := p.Operations().AgentState("analyst-agent")
+	if !ok {
+		t.Fatal("expected operations.yaml to record the active override")
 	}
-	if ag.PrimaryProvider != "anthropic-cloud" || ag.PrimaryModel != "claude-3-7-sonnet" {
-		t.Fatalf("expected primary stashed to original provider/model, got %+v", ag)
+	if state.Active.Provider != "gemini-cloud" || state.Active.Model != "gemini-2.5-flash" {
+		t.Fatalf("expected switched active provider/model, got %+v", state)
+	}
+	if state.Primary.Provider != "anthropic-cloud" || state.Primary.Model != "claude-3-7-sonnet" {
+		t.Fatalf("expected primary stashed to original provider/model, got %+v", state)
+	}
+	if !state.IsFailedOver() {
+		t.Error("expected IsFailedOver() true")
 	}
 
-	commits, err := p.Git.Log("lifecycle/config.yaml", 5)
-	if err != nil {
-		t.Fatal(err)
+	hist := p.Operations().HistorySnapshot()
+	if len(hist) != 1 || hist[0].Action != "failover" {
+		t.Fatalf("expected one failover history entry, got %+v", hist)
 	}
-	if len(commits) == 0 || !strings.HasPrefix(commits[0].Message, "failover(agent): analyst-agent anthropic-cloud -> gemini-cloud") {
-		t.Fatalf("expected a failover(agent) commit, got %+v", commits)
-	}
+
+	assertConfigYAMLUnchangedAndNoNewCommits(t, p)
 }
 
 func TestRestoreAgentProvider(t *testing.T) {
@@ -152,21 +174,22 @@ func TestRestoreAgentProvider(t *testing.T) {
 		t.Fatalf("RestoreAgentProvider: %v", err)
 	}
 
-	ag := agentByName(t, p, "analyst-agent")
-	if ag.Provider != "anthropic-cloud" || ag.Model != "claude-3-7-sonnet" {
-		t.Fatalf("expected restored to primary provider/model, got %+v", ag)
-	}
-	if ag.PrimaryProvider != "" || ag.PrimaryModel != "" {
-		t.Fatalf("expected primary fields cleared after restore, got %+v", ag)
+	if _, ok := p.Operations().AgentState("analyst-agent"); ok {
+		t.Fatal("expected operations.yaml override cleared after restore")
 	}
 
-	commits, err := p.Git.Log("lifecycle/config.yaml", 5)
-	if err != nil {
-		t.Fatal(err)
+	// Declared config was never touched, so it already reads as the primary.
+	ag := agentByName(t, p, "analyst-agent")
+	if ag.Provider != "anthropic-cloud" || ag.Model != "claude-3-7-sonnet" {
+		t.Fatalf("expected declared config to still read primary provider/model, got %+v", ag)
 	}
-	if len(commits) == 0 || !strings.HasPrefix(commits[0].Message, "restore(agent): analyst-agent restored to anthropic-cloud") {
-		t.Fatalf("expected a restore(agent) commit, got %+v", commits)
+
+	hist := p.Operations().HistorySnapshot()
+	if len(hist) != 2 || hist[1].Action != "restore" {
+		t.Fatalf("expected failover then restore history entries, got %+v", hist)
 	}
+
+	assertConfigYAMLUnchangedAndNoNewCommits(t, p)
 }
 
 func TestRestoreAgentProvider_NotInFailover(t *testing.T) {
@@ -189,18 +212,15 @@ func TestApplyProviderTemplate(t *testing.T) {
 		t.Fatalf("expected 1 agent updated, got %d", n)
 	}
 
-	ag := agentByName(t, p, "analyst-agent")
-	if ag.Provider != "gemini-cloud" || ag.Model != "gemini-2.5-flash" {
-		t.Fatalf("expected template-applied provider/model, got %+v", ag)
+	state, ok := p.Operations().AgentState("analyst-agent")
+	if !ok {
+		t.Fatal("expected operations.yaml to record the template-applied override")
+	}
+	if state.Active.Provider != "gemini-cloud" || state.Active.Model != "gemini-2.5-flash" {
+		t.Fatalf("expected template-applied provider/model, got %+v", state)
 	}
 
-	commits, err := p.Git.Log("lifecycle/config.yaml", 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(commits) == 0 || !strings.HasPrefix(commits[0].Message, "template(provider): applied local-ai") {
-		t.Fatalf("expected a template(provider) commit, got %+v", commits)
-	}
+	assertConfigYAMLUnchangedAndNoNewCommits(t, p)
 }
 
 func TestApplyProviderTemplate_UnknownTemplate(t *testing.T) {

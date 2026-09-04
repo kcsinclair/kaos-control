@@ -8,6 +8,7 @@ import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { useTestingStore } from '@/stores/testing'
 import { useAppStore } from '@/stores/app'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import { api } from '@/api/client'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
@@ -33,6 +34,7 @@ import {
   BarChart3,
   BookOpen,
   Wand2,
+  Undo2,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import SidebarTooltip from '@/components/ui/SidebarTooltip.vue'
@@ -44,6 +46,7 @@ const uiStore = useUiStore()
 const authStore = useAuthStore()
 const testingStore = useTestingStore()
 const appStore = useAppStore()
+const providerSwitchStore = useProviderSwitchStore()
 
 const faviconSrc = `${import.meta.env.BASE_URL}favicon-32x32.png`
 
@@ -108,6 +111,11 @@ const navSections = computed((): NavSection[] => {
     { label: 'Config', to: `/p/${p}/config`,          icon: Settings },
     { label: 'Providers', to: `/p/${p}/settings/providers`, icon: Server },
   ]
+  // Failback screen (FR-9.2) only makes sense once a secondary is configured
+  // for at least one agent — same gating as the header's status button.
+  if (providerSwitchStore.hasSecondaryConfigured) {
+    system.push({ label: 'Failback', to: `/p/${p}/failback`, icon: Undo2 })
+  }
   if (hasDevOpsAccess) {
     system.push({ label: 'DevOps', to: `/p/${p}/devops`, icon: Layers })
   }

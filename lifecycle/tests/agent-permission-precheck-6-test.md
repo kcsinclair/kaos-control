@@ -1,10 +1,10 @@
 ---
-title: "Tests — Claude Code Permission-Mode Precheck"
+title: Tests — Claude Code Permission-Mode Precheck
 type: test
 status: approved
 lineage: agent-permission-precheck
-parent: lifecycle/test-plans/agent-permission-precheck-5-test.md
 created: "2026-05-12T16:30:00+10:00"
+parent: lifecycle/test-plans/agent-permission-precheck-5-test.md
 labels:
     - agent
     - reliability

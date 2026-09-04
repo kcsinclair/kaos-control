@@ -16,13 +16,15 @@ import (
 
 // File is the on-disk representation of a release markdown file.
 type File struct {
-	Title     string
-	Slug      string
-	Status    string
-	StartDate *time.Time
-	EndDate   *time.Time
-	UpdatedAt time.Time
-	Body      string
+	Title       string
+	Slug        string
+	Status      string
+	Goal        string
+	Description string
+	StartDate   *time.Time
+	EndDate     *time.Time
+	UpdatedAt   time.Time
+	Body        string
 }
 
 var (
@@ -58,12 +60,14 @@ func Parse(path string, raw []byte) (*File, error) {
 	body := strings.TrimSpace(rest[closeIdx+4:])
 
 	var fm struct {
-		Title     string `yaml:"title"`
-		Type      string `yaml:"type"`
-		Status    string `yaml:"status"`
-		StartDate string `yaml:"start_date"`
-		EndDate   string `yaml:"end_date"`
-		UpdatedAt string `yaml:"updated_at"`
+		Title       string `yaml:"title"`
+		Type        string `yaml:"type"`
+		Status      string `yaml:"status"`
+		Goal        string `yaml:"goal"`
+		Description string `yaml:"description"`
+		StartDate   string `yaml:"start_date"`
+		EndDate     string `yaml:"end_date"`
+		UpdatedAt   string `yaml:"updated_at"`
 	}
 	if err := yaml.Unmarshal([]byte(fmYAML), &fm); err != nil {
 		return nil, fmt.Errorf("parsing frontmatter: %w", err)
@@ -90,10 +94,12 @@ func Parse(path string, raw []byte) (*File, error) {
 	}
 
 	f := &File{
-		Title:  fm.Title,
-		Status: fm.Status,
-		Body:   body,
-		Slug:   strings.TrimSuffix(filepath.Base(path), ".md"),
+		Title:       fm.Title,
+		Status:      fm.Status,
+		Goal:        strings.TrimSpace(fm.Goal),
+		Description: strings.TrimSpace(fm.Description),
+		Body:        body,
+		Slug:        strings.TrimSuffix(filepath.Base(path), ".md"),
 	}
 
 	if fm.StartDate != "" {
@@ -127,23 +133,27 @@ func Parse(path string, raw []byte) (*File, error) {
 // releaseFM is used for deterministic YAML key ordering in Marshal.
 // Fields must be declared in the desired output order.
 type releaseFM struct {
-	Title     string `yaml:"title"`
-	Type      string `yaml:"type"`
-	Status    string `yaml:"status"`
-	StartDate string `yaml:"start_date,omitempty"`
-	EndDate   string `yaml:"end_date,omitempty"`
-	UpdatedAt string `yaml:"updated_at"`
+	Title       string `yaml:"title"`
+	Type        string `yaml:"type"`
+	Status      string `yaml:"status"`
+	Goal        string `yaml:"goal,omitempty"`
+	Description string `yaml:"description,omitempty"`
+	StartDate   string `yaml:"start_date,omitempty"`
+	EndDate     string `yaml:"end_date,omitempty"`
+	UpdatedAt   string `yaml:"updated_at"`
 }
 
 // Marshal serialises f to a markdown file with YAML frontmatter.
-// Keys are written in deterministic order: title, type, status,
-// start_date, end_date, updated_at.
+// Keys are written in deterministic order: title, type, status, goal,
+// description, start_date, end_date, updated_at.
 func (f *File) Marshal() ([]byte, error) {
 	fm := releaseFM{
-		Title:     f.Title,
-		Type:      "release",
-		Status:    f.Status,
-		UpdatedAt: f.UpdatedAt.UTC().Format(time.RFC3339),
+		Title:       f.Title,
+		Type:        "release",
+		Status:      f.Status,
+		Goal:        f.Goal,
+		Description: f.Description,
+		UpdatedAt:   f.UpdatedAt.UTC().Format(time.RFC3339),
 	}
 	if f.StartDate != nil {
 		fm.StartDate = f.StartDate.Format("2006-01-02")

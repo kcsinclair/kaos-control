@@ -1,10 +1,10 @@
 ---
 title: Sidecar Agent Drivers (LangChain, Aider, Goose, …)
 type: idea
-status: blocked
+status: draft
 lineage: sidecar-agent-drivers
-priority: medium
 created: "2026-05-14T10:15:00+10:00"
+priority: medium
 labels:
     - agent
     - architecture
@@ -157,7 +157,7 @@ venv` happens on first agent run".
 Step 1 is maybe an hour of work and tells us whether the pattern
 feels right before we invest in the Python runner properly.
 
-## Open Questions
+## Potential Questions
 
 - Sandbox enforcement: in-Python (fast, but trust boundary inside the
   subprocess) or stdin-protocol callback to Go (safe, but more

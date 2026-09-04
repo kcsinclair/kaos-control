@@ -22,3 +22,6 @@ tests/web/test-results/
 .env
 .env.*
 !.env.example
+
+# kaos-control operational state (failover/switchover) — runtime state, not config
+operations.yaml

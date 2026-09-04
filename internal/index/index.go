@@ -41,7 +41,9 @@ type Transitioner interface {
 // would never reach them (e.g. a draft with "## Open questions" stays unblocked).
 // Bumped to 7 to back-fill the new rice_score column for every existing
 // artifact — the mtime/SHA guards would otherwise skip unchanged files.
-const schemaVersion = 7
+// Bumped to 8 to add the goal/description columns to releases, rebuilt
+// from disk rather than an in-place ALTER TABLE (index is a cache).
+const schemaVersion = 8
 
 // Index wraps the SQLite database for one project.
 type Index struct {
@@ -1458,11 +1460,30 @@ func (idx *Index) ListAgentRunsByTargetPath(targetPath string) ([]*AgentRunRow, 
 	return out, rows.Err()
 }
 
-// RecoverRunningRuns marks any runs still in status=running as failed (called on startup).
-func (idx *Index) RecoverRunningRuns() error {
+// RecoverRunningRuns marks any runs still in status=running as failed (called on
+// startup). Such a run was in flight when the process died or was restarted, so
+// its exit code, stderr and terminal result were never captured — leaving a row
+// that is indistinguishable from a genuine failure. Record an explicit reason
+// and remediation so the operator can tell the difference: the agent may in fact
+// have completed and committed its work (observed: run 2073eaa29f90f088 finished
+// successfully one second before a restart, yet showed only "failed" with a NULL
+// exit code and empty stderr).
+//
+// reason/remediation are supplied by the caller to avoid an index -> agent
+// package dependency.
+func (idx *Index) RecoverRunningRuns(reason string, remediation []string) error {
+	remediationJSON := ""
+	if len(remediation) > 0 {
+		if b, err := json.Marshal(remediation); err == nil {
+			remediationJSON = string(b)
+		}
+	}
 	_, err := idx.db.Exec(
-		`UPDATE agent_runs SET status='failed', finished_at=? WHERE status='running'`,
-		time.Now().Unix(),
+		`UPDATE agent_runs
+		 SET status='failed', finished_at=?, failure_reason=?,
+		     remediation_json=NULLIF(?, '')
+		 WHERE status='running'`,
+		time.Now().Unix(), reason, remediationJSON,
 	)
 	return err
 }
@@ -2114,6 +2135,8 @@ CREATE TABLE releases (
     name        TEXT NOT NULL,
     slug        TEXT NOT NULL DEFAULT '',
     status      TEXT NOT NULL DEFAULT 'planned',
+    goal        TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
     start_date  TEXT,
     end_date    TEXT,
     created_at  TEXT NOT NULL,

@@ -26,11 +26,12 @@ const (
 )
 
 // TestSecrets_FailoverAudit (FS1): drives a full automated-failover cycle
-// (config mutation, git commit, WS broadcast, REST responses) using
-// providers whose app-level api_key is set, then asserts none of those
-// keys appear anywhere in: lifecycle/config.yaml on disk, the
-// lifecycle/config.yaml git commit log, buffered WebSocket event payloads,
-// or the queue/status REST response bodies.
+// (operations.yaml mutation, WS broadcast, REST responses) using providers
+// whose app-level api_key is set, then asserts none of those keys appear
+// anywhere in: lifecycle/config.yaml on disk, operations.yaml on disk (the
+// new runtime-state store — Milestone 1's NFR-1), the git commit log,
+// buffered WebSocket event payloads, or the queue/status REST response
+// bodies.
 func TestSecrets_FailoverAudit(t *testing.T) {
 	gemini := newMockProvider(t, true)
 	providers := []config.Provider{
@@ -45,6 +46,7 @@ func TestSecrets_FailoverAudit(t *testing.T) {
 	env := newFailoverTestEnv(t, failoverAutoCfgYAML, providers, []seedArtifact{
 		{relPath: "lifecycle/ideas/fs1-idea-1.md", content: makeApprovedArtifact("FS1 Idea", "idea", "fs1-idea")},
 	})
+	beforeSHA := env.headSHA()
 
 	ws := env.connectProjectWS()
 
@@ -66,14 +68,25 @@ func TestSecrets_FailoverAudit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	reportResp := env.doRequest("GET", "/api/p/testproject/reports/failover", nil)
+	requireStatus(t, reportResp, 200)
+	reportBody, err := readBodyString(reportResp)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	// 1. lifecycle/config.yaml on disk.
+	// 1. lifecycle/config.yaml on disk — never touched by a switch/failover.
 	assertNoSecret(t, "lifecycle/config.yaml", env.readConfigYAML())
 
-	// 2. git commit log for lifecycle/config.yaml.
+	// 2. operations.yaml on disk — the new runtime-state store that actually
+	// records the switch; it carries provider/model names only (NFR-1).
+	assertNoSecret(t, "operations.yaml", env.readOperationsYAML())
+
+	// 3. git commit log — unaffected either way, since neither file is ever
+	// committed by a switch/failover.
 	assertNoSecret(t, "git commit log", strings.Join(env.gitLogMessages(20), "\n"))
 
-	// 3. Buffered WebSocket event payloads.
+	// 4. Buffered WebSocket event payloads.
 	drained := drainEvents(ws)
 	wsJSON, err := json.Marshal(drained)
 	if err != nil {
@@ -81,8 +94,23 @@ func TestSecrets_FailoverAudit(t *testing.T) {
 	}
 	assertNoSecret(t, "WS event payloads", string(wsJSON))
 
-	// 4. REST response bodies.
+	// 5. REST response bodies.
 	assertNoSecret(t, "GET provider-switch/status response", statusBody)
+	assertNoSecret(t, "GET reports/failover response", reportBody)
+
+	// Milestone 1's git-isolation guarantee, exercised end-to-end here since
+	// this is the one test that actually drives a real failover: the switch
+	// landed in operations.yaml only — no commit, and (given the project's
+	// .gitignore covers it, the documented convention) it never shows up as
+	// a tracked/untracked change either.
+	if got := env.headSHA(); got != beforeSHA {
+		t.Errorf("expected no git commit from the failover, HEAD moved from %s to %s", beforeSHA, got)
+	}
+	for _, f := range env.modifiedFiles() {
+		if f == "operations.yaml" {
+			t.Error("operations.yaml must never appear in git status")
+		}
+	}
 }
 
 // assertNoSecret fails the test if either test API key literal appears in

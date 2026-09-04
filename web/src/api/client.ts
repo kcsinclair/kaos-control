@@ -7,6 +7,10 @@ export class ApiError extends Error {
     public readonly code: string,
     message: string,
     public readonly status: number,
+    /** Full parsed JSON response body, for endpoints that attach structured
+     *  detail beyond {code, message} (e.g. the FR-8.2 running-jobs rejection's
+     *  `running_jobs` array). */
+    public readonly body?: unknown,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -77,7 +81,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       }
     }
     const err: ApiErrorBody = data?.error ?? { code: 'unknown', message: res.statusText }
-    throw new ApiError(err.code, err.message, res.status)
+    throw new ApiError(err.code, err.message, res.status, data)
   }
 
   return data as T

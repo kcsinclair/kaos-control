@@ -5,6 +5,7 @@ package project
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -21,20 +22,25 @@ const recoveryProbeTimeout = 3 * time.Second
 // required before a primary provider is announced as recovered.
 const recoveryRecoveredThreshold = 2
 
-// RecoveryProber is a background goroutine that, whenever at least one agent
-// is operating in failover (primary_provider set), periodically re-probes
-// each such primary provider's reachability. After recoveryRecoveredThreshold
-// consecutive healthy probes it broadcasts provider.primary_recovered and
-// records a feed notification so an operator can restore the agent.
+// RecoveryProber is a background goroutine that periodically probes the
+// reachability of every provider bound to any configured agent — in every
+// mode, including single-provider (agent-switchover-and-failover FR-5.1) —
+// and records the result to operations.yaml (FR-5.2). Whenever at least one
+// agent is operating in failover, it additionally announces
+// provider.primary_recovered for that agent's primary once
+// recoveryRecoveredThreshold consecutive healthy probes are observed —
+// gated on any recorded rate-limit reset time so a quota failover doesn't
+// look "recovered" merely because /v1/models responds (FR-9.3).
 //
-// It stays idle — no network traffic at all — whenever no agent is in
-// failover, and re-checks that condition every probe interval.
+// It stays idle — no network traffic at all — whenever no agent is
+// configured at all, and re-checks that condition every probe interval.
 type RecoveryProber struct {
 	p          *Project
 	httpClient *http.Client
 
 	mu                 sync.Mutex
-	consecutiveSuccess map[string]int // provider name -> consecutive healthy probes
+	consecutiveSuccess map[string]int  // provider name -> consecutive healthy probes
+	announcedRecovered map[string]bool // provider name -> already announced for the current healthy streak
 }
 
 // newRecoveryProber creates a RecoveryProber bound to p. Not started until Start is called.
@@ -42,6 +48,7 @@ func newRecoveryProber(p *Project) *RecoveryProber {
 	return &RecoveryProber{
 		p:                  p,
 		consecutiveSuccess: make(map[string]int),
+		announcedRecovered: make(map[string]bool),
 	}
 }
 
@@ -74,16 +81,23 @@ func (rp *RecoveryProber) loop(ctx context.Context) {
 	}
 }
 
-// probe scans the current agent roster for primary providers under
-// failover, probes each exactly once, and broadcasts recovery once a
-// provider crosses recoveryRecoveredThreshold consecutive healthy probes.
+// probe scans the current agent roster for every provider in use (primary
+// or fallback, in any mode) and probes each exactly once, writing
+// reachability to operations.yaml. Providers with at least one agent
+// currently failed over from them are additionally candidates for a
+// provider.primary_recovered announcement once they cross
+// recoveryRecoveredThreshold consecutive healthy probes and, for a
+// rate-limit failover, once the recorded reset time has passed.
 func (rp *RecoveryProber) probe(ctx context.Context) {
 	cfg := rp.p.Config()
 
 	names := make(map[string]bool)
 	for _, ag := range cfg.Agents {
-		if ag.PrimaryProvider != "" {
-			names[ag.PrimaryProvider] = true
+		if ag.Provider != "" {
+			names[ag.Provider] = true
+		}
+		if ag.FallbackProvider != "" {
+			names[ag.FallbackProvider] = true
 		}
 	}
 
@@ -91,37 +105,71 @@ func (rp *RecoveryProber) probe(ctx context.Context) {
 	for tracked := range rp.consecutiveSuccess {
 		if !names[tracked] {
 			delete(rp.consecutiveSuccess, tracked)
+			delete(rp.announcedRecovered, tracked)
 		}
 	}
 	rp.mu.Unlock()
 
 	if len(names) == 0 {
-		return // idle — no agent in failover, no network traffic this cycle
+		return // idle — no provider-backed agents configured
 	}
 
+	// Providers with at least one agent currently failed over from them —
+	// only these are candidates for a "recovered" announcement, gated on
+	// the latest recorded rate-limit reset time among them (FR-9.3). A
+	// non-rate-limit failover (ResetsAtUnix == 0) is not quota-gated.
+	failoverGate := make(map[string]int64) // primary provider -> latest resets_at_unix
+	for _, state := range rp.p.Operations().AllAgentStates() {
+		if !state.IsFailedOver() {
+			continue
+		}
+		if _, tracked := failoverGate[state.Primary.Provider]; !tracked || state.ResetsAtUnix > failoverGate[state.Primary.Provider] {
+			failoverGate[state.Primary.Provider] = state.ResetsAtUnix
+		}
+	}
+
+	now := time.Now()
 	for name := range names {
 		prov, ok := rp.findProviderConfig(name)
 		healthy := ok && agent.ProbeProviderHealth(ctx, rp.httpClient, prov, recoveryProbeTimeout)
+
+		if err := rp.p.Operations().SetReachability(name, healthy, now); err != nil {
+			slog.Warn("recovery prober: recording reachability", "project", rp.p.Entry.Name, "provider", name, "err", err)
+		}
 
 		rp.mu.Lock()
 		if healthy {
 			rp.consecutiveSuccess[name]++
 		} else {
 			rp.consecutiveSuccess[name] = 0
+			rp.announcedRecovered[name] = false
 		}
 		count := rp.consecutiveSuccess[name]
+		alreadyAnnounced := rp.announcedRecovered[name]
 		rp.mu.Unlock()
 
-		if count == recoveryRecoveredThreshold {
-			rp.p.Hub.Broadcast(hub.Event{
-				Type: "provider.primary_recovered",
-				Payload: map[string]any{
-					"provider": name,
-					"project":  rp.p.Entry.Name,
-				},
-			})
-			rp.p.insertFeedEvent("primary_recovered", fmt.Sprintf("Primary provider %s has recovered and is ready to be restored.", name))
+		resetsAt, hasFailover := failoverGate[name]
+		if !hasFailover || alreadyAnnounced || count < recoveryRecoveredThreshold {
+			continue
 		}
+		if resetsAt > 0 && now.Before(time.Unix(resetsAt, 0)) {
+			// FR-9.3: quota-gated — do not announce recovery before the
+			// recorded reset time, even with healthy /v1/models probes.
+			continue
+		}
+
+		rp.mu.Lock()
+		rp.announcedRecovered[name] = true
+		rp.mu.Unlock()
+
+		rp.p.Hub.Broadcast(hub.Event{
+			Type: "provider.primary_recovered",
+			Payload: map[string]any{
+				"provider": name,
+				"project":  rp.p.Entry.Name,
+			},
+		})
+		rp.p.insertFeedEvent("primary_recovered", fmt.Sprintf("Primary provider %s has recovered and is ready to be restored.", name))
 	}
 }
 

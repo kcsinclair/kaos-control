@@ -73,3 +73,74 @@ Feature X implementation completed successfully.
     expect(lastTurn.content).toBe('Feature X implementation completed successfully.')
   })
 })
+
+describe('parseLogTurns — claude-code-cli stream-json', () => {
+  // Trimmed from a real run log (aaea9a74bd5b8fe0): header, an assistant event
+  // carrying thinking + tool_use, and the user event carrying the tool_result.
+  const log = [
+    '# kaos-control agent run aaea9a74bd5b8fe0',
+    '# agent=backend-developer role=backend-developer driver=claude-code-cli provider= model=sonnet',
+    '# started=2026-08-27T13:36:03+10:00',
+    JSON.stringify({
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [
+          { type: 'thinking', thinking: 'Need to read the defect first.' },
+          { type: 'text', text: "I'll read the defect." },
+          { type: 'tool_use', id: 'toolu_01', name: 'Read', input: { file_path: '/repo/defect.md' } },
+        ],
+      },
+    }),
+    JSON.stringify({
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [{ tool_use_id: 'toolu_01', type: 'tool_result', content: '1\t---\n2\ttitle: X' }],
+      },
+    }),
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: false }),
+    '# finished=2026-08-27T13:37:04+10:00',
+  ].join('\n')
+
+  it('builds turns from stream-json, which has no "# turn" markers', () => {
+    const turns = parseLogTurns(log)
+    expect(turns).toHaveLength(1)
+    expect(turns[0].role).toBe('assistant')
+    expect(turns[0].tool_calls).toHaveLength(1)
+  })
+
+  it('captures the tool name and arguments', () => {
+    const call = parseLogTurns(log)[0].tool_calls![0]
+    expect(call.name).toBe('Read')
+    expect(call.arguments).toContain('/repo/defect.md')
+  })
+
+  it('attaches the tool_result from the following user event', () => {
+    const call = parseLogTurns(log)[0].tool_calls![0]
+    expect(call.result).toBe('1\t---\n2\ttitle: X')
+  })
+
+  it('labels thinking blocks so they are not read as the reply', () => {
+    const content = parseLogTurns(log)[0].content!
+    expect(content).toContain('[thinking]')
+    expect(content).toContain('Need to read the defect first.')
+    expect(content).toContain("I'll read the defect.")
+  })
+
+  it('ignores partial trailing lines from a still-writing log', () => {
+    expect(() => parseLogTurns(log + '\n{"type":"assist')).not.toThrow()
+    expect(parseLogTurns(log + '\n{"type":"assist')).toHaveLength(1)
+  })
+
+  it('still routes openai-compatible logs to the "# turn" parser', () => {
+    const oai = [
+      '# agent=qa role=qa driver=openai-compatible provider=leia-llamacpp',
+      '# turn 1',
+      '# executing tool bash (id: abc) with args: {"command":"make test-unit"}',
+      '# tool result (abc): ok',
+    ].join('\n')
+    const turns = parseLogTurns(oai)
+    expect(turns[0]?.tool_calls?.[0]?.name).toBe('bash')
+  })
+})

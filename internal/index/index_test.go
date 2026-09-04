@@ -630,3 +630,42 @@ func TestUpdateAgentRunMetrics_UnknownRunID(t *testing.T) {
 	err := idx.UpdateAgentRunMetrics("nonexistent-run-id", m)
 	_ = err // Either nil or error is acceptable; we only care about no panic.
 }
+
+// TestRecoverRunningRuns_RecordsReason pins that a run interrupted by a restart
+// is distinguishable from a genuine failure. Run 2073eaa29f90f088 (tech-writer)
+// completed successfully — is_error:false, terminal_reason "completed", work
+// committed — one second before kaos-control restarted. Crash recovery failed
+// the row, and because it recorded no reason the row was indistinguishable from
+// a real failure: NULL exit code, empty stderr, empty failure_reason.
+func TestRecoverRunningRuns_RecordsReason(t *testing.T) {
+	idx := openTestIndex(t)
+
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID:     "restart-victim",
+		AgentName: "tech-writer",
+		Role:      "tech-writer",
+		Status:    "running",
+		StartedAt: time.Now().Add(-time.Minute),
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+
+	if err := idx.RecoverRunningRuns("interrupted_by_restart",
+		[]string{"kaos-control restarted while this run was in flight."}); err != nil {
+		t.Fatalf("RecoverRunningRuns: %v", err)
+	}
+
+	row, err := idx.GetAgentRun("restart-victim")
+	if err != nil {
+		t.Fatalf("GetAgentRun: %v", err)
+	}
+	if row.Status != "failed" {
+		t.Errorf("status = %q, want failed", row.Status)
+	}
+	if row.FailureReason == nil || *row.FailureReason != "interrupted_by_restart" {
+		t.Errorf("failure_reason = %v, want interrupted_by_restart — without it the row is indistinguishable from a real failure", row.FailureReason)
+	}
+	if len(row.Remediation) == 0 {
+		t.Error("remediation is empty — the operator gets no guidance that the agent may have completed")
+	}
+}

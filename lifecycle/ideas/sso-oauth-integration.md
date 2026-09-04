@@ -10,6 +10,8 @@ labels:
     - security
     - integration
     - backend
+release: KC-Release7
+parent: lifecycle/ideas/openrouter-token-metrics-extraction.md
 ---
 
 # SSO with OAuth Integrations

@@ -46,7 +46,7 @@ Single Go binary with the SPA embedded. Self-hosted. Your artefacts live in your
 ## Who it's for
 
 - **Lead developers** introducing agents into a real team workflow without giving up code review, tests, or release discipline.
-- **CTOs and tech leaders** who want to approve documents rather than tinker with an IDE — the discipline is encoded in `CLAUDE.md` and inherited per project.
+- **CTOs and tech leaders** who want to approve documents rather than tinker with an IDE — the discipline is encoded in `AGENTS.md` and inherited per project.
 - **Founders running a one-person dev shop** who need structure to track what's built and plan what's next.
 - **Product owners** who want vague ideas captured faithfully, traceable through to release.
 
@@ -441,10 +441,10 @@ The fastest path is the CLI scaffolder:
 
 ```bash
 cd /path/to/your/project        # any directory; an existing git repo or a fresh one
-/path/to/dist/kaos-control init -owner-email YOUR_EMAIL  # creates lifecycle/, lifecycle/config.yaml, CLAUDE.md
+/path/to/dist/kaos-control init -owner-email YOUR_EMAIL  # creates lifecycle/, lifecycle/config.yaml, AGENTS.md
 ```
 
-`kaos-control init` creates the standard `lifecycle/` directory tree (`ideas/`, `requirements/`, `backend-plans/`, `frontend-plans/`, `test-plans/`, `tests/`, `defects/`, `releases/`, `sprints/`, `prototypes/`), a skeleton `lifecycle/config.yaml` with the standard role and agent definitions, and a `CLAUDE.md` to guide agent runs in this project.
+`kaos-control init` creates the standard `lifecycle/` directory tree (`ideas/`, `requirements/`, `backend-plans/`, `frontend-plans/`, `test-plans/`, `tests/`, `defects/`, `releases/`, `sprints/`, `prototypes/`), a skeleton `lifecycle/config.yaml` with the standard role and agent definitions, and a `AGENTS.md` to guide agent runs in this project.
 
 Then register the project with kaos-control:
 
@@ -499,7 +499,7 @@ plans/              Project plan + per-change implementation plans
 ## Documentation
 
 - [kaos-control.io](https://kaos-control.io) — project site with screenshots, architecture diagrams, and the full pitch.
-- [CLAUDE.md](CLAUDE.md) — guidance for Claude Code agents working in this repo (commit conventions, lineage rules, build commands).
+- [AGENTS.md](AGENTS.md) — guidance for Claude Code agents working in this repo (commit conventions, lineage rules, build commands).
 - [lifecycle/requirements/Innovation Maker - Making Releases from Ideas-1.md](lifecycle/requirements/Innovation%20Maker%20-%20Making%20Releases%20from%20Ideas-1.md) — authoritative product spec.
 - [plans/PROJECT_PLAN.md](plans/PROJECT_PLAN.md) — living state-of-the-project document.
 

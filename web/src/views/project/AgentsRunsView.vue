@@ -19,6 +19,7 @@ import RunFailureBanner from '@/components/agent/RunFailureBanner.vue'
 import RunSummaryCard from '@/components/agent/RunSummaryCard.vue'
 import RunDenialSummary from '@/components/agent/RunDenialSummary.vue'
 import RawLogModal from '@/components/agent/RawLogModal.vue'
+import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
 import type { AgentSummary, AgentRunRow } from '@/types/api'
@@ -63,10 +64,10 @@ function runDriverLabel(run: AgentRunRow, agents: AgentSummary[]): string {
   return driver ? driverLabel(driver) : ''
 }
 
-function agentHasTokenMetrics(agentName: string): boolean {
-  const driver = store.agents.find((ag) => ag.name === agentName)?.driver
+function agentHasTokenMetrics(run: AgentRunRow): boolean {
+  const driver = runDriverId(run, store.agents)
   if (!driver) return true
-  return driver === 'claude-code-cli' || driver === 'claude-mediated'
+  return driver === 'claude-code-cli' || driver === 'claude-mediated' || driver === 'openai-compatible'
 }
 
 const route = useRoute()
@@ -214,6 +215,11 @@ watch([sortColumn, sortDirection], () => setPage(1))
 // run_id currently being viewed in the full-height RawLogModal (one open at a
 // time across the whole runs table). null = closed.
 const fullLogRunId = ref<string | null>(null)
+
+// run_id currently being viewed in the structured RunDetailModal. Independent
+// of fullLogRunId — the two modals show different things and are opened by
+// separate buttons.
+const detailRunId = ref<string | null>(null)
 
 // Run statuses that have produced a terminal type:result line we can summarise.
 // `running` / `queued` runs don't have one yet so the summary section is hidden.
@@ -449,7 +455,7 @@ onMounted(() => {
                     <RunSummaryCard
                       v-else
                       :result="store.runResults.get(run.run_id) ?? null"
-                      :driver-available="agentHasTokenMetrics(run.agent_name)"
+                      :driver-available="agentHasTokenMetrics(run)"
                     />
                   </div>
                   <!-- Full log — opens in a full-height modal (same component
@@ -457,6 +463,7 @@ onMounted(() => {
                   <div class="detail-section">
                     <div class="detail-label">Run log</div>
                     <button class="btn-link" @click="fullLogRunId = run.run_id">View full log</button>
+                    <button class="btn-link" @click="detailRunId = run.run_id">View run details</button>
                   </div>
                   <div v-if="!run.stderr_tail && !run.artifacts_produced?.length && run.status !== 'running'" class="detail-empty">
                     No output recorded.
@@ -511,6 +518,15 @@ onMounted(() => {
       :project="project"
       :run-id="fullLogRunId"
       @close="fullLogRunId = null"
+    />
+
+    <!-- Structured run details — the same modal the artefact screen opens
+         from its agent-runs list. -->
+    <RunDetailModal
+      v-if="detailRunId"
+      :project="project"
+      :run-id="detailRunId"
+      @close="detailRunId = null"
     />
 
     <!-- Agent config form modal -->
@@ -691,6 +707,8 @@ onMounted(() => {
 .run-detail { background: var(--color-surface); }
 .detail-cell { padding: var(--space-4) var(--space-6) !important; }
 .detail-section { margin-bottom: var(--space-3); }
+/* "View full log" and "View run details" sit side by side. */
+.detail-section .btn-link + .btn-link { margin-left: var(--space-3); }
 .detail-label {
   font-size: 11px;
   font-weight: 600;

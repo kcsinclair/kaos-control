@@ -10,6 +10,8 @@ labels:
     - frontend
     - usability
     - v1
+release: KC-Release7
+parent: lifecycle/ideas/openrouter-token-metrics-extraction.md
 ---
 
 # Manual Idea Capture Without AI Assistance

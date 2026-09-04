@@ -5,12 +5,22 @@ import type {
   FailoverStatus,
   ProviderTemplate,
   SwitchAllPayload,
+  SwitchoverPolicy,
   SwitchProviderPayload,
 } from '@/types/providerSwitch'
 
 export function getFailoverStatus(project: string): Promise<FailoverStatus> {
   return api.get<FailoverStatus>(
     `/p/${encodeURIComponent(project)}/provider-switch/status`,
+  )
+}
+
+// getSwitchoverPolicy returns the project's effective event->action policy
+// (FR-2.4): automated_switchover and one action per classified reason,
+// configured overrides applied on top of the FR-2.3 defaults.
+export function getSwitchoverPolicy(project: string): Promise<SwitchoverPolicy> {
+  return api.get<SwitchoverPolicy>(
+    `/p/${encodeURIComponent(project)}/provider-switch/policy`,
   )
 }
 

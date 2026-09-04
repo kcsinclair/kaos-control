@@ -134,6 +134,11 @@ const router = createRouter({
           component: () => import('@/views/project/ProviderSettingsView.vue'),
         },
         {
+          path: 'failback',
+          name: 'failback',
+          component: () => import('@/views/project/FailbackView.vue'),
+        },
+        {
           path: 'settings/ollama',
           name: 'ollama-settings',
           redirect: (to) => `/p/${to.params.project}/settings/providers`,

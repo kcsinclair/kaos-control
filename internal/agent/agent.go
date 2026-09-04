@@ -117,6 +117,13 @@ type Run struct {
 	// between process start and the first streamed content token. Set by the
 	// Manager for streaming drivers; nil for batch-mode drivers.
 	OnTTFT func(ms int64)
+	// OnProviderDisconnect, when non-nil, is called once per detected
+	// mid-stream disconnect — before any in-loop retry — so the caller can
+	// record it in operations.yaml for the rolling-hour pause threshold
+	// (agent-switchover-and-failover FR-6.3/6.4). A run that retries and
+	// eventually succeeds still reports every disconnect it hit along the
+	// way (FR-6.3).
+	OnProviderDisconnect func(providerName string, at time.Time)
 }
 
 // Process is a handle to a running agent.
@@ -443,6 +450,20 @@ type Manager struct {
 	// nil means queue pausing is not configured.
 	PauseQueue func(reason string)
 
+	// EffectiveProvider resolves an agent's operations.yaml active-provider
+	// override, if any (agent-switchover-and-failover Milestone 2). Returns
+	// ok=false when the agent has no recorded override, in which case the
+	// agent's config-declared provider/model apply unchanged. nil means no
+	// operations store is wired (e.g. in tests) — declared config always
+	// applies.
+	EffectiveProvider func(agentName string) (provider, model string, ok bool)
+
+	// OnProviderDisconnect, when non-nil, records a mid-stream provider
+	// disconnect in operations.yaml (agent-switchover-and-failover
+	// Milestone 5). Wired onto every openai-compatible Run started by
+	// StartRun.
+	OnProviderDisconnect func(providerName string, at time.Time)
+
 	idx     *index.Index
 	git     *kgit.Repo
 	hub     *hub.Hub
@@ -542,7 +563,7 @@ func New(
 		"shell-stub":        &ShellStubDriver{},
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
-	if err := idx.RecoverRunningRuns(); err != nil {
+	if err := idx.RecoverRunningRuns(FailureReasonInterruptedByRestart, interruptedByRestartRemediation); err != nil {
 		slog.Warn("agent manager: error recovering running runs", "err", err)
 	}
 	// Crash recovery: reset orphaned test artifacts left in-qa from a prior crash.
@@ -660,8 +681,19 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	// on the provider before acquiring any resources (semaphore or lineage
 	// lock). A missing model or unreachable endpoint fails fast (<3s) with a
 	// classified run record instead of hanging or corrupting artifact state.
+	// Resolve the effective active provider/model: an operations.yaml
+	// failover/switch override when one is recorded, else the agent's
+	// config-declared provider/model (agent-switchover-and-failover
+	// Milestone 2) — so a run dispatched for a failed-over agent uses its
+	// secondary, not the primary named in lifecycle/config.yaml.
+	var overrideProvider, overrideModel string
+	if m.EffectiveProvider != nil {
+		overrideProvider, overrideModel, _ = m.EffectiveProvider(agentName)
+	}
+	effProvider, effModel := config.EffectiveProvider(*ag, overrideProvider, overrideModel)
+
 	if ag.Driver == "openai-compatible" {
-		if err := m.preflightModelAvailability(ctx, ag, agentName, targetPath, role); err != nil {
+		if err := m.preflightModelAvailability(ctx, effProvider, effModel, agentName, targetPath, role, ag.Driver); err != nil {
 			return "", err
 		}
 	}
@@ -686,14 +718,14 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		relatedTestPath = targetPath
 	}
 
-	providerName := ag.Provider
+	providerName := effProvider
 
 	run := Run{
 		RunID:               runID,
 		AgentName:           agentName,
 		Role:                role,
 		Driver:              ag.Driver,
-		Model:               ag.Model,
+		Model:               effModel,
 		PromptText:          prompt,
 		ProjectRoot:         m.root,
 		AllowedPaths:        ag.AllowedPaths,
@@ -735,6 +767,12 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 				slog.Warn("agent: recording ttft_ms", "run_id", runIDCopy, "err", err)
 			}
 		}
+	}
+
+	// Wire provider-disconnect recording (Milestone 5) for the
+	// openai-compatible driver, the only driver with an in-loop retry path.
+	if ag.Driver == "openai-compatible" && m.OnProviderDisconnect != nil {
+		run.OnProviderDisconnect = m.OnProviderDisconnect
 	}
 
 	// Acquire lineage lock.
@@ -858,33 +896,36 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	return runID, nil
 }
 
-// preflightModelAvailability resolves ag's provider and checks that ag.Model
-// is present on it, before any resource (semaphore, lineage lock) is
-// acquired (local-model-operability FR-2, NFR-1, NFR-3). On a classifiable
-// failure (model missing, endpoint unreachable) it records a failed run row
-// and broadcasts agent.failed so the failure is visible in the UI, then
-// returns an error so the caller aborts the run — without ever touching
-// locks or artifact status. When the model is present but the provider
-// reports it as not yet resident in memory (llama.cpp-style lazy loading),
-// it broadcasts an informational agent.status model_loading event and lets
-// the run proceed normally.
-func (m *Manager) preflightModelAvailability(ctx context.Context, ag *config.AgentConfig, agentName, targetPath, role string) error {
-	if ag.Model == "" {
+// preflightModelAvailability resolves the given provider and checks that
+// model is present on it, before any resource (semaphore, lineage lock) is
+// acquired (local-model-operability FR-2, NFR-1, NFR-3). provider/model are
+// the agent's *effective* active values (operations.yaml override, falling
+// back to config-declared) — see the EffectiveProvider resolution in
+// StartRun — so a failed-over agent is preflighted against its secondary,
+// not its primary. On a classifiable failure (model missing, endpoint
+// unreachable) it records a failed run row and broadcasts agent.failed so
+// the failure is visible in the UI, then returns an error so the caller
+// aborts the run — without ever touching locks or artifact status. When the
+// model is present but the provider reports it as not yet resident in
+// memory (llama.cpp-style lazy loading), it broadcasts an informational
+// agent.status model_loading event and lets the run proceed normally.
+func (m *Manager) preflightModelAvailability(ctx context.Context, provider, model, agentName, targetPath, role, driver string) error {
+	if model == "" {
 		return nil
 	}
 
 	var prov *config.Provider
 	for i := range m.providers {
-		if m.providers[i].Name == ag.Provider {
+		if m.providers[i].Name == provider {
 			prov = &m.providers[i]
 			break
 		}
 	}
 	if prov == nil {
-		return fmt.Errorf("provider %q not found for agent %q", ag.Provider, agentName)
+		return fmt.Errorf("provider %q not found for agent %q", provider, agentName)
 	}
 
-	status, err := probeModelAvailability(ctx, nil, *prov, ag.Model)
+	status, err := probeModelAvailability(ctx, nil, *prov, model)
 	if err != nil {
 		reason := FailureReasonEndpointUnreachable
 		remediation := endpointUnreachableRemediation
@@ -892,7 +933,7 @@ func (m *Manager) preflightModelAvailability(ctx context.Context, ag *config.Age
 			reason = FailureReasonModelNotFound
 			remediation = modelNotFoundRemediation
 		}
-		m.recordPreflightFailure(agentName, targetPath, role, ag.Driver, ag.Provider, reason, remediation, err)
+		m.recordPreflightFailure(agentName, targetPath, role, driver, provider, reason, remediation, err)
 		return fmt.Errorf("preflight: %s: %w", reason, err)
 	}
 
@@ -1016,8 +1057,16 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 					// FR6/Mode-2: prefer the precise typed reset from the most
 					// recent rate_limit_event over the dispatcher's regex parse
 					// of rawText, when one has been observed for this run.
-					if cached, hadCache := m.getRunQuota(run.RunID); hadCache && cached.ResetsAtUnix > 0 {
-						rlPayload["resets_at_unix"] = cached.ResetsAtUnix
+					// agent-switchover-and-failover FR-3.3: also surface the
+					// reset bucket ("five_hour" | "weekly") so a project-wide
+					// failover can record it alongside resets_at_unix.
+					if cached, hadCache := m.getRunQuota(run.RunID); hadCache {
+						if cached.ResetsAtUnix > 0 {
+							rlPayload["resets_at_unix"] = cached.ResetsAtUnix
+						}
+						if cached.Bucket != "" {
+							rlPayload["bucket"] = cached.Bucket
+						}
 					}
 					m.hub.Broadcast(hub.Event{
 						Type:    "queue.rate_limit",
@@ -1363,8 +1412,28 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	_ = m.idx.UpdateAgentRun(row)
 
 	// Pause queue if there were denials (FR16).
+	// Pausing the whole queue on ANY denial proved too blunt: an allowlist miss
+	// is routine — the agent guesses a command, is refused, adapts, and finishes
+	// (run 4d4f8110dbb59ee3 completed successfully yet halted all work). Local
+	// models guess constantly, so that stops the queue continually for a policy
+	// working exactly as intended.
+	//
+	// Pause only when a human is genuinely needed:
+	//   - a DENYLIST hit — the agent attempted something explicitly forbidden,
+	//     which warrants review whether or not the run then succeeded; or
+	//   - the run FAILED while denials occurred — the refusal plausibly
+	//     contributed, so continuing would likely repeat it.
+	// A plain allowlist miss on a successful run is logged and recorded on the
+	// run, but does not stop other work.
 	if hasDenials && m.PauseQueue != nil {
-		m.PauseQueue("denied_tool_calls: run " + run.RunID)
+		runFailed := status != "done"
+		if deniedByDenylist(denials) || runFailed {
+			m.PauseQueue("denied_tool_calls: run " + run.RunID + " — " + summariseDenials(denials))
+		} else {
+			slog.Info("agent: allowlist denials on a successful run — not pausing the queue",
+				"run_id", run.RunID, "agent", run.AgentName, "denials", len(denials),
+				"detail", summariseDenials(denials))
+		}
 	}
 
 	eventType := "agent.finished"
@@ -1642,6 +1711,19 @@ func (m *Manager) RecordDenial(runID string, d Decision, toolName string, toolIn
 	m.mu.Lock()
 	m.deniedCalls[runID] = append(m.deniedCalls[runID], rec)
 	m.mu.Unlock()
+
+	// Log at the moment of denial. Previously this only accumulated in memory,
+	// so a denial that paused the queue left nothing in the server log naming
+	// the tool — the operator saw "paused: denied_tool_calls" with no way to
+	// tell what had been refused or why.
+	slog.Warn("agent: tool call denied",
+		"run_id", runID,
+		"tool", toolName,
+		"rule", d.Rule,
+		"reason", d.Reason,
+		"command", rec.Command,
+		"path", rec.Path,
+	)
 }
 
 // DeniedCalls returns a copy of all denial records for the given run.
@@ -2229,4 +2311,51 @@ func splitPrompt(text string) (system, user string) {
 	}
 
 	return strings.TrimSpace(after[:userIdx]), strings.TrimSpace(after[userIdx+len(userDelim):])
+}
+
+// summariseDenials renders denial records into a short, human-readable reason
+// suitable for a queue-pause message: the tool, what it tried, and the rule that
+// refused it. Truncated so one pathological run cannot produce an unreadable
+// pause banner.
+func summariseDenials(denials []DenialRecord) string {
+	if len(denials) == 0 {
+		return "no details recorded"
+	}
+	const maxShown = 3
+	parts := make([]string, 0, maxShown)
+	for i, d := range denials {
+		if i == maxShown {
+			parts = append(parts, fmt.Sprintf("and %d more", len(denials)-maxShown))
+			break
+		}
+		target := d.Command
+		if target == "" {
+			target = d.Path
+		}
+		if len(target) > 80 {
+			target = target[:80] + "…"
+		}
+		switch {
+		case target != "" && d.Rule != "":
+			parts = append(parts, fmt.Sprintf("%s: %q (rule: %s)", d.ToolName, target, d.Rule))
+		case target != "":
+			parts = append(parts, fmt.Sprintf("%s: %q", d.ToolName, target))
+		default:
+			parts = append(parts, d.ToolName)
+		}
+	}
+	return strings.Join(parts, "; ")
+}
+
+// deniedByDenylist reports whether any denial was an explicit denylist hit, as
+// opposed to a command simply not appearing on the allowlist. The distinction
+// matters for escalation: an allowlist miss is an agent guessing, whereas a
+// denylist hit is an agent reaching for something deliberately forbidden.
+func deniedByDenylist(denials []DenialRecord) bool {
+	for _, d := range denials {
+		if strings.Contains(strings.ToLower(d.Rule), "denylist") {
+			return true
+		}
+	}
+	return false
 }

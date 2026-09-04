@@ -181,6 +181,44 @@ func (repo *Repo) FirstCommitDate(relPath string) (time.Time, error) {
 	return oldest, nil
 }
 
+// CommitsSince returns commits reachable from HEAD whose author date is at
+// or after since, newest first — used to detect whether an interrupted
+// agent run reached its commit step before failing (agent-switchover-and-
+// failover FR-7.1: "the partial-commit race"). Author date (not committer
+// date) is used so a rebase/amend of an old commit doesn't look like new
+// work. Walking stops at the first commit older than since, which is safe
+// for the linear, mostly-append-only history kaos-control produces.
+func (repo *Repo) CommitsSince(since time.Time) ([]*CommitInfo, error) {
+	ref, err := repo.r.Head()
+	if err != nil {
+		return nil, fmt.Errorf("reading HEAD: %w", err)
+	}
+	iter, err := repo.r.Log(&gogit.LogOptions{From: ref.Hash(), Order: gogit.LogOrderCommitterTime})
+	if err != nil {
+		return nil, fmt.Errorf("git log: %w", err)
+	}
+	defer iter.Close()
+
+	var out []*CommitInfo
+	for {
+		c, err := iter.Next()
+		if err != nil {
+			break
+		}
+		if c.Author.When.Before(since) {
+			break
+		}
+		summary := strings.SplitN(c.Message, "\n", 2)[0]
+		out = append(out, &CommitInfo{
+			SHA:     c.Hash.String(),
+			Message: summary,
+			Author:  c.Author.Name,
+			When:    c.Author.When,
+		})
+	}
+	return out, nil
+}
+
 func (repo *Repo) firstCommitDateNative(relPath string) (time.Time, error) {
 	out, err := exec.Command(
 		"git", "-C", repo.root,

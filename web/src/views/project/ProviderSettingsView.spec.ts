@@ -3,6 +3,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
+
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ params: { project: 'testproject' } }),
+  RouterLink: { props: ['to'], template: '<a><slot /></a>' },
+}))
+
 import ProviderSettingsView from './ProviderSettingsView.vue'
 import { useProvidersStore } from '@/stores/providers'
 import { ApiError } from '@/api/client'

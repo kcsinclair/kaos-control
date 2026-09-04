@@ -5,6 +5,7 @@ import { mount, flushPromises, DOMWrapper, enableAutoUnmount } from '@vue/test-u
 import { setActivePinia, createPinia } from 'pinia'
 import type { AgentRunRow } from '@/types/api'
 import { useAgentsStore } from '@/stores/agents'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import * as agentsApi from '@/api/agents'
 import RunDetailModal from '../RunDetailModal.vue'
 
@@ -89,5 +90,68 @@ describe('RunDetailModal — Driver + Provider fields', () => {
     const fields = wrapper.findAll('.rdm-field')
     const driverField = fields.find((f) => f.find('.rdm-field-label').text() === 'Driver')!
     expect(driverField.find('.rdm-field-value').text()).toBe('Claude Mediated')
+  })
+})
+
+// agent-switchover-and-failover frontend plan, Milestone 5 — FR-7.3: a run
+// interrupted with a suspected partial commit is held pending an operator
+// decision (no auto-rerun/auto-rollback); the modal must surface this.
+describe('RunDetailModal — awaiting operator decision (FR-7.3)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.restoreAllMocks()
+    vi.spyOn(agentsApi, 'getRunResult').mockResolvedValue({ result: null })
+    vi.spyOn(agentsApi, 'getRunLog').mockResolvedValue('')
+  })
+
+  it('shows the awaiting-decision banner when this run is the recorded awaiting_decision_job_id', async () => {
+    vi.spyOn(agentsApi, 'getRun').mockResolvedValue({
+      run: makeRun({ status: 'killed' }),
+    })
+    const providerSwitchStore = useProviderSwitchStore()
+    providerSwitchStore.status = {
+      failover_active: false,
+      reachability: {},
+      agents: [
+        {
+          agent: 'agent-a',
+          is_failover: false,
+          active_provider: 'p1',
+          active_model: 'm1',
+          awaiting_decision: true,
+          awaiting_decision_job_id: 'run-1',
+        },
+      ],
+    }
+
+    const wrapper = await mountModal()
+
+    expect(wrapper.find('.rdm-awaiting-decision').exists()).toBe(true)
+    expect(wrapper.find('.rdm-awaiting-decision').text()).toContain('Awaiting operator decision')
+  })
+
+  it('does not show the banner for a different job id', async () => {
+    vi.spyOn(agentsApi, 'getRun').mockResolvedValue({
+      run: makeRun({ status: 'killed' }),
+    })
+    const providerSwitchStore = useProviderSwitchStore()
+    providerSwitchStore.status = {
+      failover_active: false,
+      reachability: {},
+      agents: [
+        {
+          agent: 'agent-a',
+          is_failover: false,
+          active_provider: 'p1',
+          active_model: 'm1',
+          awaiting_decision: true,
+          awaiting_decision_job_id: 'some-other-run',
+        },
+      ],
+    }
+
+    const wrapper = await mountModal()
+
+    expect(wrapper.find('.rdm-awaiting-decision').exists()).toBe(false)
   })
 })

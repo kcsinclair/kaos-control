@@ -91,3 +91,13 @@ func (s *Server) handleGetAgentUsageReport(w http.ResponseWriter, r *http.Reques
 
 	writeJSON(w, http.StatusOK, report)
 }
+
+// handleGetFailoverReport aggregates operations.yaml failover history into
+// per-agent/per-provider failover counts, time on secondary, and
+// time-to-restore (agent-switchover-and-failover FR-10.2).
+// GET /api/p/:project/reports/failover
+func (s *Server) handleGetFailoverReport(w http.ResponseWriter, r *http.Request) {
+	p := projectFromCtx(r.Context())
+	report := reports.FailoverUsage(p.Operations().HistorySnapshot(), time.Now())
+	writeJSON(w, http.StatusOK, report)
+}

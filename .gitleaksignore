@@ -13,3 +13,9 @@
 # commit 51d72d73; ignore those self-references too.
 51d72d736e40b18233f1276aefbd28bd88e197ae:.gitleaksignore:generic-api-key:6
 51d72d736e40b18233f1276aefbd28bd88e197ae:plans/PROJECT_PLAN.md:generic-api-key:13
+
+# A hard-coded test fixture in an integration test that exists to assert the
+# value NEVER appears in an API response — see the assertions at
+# inline_provider_completer_test.go:467 and :478. Not a credential; grants no
+# access.
+4f759131480b29446f7d2a1f27a8108c1015b886:tests/integration/inline_provider_completer_test.go:generic-api-key:115

@@ -77,12 +77,14 @@ func (d *DiskSync) Write(projectRoot string, r *Release) (string, error) {
 	}
 
 	f := &File{
-		Title:     r.Name,
-		Slug:      r.Slug,
-		Status:    r.Status,
-		StartDate: r.StartDate,
-		EndDate:   r.EndDate,
-		UpdatedAt: r.UpdatedAt,
+		Title:       r.Name,
+		Slug:        r.Slug,
+		Status:      r.Status,
+		Goal:        r.Goal,
+		Description: r.Description,
+		StartDate:   r.StartDate,
+		EndDate:     r.EndDate,
+		UpdatedAt:   r.UpdatedAt,
 	}
 	data, err := f.Marshal()
 	if err != nil {

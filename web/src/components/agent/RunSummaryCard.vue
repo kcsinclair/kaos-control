@@ -23,6 +23,11 @@ const errorMessage = computed(() =>
   isError.value ? (props.result?.result ?? '').trim() : '',
 )
 
+const isUsageReported = computed(() => {
+  if (!props.result) return false
+  return props.result.usage_source !== 'none'
+})
+
 function formatMs(ms: number): string {
   if (ms < 1000) return `${ms}ms`
   const totalSeconds = Math.floor(ms / 1000)
@@ -34,6 +39,7 @@ function formatMs(ms: number): string {
 
 const formattedCost = computed(() => {
   if (!props.result) return '—'
+  if (props.result.cost_reported === false) return '—'
   return `$${props.result.total_cost_usd.toFixed(4)}`
 })
 
@@ -45,7 +51,7 @@ const formattedDuration = computed(() => {
 })
 
 const cacheHitRatio = computed<number | null>(() => {
-  if (!props.result) return null
+  if (!props.result || !isUsageReported.value) return null
   const { input_tokens, cache_creation_input_tokens, cache_read_input_tokens } = props.result.usage
   const denominator = cache_read_input_tokens + cache_creation_input_tokens + input_tokens
   if (denominator === 0) return null
@@ -77,7 +83,8 @@ const cacheAriaLabel = computed<string>(() => {
   return `Cache efficiency: ${cacheHitDisplay.value} — ${cacheQuality.value.label}`
 })
 
-function fmtTokens(n: number): string {
+function fmtTokens(n: number | undefined): string {
+  if (n == null) return '0'
   return n.toLocaleString()
 }
 </script>
@@ -107,42 +114,49 @@ function fmtTokens(n: number): string {
          killed and stderr_tail is empty. -->
     <p v-if="errorMessage" class="rsc-error-msg">{{ errorMessage }}</p>
 
-    <!-- Token usage table -->
-    <div class="table-scroll">
-    <table class="rsc-table">
-      <caption class="rsc-table-caption">Token Usage</caption>
-      <tbody>
-        <tr>
-          <td class="rsc-td-label">Input</td>
-          <td class="rsc-td-value">{{ fmtTokens(result.usage.input_tokens) }}</td>
-        </tr>
-        <tr>
-          <td class="rsc-td-label">Cache Creation</td>
-          <td class="rsc-td-value">{{ fmtTokens(result.usage.cache_creation_input_tokens) }}</td>
-        </tr>
-        <tr>
-          <td class="rsc-td-label">Cache Read</td>
-          <td class="rsc-td-value">{{ fmtTokens(result.usage.cache_read_input_tokens) }}</td>
-        </tr>
-        <tr>
-          <td class="rsc-td-label">Output</td>
-          <td class="rsc-td-value">{{ fmtTokens(result.usage.output_tokens) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <!-- State 2: Driver capable but provider reported no usage -->
+    <div v-if="!isUsageReported" class="rsc-usage-unreported">
+      Token usage not reported by this provider
     </div>
 
-    <!-- Cache hit ratio -->
-    <div class="rsc-cache-row">
-      <span class="rsc-cache-label">Cache hit ratio</span>
-      <span class="rsc-cache-value">{{ cacheHitDisplay }}</span>
-      <span
-        v-if="cacheQuality"
-        class="rsc-quality-badge"
-        :data-color="cacheQuality.color"
-        :aria-label="cacheAriaLabel"
-      >{{ cacheQuality.label }}</span>
-    </div>
+    <!-- State 1: Metrics present: Token usage table & cache hit ratio -->
+    <template v-else>
+      <div class="table-scroll">
+      <table class="rsc-table">
+        <caption class="rsc-table-caption">Token Usage</caption>
+        <tbody>
+          <tr>
+            <td class="rsc-td-label">Input</td>
+            <td class="rsc-td-value">{{ fmtTokens(result.usage?.input_tokens) }}</td>
+          </tr>
+          <tr>
+            <td class="rsc-td-label">Cache Creation</td>
+            <td class="rsc-td-value">{{ fmtTokens(result.usage?.cache_creation_input_tokens) }}</td>
+          </tr>
+          <tr>
+            <td class="rsc-td-label">Cache Read</td>
+            <td class="rsc-td-value">{{ fmtTokens(result.usage?.cache_read_input_tokens) }}</td>
+          </tr>
+          <tr>
+            <td class="rsc-td-label">Output</td>
+            <td class="rsc-td-value">{{ fmtTokens(result.usage?.output_tokens) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <!-- Cache hit ratio -->
+      <div class="rsc-cache-row">
+        <span class="rsc-cache-label">Cache hit ratio</span>
+        <span class="rsc-cache-value">{{ cacheHitDisplay }}</span>
+        <span
+          v-if="cacheQuality"
+          class="rsc-quality-badge"
+          :data-color="cacheQuality.color"
+          :aria-label="cacheAriaLabel"
+        >{{ cacheQuality.label }}</span>
+      </div>
+    </template>
 
     <!-- Permission denials (collapsible when long) -->
     <div v-if="result.permission_denials && result.permission_denials.length > 0" class="rsc-denials">
@@ -233,6 +247,13 @@ function fmtTokens(n: number): string {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
+}
+
+.rsc-usage-unreported {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: var(--space-2) 0;
 }
 
 /* Token table */

@@ -270,3 +270,64 @@ func TestCancelPendingOnly(t *testing.T) {
 		t.Errorf("expected ErrCannotCancelRunning, got %v", err)
 	}
 }
+
+func TestDequeueSkipping_SkipsBlockedAgents(t *testing.T) {
+	s := openTestStore(t)
+	_ = s.Enqueue(job("proj", "lifecycle/ideas/a.md", "blocked-agent", "alice@example.com"))
+	_ = s.Enqueue(job("proj", "lifecycle/ideas/b.md", "other-agent", "alice@example.com"))
+
+	got, err := s.DequeueSkipping([]AgentKey{{Project: "proj", Agent: "blocked-agent"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.AgentName != "other-agent" {
+		t.Fatalf("expected other-agent's job to be dequeued, got %+v", got)
+	}
+
+	// The blocked agent's job is still pending, untouched.
+	pending, _ := s.ListByState(StatePending)
+	if len(pending) != 1 || pending[0].AgentName != "blocked-agent" {
+		t.Errorf("expected blocked-agent's job to remain pending, got %+v", pending)
+	}
+}
+
+func TestDequeueSkipping_ScopedByProject(t *testing.T) {
+	s := openTestStore(t)
+	_ = s.Enqueue(job("proj-a", "lifecycle/ideas/a.md", "analyst", "alice@example.com"))
+	_ = s.Enqueue(job("proj-b", "lifecycle/ideas/b.md", "analyst", "alice@example.com"))
+
+	// Blocking "analyst" in proj-a must not affect proj-b's identically-named agent.
+	got, err := s.DequeueSkipping([]AgentKey{{Project: "proj-a", Agent: "analyst"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.Project != "proj-b" {
+		t.Fatalf("expected proj-b's job to be dequeued, got %+v", got)
+	}
+}
+
+func TestDequeueSkipping_AllBlockedReturnsNil(t *testing.T) {
+	s := openTestStore(t)
+	_ = s.Enqueue(job("proj", "lifecycle/ideas/a.md", "blocked-agent", "alice@example.com"))
+
+	got, err := s.DequeueSkipping([]AgentKey{{Project: "proj", Agent: "blocked-agent"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != nil {
+		t.Errorf("expected nil when every pending job is blocked, got %+v", got)
+	}
+}
+
+func TestDequeueSkipping_EmptyBlockedBehavesLikeDequeue(t *testing.T) {
+	s := openTestStore(t)
+	_ = s.Enqueue(job("proj", "lifecycle/ideas/a.md", "analyst", "alice@example.com"))
+
+	got, err := s.DequeueSkipping(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.AgentName != "analyst" {
+		t.Fatalf("expected the only pending job to be dequeued, got %+v", got)
+	}
+}
