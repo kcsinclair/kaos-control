@@ -1,7 +1,7 @@
 ---
 title: Token, cost and usage metrics for openai-compatible (OpenRouter) runs
 type: requirement
-status: blocked
+status: draft
 lineage: openrouter-token-metrics-extraction
 created: "2026-09-04T11:20:00+10:00"
 priority: high
@@ -459,7 +459,7 @@ Map accumulated OpenAI/OpenRouter usage onto the existing `RunResult` /
       ([[adr-0006-mediated-agent-driver-permission-model]])
 - [ ] Legacy pre-change runs render the degraded state without error.
 
-## Open Questions
+## Resolved Questions
 
 1. **Reasoning tokens.** OpenRouter/OpenAI report
    `completion_tokens_details.reasoning_tokens`, and reasoning-heavy models make
@@ -509,3 +509,5 @@ Map accumulated OpenAI/OpenRouter usage onto the existing `RunResult` /
    was never requested), so no backfill is possible. Confirm that leaving them
    as `metrics_available = 0` — rather than deleting or annotating the rows — is
    the accepted end state.
+
+> Is the usage data not in the final output?  If it is not available, then use metrics_available = 0
