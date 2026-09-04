@@ -468,25 +468,32 @@ Map accumulated OpenAI/OpenRouter usage onto the existing `RunResult` /
    [[gemini-cli-stream-json]] FR-6's `thinking_tokens` decision). Do we want a
    dedicated field later — which means widening `RunResultUsage`, the API type,
    the summary card, and adding an `agent_runs` column for every driver?
+
+> Yes roll it in for now, a dedicated field later.
+
 2. **`cache_creation_input_tokens` for Anthropic-via-OpenRouter.** Anthropic
    models proxied through OpenRouter may expose cache-write counts under a
    vendor-specific key. v1 records 0 rather than guessing. Should we probe a
    real response and map it if a stable key exists, accepting a
    provider-specific special case in a generic driver?
+
 3. **Claude-5-family list prices.** `internal/reports/pricing.go` only knows
    `claude-{opus,sonnet,haiku}-4`, while this project runs
    `anthropic/claude-{opus,sonnet}-5` — so even after vendor-prefix stripping
    (FR-10) the input/output cost **split** stays empty, though the total is
    correct. Add the 5-family prices (accepting the staleness risk the file's own
    doc comment warns about), or leave the split blank for unknown families?
+
 4. **BYOK / upstream cost.** When `is_byok` is true, OpenRouter's `cost` is the
    gateway fee, not the model spend (`cost_details.upstream_inference_cost`).
    Should the report show gateway cost only (v1), the sum, or both as separate
    figures?
+
 5. **`stream_options` and switchover.** Should a provider that rejects the usage
    parameters (FR-2 fallback) be surfaced as a capability warning in Provider
    Settings, or is the per-run log note plus `slog.Warn` enough?
    ([[switch-provider]], [[open-provider-support]])
+
 6. **Backfill.** Historical `openai-compatible` runs can never have usage (it
    was never requested), so no backfill is possible. Confirm that leaving them
    as `metrics_available = 0` — rather than deleting or annotating the rows — is
