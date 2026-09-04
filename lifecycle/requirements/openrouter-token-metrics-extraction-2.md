@@ -1,7 +1,7 @@
 ---
 title: Token, cost and usage metrics for openai-compatible (OpenRouter) runs
 type: requirement
-status: approved
+status: planning
 lineage: openrouter-token-metrics-extraction
 created: "2026-09-04T11:20:00+10:00"
 priority: high
