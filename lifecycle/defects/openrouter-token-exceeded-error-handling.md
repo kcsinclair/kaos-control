@@ -1,7 +1,7 @@
 ---
 title: Add handling for OpenRouter token exceeded error
 type: defect
-status: draft
+status: in-development
 lineage: openrouter-token-exceeded-error-handling
 created: "2026-09-04T12:51:51+10:00"
 priority: normal
