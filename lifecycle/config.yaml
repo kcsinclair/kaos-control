@@ -205,8 +205,12 @@ agents:
   - name: requirements-analyst
     role:
       - analyst
-    driver: claude-mediated
-    model: opus
+    provider: openrouter
+    driver: openai-compatible
+    model: anthropic/claude-opus-5
+    max_tool_iterations: 500
+    #driver: claude-mediated
+    #model: opus
     active_status: clarifying
     source_types:
       - idea
@@ -282,8 +286,13 @@ agents:
   - name: planning-analyst
     role:
       - analyst
-    driver: claude-code-cli
-    model: opus
+    provider: openrouter
+    driver: openai-compatible
+    #model: anthropic/claude-opus-5
+    model: google/gemini-3.1-pro-preview
+    max_tool_iterations: 500
+    #driver: claude-code-cli
+    #model: opus
     active_status: planning
     source_types:
       - requirement
@@ -343,8 +352,13 @@ agents:
   - name: backend-developer
     role:
       - backend-developer
-    driver: claude-code-cli
-    model: sonnet
+    provider: openrouter
+    driver: openai-compatible
+    #model: anthropic/claude-sonnet-5
+    model: google/gemini-3.7-flash
+    max_tool_iterations: 500
+    #driver: claude-code-cli
+    #model: sonnet
     active_status: in-development
     done_on_success: true
     source_types:
@@ -400,8 +414,13 @@ agents:
   - name: frontend-developer
     role:
       - frontend-developer
-    driver: claude-code-cli
-    model: sonnet
+    provider: openrouter
+    driver: openai-compatible
+    #model: anthropic/claude-sonnet-5
+    model: google/gemini-3.7-flash
+    max_tool_iterations: 500
+    #driver: claude-code-cli
+    #model: sonnet
     active_status: in-development
     done_on_success: true
     source_types:
@@ -456,8 +475,13 @@ agents:
   - name: test-developer
     role:
       - test-developer
-    driver: claude-code-cli
-    model: sonnet
+    provider: openrouter
+    driver: openai-compatible
+    #model: anthropic/claude-sonnet-5
+    model: google/gemini-3.7-flash
+    max_tool_iterations: 500
+    #driver: claude-code-cli
+    #model: sonnet
     active_status: in-development
     done_on_success: true
     source_types:
@@ -515,11 +539,14 @@ agents:
   - name: qa
     role:
       - qa
-    provider: leia-llamacpp
+    provider: openrouter
     driver: openai-compatible
+    model: openai/gpt-oss-120b
+    max_tool_iterations: 500
+    #provider: leia-llamacpp
+    #driver: openai-compatible
     #model: gemma-4-26B-A4B-it-UD-Q8_K_XL
-    model: gpt-oss-20b-Q8_0
-    max_tool_iterations: 40
+    #model: gpt-oss-20b-Q8_0
     timeout_minutes: 30          # 0 is silently 10m on this driver — set it explicitly
     bash_allowlist:
       - "make test-unit"
@@ -633,8 +660,8 @@ agents:
       - qa
     provider: openrouter
     driver: openai-compatible
-    model: google/gemma-4-26b-a4b-it
-    max_tool_iterations: 40
+    model: google/gemma-4-31b-it
+    max_tool_iterations: 100
     timeout_minutes: 30          # 0 is silently 10m on this driver — set it explicitly
     bash_allowlist:
       - "make test-unit"
@@ -746,8 +773,13 @@ agents:
   - name: tech-writer
     role:
       - tech-writer
-    driver: claude-code-cli
-    model: sonnet
+    provider: openrouter
+    driver: openai-compatible
+    #model: anthropic/claude-sonnet-5
+    model: google/gemini-3.7-flash
+    max_tool_iterations: 500
+    #driver: claude-code-cli
+    #model: sonnet
     active_status: in-development
     done_on_success: true
     source_types:
@@ -802,8 +834,12 @@ agents:
   - name: test-runner
     role:
       - qa
-    driver: claude-code-cli
-    model: sonnet
+    provider: openrouter
+    driver: openai-compatible
+    model: openai/gpt-oss-120b
+    max_tool_iterations: 100
+    #driver: claude-code-cli
+    #model: sonnet
     active_status: ""
     source_types: []
     timeout_minutes: 45
@@ -866,7 +902,9 @@ agents:
     role:
       - product-owner
     driver: inline
-    model: claude-sonnet-4-6
+    provider: openrouter
+    #model: anthropic/claude-sonnet-5
+    model: openai/gpt-oss-120b
     allowed_write_paths:
       - lifecycle/ideas
     prompt_templates:
@@ -953,7 +991,8 @@ agents:
     role:
       - product-owner
     driver: inline
-    model: claude-sonnet-4-6
+    provider: openrouter
+    model: openai/gpt-oss-120b
     active_status: draft
     source_types:
       - idea
@@ -989,7 +1028,8 @@ agents:
     role:
       - product-owner
     driver: inline
-    model: claude-sonnet-4-6
+    provider: openrouter
+    model: openai/gpt-oss-120b
     allowed_write_paths:
       - lifecycle/docs
     prompt_templates:
