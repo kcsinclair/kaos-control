@@ -252,6 +252,7 @@ ADR is required.** Evaluation against standing constraints:
    the header or return a 400 Bad Request? If an error is returned, should the
    driver implement an automatic retry fallback similar to FR-2 in
    [[openrouter-token-metrics-extraction]]?
+
 2. **Dynamic Invalidation vs. Natural TTL:** Is an automatic cache clear desirable
    when a prompt template or agent definition in `lifecycle/config.yaml` is updated,
    or should cache invalidation remain strictly manual / TTL-based?
