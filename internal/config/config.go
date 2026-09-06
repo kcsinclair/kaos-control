@@ -23,15 +23,29 @@ type OllamaInstance struct {
 	APIKey  string `yaml:"api_key,omitempty"`
 }
 
+func (o OllamaInstance) instanceName() string    { return o.Name }
+func (o OllamaInstance) instanceBaseURL() string { return o.BaseURL }
+
+// LlamaCPPInstance is one registered llama.cpp server shared across all projects.
+type LlamaCPPInstance struct {
+	Name    string `yaml:"name"`
+	BaseURL string `yaml:"base_url"`
+	APIKey  string `yaml:"api_key,omitempty"`
+}
+
+func (l LlamaCPPInstance) instanceName() string    { return l.Name }
+func (l LlamaCPPInstance) instanceBaseURL() string { return l.BaseURL }
+
 // App is the top-level application configuration (install-dir/config.yaml).
 type App struct {
-	Server          ServerConfig     `yaml:"server"`
-	Auth            AuthConfig       `yaml:"auth"`
-	ProjectsDir     string           `yaml:"projects_dir"`
-	Limits          LimitsConfig     `yaml:"limits"`
-	DataDir         string           `yaml:"data_dir"` // where app DBs live; defaults to projects_dir/../data
-	OllamaInstances []OllamaInstance `yaml:"ollama_instances,omitempty"`
-	Agent           AppAgentConfig   `yaml:"agent"`
+	Server            ServerConfig       `yaml:"server"`
+	Auth              AuthConfig         `yaml:"auth"`
+	ProjectsDir       string             `yaml:"projects_dir"`
+	Limits            LimitsConfig       `yaml:"limits"`
+	DataDir           string             `yaml:"data_dir"` // where app DBs live; defaults to projects_dir/../data
+	OllamaInstances   []OllamaInstance   `yaml:"ollama_instances,omitempty"`
+	LlamaCPPInstances []LlamaCPPInstance `yaml:"llama_cpp_instances,omitempty"`
+	Agent             AppAgentConfig     `yaml:"agent"`
 }
 
 type ServerConfig struct {
@@ -142,6 +156,33 @@ func LoadApp(path string) (*App, error) {
 	return &cfg, nil
 }
 
+
+
+// validateInstances checks that each instance has a unique name and valid URL.
+// Returns an error describing the first validation failure encountered.
+func validateInstances[T interface{ instanceName() string; instanceBaseURL() string }](namePrefix string, instances []T) error {
+	seen := make(map[string]bool)
+	for i, inst := range instances {
+		name := inst.instanceName()
+		baseURL := inst.instanceBaseURL()
+		if name == "" {
+			return fmt.Errorf("%s[%d]: name must not be empty", namePrefix, i)
+		}
+		if baseURL == "" {
+			return fmt.Errorf("%s[%d] %q: base_url must not be empty", namePrefix, i, name)
+		}
+		u, err := url.ParseRequestURI(baseURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			return fmt.Errorf("%s[%d] %q: base_url %q is not a valid http/https URL", namePrefix, i, name, baseURL)
+		}
+		if seen[name] {
+			return fmt.Errorf("%s: duplicate name %q", namePrefix, name)
+		}
+		seen[name] = true
+	}
+	return nil
+}
+
 func validateApp(cfg *App) error {
 	if cfg.Server.Listen == "" {
 		return fmt.Errorf("server.listen must not be empty")
@@ -175,22 +216,11 @@ func validateApp(cfg *App) error {
 		cfg.Agent.RequireBypassPermissions = &v
 	}
 
-	seen := make(map[string]bool, len(cfg.OllamaInstances))
-	for i, inst := range cfg.OllamaInstances {
-		if inst.Name == "" {
-			return fmt.Errorf("ollama_instances[%d]: name must not be empty", i)
-		}
-		if seen[inst.Name] {
-			return fmt.Errorf("ollama_instances: duplicate name %q", inst.Name)
-		}
-		seen[inst.Name] = true
-		if inst.BaseURL == "" {
-			return fmt.Errorf("ollama_instances[%d] %q: base_url must not be empty", i, inst.Name)
-		}
-		u, err := url.ParseRequestURI(inst.BaseURL)
-		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
-			return fmt.Errorf("ollama_instances[%d] %q: base_url %q is not a valid http/https URL", i, inst.Name, inst.BaseURL)
-		}
+	if err := validateInstances("ollama_instances", cfg.OllamaInstances); err != nil {
+		return err
+	}
+	if err := validateInstances("llama_cpp_instances", cfg.LlamaCPPInstances); err != nil {
+		return err
 	}
 	return nil
 }
@@ -463,6 +493,8 @@ type AgentConfig struct {
 	// Ollama-specific fields (only used when Driver == "ollama").
 	OllamaInstanceName string `yaml:"ollama_instance,omitempty"` // name of OllamaInstance in app config
 	OllamaEndpoint     string `yaml:"ollama_endpoint,omitempty"` // "chat" (default) or "generate"
+	// Llama.cpp-specific fields (only used when Driver == "llama.cpp").
+	LlamaCPPInstanceName string `yaml:"llama_cpp_instance,omitempty"` // name of LlamaCPPInstance in app config
 	// claude-mediated driver fields.
 	// BashAllowlist is a list of glob patterns; when non-empty only matching
 	// commands are permitted. Checked after BashDenylist.
@@ -480,6 +512,9 @@ type AgentConfig struct {
 	// It is the shell command to run as the agent process.
 	// If empty, the stub emits one synthetic result event and exits 0.
 	ShellCommand string `yaml:"shell_command,omitempty"`
+	// Llama.cpp inference params (only used when Driver == "llama.cpp").
+	MaxTokens   int     `yaml:"max_tokens,omitempty"`  // max tokens to generate (0 = model default)
+	Temperature float64 `yaml:"temperature,omitempty"` // temperature for sampling (0.0 = greedy)
 	// claude-env driver fields (only used when Driver == "claude-env").
 	BaseURL   string `yaml:"base_url,omitempty"`
 	AuthToken string `yaml:"auth_token,omitempty"` // secret — must never be logged or echoed
@@ -488,28 +523,31 @@ type AgentConfig struct {
 // agentConfigRaw is used internally to unmarshal AgentConfig and accept both
 // "role" (canonical) and "roles" (alias) YAML keys for the roles list.
 type agentConfigRaw struct {
-	Name               string            `yaml:"name"`
-	Role               []string          `yaml:"role"`
-	Roles              []string          `yaml:"roles"`
-	Driver             string            `yaml:"driver"`
-	Model              string            `yaml:"model,omitempty"`
-	Endpoint           string            `yaml:"endpoint,omitempty"`
-	AllowedPaths       []string          `yaml:"allowed_write_paths,omitempty"`
-	TimeoutMinutes     int               `yaml:"timeout_minutes,omitempty"`
-	GitIdentity        GitIdentity       `yaml:"git_identity"`
-	PromptTemplates    map[string]string `yaml:"prompt_templates,omitempty"`
-	ActiveStatus       string            `yaml:"active_status,omitempty"`
-	DoneOnSuccess      bool              `yaml:"done_on_success,omitempty"`
-	SourceTypes        []string          `yaml:"source_types,omitempty"`
-	OllamaInstanceName string            `yaml:"ollama_instance,omitempty"`
-	OllamaEndpoint     string            `yaml:"ollama_endpoint,omitempty"`
-	BashAllowlist      []string          `yaml:"bash_allowlist,omitempty"`
-	BashDenylist       []string          `yaml:"bash_denylist,omitempty"`
-	OnDenial           string            `yaml:"on_denial,omitempty"`
-	ObserveOnly        bool              `yaml:"observe_only,omitempty"`
-	ShellCommand       string            `yaml:"shell_command,omitempty"`
-	BaseURL            string            `yaml:"base_url,omitempty"`
-	AuthToken          string            `yaml:"auth_token,omitempty"`
+	Name                 string            `yaml:"name"`
+	Role                 []string          `yaml:"role"`
+	Roles                []string          `yaml:"roles"`
+	Driver               string            `yaml:"driver"`
+	Model                string            `yaml:"model,omitempty"`
+	Endpoint             string            `yaml:"endpoint,omitempty"`
+	AllowedPaths         []string          `yaml:"allowed_write_paths,omitempty"`
+	TimeoutMinutes       int               `yaml:"timeout_minutes,omitempty"`
+	GitIdentity          GitIdentity       `yaml:"git_identity"`
+	PromptTemplates      map[string]string `yaml:"prompt_templates,omitempty"`
+	ActiveStatus         string            `yaml:"active_status,omitempty"`
+	DoneOnSuccess        bool              `yaml:"done_on_success,omitempty"`
+	SourceTypes          []string          `yaml:"source_types,omitempty"`
+	OllamaInstanceName   string            `yaml:"ollama_instance,omitempty"`
+	OllamaEndpoint       string            `yaml:"ollama_endpoint,omitempty"`
+	LlamaCPPInstanceName string            `yaml:"llama_cpp_instance,omitempty"`
+	BashAllowlist        []string          `yaml:"bash_allowlist,omitempty"`
+	BashDenylist         []string          `yaml:"bash_denylist,omitempty"`
+	OnDenial             string            `yaml:"on_denial,omitempty"`
+	ObserveOnly          bool              `yaml:"observe_only,omitempty"`
+	ShellCommand         string            `yaml:"shell_command,omitempty"`
+	MaxTokens            int               `yaml:"max_tokens,omitempty"`
+	Temperature          float64           `yaml:"temperature,omitempty"`
+	BaseURL              string            `yaml:"base_url,omitempty"`
+	AuthToken            string            `yaml:"auth_token,omitempty"`
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler so that AgentConfig accepts both
@@ -533,11 +571,14 @@ func (a *AgentConfig) UnmarshalYAML(value *yaml.Node) error {
 	a.SourceTypes = raw.SourceTypes
 	a.OllamaInstanceName = raw.OllamaInstanceName
 	a.OllamaEndpoint = raw.OllamaEndpoint
+	a.LlamaCPPInstanceName = raw.LlamaCPPInstanceName
 	a.BashAllowlist = raw.BashAllowlist
 	a.BashDenylist = raw.BashDenylist
 	a.OnDenial = raw.OnDenial
 	a.ObserveOnly = raw.ObserveOnly
 	a.ShellCommand = raw.ShellCommand
+	a.MaxTokens = raw.MaxTokens
+	a.Temperature = raw.Temperature
 	a.BaseURL = raw.BaseURL
 	a.AuthToken = raw.AuthToken
 
@@ -989,6 +1030,14 @@ func validateProject(cfg *Project) error {
 				a.OllamaEndpoint = "chat"
 			} else if a.OllamaEndpoint != "chat" && a.OllamaEndpoint != "generate" {
 				return fmt.Errorf("project config: agent %q ollama_endpoint must be \"chat\" or \"generate\", got %q", a.Name, a.OllamaEndpoint)
+			}
+		}
+		if a.Driver == "llama.cpp" {
+			if a.LlamaCPPInstanceName == "" {
+				return fmt.Errorf("project config: agent %q has driver=llama.cpp but missing llama_cpp_instance", a.Name)
+			}
+			if a.Model == "" {
+				return fmt.Errorf("project config: agent %q has driver=llama.cpp but missing model", a.Name)
 			}
 		}
 		if a.Driver == "claude-mediated" {

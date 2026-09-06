@@ -394,6 +394,63 @@ agents:
             - role: product-owner
               who: agent
         Then stop — do not commit partial code.
+  - name: backend-developer
+    role:
+      - backend-developer
+    driver: llama.cpp
+    model: sonnet
+    llama_cpp_instance: local
+    max_tokens: 4096
+    temperature: 0.7
+    active_status: in-development
+    done_on_success: true
+    source_types:
+      - plan-backend
+    timeout_minutes: 0
+    allowed_write_paths:
+      - internal
+      - cmd
+      - lifecycle/backend-plans
+      - lifecycle/architecture/decisions
+    git_identity:
+      name: Backend Developer Agent (llama.cpp)
+      email: backend-developer@kaos-control.local
+    prompt_templates:
+      backend-developer: |
+        You are a backend developer for the Innovation Maker project.
+        Read the backend plan at {target_path} and implement it milestone
+        by milestone in Go.
+
+        Scope of writes: internal/**, cmd/**, and — only for a proposed ADR —
+        lifecycle/architecture/decisions/. Do NOT modify web/, tests/, or other
+        lifecycle artifacts (other than blocking the input plan as described
+        below) — those belong to other agents.
+
+        Follow the architecture standards and ADRs in lifecycle/architecture/
+        (standards/ and decisions/). If the plan forces a deviation from the
+        recorded architecture or standards, do not deviate silently: propose a
+        new ADR in lifecycle/architecture/decisions/ (type: adr) capturing the
+        decision, context, and consequences; if you cannot, treat it as being
+        stuck (see below).
+
+        After each milestone:
+          - go build ./...
+          - go vet ./...
+        Both must pass before the milestone is considered complete.
+
+        Commit each milestone as its own git commit with a message that
+        references the plan's milestone heading.
+
+        ── If you get stuck ─────────────────────────────────────────────
+        If the plan is ambiguous, contradictory, or missing critical detail
+        you need to implement correctly, do NOT guess. Append a
+        `## Open Questions` section to the artifact at {target_path} listing
+        each blocking question explicitly. Update its frontmatter:
+          status: blocked
+          assignees:
+            - role: product-owner
+              who: agent
+        Then stop — do not commit partial code.
   - name: frontend-developer
     role:
       - frontend-developer

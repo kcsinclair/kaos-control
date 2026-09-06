@@ -93,7 +93,13 @@ type Run struct {
 	// Ollama-specific fields (only used when Driver == "ollama").
 	OllamaInstanceName string // resolved from AgentConfig.OllamaInstanceName
 	OllamaEndpoint     string // "chat" or "generate"
-	ShellCommand       string // shell-stub driver: command to run (empty = default stub behavior)
+	// Llama.cpp-specific fields (only used when Driver == "llama.cpp").
+	LlamaCPPInstanceName string // resolved from AgentConfig.LlamaCPPInstanceName
+	// ShellCommand is shell-stub driver: command to run (empty = default stub behavior).
+	ShellCommand string
+	// Llama.cpp inference params (only used when Driver == "llama.cpp").
+	MaxTokens   int     // max tokens to generate (0 = model default)
+	Temperature float64 // temperature for sampling (0.0 = greedy)
 	// claude-env driver fields (only used when Driver == "claude-env").
 	BaseURL   string // ANTHROPIC_BASE_URL override for the subprocess
 	AuthToken string // ANTHROPIC_AUTH_TOKEN override — secret, must never be logged or echoed
@@ -446,6 +452,7 @@ func New(
 	root string,
 	logsDir string,
 	ollamaInstances []config.OllamaInstance,
+	llamaCPPInstances []config.LlamaCPPInstance,
 	agentCfg config.AppAgentConfig,
 ) *Manager {
 	if maxConcurrent <= 0 {
@@ -489,6 +496,7 @@ func New(
 		"claude-env":      &ClaudeEnvDriver{},
 		"codex-cli":       &CodexCLIDriver{},
 		"ollama":          &OllamaDriver{Instances: ollamaInstances},
+		"llama.cpp":       &LlamaCPPDriver{Instances: llamaCPPInstances},
 		"gemini":          &GeminiDriver{},
 		"gemini-cli":      &GeminiCliDriver{},
 		"shell-stub":      &ShellStubDriver{},
@@ -619,26 +627,29 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	}
 
 	run := Run{
-		RunID:              runID,
-		AgentName:          agentName,
-		Role:               role,
-		Driver:             ag.Driver,
-		Model:              ag.Model,
-		PromptText:         prompt,
-		ProjectRoot:        m.root,
-		AllowedPaths:       ag.AllowedPaths,
-		GitIdentity:        identity,
-		LogPath:            m.LogPath(runID),
-		TargetPath:         targetPath,
-		ActiveStatus:       ag.ActiveStatus,
-		DoneOnSuccess:      ag.DoneOnSuccess,
-		TimeoutMinutes:     ag.TimeoutMinutes,
-		RelatedTestPath:    relatedTestPath,
-		OllamaInstanceName: ag.OllamaInstanceName,
-		OllamaEndpoint:     ag.OllamaEndpoint,
-		ShellCommand:       ag.ShellCommand,
-		BaseURL:            ag.BaseURL,
-		AuthToken:          ag.AuthToken,
+		RunID:                runID,
+		AgentName:            agentName,
+		Role:                 role,
+		Driver:               ag.Driver,
+		Model:                ag.Model,
+		PromptText:           prompt,
+		ProjectRoot:          m.root,
+		AllowedPaths:         ag.AllowedPaths,
+		GitIdentity:          identity,
+		LogPath:              m.LogPath(runID),
+		TargetPath:           targetPath,
+		ActiveStatus:         ag.ActiveStatus,
+		DoneOnSuccess:        ag.DoneOnSuccess,
+		TimeoutMinutes:       ag.TimeoutMinutes,
+		RelatedTestPath:      relatedTestPath,
+		OllamaInstanceName:   ag.OllamaInstanceName,
+		OllamaEndpoint:       ag.OllamaEndpoint,
+		LlamaCPPInstanceName: ag.LlamaCPPInstanceName,
+		MaxTokens:            ag.MaxTokens,
+		Temperature:          ag.Temperature,
+		ShellCommand:         ag.ShellCommand,
+		BaseURL:              ag.BaseURL,
+		AuthToken:            ag.AuthToken,
 	}
 
 	// Wire TTFT recording for streaming drivers. The callback is called from
