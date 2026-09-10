@@ -14,7 +14,7 @@
     "vite": "^6.4.2",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
