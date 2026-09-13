@@ -4,12 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  undici: ^7.29.0
-  postcss: ^8.5.18
-  linkify-it: ^5.0.2
-  brace-expansion: ^2.1.2
-
 importers:
 
   .:
@@ -54,8 +48,8 @@ importers:
         specifier: ^6.1.0
         version: 6.1.0
       js-yaml:
-        specifier: ^4.3.1
-        version: 4.3.1
+        specifier: ^4.3.2
+        version: 4.3.2
       lucide-vue-next:
         specifier: ^1.0.0
         version: 1.0.0(vue@3.5.33(typescript@5.9.3))
@@ -985,8 +979,8 @@ packages:
     engines: {node: '>=20'}
     deprecated: Missing corresponding tag/release on GitHub
 
-  js-yaml@4.3.1:
-    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
+  js-yaml@4.3.2:
+    resolution: {integrity: sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA==}
     hasBin: true
 
   jsdom@29.1.1:
@@ -2275,7 +2269,7 @@ snapshots:
 
   js-cookie@3.0.6: {}
 
-  js-yaml@4.3.1:
+  js-yaml@4.3.2:
     dependencies:
       argparse: 2.0.1
 
