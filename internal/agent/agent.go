@@ -30,6 +30,7 @@ import (
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/lock"
+	"github.com/kaos-control/kaos-control/internal/sandbox"
 )
 
 // processKiller abstracts graceful process termination for testability.
@@ -623,6 +624,14 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	ag, ok := m.GetAgent(agentName)
 	if !ok {
 		return "", ErrNotFound
+	}
+
+	// target_path comes from the API caller and is later written through
+	// setArtifactStatus and committed, so it must stay inside the project.
+	if targetPath != "" {
+		if _, err := sandbox.Resolve(m.root, targetPath); err != nil {
+			return "", fmt.Errorf("invalid target_path %q: %w", targetPath, err)
+		}
 	}
 
 	// Pick role and prompt template.
@@ -1821,7 +1830,10 @@ func (m *Manager) recoverOrphanedTests() error {
 
 // setArtifactStatus patches the status field of an artifact on disk and re-indexes it.
 func (m *Manager) setArtifactStatus(relPath, status string) error {
-	absPath := filepath.Join(m.root, relPath)
+	absPath, err := sandbox.Resolve(m.root, relPath)
+	if err != nil {
+		return fmt.Errorf("resolving %s: %w", relPath, err)
+	}
 	raw, err := os.ReadFile(absPath)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", relPath, err)

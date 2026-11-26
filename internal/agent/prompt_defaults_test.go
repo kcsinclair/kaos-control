@@ -55,3 +55,25 @@ func TestStartRun_LocalModelPromptFallback(t *testing.T) {
 		t.Fatalf("expected local-model fallback prompt to be used, got: %v", err)
 	}
 }
+
+// target_path is caller-supplied and later written by setArtifactStatus, so
+// StartRun must reject anything that escapes the project root before doing
+// any other work.
+func TestStartRun_RejectsTargetPathOutsideRoot(t *testing.T) {
+	agents := []config.AgentConfig{{
+		Name:         "backend-developer",
+		Roles:        []string{"backend-developer"},
+		Driver:       "shell-stub",
+		Model:        "n/a",
+		ActiveStatus: "in-development",
+	}}
+	mgr, cleanup := newMinimalManager(t, agents, 4)
+	defer cleanup()
+
+	for _, p := range []string{"../outside.md", "lifecycle/../../outside.md", "/etc/passwd"} {
+		_, err := mgr.StartRun(context.Background(), "backend-developer", p, "backend-developer", nil)
+		if err == nil || !strings.Contains(err.Error(), "invalid target_path") {
+			t.Errorf("StartRun(%q): want invalid target_path error, got %v", p, err)
+		}
+	}
+}
