@@ -31,9 +31,9 @@ const releasesStore = useReleasesStore()
 const showCreateReleaseModal = ref(false)
 
 onMounted(() => {
-  projectConfigStore.fetchRoles(props.project)
+  void projectConfigStore.fetchRoles(props.project)
   if (releasesStore.releases.length === 0) {
-    releasesStore.fetch(props.project)
+    void releasesStore.fetch(props.project)
   }
 })
 

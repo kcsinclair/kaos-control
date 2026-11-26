@@ -182,31 +182,64 @@ export interface LockRow {
   last_heartbeat: string
 }
 
-export interface OllamaInstance {
+export interface ProviderConfig {
   name: string
   base_url: string
+  driver: string
   api_key?: string
+  has_api_key?: boolean
+  extra_headers?: Record<string, string>
 }
 
-export interface OllamaHealthResponse {
+export type Provider = ProviderConfig
+
+export interface ProviderHealth {
   ok: boolean
   latency_ms?: number
   error?: string
 }
 
-export interface OllamaModel {
+export interface DiscoveredModel {
+  id: string
   name: string
-  size: number
+  owned_by?: string
+  supports_tools?: boolean
+  supported_parameters?: string[]
+}
+
+export type ProviderModel = DiscoveredModel
+
+export interface ProviderProbeResult {
+  ok: boolean
+  error?: string
+  latency_ms?: number
+  message?: string
+  models: DiscoveredModel[]
+}
+
+export interface AgentConfig {
+  name: string
+  role?: string | string[]
+  roles?: string[]
+  /** driver: 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'inline' | 'claude-env' | 'openai-compatible' */
+  driver: string
+  provider?: string
+  model?: string
+  max_tool_iterations?: number
+  allowed_write_paths?: string[]
+  timeout_minutes?: number
+  git_identity?: { name?: string; email?: string }
+  prompt_templates?: Record<string, string>
 }
 
 export interface AgentSummary {
   name: string
   roles: string[]
-  /** driver: 'ollama' | 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'inline' | 'claude-env' */
+  /** driver: 'claude-code-cli' | 'claude-mediated' | 'codex-cli' | 'gemini' | 'gemini-cli' | 'inline' | 'claude-env' | 'openai-compatible' */
   driver: string
+  provider?: string
   model?: string
-  /** Non-secret base URL exposed by claude-env driver (BE-6); never auth_token. */
-  base_url?: string
+  max_tool_iterations?: number
   active_status?: string
   source_types?: string[]
   allowed_write_paths?: string[]
@@ -216,14 +249,15 @@ export interface AgentSummary {
   done_on_success?: boolean
   endpoint?: string
   shell_command?: string
-  ollama_instance?: string
-  ollama_endpoint?: string
   observe_only?: boolean
   bash_allowlist?: string[]
   bash_denylist?: string[]
   on_denial?: string
-  // auth_token is intentionally never present in this payload — it is a
-  // secret and the server excludes it from GET /agents responses.
+  fallback_provider?: string
+  fallback_model?: string
+  primary_provider?: string
+  primary_model?: string
+  is_failover?: boolean
 }
 
 export interface DenialRecord {
@@ -252,6 +286,32 @@ export interface RunSummary {
   elapsed: number
 }
 
+/**
+ * Structured failure-reason codes (mirrors internal/agent.FailureReason* and
+ * the precheck-specific codes recorded by killAndFail). Loosely typed
+ * (`| string`) so an unclassified/future backend code still type-checks
+ * instead of narrowing the whole union.
+ */
+export type FailureReason =
+  | 'tools_unsupported'
+  | 'model_not_found'
+  | 'model_unloaded'
+  | 'endpoint_unreachable'
+  | 'provider_disconnected'
+  | 'interrupted_by_restart'
+  | 'context_window_exceeded'
+  | 'turn_token_ceiling'
+  | 'max_iterations_reached'
+  | 'auth_error'
+  | 'timeout'
+  | 'permission_mode_default'
+  | 'precheck_timeout'
+  | 'precheck_unknown'
+  | (string & {})
+
+/** Live model-loading/generation phase surfaced by warmup WS events (local-model-operability FR-5). */
+export type WarmupState = 'model_loading' | 'warming_up' | 'generating'
+
 export interface AgentRunRow {
   run_id: string
   agent_name: string
@@ -264,15 +324,46 @@ export interface AgentRunRow {
   stderr_tail: string
   artifacts_produced: string[]
   /** Stable reason code on failure; null on success / pending. */
-  failure_reason?: 'permission_mode_default' | 'precheck_timeout' | string | null
+  failure_reason?: FailureReason | null
   /** Set when failure_reason === 'permission_mode_default'. */
   observed_permission_mode?: string | null
   /** Set on precheck-related failures; up to ~5 short remediation lines. */
   remediation?: string[] | null
+  /** Contextual failure details (already secret-masked server-side); shape varies by failure_reason. */
+  error_details?: Record<string, unknown> | null
   /** Tool calls denied by the mediated driver permission hooks. */
   denied_tool_calls?: DenialRecord[] | null
+  /** Driver id that executed this run, recorded at run-start (immutable). */
+  driver?: string
+  /** Provider name that backed this run; empty for CLI drivers. */
+  provider?: string
   /** Populated for test-runner agent runs. */
   run_summary?: RunSummary
+  /** Time to first token in milliseconds (recorded for streaming drivers). */
+  ttft_ms?: number | null
+  /**
+   * Live warmup/loading phase, populated client-side from agent.status /
+   * agent.progress WS events (never persisted server-side — cleared once the
+   * run reaches a terminal status).
+   */
+  warmup_state?: WarmupState | null
+  warmup_message?: string | null
+}
+
+export interface ToolCallRecord {
+  id: string
+  name: string
+  arguments: string
+  result?: string
+  is_recovered?: boolean
+}
+
+export interface RunTurn {
+  turn_number: number
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content?: string
+  tool_calls?: ToolCallRecord[]
+  is_recovered?: boolean
 }
 
 export interface ArtifactFilter {
@@ -409,6 +500,19 @@ export interface GitStatusResponse {
   head_when?: string
 }
 
+/**
+ * Payload for the `agent.status` WS event (mirrors
+ * Manager.preflightModelAvailability's broadcast verbatim — local-model-
+ * operability FR-2). Broadcast before the run's `agent.started` event, so it
+ * carries `target_path` rather than `run_id`; consumers match on that.
+ */
+export interface AgentStatusEvent {
+  agent: string
+  target_path: string
+  state: 'model_loading'
+  details?: string
+}
+
 export interface PermissionDecision {
   run_id: string
   tool_name: string
@@ -430,6 +534,7 @@ export type WsEventType =
   | 'lock.released'
   | 'agent.started'
   | 'agent.progress'
+  | 'agent.status'
   | 'agent.finished'
   | 'agent.failed'
   | 'agent.permission'
@@ -453,6 +558,12 @@ export type WsEventType =
   | 'queue.paused'
   | 'queue.resumed'
   | 'agent.quota_status'
+  | 'provider.switched'
+  | 'provider.restored'
+  | 'provider.primary_recovered'
+  | 'provider.failover_project_wide'
+  | 'queue.awaiting_operator_decision'
+  | 'config.reloaded'
 
 /** Payload for the `agent.quota_status` WS event (mirrors the backend wire shape verbatim). */
 export interface QuotaStatusPayload {
@@ -546,6 +657,12 @@ export interface RunResultUsage {
 
 export interface RunResult {
   subtype: string
+  /** Authoritative success/failure flag. Claude Code emits subtype:"success"
+   *  alongside is_error:true (e.g. a mid-response API error), so UI must prefer
+   *  this over `subtype` — see RunSummaryCard. */
+  is_error?: boolean
+  /** Terminal message; carries the reason when is_error is true. */
+  result?: string
   total_cost_usd: number
   duration_ms: number
   duration_api_ms: number
@@ -553,7 +670,49 @@ export interface RunResult {
   usage: RunResultUsage
   permission_denials: unknown[]
   session_id: string
+  /** Diagnostic source of usage metrics: "provider_stream" | "none" */
+  usage_source?: 'provider_stream' | 'none' | string
+  /** False if provider did not report cost; cost renders as '—' instead of '$0.0000' */
+  cost_reported?: boolean
+  driver?: string
+  provider?: string
 }
+
+// agy (gemini-cli) stream-json progress events, discriminated by `event`
+// (not `type`), with the payload nested under a key matching the event
+// name. See the verified event schema in gemini-cli-stream-json-2.
+export interface AgyInitEvent {
+  event: 'init'
+  conversation_id?: string
+  init?: { cwd?: string; tools?: unknown[] }
+}
+
+export interface AgyStepUpdateEvent {
+  event: 'step_update'
+  step_update?: {
+    conversation_id?: string
+    step_index?: number
+    step_type?: string
+    state?: string
+    text_delta?: string
+    duration_seconds?: number
+    usage?: Record<string, number>
+  }
+}
+
+export interface AgyResultEvent {
+  event: 'result'
+  result?: {
+    conversation_id?: string
+    status?: string
+    response?: string
+    num_turns?: number
+    duration_seconds?: number
+    usage?: Record<string, number>
+  }
+}
+
+export type AgyProgressEvent = AgyInitEvent | AgyStepUpdateEvent | AgyResultEvent
 
 export interface AgentUsageBucketPoint {
   bucket_start: string

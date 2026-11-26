@@ -26,6 +26,8 @@ func openTestDB(t *testing.T) *sql.DB {
 			name        TEXT NOT NULL,
 			slug        TEXT NOT NULL DEFAULT '',
 			status      TEXT NOT NULL DEFAULT 'planned',
+			goal        TEXT NOT NULL DEFAULT '',
+			description TEXT NOT NULL DEFAULT '',
 			start_date  TEXT,
 			end_date    TEXT,
 			created_at  TEXT NOT NULL,

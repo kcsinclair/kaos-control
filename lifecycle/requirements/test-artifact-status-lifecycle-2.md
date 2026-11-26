@@ -1,9 +1,9 @@
 ---
-created: "2026-06-14T17:56:17+10:00"
 title: Test Artifact Status Lifecycle
 type: requirement
 status: planning
 lineage: test-artifact-status-lifecycle
+created: "2026-06-14T17:56:17+10:00"
 parent: ideas/test-artifact-status-lifecycle.md
 labels:
     - test
@@ -11,7 +11,7 @@ labels:
     - qa
     - workflow
     - artefacts
-release: KC-Release4
+release: KC-Release6
 assignees:
     - role: product-owner
       who: agent

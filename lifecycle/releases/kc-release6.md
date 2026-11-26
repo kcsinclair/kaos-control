@@ -1,8 +1,8 @@
 ---
 title: KC-Release6
 type: release
-status: planned
+status: active
 start_date: "2026-08-25"
-end_date: "2026-09-14"
-updated_at: "2026-08-22T02:16:33Z"
+end_date: "2026-09-21"
+updated_at: "2026-08-24T07:42:39Z"
 ---

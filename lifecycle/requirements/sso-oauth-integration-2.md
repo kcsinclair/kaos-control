@@ -11,6 +11,7 @@ labels:
     - security
     - integration
     - backend
+release: KC-Release7
 assignees:
     - role: product-owner
       who: agent

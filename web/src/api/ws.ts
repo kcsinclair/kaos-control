@@ -87,16 +87,18 @@ export function getProjectWs(project: string): WsClient {
 
     // Dynamic imports avoid circular deps (router → stores/auth → api/auth → api/client).
     // On auth failure the client is already marked closed, so no reconnect loop occurs.
-    client.onAuthFailure = async () => {
-      const [{ useAuthStore }, { default: router }] = await Promise.all([
-        import('@/stores/auth'),
-        import('@/router'),
-      ])
-      useAuthStore().clearSession()
-      _clients.delete(project)
-      if (router.currentRoute.value.path !== '/login') {
-        await router.push({ path: '/login', query: { expired: '1' } })
-      }
+    client.onAuthFailure = () => {
+      void (async () => {
+        const [{ useAuthStore }, { default: router }] = await Promise.all([
+          import('@/stores/auth'),
+          import('@/router'),
+        ])
+        useAuthStore().clearSession()
+        _clients.delete(project)
+        if (router.currentRoute.value.path !== '/login') {
+          await router.push({ path: '/login', query: { expired: '1' } })
+        }
+      })()
     }
 
     client.connect()
@@ -124,16 +126,18 @@ export function getAppWs(): WsClient {
     const url = `${proto}//${location.host}/api/ws`
     const client = new WsClient(url)
 
-    client.onAuthFailure = async () => {
-      const [{ useAuthStore }, { default: router }] = await Promise.all([
-        import('@/stores/auth'),
-        import('@/router'),
-      ])
-      useAuthStore().clearSession()
-      _clients.delete(APP_WS_KEY)
-      if (router.currentRoute.value.path !== '/login') {
-        await router.push({ path: '/login', query: { expired: '1' } })
-      }
+    client.onAuthFailure = () => {
+      void (async () => {
+        const [{ useAuthStore }, { default: router }] = await Promise.all([
+          import('@/stores/auth'),
+          import('@/router'),
+        ])
+        useAuthStore().clearSession()
+        _clients.delete(APP_WS_KEY)
+        if (router.currentRoute.value.path !== '/login') {
+          await router.push({ path: '/login', query: { expired: '1' } })
+        }
+      })()
     }
 
     client.connect()

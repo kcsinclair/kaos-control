@@ -1,0 +1,85 @@
+name: CodeQL
+
+# Advanced setup. Replaces GitHub's default code-scanning setup so the analysis
+# can load .github/codeql/codeql-config.yml, which registers this repository's
+# own path sanitisers as CodeQL barriers.
+#
+# Default setup MUST be disabled for this workflow to take effect — the two
+# cannot run together.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, matching the cadence default setup used.
+    - cron: "27 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: manual
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
+
+      # The Go build embeds web/dist (web/embed.go: //go:embed all:dist), and
+      # web/dist is not committed, so the frontend must be built before the Go
+      # packages will compile at all. This mirrors `make build-web && make build`.
+      - name: Set up pnpm
+        if: matrix.language == 'go'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        if: matrix.language == 'go'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Set up Go
+        if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        if: matrix.language == 'go'
+        run: |
+          cd web && pnpm install --frozen-lockfile && pnpm run build && cd ..
+          go build ./...
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

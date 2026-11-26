@@ -1,7 +1,7 @@
 ---
 title: Release Artifact Not Automatically Committed to Git After Edit
 type: defect
-status: approved
+status: done
 lineage: release-edit-no-git-commit
 created: "2026-08-24T11:41:56+10:00"
 priority: normal
@@ -12,6 +12,9 @@ labels:
     - editor
     - backend
 release: KC-Release6
+assignees:
+    - role: backend-developer
+      who: agent
 ---
 
 # Release Artifact Not Automatically Committed to Git After Edit

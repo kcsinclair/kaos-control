@@ -2,7 +2,7 @@
 created: "2026-08-15T17:40:19+10:00"
 title: AGENTS.md-primary directive files + a simple migration option
 type: idea
-status: clarifying
+status: done
 lineage: agents-md-primary-directives
 priority: medium
 labels:
@@ -126,3 +126,20 @@ requirement's job.
   extends (currently emits only `CLAUDE.md`).
 - [onboarding-architecture-selection](onboarding-architecture-selection.md) — the
   wizard that drives the stack-aware content half.
+
+## Outcome
+
+**Delivered — closed 2026-09-03.**
+
+This idea produced [[agents-md-primary-directives-2]], which is now `done`: the
+canonical `AGENTS.md` set ships from `kaos-control init`, `migrate-directives`
+converts legacy single-`CLAUDE.md` projects, and this repository is itself
+migrated — `AGENTS.md` holds the content, `CLAUDE.md` and `GEMINI.md` are
+11-byte `@AGENTS.md` imports.
+
+The status had been left at `clarifying` after the requirement was written; the
+implementation landed without it being updated.
+
+The **stack-aware directive body** and the `lifecycle/config.yaml` prompt tuning
+were always out of scope here and remain tracked in
+[[agent-directives-generation]].

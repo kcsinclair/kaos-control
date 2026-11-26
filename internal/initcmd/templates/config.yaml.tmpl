@@ -220,6 +220,19 @@ architecture_wizard:
           labels:
             - php
 
+# Configuring a local-model agent (llama.cpp / Ollama / any OpenAI-compatible
+# server): set driver: openai-compatible and provider: <name>, where <name>
+# matches an entry under providers: in the app-level ~/.kaos-control/config.yaml
+# (base_url, e.g. http://localhost:8080 for llama-server or
+# http://localhost:11434/v1 for Ollama; llama-server must be started with
+# --jinja for tool calling). If an agent's prompt_templates omits an entry for
+# its active role, kaos-control falls back to a concise, local-model-tuned
+# preset (see LocalModelPromptDefaults in internal/agent/prompt_defaults.go) —
+# short, single-step-ordered, with a concrete frontmatter few-shot example, so
+# small (8B-30B) local models don't drift on long frontier-style prose. Model
+# availability is checked against the provider's /v1/models endpoint before a
+# run starts, so a missing model or unreachable server fails fast instead of
+# hanging.
 agents:
   - name: requirements-analyst
     role:

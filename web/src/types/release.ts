@@ -7,6 +7,8 @@ export interface Release {
   slug: string
   name: string
   status: ReleaseStatus
+  goal: string
+  description: string
   start_date: string | null
   end_date: string | null
   file_path: string
@@ -22,6 +24,8 @@ export interface ReleaseDetail extends Release {
 export interface CreateReleasePayload {
   name: string
   status: ReleaseStatus
+  goal?: string
+  description?: string
   start_date?: string | null
   end_date?: string | null
 }
@@ -29,6 +33,8 @@ export interface CreateReleasePayload {
 export interface UpdateReleasePayload {
   name?: string
   status?: ReleaseStatus
+  goal?: string
+  description?: string
   start_date?: string | null
   end_date?: string | null
   updated_at?: string

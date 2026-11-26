@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/kaos-control/kaos-control/internal/config"
 	"github.com/kaos-control/kaos-control/internal/config/defaults"
 	"github.com/kaos-control/kaos-control/internal/hub"
 	"github.com/kaos-control/kaos-control/internal/ideachat"
@@ -23,7 +24,8 @@ import (
 //
 // Request:  { "session_id": string|null, "message": string }
 // Response: { "session_id": string, "reply": string, "status": string,
-//             "preview": {...}|null, "artifact_path": string|null }
+//
+//	"preview": {...}|null, "artifact_path": string|null }
 //
 // Special message values:
 //   - "__accept__"  – accept the current proposal and write the artifact
@@ -233,16 +235,19 @@ func resolveIdeaCaptureConfig(p *project.Project, templateKey string) (ideachat.
 			if model == "" {
 				model = "claude-sonnet-4-6"
 			}
+			provider := resolveAgentProvider(p, a.Provider)
 			if prompt, ok := a.PromptTemplates[templateKey]; ok {
 				return ideachat.ModelConfig{
 					Model:        model,
 					SystemPrompt: prompt,
+					Provider:     provider,
 				}, nil
 			}
 			if prompt, ok := defaultTemplateFor(templateKey); ok {
 				return ideachat.ModelConfig{
 					Model:        model,
 					SystemPrompt: prompt,
+					Provider:     provider,
 				}, nil
 			}
 			return ideachat.ModelConfig{}, fmt.Errorf("%s agent has no template %q", agentName, templateKey)
@@ -256,6 +261,25 @@ func resolveIdeaCaptureConfig(p *project.Project, templateKey string) (ideachat.
 		}, nil
 	}
 	return ideachat.ModelConfig{}, fmt.Errorf("%s agent not configured", agentName)
+}
+
+// resolveAgentProvider looks up providerName in the project's app-level
+// provider snapshot and returns a pointer to it, or nil when providerName is
+// empty or unregistered (CLI default). config.ValidateAgentProviders rejects
+// an unregistered provider at project load, so an unregistered name here
+// should not normally occur — resolving to nil (CLI default) rather than
+// erroring keeps this a pure lookup.
+func resolveAgentProvider(p *project.Project, providerName string) *config.ProviderConfig {
+	if providerName == "" {
+		return nil
+	}
+	for i := range p.Providers {
+		if p.Providers[i].Name == providerName {
+			prov := p.Providers[i]
+			return &prov
+		}
+	}
+	return nil
 }
 
 // templateUnavailableError builds the actionable "template_unavailable" API

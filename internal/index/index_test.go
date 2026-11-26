@@ -543,6 +543,78 @@ func TestSetAgentRunTTFT_RecordedOnce(t *testing.T) {
 	}
 }
 
+// TestAgentRunRow_FailureClassificationRoundTrip verifies that
+// FailureReason, Remediation, and ErrorDetails survive an UpdateAgentRun +
+// GetAgentRun round trip (local-model-operability Milestone 4).
+func TestAgentRunRow_FailureClassificationRoundTrip(t *testing.T) {
+	idx := openTestIndex(t)
+
+	now := time.Now()
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID: "classify-run-1", AgentName: "backend-developer", Role: "backend-developer",
+		StartedAt: now, Status: "running",
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+
+	reason := "model_not_found"
+	finishedAt := now.Add(2 * time.Second)
+	exitCode := -1
+	if err := idx.UpdateAgentRun(&AgentRunRow{
+		RunID:         "classify-run-1",
+		Status:        "failed",
+		FinishedAt:    &finishedAt,
+		ExitCode:      &exitCode,
+		StderrTail:    "model \"gemma-4-26b\" not found on provider \"local\"",
+		FailureReason: &reason,
+		Remediation:   []string{"step one", "step two"},
+		ErrorDetails:  map[string]any{"message": "model not found", "stderr_excerpt": "..."},
+	}); err != nil {
+		t.Fatalf("UpdateAgentRun: %v", err)
+	}
+
+	got, err := idx.GetAgentRun("classify-run-1")
+	if err != nil {
+		t.Fatalf("GetAgentRun: %v", err)
+	}
+	if got == nil {
+		t.Fatal("GetAgentRun returned nil")
+	}
+	if got.FailureReason == nil || *got.FailureReason != reason {
+		t.Errorf("FailureReason: got %v, want %q", got.FailureReason, reason)
+	}
+	if len(got.Remediation) != 2 || got.Remediation[0] != "step one" || got.Remediation[1] != "step two" {
+		t.Errorf("Remediation: got %v", got.Remediation)
+	}
+	if got.ErrorDetails["message"] != "model not found" {
+		t.Errorf("ErrorDetails[message]: got %v", got.ErrorDetails["message"])
+	}
+
+	// A run with no failure classification must round-trip as nil/empty,
+	// not as empty-but-non-nil JSON artifacts.
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID: "classify-run-2", AgentName: "backend-developer", Role: "backend-developer",
+		StartedAt: now, Status: "running",
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+	if err := idx.UpdateAgentRun(&AgentRunRow{
+		RunID: "classify-run-2", Status: "done", FinishedAt: &finishedAt,
+	}); err != nil {
+		t.Fatalf("UpdateAgentRun: %v", err)
+	}
+	got2, err := idx.GetAgentRun("classify-run-2")
+	if err != nil {
+		t.Fatalf("GetAgentRun: %v", err)
+	}
+	if got2.FailureReason != nil {
+		t.Errorf("expected nil FailureReason for a successful run, got %v", *got2.FailureReason)
+	}
+	if len(got2.Remediation) != 0 || len(got2.ErrorDetails) != 0 {
+		t.Errorf("expected empty Remediation/ErrorDetails for a successful run, got %v / %v", got2.Remediation, got2.ErrorDetails)
+	}
+}
+
 // TestUpdateAgentRunMetrics_UnknownRunID verifies that calling
 // UpdateAgentRunMetrics on a non-existent run ID does not panic.
 // SQLite's UPDATE returns no error for zero-rows-affected.
@@ -557,4 +629,43 @@ func TestUpdateAgentRunMetrics_UnknownRunID(t *testing.T) {
 	// Must not panic; may return nil or an error.
 	err := idx.UpdateAgentRunMetrics("nonexistent-run-id", m)
 	_ = err // Either nil or error is acceptable; we only care about no panic.
+}
+
+// TestRecoverRunningRuns_RecordsReason pins that a run interrupted by a restart
+// is distinguishable from a genuine failure. Run 2073eaa29f90f088 (tech-writer)
+// completed successfully — is_error:false, terminal_reason "completed", work
+// committed — one second before kaos-control restarted. Crash recovery failed
+// the row, and because it recorded no reason the row was indistinguishable from
+// a real failure: NULL exit code, empty stderr, empty failure_reason.
+func TestRecoverRunningRuns_RecordsReason(t *testing.T) {
+	idx := openTestIndex(t)
+
+	if err := idx.InsertAgentRun(&AgentRunRow{
+		RunID:     "restart-victim",
+		AgentName: "tech-writer",
+		Role:      "tech-writer",
+		Status:    "running",
+		StartedAt: time.Now().Add(-time.Minute),
+	}); err != nil {
+		t.Fatalf("InsertAgentRun: %v", err)
+	}
+
+	if err := idx.RecoverRunningRuns("interrupted_by_restart",
+		[]string{"kaos-control restarted while this run was in flight."}); err != nil {
+		t.Fatalf("RecoverRunningRuns: %v", err)
+	}
+
+	row, err := idx.GetAgentRun("restart-victim")
+	if err != nil {
+		t.Fatalf("GetAgentRun: %v", err)
+	}
+	if row.Status != "failed" {
+		t.Errorf("status = %q, want failed", row.Status)
+	}
+	if row.FailureReason == nil || *row.FailureReason != "interrupted_by_restart" {
+		t.Errorf("failure_reason = %v, want interrupted_by_restart — without it the row is indistinguishable from a real failure", row.FailureReason)
+	}
+	if len(row.Remediation) == 0 {
+		t.Error("remediation is empty — the operator gets no guidance that the agent may have completed")
+	}
 }

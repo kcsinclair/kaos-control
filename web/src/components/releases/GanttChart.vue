@@ -387,7 +387,10 @@ function summaryBadge(release: Release): string {
           :key="bar.release.id"
           class="gantt-row"
         >
-          <div class="row-label" :title="bar.release.name">{{ bar.release.name }}</div>
+          <div class="row-label" :title="bar.release.name">
+            <span class="row-label-name">{{ bar.release.name }}</span>
+            <span v-if="bar.release.goal" class="row-label-goal" :title="bar.release.goal">{{ bar.release.goal }}</span>
+          </div>
           <div class="row-track">
             <!-- Column grid lines -->
             <div
@@ -434,7 +437,10 @@ function summaryBadge(release: Release): string {
           :key="r.id"
           class="gantt-row"
         >
-          <div class="row-label" :title="r.name">{{ r.name }}</div>
+          <div class="row-label" :title="r.name">
+            <span class="row-label-name">{{ r.name }}</span>
+            <span v-if="r.goal" class="row-label-goal" :title="r.goal">{{ r.goal }}</span>
+          </div>
           <div class="row-track">
             <!-- Column grid lines (keeps visual alignment with scheduled rows) -->
             <div
@@ -540,15 +546,26 @@ function summaryBadge(release: Release): string {
   border-right: 2px solid var(--color-border);
   z-index: 5;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
   padding: 0 var(--space-2);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.row-label-name {
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex-shrink: 0;
+}
+.row-label-goal {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .header-date-area {
   display: flex;

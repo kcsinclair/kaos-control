@@ -23,7 +23,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import RunDetailModal from '../../web/src/components/agent/RunDetailModal.vue'
-import type { AgentRunRow, RunResult } from '../../web/src/types/api'
+import type { RunResult } from '../../web/src/types/api'
 import { useAgentsStore } from '../../web/src/stores/agents'
 
 // ---------------------------------------------------------------------------
@@ -58,20 +58,6 @@ vi.mock('@/api/agents', () => ({
   // Default: result is null (no summary) — individual tests override as needed.
   getRunResult:         vi.fn().mockResolvedValue({ result: null }),
 }))
-
-// Typed reference to the mocked run used throughout the tests.
-const mockRun: AgentRunRow = {
-  run_id:             'test-run-id-abcdef12',
-  agent_name:         'backend-developer',
-  role:               'backend-developer',
-  target_path:        'lifecycle/requirements/foo-2.md',
-  started_at:         '2026-01-01T10:00:00Z',
-  finished_at:        '2026-01-01T10:05:00Z',
-  status:             'done',
-  exit_code:          0,
-  stderr_tail:        'line one\nline two\nline three',
-  artifacts_produced: ['lifecycle/requirements/foo-2.md', 'lifecycle/backend-plans/foo-3-be.md'],
-}
 
 // ---------------------------------------------------------------------------
 // Setup

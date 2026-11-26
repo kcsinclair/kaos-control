@@ -26,6 +26,10 @@ type GeminiCliDriver struct {
 func (d *GeminiCliDriver) buildArgs(run Run) []string {
 	args := []string{
 		"--dangerously-skip-permissions",
+		// stream-json gives us structured init/step_update/result events instead
+		// of agy's default plain text, so the driver can parse a RunResult,
+		// stream progress, and record TTFT (gemini-cli-stream-json FR-1).
+		"--output-format", "stream-json",
 	}
 	// agy ignores cmd.Dir for its workspace context and defaults to
 	// ~/.gemini/antigravity-cli/scratch, so the agent spends the whole run
@@ -84,8 +88,7 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 				slog.Warn("agent: opening log file failed", "path", run.LogPath, "err", err)
 			} else {
 				logFile = f
-				fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s model=%s\n# args=%v\n# started=%s\n\n",
-					run.RunID, run.AgentName, run.Role, run.Model, args, time.Now().Format(time.RFC3339))
+				writeRunLogHeader(logFile, run, args)
 			}
 		}
 	}
@@ -96,6 +99,9 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 		}
 		return nil, fmt.Errorf("starting agy: %w", err)
 	}
+
+	// runStart is captured here (after cmd.Start succeeds) for TTFT measurement.
+	runStart := time.Now()
 
 	waitErr := make(chan error, 1)
 	p := &cliProcess{cmd: cmd, progress: progressCh, stderr: rb, logFile: logFile, waitErr: waitErr}
@@ -114,11 +120,14 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	// Pipe stdout: tee to log file, parse json or wrap raw text, send as progress events.
+	// Pipe stdout: tee to log file, parse agy NDJSON or wrap raw text, send as
+	// progress events. Track TTFT from the first step_update carrying a
+	// non-empty text_delta.
 	go func() {
 		defer wg.Done()
 		sc := bufio.NewScanner(stdout)
 		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+		var firstTokenSeen bool
 		for sc.Scan() {
 			line := sc.Text()
 			if logFile != nil {
@@ -127,9 +136,19 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 			ev := ProgressEvent{Raw: line}
 			var parsed map[string]any
 			if err := json.Unmarshal([]byte(line), &parsed); err == nil {
-				ev.Event = parsed
-			} else {
-				// Wrap raw text line as an output progress event.
+				if _, hasEvent := parsed["event"]; hasEvent {
+					// agy stream-json shape: forward the parsed object as-is so
+					// the frontend can render it natively.
+					ev.Event = parsed
+					if !firstTokenSeen && run.OnTTFT != nil && agyStepUpdateHasTextDelta(parsed) {
+						firstTokenSeen = true
+						run.OnTTFT(time.Since(runStart).Milliseconds())
+					}
+				}
+			}
+			if ev.Event == nil {
+				// Malformed or non-agy-shaped line — degrade to raw text (NFR-2).
+				// Still teed to the log above; never fatal to the run.
 				ev.Event = map[string]any{
 					"type": "output",
 					"text": line + "\n",
@@ -186,4 +205,19 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 	}()
 
 	return p, nil
+}
+
+// agyStepUpdateHasTextDelta reports whether a decoded agy stream-json line is
+// a step_update event carrying a non-empty text_delta — the first-token
+// signal used to record TTFT (gemini-cli-stream-json FR-5).
+func agyStepUpdateHasTextDelta(parsed map[string]any) bool {
+	if e, _ := parsed["event"].(string); e != "step_update" {
+		return false
+	}
+	step, _ := parsed["step_update"].(map[string]any)
+	if step == nil {
+		return false
+	}
+	delta, _ := step["text_delta"].(string)
+	return delta != ""
 }

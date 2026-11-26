@@ -190,14 +190,18 @@ func (s *Server) buildRouter() chi.Router {
 			r.Post("/queue/pause", s.handlePauseQueue)
 			r.Post("/queue/resume", s.handleResumeQueue)
 
-			// Ollama instance management (app-level, not project-scoped)
-			r.Route("/ollama/instances", func(r chi.Router) {
-				r.Get("/", s.handleListOllamaInstances)
-				r.Post("/", s.handleCreateOllamaInstance)
-				r.Put("/{name}", s.handleUpdateOllamaInstance)
-				r.Delete("/{name}", s.handleDeleteOllamaInstance)
-				r.Get("/{name}/health", s.handleOllamaHealth)
-				r.Get("/{name}/models", s.handleOllamaModels)
+			// Provider management (app-level, not project-scoped)
+			r.Route("/providers", func(r chi.Router) {
+				r.Get("/", s.handleListProviders)
+				r.Post("/", s.handleCreateProvider)
+				r.Post("/test", s.handleTestProvider)
+				r.Route("/{name}", func(r chi.Router) {
+					r.Get("/", s.handleGetProvider)
+					r.Put("/", s.handleUpdateProvider)
+					r.Delete("/", s.handleDeleteProvider)
+					r.Get("/health", s.handleProviderHealth)
+					r.Get("/models", s.handleProviderModels)
+				})
 			})
 
 			// Per-project routes
@@ -301,9 +305,21 @@ func (s *Server) buildRouter() chi.Router {
 				r.Get("/agents/runs/{run_id}/log", s.handleGetAgentRunLog)
 				r.Get("/agents/runs/{run_id}/result", s.handleGetAgentRunResult)
 				r.Post("/agents/runs/{run_id}/kill", s.handleKillAgentRun)
+				r.Post("/agents/{name}/switch-provider", s.handleAgentSwitchProvider)
+				r.Post("/agents/{name}/restore-provider", s.handleAgentRestoreProvider)
+
+				// Provider switching / failover (switch-provider-3-be,
+				// agent-switchover-and-failover)
+				r.Get("/provider-switch/status", s.handleGetFailoverStatus)
+				r.Get("/provider-switch/policy", s.handleGetSwitchoverPolicy)
+				r.Post("/provider-switch/switch-all", s.handleSwitchAllProviders)
+				r.Post("/provider-switch/restore-all", s.handleRestoreAllProviders)
+				r.Get("/provider-templates", s.handleListProviderTemplates)
+				r.Post("/provider-templates/apply", s.handleApplyProviderTemplate)
 
 				// Reports
 				r.Get("/reports/agent-usage", s.handleGetAgentUsageReport)
+				r.Get("/reports/failover", s.handleGetFailoverReport)
 
 				// Locks
 				r.Get("/locks", s.handleListLocks)
@@ -475,6 +491,19 @@ func (s *Server) GetProject(name string) (*project.Project, bool) {
 	return s.getProject(name)
 }
 
+// ProjectNames returns the names of every currently-registered project.
+// Used by the queue dispatcher (e.g. to enumerate partially-paused agents
+// across all open projects for FR-3.4).
+func (s *Server) ProjectNames() []string {
+	s.projectsMu.RLock()
+	defer s.projectsMu.RUnlock()
+	names := make([]string, 0, len(s.projects))
+	for name := range s.projects {
+		names = append(names, name)
+	}
+	return names
+}
+
 // RegisterProject opens a project, starts its goroutines, and adds it to the
 // server's live project map. The project's goroutines run until
 // UnregisterProject is called or the server shuts down.
@@ -498,6 +527,7 @@ func (s *Server) RegisterProject(entry *config.ProjectEntry) error {
 	p.StartLockReaper(pCtx)
 	p.StartSessionReaper(pCtx)
 	p.StartScheduler(pCtx)
+	p.StartRecoveryProber(pCtx)
 
 	// Wire queue pause callback so denied tool calls pause the queue.
 	if q != nil && p.Agents != nil {

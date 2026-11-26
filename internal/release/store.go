@@ -27,7 +27,7 @@ func NewStore(db *sql.DB) *Store {
 // (scheduled first, then unscheduled), then by name.
 func (s *Store) List(projectID string) ([]*Release, error) {
 	rows, err := s.db.Query(`
-		SELECT id, project_id, name, slug, status, start_date, end_date, created_at, updated_at
+		SELECT id, project_id, name, slug, status, goal, description, start_date, end_date, created_at, updated_at
 		FROM releases
 		WHERE project_id = ?
 		ORDER BY
@@ -47,7 +47,7 @@ func (s *Store) List(projectID string) ([]*Release, error) {
 func (s *Store) Get(projectID string, id int64) (*Release, error) {
 	row := s.db.QueryRow(`
 		SELECT
-			r.id, r.project_id, r.name, r.slug, r.status, r.start_date, r.end_date,
+			r.id, r.project_id, r.name, r.slug, r.status, r.goal, r.description, r.start_date, r.end_date,
 			r.created_at, r.updated_at,
 			(SELECT COUNT(*) FROM artifacts
 			 WHERE json_extract(frontmatter_json, '$.release') = r.name
@@ -69,7 +69,7 @@ func (s *Store) Get(projectID string, id int64) (*Release, error) {
 // GetBySlug returns a release by project and slug, or nil if not found.
 func (s *Store) GetBySlug(projectID, slug string) (*Release, error) {
 	row := s.db.QueryRow(`
-		SELECT id, project_id, name, slug, status, start_date, end_date, created_at, updated_at
+		SELECT id, project_id, name, slug, status, goal, description, start_date, end_date, created_at, updated_at
 		FROM releases
 		WHERE project_id = ? AND slug = ?
 	`, projectID, slug)
@@ -77,7 +77,7 @@ func (s *Store) GetBySlug(projectID, slug string) (*Release, error) {
 	var startDate, endDate sql.NullString
 	var createdAt, updatedAt string
 	err := row.Scan(
-		&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status,
+		&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status, &r.Goal, &r.Description,
 		&startDate, &endDate, &createdAt, &updatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -97,7 +97,7 @@ func (s *Store) GetBySlug(projectID, slug string) (*Release, error) {
 // GetByName returns a release by project and name, or nil if not found.
 func (s *Store) GetByName(projectID, name string) (*Release, error) {
 	row := s.db.QueryRow(`
-		SELECT id, project_id, name, slug, status, start_date, end_date, created_at, updated_at
+		SELECT id, project_id, name, slug, status, goal, description, start_date, end_date, created_at, updated_at
 		FROM releases
 		WHERE project_id = ? AND name = ?
 	`, projectID, name)
@@ -106,7 +106,7 @@ func (s *Store) GetByName(projectID, name string) (*Release, error) {
 	var startDate, endDate sql.NullString
 	var createdAt, updatedAt string
 	err := row.Scan(
-		&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status,
+		&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status, &r.Goal, &r.Description,
 		&startDate, &endDate, &createdAt, &updatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -233,10 +233,10 @@ func (s *Store) Update(r *Release, sync *DiskSync, projectRoot string) (string, 
 	// name/slug change, which an ON CONFLICT(name) upsert would not).
 	if _, err := s.db.Exec(`
 		UPDATE releases
-		SET name = ?, slug = ?, status = ?, start_date = ?, end_date = ?, updated_at = ?
+		SET name = ?, slug = ?, status = ?, goal = ?, description = ?, start_date = ?, end_date = ?, updated_at = ?
 		WHERE project_id = ? AND id = ?
 	`,
-		r.Name, newSlug, r.Status,
+		r.Name, newSlug, r.Status, r.Goal, r.Description,
 		formatDate(r.StartDate), formatDate(r.EndDate),
 		now.Format(time.RFC3339),
 		r.ProjectID, r.ID,
@@ -251,16 +251,18 @@ func (s *Store) Update(r *Release, sync *DiskSync, projectRoot string) (string, 
 func (s *Store) UpsertBySlug(r *Release) error {
 	now := time.Now().UTC()
 	_, err := s.db.Exec(`
-		INSERT INTO releases (project_id, name, slug, status, start_date, end_date, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO releases (project_id, name, slug, status, goal, description, start_date, end_date, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(project_id, name) DO UPDATE SET
-			slug       = excluded.slug,
-			status     = excluded.status,
-			start_date = excluded.start_date,
-			end_date   = excluded.end_date,
-			updated_at = excluded.updated_at
+			slug        = excluded.slug,
+			status      = excluded.status,
+			goal        = excluded.goal,
+			description = excluded.description,
+			start_date  = excluded.start_date,
+			end_date    = excluded.end_date,
+			updated_at  = excluded.updated_at
 	`,
-		r.ProjectID, r.Name, r.Slug, r.Status,
+		r.ProjectID, r.Name, r.Slug, r.Status, r.Goal, r.Description,
 		formatDate(r.StartDate), formatDate(r.EndDate),
 		now.Format(time.RFC3339), now.Format(time.RFC3339),
 	)
@@ -423,7 +425,7 @@ func scanReleases(rows *sql.Rows) ([]*Release, error) {
 		var startDate, endDate sql.NullString
 		var createdAt, updatedAt string
 		if err := rows.Scan(
-			&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status,
+			&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status, &r.Goal, &r.Description,
 			&startDate, &endDate, &createdAt, &updatedAt,
 		); err != nil {
 			return nil, err
@@ -443,7 +445,7 @@ func scanReleaseWithCounts(row *sql.Row) (*Release, error) {
 	var startDate, endDate sql.NullString
 	var createdAt, updatedAt string
 	err := row.Scan(
-		&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status,
+		&r.ID, &r.ProjectID, &r.Name, &r.Slug, &r.Status, &r.Goal, &r.Description,
 		&startDate, &endDate, &createdAt, &updatedAt,
 		&r.IdeaCount, &r.DefectCount,
 	)

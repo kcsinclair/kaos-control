@@ -3,6 +3,8 @@ type: test
 
 steps:
   - name: Lint
-    description: go vet + staticcheck. Fails on any finding (pre-commit safety net).
+    description: >-
+      make lint — the single gate for backend (go vet, staticcheck,
+      govulncheck, gosec, gitleaks) and frontend (ESLint, vue-tsc) checks.
     command: make lint
-    timeout: 2m
+    timeout: 4m

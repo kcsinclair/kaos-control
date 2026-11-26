@@ -15,7 +15,7 @@
  *   - DevOps nav item visibility is controlled by hasAccess computed property
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
@@ -85,7 +85,7 @@ function makeRouter(project = 'testproject') {
       { path: '/:pathMatch(.*)*', component: { template: '<div/>' } },
     ],
   })
-  router.push(`/p/${project}/devops`)
+  void router.push(`/p/${project}/devops`)
   return router
 }
 

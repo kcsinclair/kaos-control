@@ -63,7 +63,7 @@ function makeRouter(path = '/p/testproject/dashboard') {
       { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
     ],
   })
-  router.push(path)
+  void router.push(path)
   return router
 }
 

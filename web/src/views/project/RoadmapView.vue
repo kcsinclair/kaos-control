@@ -68,7 +68,7 @@ const backlogArtifacts = computed(() =>
 )
 
 function onOpenBacklogArtifact(path: string) {
-  router.push(`/p/${project}/artifacts/${path}`)
+  void router.push(`/p/${project}/artifacts/${path}`)
 }
 
 // ── WebSocket: releases (managed by composable) ─────────────────────────────
@@ -109,8 +109,8 @@ async function loadDetails() {
 
 onMounted(async () => {
   await store.fetch(project)
-  loadDetails()
-  roadmapSettings.loadDefaultPeriodMode(project)
+  void loadDetails()
+  void roadmapSettings.loadDefaultPeriodMode(project)
 
   // Load backlog artifacts
   await artifactsStore.fetchList(project, { limit: 500 })
@@ -119,7 +119,7 @@ onMounted(async () => {
   // Reuse the singleton WsClient (already connected by useReleasesSocket).
   const ws = getProjectWs(project)
   unsubArtifactWs = ws.onType('artifact.indexed', () => {
-    artifactsStore.fetchList(project, { limit: 500 })
+    void artifactsStore.fetchList(project, { limit: 500 })
   })
 })
 

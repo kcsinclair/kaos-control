@@ -130,9 +130,15 @@ func (m *MockOllamaServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if latency == 0 {
 		latency = m.Latency[""]
 	}
+	if latency == 0 && r.URL.Path == "/v1/chat/completions" {
+		latency = m.Latency["/api/chat"]
+	}
 	errCode := m.ErrorCodes[r.URL.Path]
 	if errCode == 0 {
 		errCode = m.ErrorCodes[""]
+	}
+	if errCode == 0 && r.URL.Path == "/v1/chat/completions" {
+		errCode = m.ErrorCodes["/api/chat"]
 	}
 	requireAuth := m.RequireAuthToken
 	m.mu.Unlock()
@@ -147,8 +153,8 @@ func (m *MockOllamaServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Inject latency (interruptible via request context).
-	if latency > 0 {
+	// Inject latency (interruptible via request context) for non-completions paths.
+	if latency > 0 && r.URL.Path != "/v1/chat/completions" {
 		select {
 		case <-time.After(latency):
 		case <-r.Context().Done():
@@ -156,8 +162,8 @@ func (m *MockOllamaServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Configurable error override.
-	if errCode != 0 {
+	// Configurable error override for non-completions paths.
+	if errCode != 0 && r.URL.Path != "/v1/chat/completions" {
 		w.WriteHeader(errCode)
 		fmt.Fprintf(w, `{"error":"mock error %d"}`, errCode)
 		return
@@ -170,9 +176,118 @@ func (m *MockOllamaServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		m.handleChat(w, r)
 	case "/api/generate":
 		m.handleGenerate(w, r)
+	case "/v1/chat/completions":
+		m.handleV1ChatCompletions(w, r, body, latency, errCode)
 	default:
 		// Health / root.
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func (m *MockOllamaServer) handleV1ChatCompletions(w http.ResponseWriter, r *http.Request, body []byte, streamLatency time.Duration, errCode int) {
+	m.mu.Lock()
+	chunks := make([]string, len(m.ChatChunks))
+	copy(chunks, m.ChatChunks)
+	m.mu.Unlock()
+
+	var bodyMap map[string]any
+	_ = json.Unmarshal(body, &bodyMap)
+	isStream := false
+	if bodyMap != nil {
+		if streamVal, ok := bodyMap["stream"].(bool); ok {
+			isStream = streamVal
+		}
+	}
+
+	if !isStream {
+		if errCode == 400 {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, `{"error":{"message":"does not support tools"}}`)
+			return
+		}
+		// Preflight response
+		hasTools := false
+		if bodyMap != nil {
+			if tools, ok := bodyMap["tools"].([]any); ok && len(tools) > 0 {
+				hasTools = true
+			}
+		}
+		promptTokens := 5
+		if hasTools {
+			promptTokens = 25
+		}
+		resp := map[string]any{
+			"id":      "mock-preflight",
+			"choices": []any{map[string]any{"index": 0, "message": map[string]any{"role": "assistant", "content": "ok"}}},
+			"usage": map[string]any{
+				"prompt_tokens":     promptTokens,
+				"completion_tokens": 1,
+				"total_tokens":      promptTokens + 1,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	// Streaming completion
+	if streamLatency > 0 {
+		select {
+		case <-time.After(streamLatency):
+		case <-r.Context().Done():
+			return
+		}
+	}
+
+	if errCode != 0 {
+		w.WriteHeader(errCode)
+		fmt.Fprintf(w, `{"error":"mock error %d"}`, errCode)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	flusher, _ := w.(http.Flusher)
+
+	for _, chunk := range chunks {
+		select {
+		case <-r.Context().Done():
+			return
+		default:
+		}
+		chunkObj := map[string]any{
+			"id": "mock-stream",
+			"choices": []any{
+				map[string]any{
+					"index": 0,
+					"delta": map[string]any{
+						"role":    "assistant",
+						"content": chunk,
+					},
+				},
+			},
+		}
+		data, _ := json.Marshal(chunkObj)
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		if flusher != nil {
+			flusher.Flush()
+		}
+	}
+	// Terminal chunk
+	termObj := map[string]any{
+		"id": "mock-stream",
+		"choices": []any{
+			map[string]any{
+				"index":         0,
+				"delta":         map[string]any{},
+				"finish_reason": "stop",
+			},
+		},
+	}
+	termData, _ := json.Marshal(termObj)
+	fmt.Fprintf(w, "data: %s\n\n", termData)
+	fmt.Fprintf(w, "data: [DONE]\n\n")
+	if flusher != nil {
+		flusher.Flush()
 	}
 }
 

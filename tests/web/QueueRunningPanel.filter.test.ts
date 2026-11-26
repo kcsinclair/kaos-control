@@ -80,7 +80,7 @@ function makeRouter() {
       { path: '/:pathMatch(.*)*', component: { template: '<div/>' } },
     ],
   })
-  router.push('/queue')
+  void router.push('/queue')
   return router
 }
 

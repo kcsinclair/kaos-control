@@ -120,20 +120,20 @@ function openBrainDump(type: 'idea' | 'defect' | 'doc' = 'idea') {
 
 function onBrainDumpClose() {
   showBrainDump.value = false
-  nextTick(() => newIdeaButtonEl.value?.focus())
+  void nextTick(() => newIdeaButtonEl.value?.focus())
 }
 
 function onBrainDumpCreated(path: string) {
   showBrainDump.value = false
   ui.success('Artifact created!')
-  router.push(`/p/${project}/artifacts/${path}`)
+  void router.push(`/p/${project}/artifacts/${path}`)
 }
 
 function onAdrCreated(path: string) {
   showNewAdrModal.value = false
   ui.success('ADR created!')
   store.invalidate()
-  router.push(`/p/${project}/artifacts/${path}`)
+  void router.push(`/p/${project}/artifacts/${path}`)
 }
 
 const project = route.params.project as string
@@ -148,19 +148,23 @@ const selectedLabel = ref(store.filter.label ?? '')
 const selectedType = ref(store.filter.type ?? '')
 const selectedPriority = ref(store.filter.priority ?? '')
 const selectedRelease = ref(store.filter.release ?? '')
+// lineage is a URL-driven filter (no dropdown) — set by wiki links / cross-refs
+// that link to /artifacts?lineage=<slug>.
+const lineageFilter = ref(store.filter.lineage ?? '')
 const awaitingOnly = ref(false)
 const searchText = ref('')
 
 function applyFilters() {
   resetSort()
   setPage(1)
-  store.fetchList(project, {
+  void store.fetchList(project, {
     stage: selectedStage.value || undefined,
     status: selectedStatus.value || undefined,
     label: selectedLabel.value || undefined,
     type: selectedType.value || undefined,
     priority: selectedPriority.value || undefined,
     release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
+    lineage: lineageFilter.value || undefined,
     q: searchText.value || undefined,
     awaiting_answers: awaitingOnly.value || undefined,
     limit: 0,
@@ -180,6 +184,7 @@ function resetFilters() {
   selectedType.value = ''
   selectedPriority.value = ''
   selectedRelease.value = ''
+  lineageFilter.value = ''
   awaitingOnly.value = false
   searchText.value = ''
   applyFilters()
@@ -212,12 +217,20 @@ watch([showCompleted, () => ui.showCatalog], () => { resetSort(); setPage(1) })
 // Reset to page 1 after sort change
 watch([sortColumn, sortDirection], () => setPage(1))
 
+// Re-apply the lineage filter when the URL changes without a remount — e.g. a
+// wiki link ([[slug]] → /artifacts?lineage=slug) clicked while already on the
+// list. onMounted covers navigation from another route; this covers same-route.
+watch(() => route.query.lineage, (val) => {
+  lineageFilter.value = typeof val === 'string' ? val : ''
+  applyFilters()
+})
+
 function onToggleSort(col: string) {
   toggleSort(col)
 }
 
 function openArtifact(path: string) {
-  router.push(`/p/${project}/artifacts/${path}`)
+  void router.push(`/p/${project}/artifacts/${path}`)
 }
 
 function onRiceChanged(row: ArtifactRow, components: RiceComponents) {
@@ -234,7 +247,7 @@ function onRiceChanged(row: ArtifactRow, components: RiceComponents) {
 // Re-fetch when an artifact is indexed via WebSocket
 useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 
 // Re-fetch immediately when an agent run starts so the "Agent Running" pill
@@ -242,24 +255,24 @@ useWebSocket(project, 'artifact.indexed', (_e: WsEvent) => {
 // appear if an `artifact.indexed` event happened to fire mid-run.
 useWebSocket(project, 'agent.started', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 
 // Re-fetch immediately when an agent run finishes so counts and pills update
 useWebSocket(project, 'agent.finished', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 
 // Re-fetch when a job is queued or cancelled so the "Queued for Agent" pill
 // appears/clears live — queued jobs fire no agent.started/finished event.
 useWebSocket(project, 'queue.added', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 useWebSocket(project, 'queue.cancelled', (_e: WsEvent) => {
   store.invalidate()
-  store.fetchList(project, { limit: 0, offset: undefined })
+  void store.fetchList(project, { limit: 0, offset: undefined })
 })
 
 function initFiltersFromQuery() {
@@ -270,6 +283,7 @@ function initFiltersFromQuery() {
   if (typeof q.label === 'string') selectedLabel.value = q.label
   if (typeof q.priority === 'string') selectedPriority.value = q.priority
   if (typeof q.release === 'string') selectedRelease.value = q.release
+  if (typeof q.lineage === 'string') lineageFilter.value = q.lineage
   if (typeof q.q === 'string') searchText.value = q.q
   if (q.awaiting === '1') awaitingOnly.value = true
 }
@@ -284,6 +298,7 @@ onMounted(async () => {
       type: selectedType.value || undefined,
       priority: selectedPriority.value || undefined,
       release: selectedRelease.value === '__unassigned__' ? '__unassigned__' : (selectedRelease.value || undefined),
+      lineage: lineageFilter.value || undefined,
       q: searchText.value || undefined,
       awaiting_answers: awaitingOnly.value || undefined,
       limit: 0,
@@ -395,6 +410,10 @@ onMounted(async () => {
         />
         <span class="toggle-text">Awaiting my answers</span>
       </label>
+      <span v-if="lineageFilter" class="lineage-chip">
+        lineage: {{ lineageFilter }}
+        <button class="lineage-chip-x" aria-label="Clear lineage filter" @click="lineageFilter = ''; applyFilters()">×</button>
+      </span>
       <button class="btn-ghost" @click="resetFilters">Reset</button>
     </div>
 
@@ -431,6 +450,7 @@ onMounted(async () => {
           >
             <td class="cell-path">
               <span class="cell-path-title-row">
+                <!-- eslint-disable-next-line vue/no-v-html -- highlightMatch escapes the text itself and only injects a <mark> wrapper -->
                 <span class="artifact-title" v-html="highlightMatch(row.title || row.slug)" />
                 <span
                   v-if="row.type === 'defect' && row.frontmatter?.labels?.includes('auto-filed')"
@@ -610,6 +630,25 @@ onMounted(async () => {
   padding: var(--space-3) var(--space-6);
   border-bottom: 1px solid var(--color-border);
   flex-wrap: wrap;
+}
+.lineage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  padding: 2px 6px 2px 8px;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  color: var(--color-accent);
+}
+.lineage-chip-x {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
 }
 .filter-bar select {
   padding: var(--space-1) var(--space-2);

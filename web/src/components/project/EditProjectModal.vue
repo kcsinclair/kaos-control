@@ -59,7 +59,7 @@ watch(
     errors.path = ''
     errors.general = ''
     dirResult.value = null
-    loadUserBindings(p.name)
+    void loadUserBindings(p.name)
   },
   { immediate: true },
 )

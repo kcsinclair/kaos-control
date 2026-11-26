@@ -85,7 +85,7 @@ watch(
       confirmRemove.value = false
       removedStepCount.value = 0
       error.value = null
-      loadDefinition()
+      void loadDefinition()
     }
   },
 )

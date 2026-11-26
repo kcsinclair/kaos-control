@@ -3,6 +3,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -80,7 +81,13 @@ func (s *Server) handleTriageIdea(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	runID, triggerErr := p.TriageMgr.Trigger(r.Context(), ideaRow.Path, triage.TriggerAPI)
+	// Triage runs asynchronously and outlives this request, so it must NOT use
+	// the request context — that is cancelled the moment we send the 202
+	// response, which would kill the in-flight `claude` call instantly
+	// ("context canceled"). Detach cancellation (keeping request-scoped values)
+	// so the background run survives, matching the watcher path's use of
+	// context.Background().
+	runID, triggerErr := p.TriageMgr.Trigger(context.WithoutCancel(r.Context()), ideaRow.Path, triage.TriggerAPI)
 	if triggerErr == nil {
 		writeJSON(w, http.StatusAccepted, map[string]any{"run_id": runID})
 		return

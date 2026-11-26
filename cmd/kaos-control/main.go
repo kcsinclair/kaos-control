@@ -13,10 +13,12 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/authcmd"
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/devopscmd"
 	"github.com/kaos-control/kaos-control/cmd/kaos-control/hookcmd"
+	"github.com/kaos-control/kaos-control/internal/agent"
 	"github.com/kaos-control/kaos-control/internal/architecture"
 	"github.com/kaos-control/kaos-control/internal/auth"
 	"github.com/kaos-control/kaos-control/internal/backfillcmd"
@@ -219,7 +221,7 @@ func run() error {
 		MaxConcurrentAgents:        appCfg.Limits.MaxConcurrentAgents,
 		MaxConcurrentSchedulerJobs: appCfg.Limits.MaxConcurrentSchedulerJobs,
 		SchedulerRunRetentionDays:  appCfg.Limits.SchedulerRunRetentionDays,
-		OllamaInstances:            appCfg.OllamaInstances,
+		Providers:                  appCfg.Providers,
 		AgentCfg:                   appCfg.Agent,
 		// DevopsLogDir: store pipeline run logs at <appHome>/devops/<project>,
 		// e.g. ~/.kaos-control/devops/<project>. This is the directory that
@@ -255,6 +257,7 @@ func run() error {
 		p.StartLockReaper(pCtx)
 		p.StartSessionReaper(pCtx)
 		p.StartScheduler(pCtx)
+		p.StartRecoveryProber(pCtx)
 	}
 
 	// Open the queue database (app-level, shared across all projects).
@@ -341,9 +344,77 @@ func run() error {
 					return row.Status
 				},
 				Hub: p.Hub,
+				FailoverPolicy: func() queue.FailoverPolicy {
+					eff := p.Config().EffectiveFailoverConfig()
+					switchover := p.Config().EffectiveSwitchoverPolicy()
+					return queue.FailoverPolicy{
+						Enabled:            eff.Enabled != nil && *eff.Enabled,
+						AutoSwitch:         switchover.AutomatedSwitchover,
+						SwitchOnKinds:      eff.SwitchOnKinds,
+						MaxFailoversPerRun: eff.MaxFailoversPerRun,
+						Actions:            switchover.Actions,
+					}
+				},
+				AgentFailoverInfo: func(agentName string) (queue.AgentFailoverInfo, bool) {
+					ag, ok := p.Agents.GetAgent(agentName)
+					if !ok || ag.FallbackProvider == "" {
+						return queue.AgentFailoverInfo{}, false
+					}
+					return queue.AgentFailoverInfo{FallbackProvider: ag.FallbackProvider, FallbackModel: ag.FallbackModel}, true
+				},
+				ProbeProviderHealth: func(probeCtx context.Context, providerName string) bool {
+					for i := range appCfg.Providers {
+						if appCfg.Providers[i].Name == providerName {
+							return agent.ProbeProviderHealth(probeCtx, nil, appCfg.Providers[i], 2*time.Second)
+						}
+					}
+					return false
+				},
+				SwitchAgentProvider: func(agentName, provider, model, reason string, isFailover bool) error {
+					return p.SwitchAgentProvider(agentName, provider, model, reason, isFailover)
+				},
+				AgentActiveProvider: func(agentName string) (string, bool) {
+					provider, _, ok := p.EffectiveAgentProvider(agentName)
+					return provider, ok
+				},
+				IsAgentFailedOver: func(agentName string) bool {
+					return p.IsAgentFailedOver(agentName)
+				},
+				FailoverProviderWide: func(provider, reason string, resetsAtUnix int64, bucket string) ([]string, []string, error) {
+					return p.FailoverProviderWide(provider, reason, resetsAtUnix, bucket)
+				},
+				ProviderDisconnectCountLastHour: func(providerName string) int {
+					return p.Operations().DisconnectCountSince(providerName, time.Now().Add(-1*time.Hour))
+				},
+				DetectPartialCommit: func(sinceUnix int64) (bool, error) {
+					if p.Git == nil {
+						return false, nil
+					}
+					commits, err := p.Git.CommitsSince(time.Unix(sinceUnix, 0))
+					if err != nil {
+						return false, err
+					}
+					return len(commits) > 0, nil
+				},
+				MarkAwaitingOperatorDecision: func(agentName, jobID string) error {
+					return p.Operations().SetAwaitingOperatorDecision(agentName, jobID)
+				},
 			}, true
 		}
 		queueDispatcher = queue.New(queueStore, projectLookup, appHub, queue.Config{})
+		queueDispatcher.SetBlockedAgentsFunc(func() []queue.AgentKey {
+			var blocked []queue.AgentKey
+			for _, name := range srv.ProjectNames() {
+				p, ok := srv.GetProject(name)
+				if !ok {
+					continue
+				}
+				for _, agentName := range p.PartiallyPausedAgents() {
+					blocked = append(blocked, queue.AgentKey{Project: name, Agent: agentName})
+				}
+			}
+			return blocked
+		})
 		queueDispatcher.Start(ctx)
 		// Wire PauseQueue into startup projects and into the server so that
 		// future RegisterProject calls also wire new projects automatically.

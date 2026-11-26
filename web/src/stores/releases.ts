@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { defineStore } from 'pinia'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import * as releasesApi from '@/api/releases'
 import type { Release, CreateReleasePayload, UpdateReleasePayload } from '@/types/release'
 import { getProjectWs } from '@/api/ws'
@@ -10,7 +10,6 @@ export const useReleasesStore = defineStore('releases', () => {
   const releases = ref<Release[]>([])
   const loading = ref(false)
   const lastWsSeq = ref(0)
-  let currentProject = ''
   let unsub: (() => void) | null = null
 
   const scheduled = computed(() =>
@@ -86,7 +85,6 @@ export const useReleasesStore = defineStore('releases', () => {
       unsub()
       unsub = null
     }
-    currentProject = project
     const ws = getProjectWs(project)
 
     const handler = (e: { type: string; payload: Record<string, unknown> }) => {

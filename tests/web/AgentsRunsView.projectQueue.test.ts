@@ -174,7 +174,7 @@ function makeRouter(project: string = 'testproject') {
       { path: '/:pathMatch(.*)*', component: { template: '<div/>' } },
     ],
   })
-  router.push(`/p/${project}/agents`)
+  void router.push(`/p/${project}/agents`)
   return router
 }
 

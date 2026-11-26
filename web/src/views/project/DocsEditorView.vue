@@ -118,11 +118,11 @@ async function reload(): Promise<void> {
 }
 
 function goBack(): void {
-  router.push({ name: 'docs', params: { project } })
+  void router.push({ name: 'docs', params: { project } })
 }
 
 onMounted(() => {
-  loadDoc()
+  void loadDoc()
 })
 
 useWebSocket(project, 'doc.changed', (e: WsEvent) => {
@@ -133,7 +133,7 @@ useWebSocket(project, 'doc.changed', (e: WsEvent) => {
     diskUpdated.value = true
   } else {
     // No local changes — silently pull the latest version
-    loadDoc()
+    void loadDoc()
   }
 })
 

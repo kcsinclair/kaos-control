@@ -26,7 +26,7 @@ const { nodes, edges, loading, error, selectedArchId, showStacks, reload } = use
 // affordances) keeps this browse surface strictly read-only (FR-10) — the map
 // itself introduces no edit/persist UI.
 function onNodeClick(node: GraphNode) {
-  router.push(`/p/${project}/artifacts/${node.id}`)
+  void router.push(`/p/${project}/artifacts/${node.id}`)
 }
 
 // The stack-reveal target is chosen independently of node click (which
@@ -34,7 +34,7 @@ function onNodeClick(node: GraphNode) {
 const architectureNodes = computed(() => nodes.value.filter((n) => n.type === 'architecture'))
 
 function onStacksChanged() {
-  reload()
+  void reload()
 }
 
 // Last-used engine is a per-browser nicety, not part of the FR set.

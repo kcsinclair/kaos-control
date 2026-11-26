@@ -35,7 +35,6 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { useGraphStore } from '../../web/src/stores/graph'
-import type { GraphNode } from '../../web/src/types/api'
 
 // ---------------------------------------------------------------------------
 // Module mocks — prevent real network I/O and WebSocket connections.

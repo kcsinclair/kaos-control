@@ -90,17 +90,40 @@ type Run struct {
 	// It is passed to the agent prompt via the {related_test} placeholder so
 	// the agent can reference the test in defect frontmatter (related_to field).
 	RelatedTestPath string
-	// Ollama-specific fields (only used when Driver == "ollama").
-	OllamaInstanceName string // resolved from AgentConfig.OllamaInstanceName
-	OllamaEndpoint     string // "chat" or "generate"
-	ShellCommand       string // shell-stub driver: command to run (empty = default stub behavior)
+	ShellCommand    string // shell-stub driver: command to run (empty = default stub behavior)
 	// claude-env driver fields (only used when Driver == "claude-env").
 	BaseURL   string // ANTHROPIC_BASE_URL override for the subprocess
 	AuthToken string // ANTHROPIC_AUTH_TOKEN override — secret, must never be logged or echoed
+	// OpenAI-compatible driver fields.
+	ProviderName      string // resolved from AgentConfig.Provider
+	MaxToolIterations int    // per-agent override; 0 = default (25)
+	// BashAllowlist gates the openai-compatible driver's bash tool: the tool is
+	// only advertised to the model when this is non-empty, so shell access is
+	// opt-in per agent rather than granted to every local agent by default.
+	BashAllowlist []string
+	// BashDenylist is the merged (DefaultBashDenylist + per-agent) denylist,
+	// checked before the allowlist.
+	BashDenylist []string
+	// ObserveOnly logs policy decisions but allows them (dry-run).
+	ObserveOnly bool
+	// OnBashDenial is invoked for each refused bash tool call so the run record
+	// carries denied_tool_calls, matching the mediated driver.
+	OnBashDenial func(d Decision, toolName string, toolInput map[string]any)
+	// ModelLoadingTimeout bounds how long the openai-compatible driver waits
+	// for the first streamed content token before aborting as a load timeout
+	// (local-model-operability Milestone 3). 0 = driver default (60s).
+	ModelLoadingTimeout time.Duration
 	// OnTTFT, when non-nil, is called once with the wall-clock milliseconds
 	// between process start and the first streamed content token. Set by the
 	// Manager for streaming drivers; nil for batch-mode drivers.
 	OnTTFT func(ms int64)
+	// OnProviderDisconnect, when non-nil, is called once per detected
+	// mid-stream disconnect — before any in-loop retry — so the caller can
+	// record it in operations.yaml for the rolling-hour pause threshold
+	// (agent-switchover-and-failover FR-6.3/6.4). A run that retries and
+	// eventually succeeds still reports every disconnect it hit along the
+	// way (FR-6.3).
+	OnProviderDisconnect func(providerName string, at time.Time)
 }
 
 // Process is a handle to a running agent.
@@ -212,6 +235,19 @@ func (d *ClaudeCodeDriver) Start(ctx context.Context, run Run) (Process, error) 
 	return startCommandProcess(ctx, cmd, run, args, "claude")
 }
 
+// writeRunLogHeader writes the canonical per-run log header — agent, role,
+// driver, provider, and model — shared by every driver so the fields never
+// drift out of sync across drivers again. args is omitted from the header
+// when nil (drivers that don't build a CLI arg list don't fabricate one).
+func writeRunLogHeader(w io.Writer, run Run, args any) {
+	fmt.Fprintf(w, "# kaos-control agent run %s\n# agent=%s role=%s driver=%s provider=%s model=%s\n",
+		run.RunID, run.AgentName, run.Role, run.Driver, run.ProviderName, run.Model)
+	if args != nil {
+		fmt.Fprintf(w, "# args=%v\n", args)
+	}
+	fmt.Fprintf(w, "# started=%s\n\n", time.Now().Format(time.RFC3339))
+}
+
 // startCommandProcess is the shared subprocess launcher used by CLI drivers.
 // readerDrainGrace bounds how long the process-reaper waits for the stdout/
 // stderr readers to hit EOF before calling cmd.Wait() (which force-closes the
@@ -247,8 +283,7 @@ func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []strin
 				slog.Warn("agent: opening log file failed", "path", run.LogPath, "err", err)
 			} else {
 				logFile = f
-				fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s model=%s\n# args=%v\n# started=%s\n\n",
-					run.RunID, run.AgentName, run.Role, run.Model, args, time.Now().Format(time.RFC3339))
+				writeRunLogHeader(logFile, run, args)
 			}
 		}
 	}
@@ -415,6 +450,20 @@ type Manager struct {
 	// nil means queue pausing is not configured.
 	PauseQueue func(reason string)
 
+	// EffectiveProvider resolves an agent's operations.yaml active-provider
+	// override, if any (agent-switchover-and-failover Milestone 2). Returns
+	// ok=false when the agent has no recorded override, in which case the
+	// agent's config-declared provider/model apply unchanged. nil means no
+	// operations store is wired (e.g. in tests) — declared config always
+	// applies.
+	EffectiveProvider func(agentName string) (provider, model string, ok bool)
+
+	// OnProviderDisconnect, when non-nil, records a mid-stream provider
+	// disconnect in operations.yaml (agent-switchover-and-failover
+	// Milestone 5). Wired onto every openai-compatible Run started by
+	// StartRun.
+	OnProviderDisconnect func(providerName string, at time.Time)
+
 	idx     *index.Index
 	git     *kgit.Repo
 	hub     *hub.Hub
@@ -423,15 +472,26 @@ type Manager struct {
 	root    string
 	logsDir string // per-run log files go in <logsDir>/<run_id>.log
 
+	// providers is the app-level list of registered LLM providers, used by
+	// the model-availability preflight (local-model-operability FR-2) to
+	// resolve an openai-compatible agent's provider config before starting
+	// its run.
+	providers []config.Provider
+
 	// Precheck configuration (from AppAgentConfig).
 	initEventTimeout   time.Duration // how long to wait for the system/init event
 	requireBypassPerms bool          // whether to reject non-bypassPermissions runs
 	killer             processKiller // injectable for tests
+
+	// modelLoadingTimeout bounds how long the openai-compatible driver waits
+	// for the first streamed token before aborting as a load timeout
+	// (local-model-operability Milestone 3). Default 60s.
+	modelLoadingTimeout time.Duration
 }
 
 // New creates an agent Manager. maxConcurrent caps parallel runs across the project.
 // logsDir is where per-run .log files are written; empty disables log files.
-// ollamaInstances is the app-level list of registered Ollama servers.
+// providers is the app-level list of registered LLM providers.
 // wf is the optional workflow engine used for type-aware transition validation.
 // agentCfg supplies the precheck timeout and bypass-permissions requirement.
 // serverAddr is the listen address used by the HTTP server (for hook-helper).
@@ -445,7 +505,7 @@ func New(
 	wf WorkflowEngine,
 	root string,
 	logsDir string,
-	ollamaInstances []config.OllamaInstance,
+	providers []config.Provider,
 	agentCfg config.AppAgentConfig,
 ) *Manager {
 	if maxConcurrent <= 0 {
@@ -459,42 +519,51 @@ func New(
 	if agentCfg.RequireBypassPermissions != nil {
 		requireBypass = *agentCfg.RequireBypassPermissions
 	}
+	modelLoadingTimeout := time.Duration(agentCfg.ModelLoadingTimeoutSeconds) * time.Second
+	if modelLoadingTimeout <= 0 {
+		modelLoadingTimeout = 60 * time.Second
+	}
 	m := &Manager{
-		agents:             agents,
-		sem:                make(chan struct{}, maxConcurrent),
-		active:             make(map[string]*activeRun),
-		runSecrets:         make(map[string]string),
-		runPolicies:        make(map[string]*PolicyConfig),
-		deniedCalls:        make(map[string][]DenialRecord),
-		runQuota:           make(map[string]RateLimitInfo),
-		idx:                idx,
-		git:                git,
-		hub:                h,
-		locks:              locks,
-		wf:                 wf,
-		root:               root,
-		logsDir:            logsDir,
-		initEventTimeout:   timeout,
-		requireBypassPerms: requireBypass,
-		killer:             defaultProcessKiller{},
+		agents:              agents,
+		sem:                 make(chan struct{}, maxConcurrent),
+		active:              make(map[string]*activeRun),
+		runSecrets:          make(map[string]string),
+		runPolicies:         make(map[string]*PolicyConfig),
+		deniedCalls:         make(map[string][]DenialRecord),
+		runQuota:            make(map[string]RateLimitInfo),
+		idx:                 idx,
+		git:                 git,
+		hub:                 h,
+		locks:               locks,
+		wf:                  wf,
+		root:                root,
+		logsDir:             logsDir,
+		providers:           providers,
+		initEventTimeout:    timeout,
+		requireBypassPerms:  requireBypass,
+		killer:              defaultProcessKiller{},
+		modelLoadingTimeout: modelLoadingTimeout,
 	}
 
 	// Build hook driver with a StoreSecret callback into this Manager.
 	hookDriver := &ClaudeHooksDriver{
 		StoreSecret: m.StoreRunSecret,
 	}
+	openAIDriver := &OpenAICompatibleDriver{
+		Providers: providers,
+	}
 	m.drivers = map[string]Driver{
-		"claude-code-cli": &ClaudeCodeDriver{},
-		"claude-mediated": hookDriver,
-		"claude-env":      &ClaudeEnvDriver{},
-		"codex-cli":       &CodexCLIDriver{},
-		"ollama":          &OllamaDriver{Instances: ollamaInstances},
-		"gemini":          &GeminiDriver{},
-		"gemini-cli":      &GeminiCliDriver{},
-		"shell-stub":      &ShellStubDriver{},
+		"claude-code-cli":   &ClaudeCodeDriver{},
+		"claude-mediated":   hookDriver,
+		"claude-env":        &ClaudeEnvDriver{},
+		"codex-cli":         &CodexCLIDriver{},
+		"openai-compatible": openAIDriver,
+		"gemini":            &GeminiDriver{},
+		"gemini-cli":        &GeminiCliDriver{},
+		"shell-stub":        &ShellStubDriver{},
 	}
 	// Crash recovery: any run still marked running from a prior process is now failed.
-	if err := idx.RecoverRunningRuns(); err != nil {
+	if err := idx.RecoverRunningRuns(FailureReasonInterruptedByRestart, interruptedByRestartRemediation); err != nil {
 		slog.Warn("agent manager: error recovering running runs", "err", err)
 	}
 	// Crash recovery: reset orphaned test artifacts left in-qa from a prior crash.
@@ -562,6 +631,12 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	}
 	promptTpl, ok := ag.PromptTemplates[role]
 	if !ok {
+		// Local-model-tuned fallback (local-model-operability Milestone 1):
+		// agents that omit a prompt_templates entry for the active role still
+		// get a concise, deterministic brief instead of a hard failure.
+		promptTpl, ok = LocalModelPromptDefaults[agentName]
+	}
+	if !ok {
 		return "", fmt.Errorf("agent %q has no prompt template for role %q", agentName, role)
 	}
 	prompt := strings.NewReplacer(
@@ -592,10 +667,35 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		return "", fmt.Errorf("lineage %q is locked by %s (%s): %w", lineage, existing.Holder, existing.Kind, lock.ErrLocked)
 	}
 
-	// Fail fast: look up driver before acquiring any resources.
+	// Fail fast: reject removed ollama driver, and look up driver before acquiring any resources.
+	if ag.Driver == "ollama" {
+		return "", fmt.Errorf("driver \"ollama\" is no longer supported; please configure a provider with driver \"openai-compatible\" and reference it via provider: <name>")
+	}
 	drv, drvOK := m.drivers[ag.Driver]
 	if !drvOK {
 		return "", fmt.Errorf("unknown driver %q for agent %q", ag.Driver, agentName)
+	}
+
+	// Proactive model-availability preflight (local-model-operability
+	// Milestone 2): for provider-backed agents, confirm the model is present
+	// on the provider before acquiring any resources (semaphore or lineage
+	// lock). A missing model or unreachable endpoint fails fast (<3s) with a
+	// classified run record instead of hanging or corrupting artifact state.
+	// Resolve the effective active provider/model: an operations.yaml
+	// failover/switch override when one is recorded, else the agent's
+	// config-declared provider/model (agent-switchover-and-failover
+	// Milestone 2) — so a run dispatched for a failed-over agent uses its
+	// secondary, not the primary named in lifecycle/config.yaml.
+	var overrideProvider, overrideModel string
+	if m.EffectiveProvider != nil {
+		overrideProvider, overrideModel, _ = m.EffectiveProvider(agentName)
+	}
+	effProvider, effModel := config.EffectiveProvider(*ag, overrideProvider, overrideModel)
+
+	if ag.Driver == "openai-compatible" {
+		if err := m.preflightModelAvailability(ctx, effProvider, effModel, agentName, targetPath, role, ag.Driver); err != nil {
+			return "", err
+		}
 	}
 
 	// Try semaphore (non-blocking).
@@ -618,32 +718,48 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		relatedTestPath = targetPath
 	}
 
+	providerName := effProvider
+
 	run := Run{
-		RunID:              runID,
-		AgentName:          agentName,
-		Role:               role,
-		Driver:             ag.Driver,
-		Model:              ag.Model,
-		PromptText:         prompt,
-		ProjectRoot:        m.root,
-		AllowedPaths:       ag.AllowedPaths,
-		GitIdentity:        identity,
-		LogPath:            m.LogPath(runID),
-		TargetPath:         targetPath,
-		ActiveStatus:       ag.ActiveStatus,
-		DoneOnSuccess:      ag.DoneOnSuccess,
-		TimeoutMinutes:     ag.TimeoutMinutes,
-		RelatedTestPath:    relatedTestPath,
-		OllamaInstanceName: ag.OllamaInstanceName,
-		OllamaEndpoint:     ag.OllamaEndpoint,
-		ShellCommand:       ag.ShellCommand,
-		BaseURL:            ag.BaseURL,
-		AuthToken:          ag.AuthToken,
+		RunID:               runID,
+		AgentName:           agentName,
+		Role:                role,
+		Driver:              ag.Driver,
+		Model:               effModel,
+		PromptText:          prompt,
+		ProjectRoot:         m.root,
+		AllowedPaths:        ag.AllowedPaths,
+		GitIdentity:         identity,
+		LogPath:             m.LogPath(runID),
+		TargetPath:          targetPath,
+		ActiveStatus:        ag.ActiveStatus,
+		DoneOnSuccess:       ag.DoneOnSuccess,
+		TimeoutMinutes:      ag.TimeoutMinutes,
+		RelatedTestPath:     relatedTestPath,
+		ProviderName:        providerName,
+		MaxToolIterations:   ag.MaxToolIterations,
+		ShellCommand:        ag.ShellCommand,
+		BaseURL:             ag.BaseURL,
+		AuthToken:           ag.AuthToken,
+		ModelLoadingTimeout: m.modelLoadingTimeout,
+		BashAllowlist:       ag.BashAllowlist,
+		BashDenylist:        mergeDenylist(ag.BashDenylist),
+		ObserveOnly:         ag.ObserveOnly,
+	}
+
+	// Refused bash calls are recorded on the run (denied_tool_calls) exactly as
+	// the mediated driver does, so an opt-in shell is auditable.
+	if ag.Driver == "openai-compatible" && len(ag.BashAllowlist) > 0 {
+		runIDCopy := runID
+		mgr := m
+		run.OnBashDenial = func(d Decision, toolName string, toolInput map[string]any) {
+			mgr.RecordDenial(runIDCopy, d, toolName, toolInput)
+		}
 	}
 
 	// Wire TTFT recording for streaming drivers. The callback is called from
-	// the stdout goroutine; errors are logged but never abort the run.
-	if driverEmitsResultEvent(ag.Driver) {
+	// the stdout/stream goroutine; errors are logged but never abort the run.
+	if driverEmitsResultEvent(ag.Driver) || ag.Driver == "openai-compatible" {
 		runIDCopy := runID
 		idx := m.idx
 		run.OnTTFT = func(ms int64) {
@@ -651,6 +767,12 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 				slog.Warn("agent: recording ttft_ms", "run_id", runIDCopy, "err", err)
 			}
 		}
+	}
+
+	// Wire provider-disconnect recording (Milestone 5) for the
+	// openai-compatible driver, the only driver with an in-loop retry path.
+	if ag.Driver == "openai-compatible" && m.OnProviderDisconnect != nil {
+		run.OnProviderDisconnect = m.OnProviderDisconnect
 	}
 
 	// Acquire lineage lock.
@@ -668,6 +790,8 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 		TargetPath: targetPath,
 		StartedAt:  now,
 		Status:     "running",
+		Driver:     run.Driver,
+		Provider:   run.ProviderName,
 	}
 	if err := m.idx.InsertAgentRun(runRow); err != nil {
 		_ = m.locks.Release(lineage)
@@ -772,6 +896,124 @@ func (m *Manager) StartRun(ctx context.Context, agentName, targetPath, role stri
 	return runID, nil
 }
 
+// preflightModelAvailability resolves the given provider and checks that
+// model is present on it, before any resource (semaphore, lineage lock) is
+// acquired (local-model-operability FR-2, NFR-1, NFR-3). provider/model are
+// the agent's *effective* active values (operations.yaml override, falling
+// back to config-declared) — see the EffectiveProvider resolution in
+// StartRun — so a failed-over agent is preflighted against its secondary,
+// not its primary. On a classifiable failure (model missing, endpoint
+// unreachable) it records a failed run row and broadcasts agent.failed so
+// the failure is visible in the UI, then returns an error so the caller
+// aborts the run — without ever touching locks or artifact status. When the
+// model is present but the provider reports it as not yet resident in
+// memory (llama.cpp-style lazy loading), it broadcasts an informational
+// agent.status model_loading event and lets the run proceed normally.
+func (m *Manager) preflightModelAvailability(ctx context.Context, provider, model, agentName, targetPath, role, driver string) error {
+	if model == "" {
+		return nil
+	}
+
+	var prov *config.Provider
+	for i := range m.providers {
+		if m.providers[i].Name == provider {
+			prov = &m.providers[i]
+			break
+		}
+	}
+	if prov == nil {
+		return fmt.Errorf("provider %q not found for agent %q", provider, agentName)
+	}
+
+	status, err := probeModelAvailability(ctx, nil, *prov, model)
+	if err != nil {
+		reason := FailureReasonEndpointUnreachable
+		remediation := endpointUnreachableRemediation
+		if errors.Is(err, ErrModelNotFound) {
+			reason = FailureReasonModelNotFound
+			remediation = modelNotFoundRemediation
+		}
+		m.recordPreflightFailure(agentName, targetPath, role, driver, provider, reason, remediation, err)
+		return fmt.Errorf("preflight: %s: %w", reason, err)
+	}
+
+	if status.LoadState == "unloaded" || status.LoadState == "loading" {
+		m.hub.Broadcast(hub.Event{
+			Type: "agent.status",
+			Payload: map[string]any{
+				"agent":       agentName,
+				"target_path": targetPath,
+				"state":       "model_loading",
+				"details":     "Loading model weights into memory...",
+			},
+		})
+	}
+
+	return nil
+}
+
+// recordPreflightFailure creates and immediately fails a run record for a
+// preflight rejection, so the failure is visible in run history and the
+// live feed exactly like any other agent.failed run — without a process
+// ever having started, and without acquiring the semaphore or lineage lock.
+func (m *Manager) recordPreflightFailure(agentName, targetPath, role, driver, provider, reason string, remediation []string, cause error) {
+	runID := randomHex(8)
+	now := time.Now()
+	row := &index.AgentRunRow{
+		RunID:      runID,
+		AgentName:  agentName,
+		Role:       role,
+		TargetPath: targetPath,
+		StartedAt:  now,
+		Status:     "running",
+		Driver:     driver,
+		Provider:   provider,
+	}
+	if err := m.idx.InsertAgentRun(row); err != nil {
+		slog.Warn("agent: inserting preflight-failure run record", "run_id", runID, "err", err)
+		return
+	}
+
+	finishedAt := time.Now()
+	exitCode := -1
+	row.Status = "failed"
+	row.FinishedAt = &finishedAt
+	row.ExitCode = &exitCode
+	row.FailureReason = &reason
+	row.Remediation = remediation
+	if cause != nil {
+		row.StderrTail = cause.Error()
+		row.ErrorDetails = map[string]any{"message": maskSecretsInText(cause.Error())}
+	}
+	if err := m.idx.UpdateAgentRun(row); err != nil {
+		slog.Warn("agent: updating preflight-failure run record", "run_id", runID, "err", err)
+	}
+
+	m.hub.Broadcast(hub.Event{
+		Type: "agent.failed",
+		Payload: map[string]any{
+			"run_id":         runID,
+			"agent":          agentName,
+			"status":         "failed",
+			"target_path":    targetPath,
+			"failure_reason": reason,
+			"remediation":    remediation,
+			"error_details":  row.ErrorDetails,
+		},
+	})
+
+	feedEvent := &index.EventRow{
+		EventType: "agent_failed",
+		Timestamp: now.Unix(),
+		Actor:     agentName,
+		RunID:     &runID,
+		Summary:   fmt.Sprintf("Agent %s preflight failed: %s", agentName, reason),
+	}
+	if err := m.idx.InsertEvent(feedEvent); err == nil {
+		m.hub.Broadcast(hub.Event{Type: "feed.new", Payload: feedEvent})
+	}
+}
+
 func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run Run, row *index.AgentRunRow, lineage string) {
 	defer cancel()
 	proc := m.getProc(run.RunID)
@@ -815,8 +1057,16 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 					// FR6/Mode-2: prefer the precise typed reset from the most
 					// recent rate_limit_event over the dispatcher's regex parse
 					// of rawText, when one has been observed for this run.
-					if cached, hadCache := m.getRunQuota(run.RunID); hadCache && cached.ResetsAtUnix > 0 {
-						rlPayload["resets_at_unix"] = cached.ResetsAtUnix
+					// agent-switchover-and-failover FR-3.3: also surface the
+					// reset bucket ("five_hour" | "weekly") so a project-wide
+					// failover can record it alongside resets_at_unix.
+					if cached, hadCache := m.getRunQuota(run.RunID); hadCache {
+						if cached.ResetsAtUnix > 0 {
+							rlPayload["resets_at_unix"] = cached.ResetsAtUnix
+						}
+						if cached.Bucket != "" {
+							rlPayload["bucket"] = cached.Bucket
+						}
 					}
 					m.hub.Broadcast(hub.Event{
 						Type:    "queue.rate_limit",
@@ -922,6 +1172,26 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	waitErr := proc.Wait()
 	finishedAt := time.Now()
 
+	// Transient-failure classification (switch-provider-3-be Milestone 3): the
+	// openai-compatible driver wraps HTTP 529/429/gateway-unreachable failures
+	// in a *RunError (Claude drivers detect these mid-stream instead — see
+	// extractRateLimitText). Re-broadcast as queue.rate_limit, the same signal
+	// the dispatcher already reacts to, so failover/pause logic is uniform
+	// across drivers.
+	if waitErr != nil {
+		var rerr *RunError
+		if errors.As(waitErr, &rerr) && rerr.Kind != "" {
+			m.hub.Broadcast(hub.Event{
+				Type: "queue.rate_limit",
+				Payload: map[string]any{
+					"run_id":   run.RunID,
+					"raw_text": rerr.Error(),
+					"kind":     string(rerr.Kind),
+				},
+			})
+		}
+	}
+
 	m.mu.Lock()
 	_, wasActive := m.active[run.RunID]
 	delete(m.active, run.RunID)
@@ -966,7 +1236,7 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	// status to failed so the run is not incorrectly recorded as successful.
 	if authErrKilled && status == "done" {
 		status = "failed"
-		failureReason = "auth_error"
+		failureReason = FailureReasonAuthError
 	}
 
 	// Truncated-stream detection (claude-code-cli / claude-mediated only).
@@ -1119,11 +1389,51 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	}
 	row.StderrTail = proc.StderrTail()
 	row.ArtifactsProduced = produced
+
+	// Structured error taxonomy (local-model-operability FR-3/NFR-2): when
+	// nothing above already classified the failure (auth_error,
+	// truncated_stream), try to classify it from the driver error and
+	// captured stderr. Skip a plain user Kill — that's an intentional
+	// action, not a failure to explain.
+	var remediation []string
+	if failureReason == "" && (status == "failed" || status == "killed-timeout") {
+		var classified string
+		classified, remediation, row.ErrorDetails = ClassifyRunError(waitErr, row.StderrTail, nil)
+		if classified != "" {
+			failureReason = classified
+		}
+	} else if failureReason == FailureReasonAuthError {
+		remediation = authErrorFailureRemediation
+	}
+	if failureReason != "" {
+		row.FailureReason = &failureReason
+		row.Remediation = remediation
+	}
 	_ = m.idx.UpdateAgentRun(row)
 
 	// Pause queue if there were denials (FR16).
+	// Pausing the whole queue on ANY denial proved too blunt: an allowlist miss
+	// is routine — the agent guesses a command, is refused, adapts, and finishes
+	// (run 4d4f8110dbb59ee3 completed successfully yet halted all work). Local
+	// models guess constantly, so that stops the queue continually for a policy
+	// working exactly as intended.
+	//
+	// Pause only when a human is genuinely needed:
+	//   - a DENYLIST hit — the agent attempted something explicitly forbidden,
+	//     which warrants review whether or not the run then succeeded; or
+	//   - the run FAILED while denials occurred — the refusal plausibly
+	//     contributed, so continuing would likely repeat it.
+	// A plain allowlist miss on a successful run is logged and recorded on the
+	// run, but does not stop other work.
 	if hasDenials && m.PauseQueue != nil {
-		m.PauseQueue("denied_tool_calls: run " + run.RunID)
+		runFailed := status != "done"
+		if deniedByDenylist(denials) || runFailed {
+			m.PauseQueue("denied_tool_calls: run " + run.RunID + " — " + summariseDenials(denials))
+		} else {
+			slog.Info("agent: allowlist denials on a successful run — not pausing the queue",
+				"run_id", run.RunID, "agent", run.AgentName, "denials", len(denials),
+				"detail", summariseDenials(denials))
+		}
 	}
 
 	eventType := "agent.finished"
@@ -1140,7 +1450,7 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	var runResult any
 	if run.LogPath != "" {
 		if logData, readErr := os.ReadFile(run.LogPath); readErr == nil {
-			if parsed, parseErr := ParseResultLine(string(logData)); parseErr == nil {
+			if parsed, parseErr := ParseRunResult(run.Driver, string(logData)); parseErr == nil {
 				runResult = parsed
 				metrics := index.AgentRunMetrics{
 					Model:               parsed.Model,
@@ -1155,6 +1465,15 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 				if err := m.idx.UpdateAgentRunMetrics(run.RunID, metrics); err != nil {
 					slog.Warn("agent: persisting run metrics", "run_id", run.RunID, "err", err)
 				}
+			} else if run.Driver == "gemini-cli" {
+				// NFR-2 degradation visibility: a gemini-cli run with no
+				// parseable agy result line means agy fell back to plain text
+				// (e.g. rejected --output-format stream-json) or crashed
+				// before emitting one. The run still completed and logged its
+				// output (M4/M5 handle that); surface the gap explicitly
+				// rather than silently reporting result:null.
+				slog.Warn("agent: gemini-cli run finished with no parseable agy result event",
+					"run_id", run.RunID, "agent", run.AgentName, "err", parseErr)
 			}
 		}
 	}
@@ -1171,6 +1490,12 @@ func (m *Manager) supervise(ctx context.Context, cancel context.CancelFunc, run 
 	}
 	if failureReason != "" {
 		failedPayload["failure_reason"] = failureReason
+		if len(row.Remediation) > 0 {
+			failedPayload["remediation"] = row.Remediation
+		}
+		if len(row.ErrorDetails) > 0 {
+			failedPayload["error_details"] = row.ErrorDetails
+		}
 	}
 	m.hub.Broadcast(hub.Event{
 		Type:    eventType,
@@ -1256,12 +1581,17 @@ func (m *Manager) killAndFail(
 	row.FinishedAt = &finishedAt
 	row.ExitCode = &code
 	row.StderrTail = fmt.Sprintf("precheck failed: %s (observed_permission_mode=%q)", reason, observedMode)
+	row.FailureReason = &reason
+	row.Remediation = remediation
+	row.ErrorDetails = map[string]any{"observed_permission_mode": observedMode}
 	_ = m.idx.UpdateAgentRun(row)
 
 	// Release lineage lock.
 	_ = m.locks.Release(lineage)
 
-	// Broadcast agent.failed with structured precheck payload.
+	// Broadcast agent.failed with structured precheck payload. "reason" is
+	// kept for backwards compatibility with existing consumers;
+	// "failure_reason" mirrors the rest of the FR-3 taxonomy payloads.
 	m.hub.Broadcast(hub.Event{
 		Type: "agent.failed",
 		Payload: map[string]any{
@@ -1270,8 +1600,10 @@ func (m *Manager) killAndFail(
 			"lineage":                  lineage,
 			"status":                   "failed",
 			"reason":                   reason,
+			"failure_reason":           reason,
 			"observed_permission_mode": observedMode,
 			"remediation":              remediation,
+			"error_details":            row.ErrorDetails,
 			"target_path":              row.TargetPath,
 		},
 	})
@@ -1379,6 +1711,19 @@ func (m *Manager) RecordDenial(runID string, d Decision, toolName string, toolIn
 	m.mu.Lock()
 	m.deniedCalls[runID] = append(m.deniedCalls[runID], rec)
 	m.mu.Unlock()
+
+	// Log at the moment of denial. Previously this only accumulated in memory,
+	// so a denial that paused the queue left nothing in the server log naming
+	// the tool — the operator saw "paused: denied_tool_calls" with no way to
+	// tell what had been refused or why.
+	slog.Warn("agent: tool call denied",
+		"run_id", runID,
+		"tool", toolName,
+		"rule", d.Rule,
+		"reason", d.Reason,
+		"command", rec.Command,
+		"path", rec.Path,
+	)
 }
 
 // DeniedCalls returns a copy of all denial records for the given run.
@@ -1603,6 +1948,11 @@ type RateLimitKind string
 const (
 	RateLimitKindRateLimit  RateLimitKind = "rate_limit"
 	RateLimitKindOverloaded RateLimitKind = "overloaded"
+	// RateLimitKindUnreachable classifies a connection-level failure
+	// (refused/DNS/timeout) or a gateway error (502/503/504) from an
+	// openai-compatible provider — the upstream itself is unreachable,
+	// distinct from a throttling response. See classifyHTTPFailure.
+	RateLimitKindUnreachable RateLimitKind = "unreachable"
 )
 
 // extractRateLimitText inspects a decoded agent.progress event payload and
@@ -1832,15 +2182,15 @@ func extractAuthError(payload map[string]any) bool {
 	return false
 }
 
-// driverEmitsResultEvent reports whether the given driver follows the Claude
-// stream-json contract of emitting a terminal `{"type":"result",...}` event
-// when the agent task completes. Drivers that do (claude-code-cli,
-// claude-mediated) can have their runs validated for stream truncation: a
-// clean exit without a result event means the stream was cut mid-run and the
-// task didn't actually complete.
+// driverEmitsResultEvent reports whether the given driver emits a terminal
+// result event (Claude's `{"type":"result",...}` or agy's
+// `{"event":"result",...}`) when the agent task completes. Drivers that do
+// can have their runs validated for stream truncation: a clean exit without
+// a result event means the stream was cut mid-run and the task didn't
+// actually complete.
 func driverEmitsResultEvent(driver string) bool {
 	switch driver {
-	case "claude-code-cli", "claude-mediated", "claude-env":
+	case "claude-code-cli", "claude-mediated", "claude-env", "gemini-cli":
 		return true
 	default:
 		return false
@@ -1863,23 +2213,37 @@ func progressPayload(runID string, ev ProgressEvent) map[string]any {
 }
 
 // isResultEvent reports whether the decoded agent.progress payload's `event`
-// field is a Claude stream-json terminal `result` event.
+// field is a terminal result event, in either the Claude stream-json shape
+// (`{"type":"result",...}`) or agy's (`{"event":"result",...}` — agy's
+// discriminator is the "event" key, not "type").
 func isResultEvent(payload map[string]any) bool {
 	ev, _ := payload["event"].(map[string]any)
 	if ev == nil {
 		return false
 	}
-	t, _ := ev["type"].(string)
-	return t == "result"
+	if t, _ := ev["type"].(string); t == "result" {
+		return true
+	}
+	if e, _ := ev["event"].(string); e == "result" {
+		return true
+	}
+	return false
 }
 
-// resultEventIsError reports whether a terminal stream-json result event carries
-// is_error:true. Only meaningful when isResultEvent(payload) is true.
+// resultEventIsError reports whether a terminal result event signals failure:
+// Claude's is_error:true, or agy's nested result.status != "SUCCESS". Only
+// meaningful when isResultEvent(payload) is true.
 func resultEventIsError(payload map[string]any) bool {
 	ev, _ := payload["event"].(map[string]any)
 	if ev == nil {
 		return false
 	}
+	// agy shape: {"event":"result","result":{"status":"SUCCESS",...}}.
+	if result, ok := ev["result"].(map[string]any); ok {
+		status, _ := result["status"].(string)
+		return status != "SUCCESS"
+	}
+	// Claude shape: {"type":"result","is_error":bool,...}.
 	isErr, _ := ev["is_error"].(bool)
 	return isErr
 }
@@ -1926,4 +2290,72 @@ func extractMessageText(ev map[string]any) string {
 	first, _ := content[0].(map[string]any)
 	text, _ := first["text"].(string)
 	return text
+}
+
+// splitPrompt splits a prompt on the ---SYSTEM--- / ---USER--- delimiter
+// convention. If the delimiter is absent the entire text is the user prompt.
+func splitPrompt(text string) (system, user string) {
+	const delim = "---SYSTEM---"
+	const userDelim = "---USER---"
+
+	sysIdx := strings.Index(text, delim)
+	if sysIdx < 0 {
+		return "", text
+	}
+
+	after := text[sysIdx+len(delim):]
+	userIdx := strings.Index(after, userDelim)
+	if userIdx < 0 {
+		// Everything after ---SYSTEM--- is the system prompt; no user section.
+		return strings.TrimSpace(after), ""
+	}
+
+	return strings.TrimSpace(after[:userIdx]), strings.TrimSpace(after[userIdx+len(userDelim):])
+}
+
+// summariseDenials renders denial records into a short, human-readable reason
+// suitable for a queue-pause message: the tool, what it tried, and the rule that
+// refused it. Truncated so one pathological run cannot produce an unreadable
+// pause banner.
+func summariseDenials(denials []DenialRecord) string {
+	if len(denials) == 0 {
+		return "no details recorded"
+	}
+	const maxShown = 3
+	parts := make([]string, 0, maxShown)
+	for i, d := range denials {
+		if i == maxShown {
+			parts = append(parts, fmt.Sprintf("and %d more", len(denials)-maxShown))
+			break
+		}
+		target := d.Command
+		if target == "" {
+			target = d.Path
+		}
+		if len(target) > 80 {
+			target = target[:80] + "…"
+		}
+		switch {
+		case target != "" && d.Rule != "":
+			parts = append(parts, fmt.Sprintf("%s: %q (rule: %s)", d.ToolName, target, d.Rule))
+		case target != "":
+			parts = append(parts, fmt.Sprintf("%s: %q", d.ToolName, target))
+		default:
+			parts = append(parts, d.ToolName)
+		}
+	}
+	return strings.Join(parts, "; ")
+}
+
+// deniedByDenylist reports whether any denial was an explicit denylist hit, as
+// opposed to a command simply not appearing on the allowlist. The distinction
+// matters for escalation: an allowlist miss is an agent guessing, whereas a
+// denylist hit is an agent reaching for something deliberately forbidden.
+func deniedByDenylist(denials []DenialRecord) bool {
+	for _, d := range denials {
+		if strings.Contains(strings.ToLower(d.Rule), "denylist") {
+			return true
+		}
+	}
+	return false
 }

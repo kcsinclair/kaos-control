@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestShouldIgnore verifies the ShouldIgnore helper with various pattern/path
@@ -493,6 +494,41 @@ func TestLoadAppDefaultDataDir(t *testing.T) {
 // TestLoadApp_AgentPrecheckDefaults verifies that when no agent: section is
 // present in the app config file, the default values are applied correctly.
 // Run with: go test ./internal/config/ -run TestLoadApp_AgentPrecheckDefaults
+// TestLoadApp_OmittedSectionsKeepDefaults verifies that a config file which
+// omits a section entirely keeps the defaults for that section. App.UnmarshalYAML
+// previously decoded into a zero-valued appRaw and overwrote every field, so any
+// key absent from the file lost its default. For auth that was fatal: no "auth:"
+// key meant method "", which validateApp rejects as unsupported — the server
+// refused to start on a minimal config, and 33 integration tests each burned
+// their full 15s readiness timeout as a result.
+func TestLoadApp_OmittedSectionsKeepDefaults(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+
+	// No auth:, limits: or agent: section — only what a hand-written minimal
+	// config would carry.
+	minimalCfg := "server:\n  listen: \":9999\"\ndata_dir: " + filepath.Join(dir, "data") + "\n"
+	if err := os.WriteFile(cfgPath, []byte(minimalCfg), 0o600); err != nil {
+		t.Fatalf("writing config: %v", err)
+	}
+
+	cfg, err := LoadApp(cfgPath)
+	if err != nil {
+		t.Fatalf("LoadApp on a config without an auth: section: %v", err)
+	}
+
+	if cfg.Auth.Method != "local" {
+		t.Errorf("Auth.Method = %q, want %q", cfg.Auth.Method, "local")
+	}
+	if cfg.Auth.SessionTTL != 30*24*time.Hour {
+		t.Errorf("Auth.SessionTTL = %v, want %v", cfg.Auth.SessionTTL, 30*24*time.Hour)
+	}
+	// The value present in the file must still win over the default.
+	if cfg.Server.Listen != ":9999" {
+		t.Errorf("Server.Listen = %q, want %q", cfg.Server.Listen, ":9999")
+	}
+}
+
 func TestLoadApp_AgentPrecheckDefaults(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")
@@ -957,23 +993,19 @@ func TestValidateClaudeEnvAgent(t *testing.T) {
 		}
 	})
 
-	// NFR-2 regression: existing drivers must still validate correctly.
-	t.Run("regression ollama still validates", func(t *testing.T) {
+	// Driver "ollama" is removed and must be rejected.
+	t.Run("driver ollama is rejected", func(t *testing.T) {
 		dir := writeMinimalProjectConfig(t, `agents:
   - name: ollama-agent
     role: [analyst]
     driver: ollama
-    ollama_instance: local-ollama
     model: llama3
     prompt_templates:
       analyst: "x"
 `)
-		cfg, err := LoadProject(dir)
-		if err != nil {
-			t.Fatalf("ollama agent should validate: %v", err)
-		}
-		if cfg.Agents[0].Driver != "ollama" {
-			t.Errorf("driver: got %q", cfg.Agents[0].Driver)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "deprecated driver \"ollama\"") {
+			t.Fatalf("expected deprecated driver ollama error, got: %v", err)
 		}
 	})
 
@@ -1289,4 +1321,815 @@ func writeMinimalProjectConfig(t *testing.T, extraYAML string) string {
 		t.Fatal(err)
 	}
 	return dir
+}
+
+// ---------------------------------------------------------------------------
+// Milestone 1 — Provider & openai-compatible AgentConfig tests
+// ---------------------------------------------------------------------------
+
+func TestProviderConfig_Validation(t *testing.T) {
+	t.Run("valid provider loads cleanly", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: local-llama
+    base_url: http://localhost:7442
+    driver: openai-compatible
+    api_key: secret-token
+    extra_headers:
+      X-Title: InnovationMaker
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := LoadApp(cfgPath)
+		if err != nil {
+			t.Fatalf("LoadApp: %v", err)
+		}
+		if len(cfg.Providers) != 1 {
+			t.Fatalf("len(Providers) = %d, want 1", len(cfg.Providers))
+		}
+		p := cfg.Providers[0]
+		if p.Name != "local-llama" || p.BaseURL != "http://localhost:7442" || p.Driver != "openai-compatible" {
+			t.Errorf("unexpected provider: %+v", p)
+		}
+		if p.APIKey != "secret-token" || p.ExtraHeaders["X-Title"] != "InnovationMaker" {
+			t.Errorf("unexpected provider fields: %+v", p)
+		}
+	})
+
+	t.Run("empty provider name rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: ""
+    base_url: http://localhost:7442
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "name must not be empty") {
+			t.Fatalf("expected empty name error, got: %v", err)
+		}
+	})
+
+	t.Run("duplicate provider name rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: dup-prov
+    base_url: http://localhost:7442
+    driver: openai-compatible
+  - name: dup-prov
+    base_url: http://localhost:7443
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "duplicate name") {
+			t.Fatalf("expected duplicate name error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid slug name rejected (uppercase)", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: "Invalid_Name"
+    base_url: http://localhost:7442
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "lowercase letters, digits, and hyphens") {
+			t.Fatalf("expected slug format error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid slug name rejected (too short)", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: "a"
+    base_url: http://localhost:7442
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "at least 2 characters") {
+			t.Fatalf("expected length error, got: %v", err)
+		}
+	})
+
+	t.Run("empty base_url rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: prov
+    base_url: ""
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "base_url must not be empty") {
+			t.Fatalf("expected empty base_url error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid base_url rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: prov
+    base_url: "ftp://invalid-url"
+    driver: openai-compatible
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "not a valid http/https URL") {
+			t.Fatalf("expected invalid url error, got: %v", err)
+		}
+	})
+
+	t.Run("empty driver rejected", func(t *testing.T) {
+		dir := t.TempDir()
+		cfgPath := filepath.Join(dir, "config.yaml")
+		yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+providers:
+  - name: prov
+    base_url: "http://localhost:7442"
+    driver: ""
+`
+		if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := LoadApp(cfgPath)
+		if err == nil || !strings.Contains(err.Error(), "driver must not be empty") {
+			t.Fatalf("expected empty driver error, got: %v", err)
+		}
+	})
+}
+
+func TestProviderConfig_OllamaMigration(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	yaml := `
+server:
+  listen: ":8042"
+auth:
+  method: local
+  session_ttl: 24h
+ollama_instances:
+  - name: legacy-ollama
+    base_url: http://localhost:11434
+    api_key: secret-key
+`
+	if err := os.WriteFile(cfgPath, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadApp(cfgPath)
+	if err != nil {
+		t.Fatalf("LoadApp: %v", err)
+	}
+	if len(cfg.Providers) != 1 {
+		t.Fatalf("expected 1 migrated provider, got %d", len(cfg.Providers))
+	}
+	p := cfg.Providers[0]
+	if p.Name != "legacy-ollama" || p.BaseURL != "http://localhost:11434" || p.Driver != "openai-compatible" || p.APIKey != "secret-key" {
+		t.Errorf("migrated provider mismatch: %+v", p)
+	}
+
+	// Verify persistence to disk
+	diskBytes, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatalf("reading persisted config: %v", err)
+	}
+	diskStr := string(diskBytes)
+	if strings.Contains(diskStr, "ollama_instances") {
+		t.Errorf("persisted config should not contain ollama_instances: %s", diskStr)
+	}
+	if !strings.Contains(diskStr, "legacy-ollama") || !strings.Contains(diskStr, "openai-compatible") {
+		t.Errorf("persisted config missing provider data: %s", diskStr)
+	}
+}
+
+func TestProjectConfig_OpenAICompatibleAgent(t *testing.T) {
+	t.Run("valid openai-compatible agent loads cleanly", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: local-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: local-llama
+    model: gemma-4-26b
+    max_tool_iterations: 15
+    allowed_write_paths: [lifecycle/requirements]
+    git_identity:
+      name: Local Agent
+      email: local@test.local
+    prompt_templates:
+      analyst: "Analyse {target_path}"
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		var found *AgentConfig
+		for i := range cfg.Agents {
+			if cfg.Agents[i].Name == "local-agent" {
+				found = &cfg.Agents[i]
+				break
+			}
+		}
+		if found == nil {
+			t.Fatal("local-agent not found")
+		}
+		if found.Driver != "openai-compatible" || found.Provider != "local-llama" || found.Model != "gemma-4-26b" || found.MaxToolIterations != 15 {
+			t.Errorf("agent fields mismatch: %+v", found)
+		}
+	})
+
+	t.Run("openrouter provider with anthropic/claude-3.5-sonnet parses correctly", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: openrouter-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: openrouter
+    model: anthropic/claude-3.5-sonnet
+    prompt_templates:
+      analyst: "Analyse {target_path}"
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		var found *AgentConfig
+		for i := range cfg.Agents {
+			if cfg.Agents[i].Name == "openrouter-agent" {
+				found = &cfg.Agents[i]
+				break
+			}
+		}
+		if found == nil {
+			t.Fatal("openrouter-agent not found")
+		}
+		if found.Provider != "openrouter" || found.Model != "anthropic/claude-3.5-sonnet" {
+			t.Errorf("agent fields mismatch: %+v", found)
+		}
+	})
+
+	t.Run("provider-backed agent with empty model rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: prov-agent
+    role: [analyst]
+    provider: openrouter
+    prompt_templates:
+      analyst: "x"
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "missing model") {
+			t.Fatalf("expected missing model error, got: %v", err)
+		}
+	})
+
+	t.Run("CLI agent parses and validates without provider", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `agents:
+  - name: claude-cli-agent
+    role: [analyst]
+    driver: claude-code-cli
+    prompt_templates:
+      analyst: "x"
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		var found *AgentConfig
+		for i := range cfg.Agents {
+			if cfg.Agents[i].Name == "claude-cli-agent" {
+				found = &cfg.Agents[i]
+				break
+			}
+		}
+		if found == nil {
+			t.Fatal("claude-cli-agent not found")
+		}
+		if found.Provider != "" {
+			t.Errorf("expected empty provider, got %q", found.Provider)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// inline-driver-provider-abstraction-3-be Milestone 5 — config validation
+// for inline provider bindings (FR-6)
+// ---------------------------------------------------------------------------
+
+func TestProjectConfig_InlineAgentProviderRequiresModel(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: idea-capture
+    role: [analyst]
+    driver: inline
+    provider: local-llama
+    prompt_templates:
+      idea-capture: "x"
+`)
+	_, err := LoadProject(dir)
+	if err == nil || !strings.Contains(err.Error(), "missing model") {
+		t.Fatalf("expected missing model error, got: %v", err)
+	}
+}
+
+func TestProjectConfig_InlineAgentNoProviderValidatesAsToday(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: idea-capture
+    role: [analyst]
+    driver: inline
+    model: claude-sonnet-4-6
+    prompt_templates:
+      idea-capture: "x"
+`)
+	if _, err := LoadProject(dir); err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+}
+
+func TestValidateAgentProviders(t *testing.T) {
+	t.Run("inline agent with unregistered provider is rejected", func(t *testing.T) {
+		cfg := &Project{Agents: []AgentConfig{{
+			Name:     "idea-capture",
+			Driver:   "inline",
+			Provider: "ghost",
+			Model:    "m",
+		}}}
+		err := ValidateAgentProviders(cfg, []ProviderConfig{{Name: "local-llama"}})
+		if err == nil || !strings.Contains(err.Error(), "idea-capture") || !strings.Contains(err.Error(), "ghost") {
+			t.Fatalf("expected error naming agent and provider, got: %v", err)
+		}
+	})
+
+	t.Run("inline agent with registered provider passes", func(t *testing.T) {
+		cfg := &Project{Agents: []AgentConfig{{
+			Name:     "idea-capture",
+			Driver:   "inline",
+			Provider: "local-llama",
+			Model:    "m",
+		}}}
+		if err := ValidateAgentProviders(cfg, []ProviderConfig{{Name: "local-llama"}}); err != nil {
+			t.Fatalf("ValidateAgentProviders: %v", err)
+		}
+	})
+
+	t.Run("inline agent with no provider passes regardless of app config", func(t *testing.T) {
+		cfg := &Project{Agents: []AgentConfig{{
+			Name:   "idea-capture",
+			Driver: "inline",
+			Model:  "claude-sonnet-4-6",
+		}}}
+		if err := ValidateAgentProviders(cfg, nil); err != nil {
+			t.Fatalf("ValidateAgentProviders: %v", err)
+		}
+	})
+
+	t.Run("non-inline agent with unregistered provider is not this check's concern", func(t *testing.T) {
+		cfg := &Project{Agents: []AgentConfig{{
+			Name:     "async-agent",
+			Driver:   "openai-compatible",
+			Provider: "ghost",
+			Model:    "m",
+		}}}
+		if err := ValidateAgentProviders(cfg, nil); err != nil {
+			t.Fatalf("ValidateAgentProviders: %v", err)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// switch-provider-3-be Milestone 1 — fallback config, failover policy,
+// provider templates
+// ---------------------------------------------------------------------------
+
+func TestAgentConfig_FallbackFieldsRoundTrip(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: analyst-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
+    fallback_provider: gemini-cloud
+    fallback_model: gemini-2.5-flash
+    primary_provider: anthropic-cloud
+    primary_model: claude-3-7-sonnet
+    prompt_templates:
+      analyst: "x"
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	ag := cfg.Agents[0]
+	if ag.FallbackProvider != "gemini-cloud" {
+		t.Errorf("fallback_provider: got %q", ag.FallbackProvider)
+	}
+	if ag.FallbackModel != "gemini-2.5-flash" {
+		t.Errorf("fallback_model: got %q", ag.FallbackModel)
+	}
+	if ag.PrimaryProvider != "anthropic-cloud" {
+		t.Errorf("primary_provider: got %q", ag.PrimaryProvider)
+	}
+	if ag.PrimaryModel != "claude-3-7-sonnet" {
+		t.Errorf("primary_model: got %q", ag.PrimaryModel)
+	}
+}
+
+func TestValidateProject_FallbackProviderSameAsProvider(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: analyst-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
+    fallback_provider: anthropic-cloud
+    fallback_model: claude-3-7-sonnet
+    prompt_templates:
+      analyst: "x"
+`)
+	_, err := LoadProject(dir)
+	if err == nil || !strings.Contains(err.Error(), "fallback_provider must differ from provider") {
+		t.Fatalf("expected fallback_provider==provider error, got: %v", err)
+	}
+}
+
+func TestValidateProject_FallbackProviderMissingModel(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `agents:
+  - name: analyst-agent
+    role: [analyst]
+    driver: openai-compatible
+    provider: anthropic-cloud
+    model: claude-3-7-sonnet
+    fallback_provider: gemini-cloud
+    prompt_templates:
+      analyst: "x"
+`)
+	_, err := LoadProject(dir)
+	if err == nil || !strings.Contains(err.Error(), "missing fallback_model") {
+		t.Fatalf("expected missing fallback_model error, got: %v", err)
+	}
+}
+
+func TestEffectiveFailoverConfig_Defaults(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, "")
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveFailoverConfig()
+	if eff.Enabled == nil || !*eff.Enabled {
+		t.Errorf("expected Enabled=true by default")
+	}
+	if eff.AutoSwitch == nil || *eff.AutoSwitch {
+		t.Errorf("expected AutoSwitch=false by default")
+	}
+	if len(eff.SwitchOnKinds) != 3 {
+		t.Errorf("expected 3 default switch_on_kinds, got %v", eff.SwitchOnKinds)
+	}
+	if eff.MaxFailoversPerRun != 1 {
+		t.Errorf("expected MaxFailoversPerRun=1, got %d", eff.MaxFailoversPerRun)
+	}
+	if eff.ProbeIntervalSeconds != 60 {
+		t.Errorf("expected ProbeIntervalSeconds=60, got %d", eff.ProbeIntervalSeconds)
+	}
+}
+
+func TestEffectiveFailoverConfig_Overrides(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `provider_failover:
+  enabled: true
+  auto_switch: true
+  switch_on_kinds: [overloaded]
+  max_failovers_per_run: 3
+  probe_interval_seconds: 30
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveFailoverConfig()
+	if eff.AutoSwitch == nil || !*eff.AutoSwitch {
+		t.Errorf("expected AutoSwitch=true override")
+	}
+	if len(eff.SwitchOnKinds) != 1 || eff.SwitchOnKinds[0] != "overloaded" {
+		t.Errorf("expected switch_on_kinds override, got %v", eff.SwitchOnKinds)
+	}
+	if eff.MaxFailoversPerRun != 3 {
+		t.Errorf("expected MaxFailoversPerRun=3 override, got %d", eff.MaxFailoversPerRun)
+	}
+	if eff.ProbeIntervalSeconds != 30 {
+		t.Errorf("expected ProbeIntervalSeconds=30 override, got %d", eff.ProbeIntervalSeconds)
+	}
+}
+
+func TestValidateProject_InvalidSwitchOnKind(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `provider_failover:
+  switch_on_kinds: [bogus]
+`)
+	_, err := LoadProject(dir)
+	if err == nil || !strings.Contains(err.Error(), "unrecognized kind") {
+		t.Fatalf("expected unrecognized kind error, got: %v", err)
+	}
+}
+
+func TestProviderTemplates_ParseAndValidate(t *testing.T) {
+	t.Run("valid template parses", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_templates:
+  - name: local-ai
+    description: Route everything to local Ollama
+    agents:
+      analyst-agent:
+        provider: local-ollama
+        model: llama3
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if len(cfg.ProviderTemplates) != 1 {
+			t.Fatalf("expected 1 template, got %d", len(cfg.ProviderTemplates))
+		}
+		tpl := cfg.ProviderTemplates[0]
+		if tpl.Name != "local-ai" {
+			t.Errorf("name: got %q", tpl.Name)
+		}
+		binding, ok := tpl.Agents["analyst-agent"]
+		if !ok {
+			t.Fatal("expected binding for analyst-agent")
+		}
+		if binding.Provider != "local-ollama" || binding.Model != "llama3" {
+			t.Errorf("binding: got %+v", binding)
+		}
+	})
+
+	t.Run("duplicate template name rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_templates:
+  - name: local-ai
+    agents:
+      analyst-agent: {provider: local-ollama, model: llama3}
+  - name: local-ai
+    agents:
+      analyst-agent: {provider: local-ollama, model: llama3}
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "duplicate name") {
+			t.Fatalf("expected duplicate name error, got: %v", err)
+		}
+	})
+
+	t.Run("empty agents map rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_templates:
+  - name: empty-template
+    agents: {}
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "agents must not be empty") {
+			t.Fatalf("expected empty agents error, got: %v", err)
+		}
+	})
+}
+
+func TestEffectiveSwitchoverPolicy_CompleteByConstruction(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, "")
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveSwitchoverPolicy()
+	if eff.AutomatedSwitchover {
+		t.Error("expected automated_switchover disabled by default (FR-2.1)")
+	}
+	if len(eff.Actions) != len(SwitchoverReasons) {
+		t.Fatalf("expected one action per known reason, got %d actions for %d reasons", len(eff.Actions), len(SwitchoverReasons))
+	}
+	for _, reason := range SwitchoverReasons {
+		action, ok := eff.Actions[reason]
+		if !ok {
+			t.Errorf("missing action for reason %q", reason)
+			continue
+		}
+		if !validSwitchoverActions[action] {
+			t.Errorf("reason %q: unrecognized action %q", reason, action)
+		}
+	}
+	// FR-2.3 "else" columns: with automated switchover disabled, every
+	// would-be-failover reason defaults to pause_queue.
+	for _, reason := range []string{SwitchoverReasonRateLimit, SwitchoverReasonOverloaded, SwitchoverReasonUnreachable, SwitchoverReasonAuthError} {
+		if eff.Actions[reason] != SwitchoverActionPauseQueue {
+			t.Errorf("reason %q: expected pause_queue when disabled, got %q", reason, eff.Actions[reason])
+		}
+	}
+	if eff.Actions[SwitchoverReasonProviderDisconnected] != SwitchoverActionRetryInPlace {
+		t.Errorf("provider_disconnected: expected retry_in_place, got %q", eff.Actions[SwitchoverReasonProviderDisconnected])
+	}
+	for _, reason := range []string{SwitchoverReasonModelNotFound, SwitchoverReasonModelUnloaded, SwitchoverReasonToolsUnsupported, SwitchoverReasonContextWindowExceeded, SwitchoverReasonTurnTokenCeiling, SwitchoverReasonMaxIterationsReached, SwitchoverReasonTimeout} {
+		if eff.Actions[reason] != SwitchoverActionFailRun {
+			t.Errorf("reason %q: expected fail_run, got %q", reason, eff.Actions[reason])
+		}
+	}
+}
+
+func TestEffectiveSwitchoverPolicy_EnabledDefaultsToFailover(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `switchover:
+  automated_switchover: true
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveSwitchoverPolicy()
+	if !eff.AutomatedSwitchover {
+		t.Error("expected automated_switchover enabled")
+	}
+	for _, reason := range []string{SwitchoverReasonRateLimit, SwitchoverReasonOverloaded, SwitchoverReasonUnreachable, SwitchoverReasonAuthError} {
+		if eff.Actions[reason] != SwitchoverActionFailover {
+			t.Errorf("reason %q: expected failover when enabled, got %q", reason, eff.Actions[reason])
+		}
+	}
+}
+
+func TestEffectiveSwitchoverPolicy_EventsOverrideDefaults(t *testing.T) {
+	dir := writeMinimalProjectConfig(t, `switchover:
+  automated_switchover: true
+  events:
+    rate_limit: pause_queue
+    timeout: retry_in_place
+`)
+	cfg, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject: %v", err)
+	}
+	eff := cfg.EffectiveSwitchoverPolicy()
+	if eff.Actions[SwitchoverReasonRateLimit] != SwitchoverActionPauseQueue {
+		t.Errorf("rate_limit override: got %q", eff.Actions[SwitchoverReasonRateLimit])
+	}
+	if eff.Actions[SwitchoverReasonTimeout] != SwitchoverActionRetryInPlace {
+		t.Errorf("timeout override: got %q", eff.Actions[SwitchoverReasonTimeout])
+	}
+	// Reasons not overridden still get the enabled-default.
+	if eff.Actions[SwitchoverReasonOverloaded] != SwitchoverActionFailover {
+		t.Errorf("overloaded (not overridden): got %q", eff.Actions[SwitchoverReasonOverloaded])
+	}
+}
+
+func TestEffectiveSwitchoverPolicy_LegacyBackCompat(t *testing.T) {
+	t.Run("legacy auto_switch enables failover when switchover block unset", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_failover:
+  auto_switch: true
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		eff := cfg.EffectiveSwitchoverPolicy()
+		if !eff.AutomatedSwitchover {
+			t.Error("expected legacy auto_switch to enable automated_switchover")
+		}
+		if eff.Actions[SwitchoverReasonOverloaded] != SwitchoverActionFailover {
+			t.Errorf("overloaded: got %q", eff.Actions[SwitchoverReasonOverloaded])
+		}
+	})
+
+	t.Run("new switchover block supersedes legacy auto_switch", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_failover:
+  auto_switch: true
+switchover:
+  automated_switchover: false
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		eff := cfg.EffectiveSwitchoverPolicy()
+		if eff.AutomatedSwitchover {
+			t.Error("expected switchover.automated_switchover=false to supersede legacy auto_switch=true")
+		}
+	})
+
+	t.Run("legacy switch_on_kinds restricts which reasons fail over", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `provider_failover:
+  auto_switch: true
+  switch_on_kinds: [overloaded]
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		eff := cfg.EffectiveSwitchoverPolicy()
+		if eff.Actions[SwitchoverReasonOverloaded] != SwitchoverActionFailover {
+			t.Errorf("overloaded (in switch_on_kinds): got %q", eff.Actions[SwitchoverReasonOverloaded])
+		}
+		if eff.Actions[SwitchoverReasonRateLimit] != SwitchoverActionPauseQueue {
+			t.Errorf("rate_limit (excluded from switch_on_kinds): got %q", eff.Actions[SwitchoverReasonRateLimit])
+		}
+		// auth_error isn't part of the legacy switch_on_kinds vocabulary, so
+		// it is unaffected by the restriction.
+		if eff.Actions[SwitchoverReasonAuthError] != SwitchoverActionFailover {
+			t.Errorf("auth_error (not in legacy vocabulary): got %q", eff.Actions[SwitchoverReasonAuthError])
+		}
+	})
+}
+
+func TestValidateProject_SwitchoverEvents(t *testing.T) {
+	t.Run("unrecognized reason rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `switchover:
+  events:
+    bogus_reason: fail_run
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "unrecognized reason") {
+			t.Fatalf("expected unrecognized reason error, got: %v", err)
+		}
+	})
+
+	t.Run("unrecognized action rejected", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `switchover:
+  events:
+    timeout: reboot_the_server
+`)
+		_, err := LoadProject(dir)
+		if err == nil || !strings.Contains(err.Error(), "unrecognized action") {
+			t.Fatalf("expected unrecognized action error, got: %v", err)
+		}
+	})
+
+	t.Run("valid events parse", func(t *testing.T) {
+		dir := writeMinimalProjectConfig(t, `switchover:
+  automated_switchover: true
+  events:
+    timeout: fail_run
+    provider_disconnected: retry_in_place
+`)
+		cfg, err := LoadProject(dir)
+		if err != nil {
+			t.Fatalf("LoadProject: %v", err)
+		}
+		if cfg.Switchover.Events["timeout"] != "fail_run" {
+			t.Errorf("expected events round-trip, got %+v", cfg.Switchover.Events)
+		}
+	})
 }

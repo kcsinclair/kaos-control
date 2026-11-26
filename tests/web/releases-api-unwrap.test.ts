@@ -53,6 +53,8 @@ const sample: Release = {
   end_date: null,
   file_path: '',
   slug: '',
+  goal: '',
+  description: '',
 } as Release
 
 describe('releases API client unwraps the envelope', () => {

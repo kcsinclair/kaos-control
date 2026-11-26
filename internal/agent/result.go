@@ -14,7 +14,17 @@ var errNoResultLine = errors.New("no result line found in log")
 
 // RunResult holds the parsed fields from a Claude Code type:result JSON line.
 type RunResult struct {
-	Subtype           string                   `json:"subtype"`
+	Subtype string `json:"subtype"`
+	// IsError is the authoritative success/failure signal. Claude Code can emit
+	// subtype:"success" together with is_error:true — e.g. an API error partway
+	// through ("API Error: Connection closed mid-response") still carries the
+	// success subtype. Consumers MUST prefer IsError over Subtype; reading
+	// Subtype alone reports a failed run as successful.
+	IsError bool `json:"is_error"`
+	// Result is the terminal message from the result line. On an error it
+	// carries the reason (e.g. the API error text), which is otherwise lost
+	// because a killed process leaves stderr_tail empty.
+	Result            string                   `json:"result"`
 	TotalCostUSD      float64                  `json:"total_cost_usd"`
 	DurationMs        int64                    `json:"duration_ms"`
 	DurationApiMs     int64                    `json:"duration_api_ms"`
@@ -100,6 +110,19 @@ func ParseResultLine(logContent string) (*RunResult, error) {
 	}
 
 	return nil, errNoResultLine
+}
+
+// ParseRunResult dispatches to the result parser matching the driver's
+// stream-json shape: ParseAgyResultLine for gemini-cli (agy's event/result
+// NDJSON), ParseResultLine for every other driver (Claude's type/result
+// NDJSON). Keeps the two call sites (supervisor post-run parse in this
+// package, the on-demand result endpoint in internal/http) on one dispatch
+// rule.
+func ParseRunResult(driver, logContent string) (*RunResult, error) {
+	if driver == "gemini-cli" {
+		return ParseAgyResultLine(logContent)
+	}
+	return ParseResultLine(logContent)
 }
 
 // dominantModel returns the run's primary model: the entry in modelUsage with

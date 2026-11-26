@@ -1,7 +1,7 @@
 ---
 title: QA Agent Should Assign Defects to the Correct Role
 type: idea
-status: draft
+status: clarifying
 lineage: qa-agent-defect-role-assignment
 created: "2026-04-28T10:30:51+10:00"
 priority: normal
@@ -11,7 +11,7 @@ labels:
     - defect
     - workflow
     - agent
-release: KC-Release6
+release: KC-Release7
 ---
 
 # QA Agent Should Assign Defects to the Correct Role

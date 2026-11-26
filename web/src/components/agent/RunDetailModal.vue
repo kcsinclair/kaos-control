@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import * as agentsApi from '@/api/agents'
 import type { AgentRunRow, RunResult } from '@/types/api'
 import RunSummaryCard from './RunSummaryCard.vue'
@@ -10,6 +10,9 @@ import RunFailureBanner from './RunFailureBanner.vue'
 import RawLogModal from './RawLogModal.vue'
 import TestRunSummaryCard from './TestRunSummaryCard.vue'
 import { useAgentsStore } from '@/stores/agents'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
+import { parseLogTurns } from '@/lib/logParser'
+import type { RunTurn } from '@/types/api'
 
 const props = defineProps<{
   project: string
@@ -25,9 +28,46 @@ const error = ref<string | null>(null)
 const runResult = ref<RunResult | null>(null)
 const resultLoading = ref(false)
 
+const parsedTurns = ref<RunTurn[]>([])
+const expandedTurns = ref<Set<number>>(new Set())
+const expandedToolArgs = ref<Set<string>>(new Set())
+const expandedToolResults = ref<Set<string>>(new Set())
+
+function toggleTurn(turnNum: number) {
+  if (expandedTurns.value.has(turnNum)) {
+    expandedTurns.value.delete(turnNum)
+  } else {
+    expandedTurns.value.add(turnNum)
+  }
+}
+
+function toggleToolArg(id: string) {
+  if (expandedToolArgs.value.has(id)) {
+    expandedToolArgs.value.delete(id)
+  } else {
+    expandedToolArgs.value.add(id)
+  }
+}
+
+function toggleToolRes(id: string) {
+  if (expandedToolResults.value.has(id)) {
+    expandedToolResults.value.delete(id)
+  } else {
+    expandedToolResults.value.add(id)
+  }
+}
+
 const TERMINAL_RUN_STATUSES = new Set(['done', 'failed', 'killed', 'killed-timeout'])
 const showRawLog = ref(false)
 const agentsStore = useAgentsStore()
+const providerSwitchStore = useProviderSwitchStore()
+
+// FR-7.3: this run was interrupted with a suspected partial commit and is
+// held pending an operator decision — no auto-rerun or auto-rollback.
+const isAwaitingOperatorDecision = computed(() => {
+  const agent = providerSwitchStore.status.agents.find((a) => a.agent === run.value?.agent_name)
+  return !!agent?.awaiting_decision && agent.awaiting_decision_job_id === props.runId
+})
 
 // Files under lifecycle/ are artifacts and link to the editor; other produced
 // files (code, config) are shown as plain paths.
@@ -54,6 +94,9 @@ let previousFocus: HTMLElement | null = null
 
 onMounted(async () => {
   previousFocus = document.activeElement as HTMLElement | null
+  if (!providerSwitchStore.status.agents.length) {
+    void providerSwitchStore.fetchStatus(props.project)
+  }
   try {
     const data = await agentsApi.getRun(props.project, props.runId)
     run.value = data.run
@@ -68,6 +111,17 @@ onMounted(async () => {
         runResult.value = result
         resultLoading.value = false
       }
+    }
+
+    try {
+      const log = await agentsApi.getRunLog(props.project, props.runId)
+      if (log) {
+        parsedTurns.value = parseLogTurns(log)
+        // Auto-expand last 3 turns
+        parsedTurns.value.slice(-3).forEach((t) => expandedTurns.value.add(t.turn_number))
+      }
+    } catch {
+      // Non-fatal if log file is not yet created or unreadable
     }
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load run'
@@ -85,10 +139,70 @@ function formatDatetime(iso: string | undefined): string {
   return new Date(iso).toLocaleString()
 }
 
-function agentHasTokenMetrics(agentName: string): boolean {
-  const driver = agentsStore.agents.find((agent) => agent.name === agentName)?.driver
+// Driver id recorded on the run itself (immutable, set at run-start) takes
+// precedence over the agent's current config, which may have since changed.
+function runDriverId(r: AgentRunRow): string | undefined {
+  return r.driver || agentsStore.agents.find((agent) => agent.name === r.agent_name)?.driver
+}
+
+function driverLabel(driver: string): string {
+  if (driver === 'ollama') return 'Ollama'
+  if (driver === 'claude-code-cli') return 'Claude Code'
+  if (driver === 'claude-mediated') return 'Claude Mediated'
+  if (driver === 'codex-cli') return 'Codex'
+  if (driver === 'gemini') return 'Gemini'
+  if (driver === 'gemini-cli') return 'Gemini CLI'
+  if (driver === 'openai-compatible') return 'OpenAI Compatible'
+  return driver
+}
+
+function runDriverDisplay(r: AgentRunRow): string {
+  const driver = runDriverId(r)
+  return driver ? driverLabel(driver) : '—'
+}
+
+function agentHasTokenMetrics(r: AgentRunRow): boolean {
+  const driver = runDriverId(r)
   if (!driver) return true
-  return driver === 'claude-code-cli' || driver === 'claude-mediated'
+  return driver === 'claude-code-cli' || driver === 'claude-mediated' || driver === 'openai-compatible'
+}
+
+// Recorded run.provider (immutable) takes precedence over the agent's
+// current config, which may have since switched providers.
+function providerNameFor(r: AgentRunRow): string | undefined {
+  return r.provider || agentsStore.agents.find((agent) => agent.name === r.agent_name)?.provider
+}
+
+// Warmup state lives only on the agentsStore's live (WS-updated) copy of the
+// run, never on the snapshot this modal fetched once via GET /runs/:id.
+const liveWarmup = computed(() => agentsStore.runs.find((r) => r.run_id === props.runId)?.warmup_state ?? null)
+const isWarmingUp = computed(() =>
+  run.value?.status === 'running' && (liveWarmup.value === 'model_loading' || liveWarmup.value === 'warming_up'),
+)
+const warmupDetail = computed(() => agentsStore.runs.find((r) => r.run_id === props.runId)?.warmup_message ?? null)
+
+// Human labels for the known error_details keys (ClassifyRunError /
+// recordPreflightFailure); anything else falls back to its raw key so a
+// future backend field still renders instead of being silently dropped.
+const DETAIL_LABELS: Record<string, string> = {
+  message: 'Error message',
+  stderr_excerpt: 'Stderr excerpt',
+  observed_permission_mode: 'Observed permission mode',
+  provider: 'Provider',
+  model: 'Model',
+  base_url: 'Endpoint',
+  status_code: 'HTTP status',
+}
+
+function detailLabel(key: string): string {
+  return DETAIL_LABELS[key] ?? key
+}
+
+function diagnosticEntries(details: Record<string, unknown> | null | undefined): Array<[string, string]> {
+  if (!details) return []
+  return Object.entries(details)
+    .filter(([, v]) => v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => [detailLabel(k), typeof v === 'string' ? v : JSON.stringify(v)])
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -156,13 +270,25 @@ function handleKeydown(e: KeyboardEvent) {
             </div>
           </div>
 
+          <!-- Driver / Provider -->
+          <div class="rdm-row">
+            <div class="rdm-field">
+              <div class="rdm-field-label">Driver</div>
+              <div class="rdm-field-value">{{ runDriverDisplay(run) }}</div>
+            </div>
+            <div class="rdm-field">
+              <div class="rdm-field-label">Provider</div>
+              <div class="rdm-field-value">{{ run.provider || '—' }}</div>
+            </div>
+          </div>
+
           <!-- Target path -->
           <div class="rdm-field">
             <div class="rdm-field-label">Target path</div>
             <div class="rdm-field-value rdm-mono">{{ run.target_path }}</div>
           </div>
 
-          <!-- Timestamps -->
+          <!-- Timestamps & TTFT -->
           <div class="rdm-row">
             <div class="rdm-field">
               <div class="rdm-field-label">Started at</div>
@@ -174,7 +300,7 @@ function handleKeydown(e: KeyboardEvent) {
             </div>
           </div>
 
-          <!-- Status / Exit code -->
+          <!-- Status / Exit code / TTFT -->
           <div class="rdm-row">
             <div class="rdm-field">
               <div class="rdm-field-label">Status</div>
@@ -190,6 +316,41 @@ function handleKeydown(e: KeyboardEvent) {
             </div>
           </div>
 
+          <div v-if="run.ttft_ms != null" class="rdm-field">
+            <div class="rdm-field-label">Time To First Token (TTFT)</div>
+            <div class="rdm-field-value">{{ run.ttft_ms }} ms</div>
+          </div>
+
+          <!-- FR-7.3: suspected partial commit, awaiting operator decision -->
+          <div v-if="isAwaitingOperatorDecision" class="rdm-awaiting-decision" role="alert">
+            <strong class="rdm-awaiting-decision-heading">Awaiting operator decision</strong>
+            <p class="rdm-awaiting-decision-body">
+              This run was interrupted while {{ run.agent_name }} may have been mid-write, so a
+              partial commit is suspected. kaos-control will not automatically re-run or roll
+              back this job — review the files this run may have touched before deciding whether
+              to re-run {{ run.agent_name }}.
+            </p>
+          </div>
+
+          <!-- Failure banner with structured diagnostics and remediation -->
+          <RunFailureBanner
+            v-if="run.status === 'failed' && run.failure_reason"
+            :failure-reason="run.failure_reason"
+            :observed-mode="run.observed_permission_mode"
+            :remediation="run.remediation"
+            :error-details="run.error_details"
+            :provider-name="providerNameFor(run)"
+          />
+          <!-- Collapsible diagnostic info: whatever error_details the backend sent -->
+          <details v-if="diagnosticEntries(run.error_details).length" class="rdm-field rdm-diagnostics">
+            <summary class="rdm-diagnostics-summary">Diagnostic Info</summary>
+            <dl class="rdm-diagnostics-list">
+              <template v-for="[label, value] in diagnosticEntries(run.error_details)" :key="label">
+                <dt class="rdm-diagnostics-key">{{ label }}</dt>
+                <dd class="rdm-diagnostics-value">{{ value }}</dd>
+              </template>
+            </dl>
+          </details>
           <!-- Denial notice for done runs with denials (on_denial: continue) -->
           <RunFailureBanner
             v-if="run.status === 'done' && run.denied_tool_calls?.length"
@@ -208,7 +369,7 @@ function handleKeydown(e: KeyboardEvent) {
             <RunSummaryCard
               v-else
               :result="runResult"
-              :driver-available="agentHasTokenMetrics(run.agent_name)"
+              :driver-available="agentHasTokenMetrics(run)"
             />
           </div>
 
@@ -217,6 +378,78 @@ function handleKeydown(e: KeyboardEvent) {
             v-if="run.run_summary"
             :summary="run.run_summary"
           />
+
+          <!-- Warmup indicator — shown before any turn has streamed a token -->
+          <div v-if="isWarmingUp" class="rdm-warmup" role="status" aria-live="polite">
+            <span class="rdm-warmup-dot" aria-hidden="true"></span>
+            <span>Warming up model weights in memory...<template v-if="warmupDetail"> {{ warmupDetail }}</template></span>
+          </div>
+
+          <!-- Multi-turn timeline -->
+          <div v-if="parsedTurns.length" class="rdm-field">
+            <div class="rdm-field-label">Turn Timeline ({{ parsedTurns.length }} turn{{ parsedTurns.length === 1 ? '' : 's' }})</div>
+            <div class="rdm-turns-timeline">
+              <div
+                v-for="turn in parsedTurns"
+                :key="turn.turn_number"
+                class="rdm-turn-card"
+                :class="{ 'rdm-turn-card--recovered': turn.is_recovered }"
+              >
+                <div class="rdm-turn-header" @click="toggleTurn(turn.turn_number)">
+                  <span class="rdm-turn-badge" :data-role="turn.role">
+                    {{ turn.role === 'system' ? 'System Prompt' : turn.role === 'user' ? 'User Prompt' : `Turn ${turn.turn_number}` }}
+                  </span>
+                  <span v-if="turn.is_recovered" class="rdm-recovery-badge" title="Recovered native tool-call (FR-5a)">
+                    ⚡ Recovered Call
+                  </span>
+                  <span v-if="turn.tool_calls?.length" class="rdm-turn-tool-count">
+                    {{ turn.tool_calls.length }} tool call{{ turn.tool_calls.length === 1 ? '' : 's' }}
+                  </span>
+                  <span class="rdm-turn-toggle">{{ expandedTurns.has(turn.turn_number) ? '▲' : '▼' }}</span>
+                </div>
+
+                <div v-if="expandedTurns.has(turn.turn_number)" class="rdm-turn-body">
+                  <!-- Assistant reasoning or text -->
+                  <div v-if="turn.content" class="rdm-turn-content">
+                    <pre class="rdm-turn-text">{{ turn.content }}</pre>
+                  </div>
+
+                  <!-- Tool calls in this turn -->
+                  <div v-if="turn.tool_calls?.length" class="rdm-tool-calls-list">
+                    <div
+                      v-for="tc in turn.tool_calls"
+                      :key="tc.id"
+                      class="rdm-tool-card"
+                    >
+                      <div class="rdm-tool-header">
+                        <span class="rdm-tool-name">{{ tc.name }}</span>
+                        <span class="rdm-tool-id">{{ tc.id }}</span>
+                        <span v-if="tc.is_recovered" class="rdm-tool-rec-tag" title="Recovered native format (FR-5a)">FR-5a</span>
+                      </div>
+
+                      <!-- Arguments -->
+                      <div v-if="tc.arguments" class="rdm-tool-block">
+                        <div class="rdm-tool-block-header" @click="toggleToolArg(tc.id)">
+                          <span>Arguments</span>
+                          <span class="rdm-tool-toggle">{{ expandedToolArgs.has(tc.id) ? '▲' : '▼' }}</span>
+                        </div>
+                        <pre v-if="expandedToolArgs.has(tc.id)" class="rdm-code-block">{{ tc.arguments }}</pre>
+                      </div>
+
+                      <!-- Result -->
+                      <div v-if="tc.result" class="rdm-tool-block">
+                        <div class="rdm-tool-block-header" @click="toggleToolRes(tc.id)">
+                          <span>Output</span>
+                          <span class="rdm-tool-toggle">{{ expandedToolResults.has(tc.id) ? '▲' : '▼' }}</span>
+                        </div>
+                        <pre v-if="expandedToolResults.has(tc.id)" class="rdm-code-block rdm-code-block--res">{{ tc.result }}</pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Permission events -->
           <div v-if="agentsStore.permissionEvents.get(props.runId)?.length" class="rdm-field">
@@ -304,7 +537,7 @@ function handleKeydown(e: KeyboardEvent) {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   width: 100%;
-  max-width: 600px;
+  max-width: 900px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -409,6 +642,87 @@ function handleKeydown(e: KeyboardEvent) {
   text-decoration: underline;
 }
 
+.rdm-warmup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+@media (prefers-color-scheme: dark) {
+  .rdm-warmup {
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.15);
+    border-color: #d97706;
+  }
+}
+.rdm-warmup-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22d3ee;
+  flex-shrink: 0;
+  animation: rdm-warmup-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rdm-warmup-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
+}
+
+.rdm-awaiting-decision {
+  border: 1px solid var(--color-error);
+  background: var(--badge-blocked-bg);
+  color: var(--badge-blocked-text);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+.rdm-awaiting-decision-heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.rdm-awaiting-decision-body {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  margin: var(--space-1) 0 0 0;
+}
+
+.rdm-diagnostics {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+.rdm-diagnostics-summary {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--color-text);
+}
+.rdm-diagnostics-list {
+  margin: var(--space-2) 0 0 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+}
+.rdm-diagnostics-key {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+.rdm-diagnostics-value {
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--color-text);
+  word-break: break-word;
+  margin: 0;
+}
+
 /* Status chip — matches AgentsRunsView */
 .status-chip {
   display: inline-block;
@@ -473,5 +787,166 @@ function handleKeydown(e: KeyboardEvent) {
 .rdm-btn-log:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Turn Timeline */
+.rdm-turns-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.rdm-turn-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.rdm-turn-card--recovered {
+  border-color: #f59e0b;
+}
+.rdm-turn-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+.rdm-turn-header:hover {
+  background: var(--color-bg);
+}
+.rdm-turn-badge {
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 11px;
+  background: var(--color-border);
+  color: var(--color-text);
+}
+.rdm-turn-badge[data-role="system"] {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+.rdm-turn-badge[data-role="user"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+.rdm-turn-badge[data-role="assistant"] {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.rdm-recovery-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.rdm-turn-tool-count {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+.rdm-turn-toggle {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+.rdm-turn-body {
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--color-bg);
+}
+.rdm-turn-content {
+  font-size: 12px;
+}
+.rdm-turn-text {
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  color: var(--color-text);
+}
+.rdm-tool-calls-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.rdm-tool-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.rdm-tool-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+.rdm-tool-name {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+.rdm-tool-id {
+  font-family: monospace;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+.rdm-tool-rec-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #b45309;
+}
+.rdm-tool-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rdm-tool-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+}
+.rdm-tool-block-header:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.rdm-tool-toggle {
+  font-size: 9px;
+}
+.rdm-code-block {
+  font-family: monospace;
+  font-size: 11px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  margin: 0;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.rdm-code-block--res {
+  color: #86efac;
 }
 </style>

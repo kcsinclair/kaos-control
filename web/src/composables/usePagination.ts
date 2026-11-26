@@ -29,7 +29,7 @@ export function usePagination(options: UsePaginationOptions = {}) {
 
   function syncUrl() {
     const query = { ...route.query, [pageKey]: String(currentPage.value), [sizeKey]: String(pageSize.value) }
-    router.replace({ query })
+    void router.replace({ query })
   }
 
   function setPage(n: number) {

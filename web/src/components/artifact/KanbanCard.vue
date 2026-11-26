@@ -17,7 +17,7 @@ const props = defineProps<{
 const router = useRouter()
 
 function open() {
-  router.push(`/p/${props.project}/artifacts/${props.artifact.path}`)
+  void router.push(`/p/${props.project}/artifacts/${props.artifact.path}`)
 }
 
 function onKeydown(e: KeyboardEvent) {

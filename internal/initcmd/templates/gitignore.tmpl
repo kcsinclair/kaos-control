@@ -3,6 +3,11 @@ lifecycle/.kaos-control.db
 lifecycle/.kaos-control.db-shm
 lifecycle/.kaos-control.db-wal
 
+# kaos-control operational state: which provider each agent is currently
+# running on, failover history and disconnect counters. Runtime state, not
+# configuration — see the agent-switchover-and-failover lineage.
+operations.yaml
+
 # OS artefacts
 .DS_Store
 Thumbs.db

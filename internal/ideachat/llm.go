@@ -3,46 +3,29 @@
 package ideachat
 
 import (
-	"context"
-	"fmt"
-	"os/exec"
 	"strings"
+
+	"github.com/kaos-control/kaos-control/internal/config"
 )
 
-// ModelConfig holds the LLM model configuration for a conversation.
+// ModelConfig holds the LLM model configuration for a conversation. It is
+// internal-only and must never be marshalled to JSON/YAML or otherwise
+// exposed on a serialised surface — carrying api_key/extra_headers via
+// Provider relies on that.
 type ModelConfig struct {
 	Model        string
 	SystemPrompt string
 	MaxTokens    int
+
+	// Provider identifies the app-level provider + driver to route this call
+	// through. Nil means "use the Claude CLI default" (today's behaviour).
+	Provider *config.ProviderConfig
 }
 
 // LLMMessage is a single message in a conversation turn.
 type LLMMessage struct {
 	Role    string
 	Content string
-}
-
-// CallLLM is the package-level function used to invoke the LLM. Tests can
-// replace it with a deterministic fake; production code should never reassign it.
-var CallLLM = callLLMImpl
-
-// callLLMImpl is the real production LLM caller.
-func callLLMImpl(ctx context.Context, cfg ModelConfig, messages []LLMMessage) (string, error) {
-	prompt := buildPrompt(cfg.SystemPrompt, messages)
-
-	args := []string{"--dangerously-skip-permissions", "-p", prompt}
-	if cfg.Model != "" {
-		args = append(args, "--model", cfg.Model)
-	}
-
-	out, err := exec.CommandContext(ctx, "claude", args...).Output()
-	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("claude exited %d: %s", ee.ExitCode(), strings.TrimSpace(string(ee.Stderr)))
-		}
-		return "", fmt.Errorf("calling claude: %w", err)
-	}
-	return strings.TrimSpace(string(out)), nil
 }
 
 // buildPrompt combines the system prompt and message history into a single

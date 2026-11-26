@@ -1,16 +1,16 @@
 ---
-created: "2026-06-26T18:18:32+10:00"
 title: Enhancement Creation Flow and Feature Documentation Artifacts
 type: requirement
 status: blocked
 lineage: ideas-are-features-or-enhancements
+created: "2026-06-26T18:18:32+10:00"
 priority: normal
 parent: ideas/ideas-are-features-or-enhancements.md
 labels:
     - workflow
     - artefacts
     - feature
-release: KC-Release6
+release: KC-Release7
 assignees:
     - role: product-owner
       who: agent

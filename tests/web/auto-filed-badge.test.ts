@@ -20,7 +20,6 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import ArtifactListView from '../../web/src/views/project/ArtifactListView.vue'
-import { useArtifactsStore } from '../../web/src/stores/artifacts'
 import type { ArtifactRow } from '../../web/src/types/api'
 
 // ---------------------------------------------------------------------------

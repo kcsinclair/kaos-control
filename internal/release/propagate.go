@@ -14,23 +14,25 @@ import (
 
 // PropagateRename updates the `release` frontmatter field on every artifact
 // currently assigned to oldName, writes the changes to disk, creates a single
-// git commit, and re-indexes all changed paths.
+// git commit, and re-indexes all changed paths. Any extraPaths passed (such
+// as the release artifact file itself) are staged and committed in the same
+// commit.
 //
 // h may be nil; when non-nil an "artifact.indexed" hub event is broadcast for
 // each successfully re-indexed artifact so WebSocket clients observe the rename.
 //
 // It returns the count of artifact files that were updated.
-func PropagateRename(projectRoot, oldName, newName string, idx *index.Index, repo *git.Repo, h *hub.Hub) (int, error) {
+func PropagateRename(projectRoot, oldName, newName string, idx *index.Index, repo *git.Repo, h *hub.Hub, extraPaths ...string) (int, error) {
+	var changed []string
+	changed = append(changed, extraPaths...)
+
 	// Find all artifacts assigned to oldName.
 	rows, _, err := idx.List(index.Filter{Release: oldName, Unlimited: true})
 	if err != nil {
 		return 0, err
 	}
-	if len(rows) == 0 {
-		return 0, nil
-	}
 
-	var changed []string
+	renamedCount := 0
 	for _, row := range rows {
 		absPath := filepath.Join(projectRoot, row.Path)
 		raw, err := os.ReadFile(absPath)
@@ -45,6 +47,7 @@ func PropagateRename(projectRoot, oldName, newName string, idx *index.Index, rep
 			continue
 		}
 		changed = append(changed, row.Path)
+		renamedCount++
 	}
 
 	if len(changed) == 0 {
@@ -72,5 +75,6 @@ func PropagateRename(projectRoot, oldName, newName string, idx *index.Index, rep
 		}
 	}
 
-	return len(changed), nil
+	return renamedCount, nil
 }
+

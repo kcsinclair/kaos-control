@@ -107,7 +107,7 @@ async function select(target: string) {
 function onTriggerKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault()
-    if (!isOpen.value) openMenu()
+    if (!isOpen.value) void openMenu()
     else closeMenu()
   }
   if (e.key === 'Escape' && isOpen.value) {
@@ -141,7 +141,7 @@ function onMenuKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault()
     if (focusedIndex.value >= 0 && focusedIndex.value < targets.value.length) {
-      select(targets.value[focusedIndex.value])
+      void select(targets.value[focusedIndex.value])
     }
   }
 }

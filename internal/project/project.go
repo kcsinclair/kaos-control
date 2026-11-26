@@ -38,6 +38,11 @@ type Project struct {
 	Cfg   *config.Project
 	cfgMu sync.RWMutex
 
+	// switchMu serialises provider switch/restore/template-apply operations
+	// (each a read-decide-write cycle against operations.yaml) so concurrent
+	// callers cannot race and clobber each other's operations state.
+	switchMu sync.Mutex
+
 	Idx            *index.Index
 	Git            *kgit.Repo // nil if the project directory is not a git repo
 	Hub            *hub.Hub
@@ -53,9 +58,27 @@ type Project struct {
 	TriageMgr      *triage.Manager      // auto-triage of raw idea artifacts
 	ReleaseSync    *release.DiskSync    // disk sync for release markdown files
 
+	// Providers is the app-level LLM provider list (snapshotted from
+	// OpenOptions.Providers at Open time), used by RecoveryProber to resolve
+	// a primary_provider name to its base_url for health probing.
+	Providers []config.Provider
+
+	// RecoveryProber watches for agents in failover and announces when their
+	// primary provider becomes reachable again. Not started until
+	// StartRecoveryProber is called.
+	RecoveryProber *RecoveryProber
+
+	// operations is the git-ignored runtime-state store (operations.yaml) —
+	// active-vs-primary provider state, reachability, disconnect counters,
+	// and failover history. Access it via Operations().
+	operations *Operations
+
 	// watcherDone is closed when the watcher goroutine exits.
 	// Close() waits on this before closing the index DB.
 	watcherDone <-chan struct{}
+	// recoveryProberDone is closed when the recovery prober goroutine exits.
+	// Close() waits on this before closing the index DB.
+	recoveryProberDone <-chan struct{}
 }
 
 // OpenOptions configures optional parameters for Open.
@@ -63,8 +86,8 @@ type OpenOptions struct {
 	MaxConcurrentAgents        int
 	MaxConcurrentSchedulerJobs int
 	SchedulerRunRetentionDays  int
-	OllamaInstances            []config.OllamaInstance // app-level Ollama servers for OllamaDriver
-	AgentCfg                   config.AppAgentConfig   // precheck timeout + bypass-permissions flag
+	Providers                  []config.Provider     // app-level LLM providers
+	AgentCfg                   config.AppAgentConfig // precheck timeout + bypass-permissions flag
 
 	// DevopsLogDir is the base directory for pipeline run logs.
 	// Logs are stored at DevopsLogDir/<project-name>/<run_id>.log.
@@ -95,6 +118,14 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	cfg, err := config.LoadProject(entry.Path)
 	if err != nil {
 		return nil, fmt.Errorf("project %q: loading config: %w", entry.Name, err)
+	}
+	if err := config.ValidateAgentProviders(cfg, opts.Providers); err != nil {
+		return nil, fmt.Errorf("project %q: %w", entry.Name, err)
+	}
+
+	ops, err := LoadOperations(entry.Path)
+	if err != nil {
+		return nil, fmt.Errorf("project %q: loading operations state: %w", entry.Name, err)
 	}
 
 	// Retrofit lifecycle/architecture/ for existing projects that predate it
@@ -200,9 +231,31 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 	var agentMgr *agent.Manager
 	if len(cfg.Agents) > 0 {
 		runsLogDir := filepath.Join(dbDir, entry.Name, "runs")
-		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, wf, entry.Path, runsLogDir, opts.OllamaInstances, opts.AgentCfg)
+		providers := opts.Providers
+		agentMgr = agent.New(cfg.Agents, maxConcurrent, idx, gitRepo, h, locks, wf, entry.Path, runsLogDir, providers, opts.AgentCfg)
 		if opts.HookServerAddr != "" {
 			agentMgr.ConfigureHookDriver(opts.HookServerAddr, opts.HookBinaryPath)
+		}
+		agentMgr.EffectiveProvider = func(agentName string) (provider, model string, ok bool) {
+			state, ok := ops.AgentState(agentName)
+			if !ok {
+				return "", "", false
+			}
+			return state.Active.Provider, state.Active.Model, true
+		}
+		agentMgr.OnProviderDisconnect = func(providerName string, at time.Time) {
+			recorded, err := ops.RecordDisconnect(providerName, at, agent.ProviderDisconnectCollapseWindow)
+			if err != nil {
+				slog.Warn("project: recording provider disconnect", "name", entry.Name, "provider", providerName, "err", err)
+				return
+			}
+			if recorded {
+				// FR-10.1: a new (non-collapsed) occurrence — logged distinctly
+				// from a disconnect that collapsed into the active backoff
+				// window (Resolved Question 1), which doesn't move the
+				// rolling-hour counter.
+				slog.Info("project: provider disconnect recorded", "name", entry.Name, "provider", providerName)
+			}
 		}
 	}
 
@@ -324,7 +377,10 @@ func Open(entry *config.ProjectEntry, dbDir string, opts OpenOptions) (*Project,
 		SchedulerStore: schedulerStore,
 		TriageMgr:      triageMgr,
 		ReleaseSync:    releaseSync,
+		Providers:      opts.Providers,
+		operations:     ops,
 	}
+	p.RecoveryProber = newRecoveryProber(p)
 
 	// Wire the config-reload callback so watcher-driven changes to
 	// lifecycle/config.yaml (including external edits, e.g. Obsidian sync)
@@ -392,6 +448,13 @@ func (p *Project) StartScheduler(ctx context.Context) {
 	p.Scheduler.Start(ctx)
 }
 
+// StartRecoveryProber launches the background primary-provider recovery
+// prober goroutine. It returns immediately; the goroutine runs until ctx is
+// cancelled. Close() waits for it to fully exit before closing the index.
+func (p *Project) StartRecoveryProber(ctx context.Context) {
+	p.recoveryProberDone = p.RecoveryProber.Start(ctx)
+}
+
 // Close releases resources held by the project.
 // It waits for the watcher goroutine to fully stop before closing the index
 // so that in-flight debounce callbacks cannot touch the DB after it is closed.
@@ -413,12 +476,26 @@ func (p *Project) Close() error {
 			slog.Warn("project: timed out waiting for watcher to stop", "name", p.Entry.Name)
 		}
 	}
+	if p.recoveryProberDone != nil {
+		select {
+		case <-p.recoveryProberDone:
+		case <-time.After(5 * time.Second):
+			slog.Warn("project: timed out waiting for recovery prober to stop", "name", p.Entry.Name)
+		}
+	}
 	return p.Idx.Close()
 }
 
 // LifecycleDir returns the absolute path to the lifecycle/ directory.
 func (p *Project) LifecycleDir() string {
 	return filepath.Join(p.Entry.Path, "lifecycle")
+}
+
+// Operations returns the project's runtime-state store (operations.yaml) —
+// active-vs-primary provider state, reachability, disconnect counters, and
+// failover history. Always non-nil after Open.
+func (p *Project) Operations() *Operations {
+	return p.operations
 }
 
 // Config returns the current lifecycle/config.yaml snapshot. Callers must use

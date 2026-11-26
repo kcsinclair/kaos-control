@@ -1,0 +1,39 @@
+# CodeQL barrier models for kaos-control's first-party path sanitisers.
+#
+# Default code scanning reported 116 go/path-injection alerts. These entries
+# declare this repository's path sanitisers as barriers so taint stops there
+# rather than being tracked through to the file operation.
+#
+# Verified locally with CodeQL 2.26.4 against a database of this repo:
+#   without these models: 116 alerts  (exactly reproducing code scanning)
+#   with these models:     79 alerts  (37 removed)
+#
+# The remaining 79 are NOT all false positives and must not be silenced with
+# further barriers without justification. 48 of them originate at
+# handleCreateProject (internal/http/projects.go), where an authenticated user
+# supplies an arbitrary absolute project path — that path genuinely reaches
+# file operations by design. See the reproduction command in
+# .github/codeql/README.md.
+#
+# Columns: package, type, subtypes, name, signature, ext, output, kind, provenance
+extensions:
+  # sandbox.Resolve(projectRoot, userPath) confines userPath to projectRoot:
+  # it rejects absolute paths, rejects ".." after filepath.Clean, EvalSymlinks
+  # both root and target and verifies containment, and for a not-yet-existing
+  # target validates the nearest existing ancestor. Its hasPrefix appends the
+  # separator, so "/root-evil" cannot match "/root".
+  # See internal/sandbox/sandbox.go.
+  - addsTo:
+      pack: codeql/go-all
+      extensible: barrierModel
+    data:
+      - ["github.com/kaos-control/kaos-control/internal/sandbox", "", false, "Resolve", "", "", "ReturnValue[0]", "path-injection", "manual"]
+
+  # config.ValidatePath resolves and canonicalises a path, returning an error
+  # unless it exists, is absolute, and falls outside the kaos-control config
+  # directory. See internal/config/config.go.
+  - addsTo:
+      pack: codeql/go-all
+      extensible: barrierModel
+    data:
+      - ["github.com/kaos-control/kaos-control/internal/config", "", false, "ValidatePath", "", "", "ReturnValue[0]", "path-injection", "manual"]

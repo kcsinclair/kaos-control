@@ -163,8 +163,8 @@ func (d *GeminiDriver) Start(ctx context.Context, run Run) (Process, error) {
 			slog.Warn("gemini agent: opening log file failed", "path", run.LogPath, "err", err)
 		} else {
 			logFile = f
-			fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s driver=gemini model=%s\n# started=%s\n",
-				run.RunID, run.AgentName, run.Role, run.Model, time.Now().Format(time.RFC3339))
+			fmt.Fprintf(logFile, "# kaos-control agent run %s\n# agent=%s role=%s driver=%s provider=%s model=%s\n# started=%s\n",
+				run.RunID, run.AgentName, run.Role, run.Driver, run.ProviderName, run.Model, time.Now().Format(time.RFC3339))
 			if systemPrompt != "" {
 				fmt.Fprintf(logFile, "\n# system_prompt:\n%s\n", systemPrompt)
 			}

@@ -4,7 +4,7 @@
 import { ref } from 'vue'
 import type { RunSummary } from '@/types/api'
 
-const props = defineProps<{ summary: RunSummary }>()
+defineProps<{ summary: RunSummary }>()
 
 const gapsOpen = ref(false)
 

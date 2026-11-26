@@ -16,11 +16,24 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ProviderConfig is one registered LLM provider shared across all projects.
+type ProviderConfig struct {
+	Name         string            `yaml:"name" json:"name"`
+	BaseURL      string            `yaml:"base_url" json:"base_url"`
+	Driver       string            `yaml:"driver" json:"driver"` // defaults to "openai-compatible"
+	APIKey       string            `yaml:"api_key,omitempty" json:"api_key,omitempty"`
+	ExtraHeaders map[string]string `yaml:"extra_headers,omitempty" json:"extra_headers,omitempty"`
+}
+
+// Provider is an alias for ProviderConfig for backwards compatibility.
+type Provider = ProviderConfig
+
 // OllamaInstance is one registered Ollama server shared across all projects.
+// Deprecated: use ProviderConfig with driver="openai-compatible".
 type OllamaInstance struct {
-	Name    string `yaml:"name"`
-	BaseURL string `yaml:"base_url"`
-	APIKey  string `yaml:"api_key,omitempty"`
+	Name    string `yaml:"name" json:"name"`
+	BaseURL string `yaml:"base_url" json:"base_url"`
+	APIKey  string `yaml:"api_key,omitempty" json:"api_key,omitempty"`
 }
 
 // App is the top-level application configuration (install-dir/config.yaml).
@@ -30,6 +43,7 @@ type App struct {
 	ProjectsDir     string           `yaml:"projects_dir"`
 	Limits          LimitsConfig     `yaml:"limits"`
 	DataDir         string           `yaml:"data_dir"` // where app DBs live; defaults to projects_dir/../data
+	Providers       []ProviderConfig `yaml:"providers,omitempty"`
 	OllamaInstances []OllamaInstance `yaml:"ollama_instances,omitempty"`
 	Agent           AppAgentConfig   `yaml:"agent"`
 }
@@ -69,6 +83,13 @@ type AppAgentConfig struct {
 	// Defaults to true. Set to false to allow runs in any permission mode (escape
 	// hatch for environments where bypass mode cannot be enabled).
 	RequireBypassPermissions *bool `yaml:"require_bypass_permissions,omitempty"`
+
+	// ModelLoadingTimeoutSeconds bounds how long the openai-compatible driver
+	// waits for the first streamed content token before aborting the turn as
+	// a load timeout. Local inference servers can take 30-120s to lazy-load
+	// multi-gigabyte weights on the first request; this timeout is dedicated
+	// to that wait and is independent of the per-run timeout_minutes. Default: 60.
+	ModelLoadingTimeoutSeconds int `yaml:"model_loading_timeout_seconds,omitempty"`
 }
 
 func defaultApp() App {
@@ -87,10 +108,34 @@ func defaultApp() App {
 			SchedulerRunRetentionDays:  90,
 		},
 		Agent: AppAgentConfig{
-			InitEventTimeoutSeconds:  10,
-			RequireBypassPermissions: &requireBypass,
+			InitEventTimeoutSeconds:    10,
+			RequireBypassPermissions:   &requireBypass,
+			ModelLoadingTimeoutSeconds: 60,
 		},
 	}
+}
+
+// migrateLegacyOllamaInstances converts legacy ollama_instances to providers
+// with driver "openai-compatible" and persists the updated config to disk.
+func migrateLegacyOllamaInstances(cfg *App, path string) error {
+	if len(cfg.OllamaInstances) > 0 && len(cfg.Providers) == 0 {
+		for _, inst := range cfg.OllamaInstances {
+			cfg.Providers = append(cfg.Providers, ProviderConfig{
+				Name:    inst.Name,
+				BaseURL: inst.BaseURL,
+				Driver:  "openai-compatible",
+				APIKey:  inst.APIKey,
+			})
+		}
+		cfg.OllamaInstances = nil
+		if path != "" {
+			if err := SaveApp(path, *cfg); err != nil {
+				return fmt.Errorf("saving migrated app config to %s: %w", path, err)
+			}
+		}
+		slog.Info("app config: migrated legacy ollama instances to providers", "count", len(cfg.Providers))
+	}
+	return nil
 }
 
 // LoadApp reads the app-level config file, applying defaults for missing fields.
@@ -105,6 +150,9 @@ func LoadApp(path string) (*App, error) {
 	if err == nil {
 		if err := yaml.Unmarshal(data, &cfg); err != nil {
 			return nil, fmt.Errorf("parsing app config: %w", err)
+		}
+		if err := migrateLegacyOllamaInstances(&cfg, path); err != nil {
+			return nil, fmt.Errorf("migrating app config: %w", err)
 		}
 	} else {
 		// File does not exist: apply path-relative defaults and persist so the
@@ -142,6 +190,66 @@ func LoadApp(path string) (*App, error) {
 	return &cfg, nil
 }
 
+type appRaw struct {
+	Server          ServerConfig     `yaml:"server"`
+	Auth            AuthConfig       `yaml:"auth"`
+	ProjectsDir     string           `yaml:"projects_dir"`
+	Limits          LimitsConfig     `yaml:"limits"`
+	DataDir         string           `yaml:"data_dir"`
+	Providers       []ProviderConfig `yaml:"providers,omitempty"`
+	OllamaInstances []OllamaInstance `yaml:"ollama_instances,omitempty"`
+	Agent           AppAgentConfig   `yaml:"agent"`
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler for App.
+//
+// raw is seeded from the receiver rather than left zero-valued. LoadApp starts
+// from defaultApp() and unmarshals the file over the top, so decoding into a
+// zero appRaw would discard every default the file does not happen to mention —
+// a config without an "auth:" key would end up with auth.method "" and be
+// rejected by validateApp, even though the default is "local". Decoding into a
+// pre-populated struct leaves absent keys untouched.
+func (a *App) UnmarshalYAML(value *yaml.Node) error {
+	raw := appRaw{
+		Server:          a.Server,
+		Auth:            a.Auth,
+		ProjectsDir:     a.ProjectsDir,
+		Limits:          a.Limits,
+		DataDir:         a.DataDir,
+		Providers:       a.Providers,
+		OllamaInstances: a.OllamaInstances,
+		Agent:           a.Agent,
+	}
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	a.Server = raw.Server
+	a.Auth = raw.Auth
+	a.ProjectsDir = raw.ProjectsDir
+	a.Limits = raw.Limits
+	a.DataDir = raw.DataDir
+	a.Providers = raw.Providers
+	a.OllamaInstances = raw.OllamaInstances
+	a.Agent = raw.Agent
+	return nil
+}
+
+// ValidateProviderSlug checks that name matches slug format (^[a-z0-9-]+$, 2–64 characters).
+func ValidateProviderSlug(name string) error {
+	if len(name) < 2 {
+		return fmt.Errorf("name must be at least 2 characters")
+	}
+	if len(name) > 64 {
+		return fmt.Errorf("name must be at most 64 characters")
+	}
+	for _, c := range name {
+		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+			return fmt.Errorf("name must contain only lowercase letters, digits, and hyphens")
+		}
+	}
+	return nil
+}
+
 func validateApp(cfg *App) error {
 	if cfg.Server.Listen == "" {
 		return fmt.Errorf("server.listen must not be empty")
@@ -174,22 +282,69 @@ func validateApp(cfg *App) error {
 		v := true
 		cfg.Agent.RequireBypassPermissions = &v
 	}
+	if cfg.Agent.ModelLoadingTimeoutSeconds <= 0 {
+		cfg.Agent.ModelLoadingTimeoutSeconds = 60
+	}
 
-	seen := make(map[string]bool, len(cfg.OllamaInstances))
+	seenOllama := make(map[string]bool, len(cfg.OllamaInstances))
 	for i, inst := range cfg.OllamaInstances {
 		if inst.Name == "" {
 			return fmt.Errorf("ollama_instances[%d]: name must not be empty", i)
 		}
-		if seen[inst.Name] {
+		if seenOllama[inst.Name] {
 			return fmt.Errorf("ollama_instances: duplicate name %q", inst.Name)
 		}
-		seen[inst.Name] = true
+		seenOllama[inst.Name] = true
 		if inst.BaseURL == "" {
 			return fmt.Errorf("ollama_instances[%d] %q: base_url must not be empty", i, inst.Name)
 		}
 		u, err := url.ParseRequestURI(inst.BaseURL)
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
 			return fmt.Errorf("ollama_instances[%d] %q: base_url %q is not a valid http/https URL", i, inst.Name, inst.BaseURL)
+		}
+	}
+
+	// Migrate any OllamaInstances not already in Providers (for when App is created directly)
+	seenProviders := make(map[string]bool, len(cfg.Providers)+len(cfg.OllamaInstances))
+	for _, p := range cfg.Providers {
+		seenProviders[p.Name] = true
+	}
+	for _, inst := range cfg.OllamaInstances {
+		if !seenProviders[inst.Name] {
+			cfg.Providers = append(cfg.Providers, ProviderConfig{
+				Name:    inst.Name,
+				BaseURL: inst.BaseURL,
+				Driver:  "openai-compatible",
+				APIKey:  inst.APIKey,
+			})
+			seenProviders[inst.Name] = true
+		}
+	}
+
+	seen := make(map[string]bool, len(cfg.Providers))
+	for i, p := range cfg.Providers {
+		if p.Name == "" {
+			return fmt.Errorf("providers[%d]: name must not be empty", i)
+		}
+		if err := ValidateProviderSlug(p.Name); err != nil {
+			return fmt.Errorf("providers[%d] %q: %w", i, p.Name, err)
+		}
+		if seen[p.Name] {
+			return fmt.Errorf("providers: duplicate name %q", p.Name)
+		}
+		seen[p.Name] = true
+		if p.BaseURL == "" {
+			return fmt.Errorf("providers[%d] %q: base_url must not be empty", i, p.Name)
+		}
+		u, err := url.ParseRequestURI(p.BaseURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			return fmt.Errorf("providers[%d] %q: base_url %q is not a valid http/https URL", i, p.Name, p.BaseURL)
+		}
+		if p.Driver == "" {
+			return fmt.Errorf("providers[%d] %q: driver must not be empty", i, p.Name)
+		}
+		if p.Driver != "openai-compatible" {
+			return fmt.Errorf("providers[%d] %q: unrecognized driver %q", i, p.Name, p.Driver)
 		}
 	}
 	return nil
@@ -444,15 +599,17 @@ type GitConfig struct {
 
 // AgentConfig is one configured agent binding.
 type AgentConfig struct {
-	Name            string            `yaml:"name"`
-	Roles           []string          `yaml:"-"` // populated by UnmarshalYAML from "role" or "roles"
-	Driver          string            `yaml:"driver"`
-	Model           string            `yaml:"model,omitempty"`
-	Endpoint        string            `yaml:"endpoint,omitempty"`
-	AllowedPaths    []string          `yaml:"allowed_write_paths,omitempty"`
-	TimeoutMinutes  int               `yaml:"timeout_minutes,omitempty"` // 0 = no timeout
-	GitIdentity     GitIdentity       `yaml:"git_identity"`
-	PromptTemplates map[string]string `yaml:"prompt_templates,omitempty"` // role -> template
+	Name              string            `yaml:"name"`
+	Roles             []string          `yaml:"-"` // populated by UnmarshalYAML from "role" or "roles"
+	Driver            string            `yaml:"driver"`
+	Provider          string            `yaml:"provider,omitempty"`
+	Model             string            `yaml:"model,omitempty"`
+	MaxToolIterations int               `yaml:"max_tool_iterations,omitempty"`
+	Endpoint          string            `yaml:"endpoint,omitempty"`
+	AllowedPaths      []string          `yaml:"allowed_write_paths,omitempty"`
+	TimeoutMinutes    int               `yaml:"timeout_minutes,omitempty"` // 0 = no timeout
+	GitIdentity       GitIdentity       `yaml:"git_identity"`
+	PromptTemplates   map[string]string `yaml:"prompt_templates,omitempty"` // role -> template
 	// Status lifecycle: set target artifact status at run start/end.
 	ActiveStatus  string `yaml:"active_status,omitempty"`   // status to set when run starts (empty = no change)
 	DoneOnSuccess bool   `yaml:"done_on_success,omitempty"` // if true, set status=done when run completes successfully
@@ -483,6 +640,16 @@ type AgentConfig struct {
 	// claude-env driver fields (only used when Driver == "claude-env").
 	BaseURL   string `yaml:"base_url,omitempty"`
 	AuthToken string `yaml:"auth_token,omitempty"` // secret — must never be logged or echoed
+
+	// Provider failover fields (switch-provider-3-be). FallbackProvider/Model
+	// name the provider+model to switch to on a transient upstream failure.
+	// PrimaryProvider/Model are populated automatically when a failover takes
+	// the agent off its configured Provider/Model, so it can be restored later;
+	// they are empty when the agent is on its normal (primary) provider.
+	FallbackProvider string `yaml:"fallback_provider,omitempty" json:"fallback_provider,omitempty"`
+	FallbackModel    string `yaml:"fallback_model,omitempty" json:"fallback_model,omitempty"`
+	PrimaryProvider  string `yaml:"primary_provider,omitempty" json:"primary_provider,omitempty"`
+	PrimaryModel     string `yaml:"primary_model,omitempty" json:"primary_model,omitempty"`
 }
 
 // agentConfigRaw is used internally to unmarshal AgentConfig and accept both
@@ -492,7 +659,9 @@ type agentConfigRaw struct {
 	Role               []string          `yaml:"role"`
 	Roles              []string          `yaml:"roles"`
 	Driver             string            `yaml:"driver"`
+	Provider           string            `yaml:"provider,omitempty"`
 	Model              string            `yaml:"model,omitempty"`
+	MaxToolIterations  int               `yaml:"max_tool_iterations,omitempty"`
 	Endpoint           string            `yaml:"endpoint,omitempty"`
 	AllowedPaths       []string          `yaml:"allowed_write_paths,omitempty"`
 	TimeoutMinutes     int               `yaml:"timeout_minutes,omitempty"`
@@ -510,6 +679,10 @@ type agentConfigRaw struct {
 	ShellCommand       string            `yaml:"shell_command,omitempty"`
 	BaseURL            string            `yaml:"base_url,omitempty"`
 	AuthToken          string            `yaml:"auth_token,omitempty"`
+	FallbackProvider   string            `yaml:"fallback_provider,omitempty" json:"fallback_provider,omitempty"`
+	FallbackModel      string            `yaml:"fallback_model,omitempty" json:"fallback_model,omitempty"`
+	PrimaryProvider    string            `yaml:"primary_provider,omitempty" json:"primary_provider,omitempty"`
+	PrimaryModel       string            `yaml:"primary_model,omitempty" json:"primary_model,omitempty"`
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler so that AgentConfig accepts both
@@ -522,7 +695,9 @@ func (a *AgentConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 	a.Name = raw.Name
 	a.Driver = raw.Driver
+	a.Provider = raw.Provider
 	a.Model = raw.Model
+	a.MaxToolIterations = raw.MaxToolIterations
 	a.Endpoint = raw.Endpoint
 	a.AllowedPaths = raw.AllowedPaths
 	a.TimeoutMinutes = raw.TimeoutMinutes
@@ -540,6 +715,10 @@ func (a *AgentConfig) UnmarshalYAML(value *yaml.Node) error {
 	a.ShellCommand = raw.ShellCommand
 	a.BaseURL = raw.BaseURL
 	a.AuthToken = raw.AuthToken
+	a.FallbackProvider = raw.FallbackProvider
+	a.FallbackModel = raw.FallbackModel
+	a.PrimaryProvider = raw.PrimaryProvider
+	a.PrimaryModel = raw.PrimaryModel
 
 	// Merge "role" and "roles" entries, preserving order and deduplicating.
 	seen := make(map[string]bool)
@@ -556,6 +735,21 @@ func (a *AgentConfig) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 	return nil
+}
+
+// EffectiveProvider resolves an agent's effective active provider/model:
+// the operations-store override when set, else the agent's declared-intent
+// Provider/Model from lifecycle/config.yaml. FindAgentConfig (via AgentConfig
+// itself) remains the source of declared intent; this helper only decides
+// which of the two values a run should actually use. overrideProvider/
+// overrideModel come from the project's operations.yaml active state (see
+// internal/project.Operations.AgentState) — this package does not depend on
+// internal/project to avoid an import cycle, so callers pass the override in.
+func EffectiveProvider(ag AgentConfig, overrideProvider, overrideModel string) (provider, model string) {
+	if overrideProvider != "" {
+		return overrideProvider, overrideModel
+	}
+	return ag.Provider, ag.Model
 }
 
 // GitIdentity is the git author identity for an agent or user commit.
@@ -655,9 +849,254 @@ type Project struct {
 
 	ArchitectureWizard ArchitectureWizardConfig `yaml:"architecture_wizard,omitempty" json:"architecture_wizard,omitempty"`
 
+	// ProviderFailover is the project-level automated-failover policy.
+	// Deprecated: superseded by Switchover (agent-switchover-and-failover
+	// Milestone 3) — auto_switch maps onto switchover.automated_switchover
+	// and switch_on_kinds onto switchover.events when the new block is
+	// unset, so existing configs keep behaving the same way. Still read for
+	// that back-compat mapping; new configs should use Switchover.
+	ProviderFailover ProviderFailoverConfig `yaml:"provider_failover,omitempty" json:"provider_failover,omitempty"`
+	// Switchover is the project-level event -> action policy (FR-2).
+	Switchover SwitchoverConfig `yaml:"switchover,omitempty" json:"switchover,omitempty"`
+	// ProviderTemplates is a catalog of named multi-agent provider presets.
+	ProviderTemplates []ProviderTemplate `yaml:"provider_templates,omitempty" json:"provider_templates,omitempty"`
+
 	// RepairNotes records the generation-template self-repairs applied by
 	// ValidateAndRepair when this config was loaded. Not persisted to disk.
 	RepairNotes []RepairNote `yaml:"-" json:"-"`
+}
+
+// ProviderFailoverConfig defines project-level automated provider failover
+// behaviour: whether failover is enabled at all, whether it engages
+// automatically on a transient upstream failure, which failure kinds trigger
+// it, and how many times it may fire within a single run.
+type ProviderFailoverConfig struct {
+	// Enabled gates the whole failover subsystem (manual switch/restore API
+	// still works when false; only automated engagement is gated). Defaults
+	// to true.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled"`
+	// AutoSwitch, when true, lets the dispatcher automatically switch an
+	// agent to its configured fallback provider on a matching failure.
+	// Defaults to false — automated failover is opt-in per project.
+	AutoSwitch *bool `yaml:"auto_switch,omitempty" json:"auto_switch"`
+	// SwitchOnKinds lists the failure kinds that trigger auto-switch:
+	// "overloaded", "rate_limit", "unreachable". Defaults to all three.
+	SwitchOnKinds []string `yaml:"switch_on_kinds,omitempty" json:"switch_on_kinds"`
+	// MaxFailoversPerRun bounds cascading switches for a single queued job.
+	// Defaults to 1.
+	MaxFailoversPerRun int `yaml:"max_failovers_per_run,omitempty" json:"max_failovers_per_run"`
+	// ProbeIntervalSeconds is how often the recovery prober re-checks a
+	// primary provider that is currently bypassed by failover. Defaults to 60.
+	ProbeIntervalSeconds int `yaml:"probe_interval_seconds,omitempty" json:"probe_interval_seconds"`
+}
+
+// validSwitchOnKinds enumerates the accepted ProviderFailoverConfig.SwitchOnKinds values.
+var validSwitchOnKinds = map[string]bool{
+	"overloaded":  true,
+	"rate_limit":  true,
+	"unreachable": true,
+}
+
+// defaultSwitchOnKinds is the default value of ProviderFailoverConfig.SwitchOnKinds.
+var defaultSwitchOnKinds = []string{"overloaded", "rate_limit", "unreachable"}
+
+// EffectiveFailoverConfig returns the project's provider-failover policy with
+// all defaults applied: Enabled=true, AutoSwitch=false,
+// SwitchOnKinds=["overloaded","rate_limit","unreachable"],
+// MaxFailoversPerRun=1, ProbeIntervalSeconds=60.
+func (p *Project) EffectiveFailoverConfig() ProviderFailoverConfig {
+	c := p.ProviderFailover
+	enabled := true
+	if c.Enabled != nil {
+		enabled = *c.Enabled
+	}
+	autoSwitch := false
+	if c.AutoSwitch != nil {
+		autoSwitch = *c.AutoSwitch
+	}
+	switchOnKinds := c.SwitchOnKinds
+	if len(switchOnKinds) == 0 {
+		switchOnKinds = defaultSwitchOnKinds
+	}
+	maxFailovers := c.MaxFailoversPerRun
+	if maxFailovers <= 0 {
+		maxFailovers = 1
+	}
+	probeInterval := c.ProbeIntervalSeconds
+	if probeInterval <= 0 {
+		probeInterval = 60
+	}
+	return ProviderFailoverConfig{
+		Enabled:              &enabled,
+		AutoSwitch:           &autoSwitch,
+		SwitchOnKinds:        switchOnKinds,
+		MaxFailoversPerRun:   maxFailovers,
+		ProbeIntervalSeconds: probeInterval,
+	}
+}
+
+// Switchover policy action verbs (FR-2.2). Mirrored as plain strings in
+// internal/agent (SwitchoverAction*) and internal/queue (FailoverPolicy) —
+// this package intentionally does not import internal/agent (internal/agent
+// already imports this package, so the reverse would cycle) — so the verb
+// text must stay in sync across all three.
+const (
+	SwitchoverActionFailover     = "failover"
+	SwitchoverActionPauseQueue   = "pause_queue"
+	SwitchoverActionRetryInPlace = "retry_in_place"
+	SwitchoverActionFailRun      = "fail_run"
+)
+
+var validSwitchoverActions = map[string]bool{
+	SwitchoverActionFailover:     true,
+	SwitchoverActionPauseQueue:   true,
+	SwitchoverActionRetryInPlace: true,
+	SwitchoverActionFailRun:      true,
+}
+
+// Switchover policy failure reasons (FR-2.3). Mirrored as
+// agent.SwitchoverReasons for the same import-cycle reason described above.
+const (
+	SwitchoverReasonRateLimit             = "rate_limit"
+	SwitchoverReasonOverloaded            = "overloaded"
+	SwitchoverReasonUnreachable           = "unreachable"
+	SwitchoverReasonAuthError             = "auth_error"
+	SwitchoverReasonProviderDisconnected  = "provider_disconnected"
+	SwitchoverReasonModelNotFound         = "model_not_found"
+	SwitchoverReasonModelUnloaded         = "model_unloaded"
+	SwitchoverReasonToolsUnsupported      = "tools_unsupported"
+	SwitchoverReasonContextWindowExceeded = "context_window_exceeded"
+	SwitchoverReasonTurnTokenCeiling      = "turn_token_ceiling"
+	SwitchoverReasonMaxIterationsReached  = "max_iterations_reached"
+	SwitchoverReasonTimeout               = "timeout"
+)
+
+// SwitchoverReasons is the canonical, complete list of failure reasons the
+// event -> action policy must cover (FR-2.1, FR-2.3) — every reason the
+// system already classifies. EffectiveSwitchoverPolicy fills one entry per
+// reason so the resolved policy is complete by construction.
+var SwitchoverReasons = []string{
+	SwitchoverReasonRateLimit,
+	SwitchoverReasonOverloaded,
+	SwitchoverReasonUnreachable,
+	SwitchoverReasonAuthError,
+	SwitchoverReasonProviderDisconnected,
+	SwitchoverReasonModelNotFound,
+	SwitchoverReasonModelUnloaded,
+	SwitchoverReasonToolsUnsupported,
+	SwitchoverReasonContextWindowExceeded,
+	SwitchoverReasonTurnTokenCeiling,
+	SwitchoverReasonMaxIterationsReached,
+	SwitchoverReasonTimeout,
+}
+
+// legacySwitchOnKindReasons is the subset of SwitchoverReasons the old
+// provider_failover.switch_on_kinds list could restrict (validSwitchOnKinds
+// above) — used only for the back-compat mapping in EffectiveSwitchoverPolicy.
+var legacySwitchOnKindReasons = map[string]bool{
+	SwitchoverReasonRateLimit:   true,
+	SwitchoverReasonOverloaded:  true,
+	SwitchoverReasonUnreachable: true,
+}
+
+func isKnownSwitchoverReason(reason string) bool {
+	for _, r := range SwitchoverReasons {
+		if r == reason {
+			return true
+		}
+	}
+	return false
+}
+
+// defaultSwitchoverAction returns the FR-2.3 default action for reason,
+// given whether automated switchover is enabled project-wide.
+func defaultSwitchoverAction(reason string, automatedSwitchoverEnabled bool) string {
+	switch reason {
+	case SwitchoverReasonRateLimit, SwitchoverReasonOverloaded, SwitchoverReasonUnreachable, SwitchoverReasonAuthError:
+		if automatedSwitchoverEnabled {
+			return SwitchoverActionFailover
+		}
+		return SwitchoverActionPauseQueue
+	case SwitchoverReasonProviderDisconnected:
+		return SwitchoverActionRetryInPlace
+	default:
+		return SwitchoverActionFailRun
+	}
+}
+
+// SwitchoverConfig is the project-level event -> action policy (FR-2).
+type SwitchoverConfig struct {
+	// AutomatedSwitchover toggles automated failover project-wide. Disabled
+	// by default (FR-2.1) — an operator must opt in.
+	AutomatedSwitchover *bool `yaml:"automated_switchover,omitempty" json:"automated_switchover"`
+	// Events maps a classified failure reason to an action, overriding the
+	// FR-2.3 default for that reason. Reasons not listed here use the
+	// default; see EffectiveSwitchoverPolicy.
+	Events map[string]string `yaml:"events,omitempty" json:"events,omitempty"`
+}
+
+// EffectiveSwitchoverPolicy is the fully-resolved event -> action policy:
+// one explicit action per SwitchoverReasons entry (FR-2.4).
+type EffectiveSwitchoverPolicy struct {
+	AutomatedSwitchover bool              `json:"automated_switchover"`
+	Actions             map[string]string `json:"actions"` // reason -> action, one entry per SwitchoverReasons
+}
+
+// EffectiveSwitchoverPolicy resolves the project's event -> action policy
+// (FR-2): AutomatedSwitchover defaults to disabled, and every reason in
+// SwitchoverReasons is assigned an explicit action — the project's
+// configured override when set, else the FR-2.3 default — so the returned
+// map is complete by construction (FR-2.4).
+//
+// Back-compat: when switchover.automated_switchover is unset, the legacy
+// provider_failover.auto_switch flag applies instead, so an existing
+// project keeps its prior enabled/disabled state until migrated. Likewise,
+// when a reason has no switchover.events override and would default to
+// "failover", a legacy provider_failover.switch_on_kinds that excludes that
+// reason downgrades it to "pause_queue" — the same restriction switch_on_kinds
+// enforced before switchover.events existed.
+func (p *Project) EffectiveSwitchoverPolicy() EffectiveSwitchoverPolicy {
+	enabled := false
+	if p.Switchover.AutomatedSwitchover != nil {
+		enabled = *p.Switchover.AutomatedSwitchover
+	} else if p.ProviderFailover.AutoSwitch != nil {
+		enabled = *p.ProviderFailover.AutoSwitch
+	}
+
+	legacyKinds := make(map[string]bool)
+	for _, k := range p.EffectiveFailoverConfig().SwitchOnKinds {
+		legacyKinds[k] = true
+	}
+
+	actions := make(map[string]string, len(SwitchoverReasons))
+	for _, reason := range SwitchoverReasons {
+		action := defaultSwitchoverAction(reason, enabled)
+		if action == SwitchoverActionFailover && legacySwitchOnKindReasons[reason] && !legacyKinds[reason] {
+			action = SwitchoverActionPauseQueue
+		}
+		actions[reason] = action
+	}
+	for reason, action := range p.Switchover.Events {
+		if isKnownSwitchoverReason(reason) {
+			actions[reason] = action
+		}
+	}
+
+	return EffectiveSwitchoverPolicy{AutomatedSwitchover: enabled, Actions: actions}
+}
+
+// ProviderTemplateAgentBinding pins one agent to a provider+model within a ProviderTemplate.
+type ProviderTemplateAgentBinding struct {
+	Provider string `yaml:"provider" json:"provider"`
+	Model    string `yaml:"model" json:"model"`
+}
+
+// ProviderTemplate is a named, multi-agent provider preset (e.g. "local-ai")
+// that can be applied in one operation via ApplyProviderTemplate.
+type ProviderTemplate struct {
+	Name        string                                  `yaml:"name" json:"name"`
+	Description string                                  `yaml:"description,omitempty" json:"description,omitempty"`
+	Agents      map[string]ProviderTemplateAgentBinding `yaml:"agents" json:"agents"`
 }
 
 // architectureWizardMaxQuestions caps the guided questionnaire (FR-7).
@@ -976,20 +1415,14 @@ func validateProject(cfg *Project) error {
 			return fmt.Errorf("project config: agent %q has no roles", a.Name)
 		}
 		if a.Driver == "" {
-			return fmt.Errorf("project config: agent %q missing driver", a.Name)
+			if a.Provider != "" {
+				a.Driver = "openai-compatible"
+			} else {
+				return fmt.Errorf("project config: agent %q missing driver", a.Name)
+			}
 		}
 		if a.Driver == "ollama" {
-			if a.OllamaInstanceName == "" {
-				return fmt.Errorf("project config: agent %q has driver=ollama but missing ollama_instance", a.Name)
-			}
-			if a.Model == "" {
-				return fmt.Errorf("project config: agent %q has driver=ollama but missing model", a.Name)
-			}
-			if a.OllamaEndpoint == "" {
-				a.OllamaEndpoint = "chat"
-			} else if a.OllamaEndpoint != "chat" && a.OllamaEndpoint != "generate" {
-				return fmt.Errorf("project config: agent %q ollama_endpoint must be \"chat\" or \"generate\", got %q", a.Name, a.OllamaEndpoint)
-			}
+			return fmt.Errorf("project config: agent %q uses deprecated driver \"ollama\"; please configure a provider with driver \"openai-compatible\" and reference it via provider: <name>", a.Name)
 		}
 		if a.Driver == "claude-mediated" {
 			if a.OnDenial == "" {
@@ -1017,6 +1450,52 @@ func validateProject(cfg *Project) error {
 			if a.Model == "" {
 				return fmt.Errorf("project config: agent %q has driver=claude-env but missing model", a.Name)
 			}
+		}
+		if a.Driver == "openai-compatible" {
+			if a.Provider == "" {
+				return fmt.Errorf("project config: agent %q has driver=openai-compatible but missing provider", a.Name)
+			}
+			if a.Model == "" {
+				return fmt.Errorf("project config: agent %q has driver=openai-compatible but missing model", a.Name)
+			}
+		} else if a.Provider != "" {
+			if a.Model == "" {
+				return fmt.Errorf("project config: agent %q has provider %q but missing model", a.Name, a.Provider)
+			}
+		}
+		if a.FallbackProvider != "" {
+			if a.FallbackProvider == a.Provider {
+				return fmt.Errorf("project config: agent %q fallback_provider must differ from provider %q", a.Name, a.Provider)
+			}
+			if a.FallbackModel == "" {
+				return fmt.Errorf("project config: agent %q has fallback_provider but missing fallback_model", a.Name)
+			}
+		}
+	}
+	for _, kind := range cfg.ProviderFailover.SwitchOnKinds {
+		if !validSwitchOnKinds[kind] {
+			return fmt.Errorf("project config: provider_failover.switch_on_kinds: unrecognized kind %q (accepted: overloaded, rate_limit, unreachable)", kind)
+		}
+	}
+	for reason, action := range cfg.Switchover.Events {
+		if !isKnownSwitchoverReason(reason) {
+			return fmt.Errorf("project config: switchover.events: unrecognized reason %q (accepted: %s)", reason, strings.Join(SwitchoverReasons, ", "))
+		}
+		if !validSwitchoverActions[action] {
+			return fmt.Errorf("project config: switchover.events[%s]: unrecognized action %q (accepted: failover, pause_queue, retry_in_place, fail_run)", reason, action)
+		}
+	}
+	seenTemplateNames := make(map[string]bool, len(cfg.ProviderTemplates))
+	for i, t := range cfg.ProviderTemplates {
+		if t.Name == "" {
+			return fmt.Errorf("project config: provider_templates[%d]: name must not be empty", i)
+		}
+		if seenTemplateNames[t.Name] {
+			return fmt.Errorf("project config: provider_templates: duplicate name %q", t.Name)
+		}
+		seenTemplateNames[t.Name] = true
+		if len(t.Agents) == 0 {
+			return fmt.Errorf("project config: provider_templates %q: agents must not be empty", t.Name)
 		}
 	}
 	seenLinuxUser := make(map[string]bool)
@@ -1055,6 +1534,26 @@ func validateProject(cfg *Project) error {
 	}
 	if !validPeriodModes[cfg.Roadmap.DefaultPeriodMode] {
 		return fmt.Errorf("project config: roadmap.default_period_mode %q is not valid; accepted values: autoscale, month, quarter, half-year, year", cfg.Roadmap.DefaultPeriodMode)
+	}
+	return nil
+}
+
+// ValidateAgentProviders rejects an inline agent (driver "inline") whose
+// provider names a provider not present in the app-level provider list,
+// consistent with the async-path rule in [[provider-model-for-agents]].
+// It is a distinct check from validateProject's intra-project rules because
+// it needs the app-level provider list, which validateProject (called from
+// LoadProject) does not have access to — callers run it at the seam where
+// both project and app config are available (project.Open).
+func ValidateAgentProviders(cfg *Project, providers []ProviderConfig) error {
+	names := make(map[string]bool, len(providers))
+	for _, p := range providers {
+		names[p.Name] = true
+	}
+	for _, a := range cfg.Agents {
+		if a.Driver == "inline" && a.Provider != "" && !names[a.Provider] {
+			return fmt.Errorf("project config: agent %q references unknown provider %q", a.Name, a.Provider)
+		}
 	}
 	return nil
 }

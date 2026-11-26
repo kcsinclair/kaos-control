@@ -188,7 +188,7 @@ function makeRouter(initialPath = '/queue') {
       { path: '/:pathMatch(.*)*', component: { template: '<div/>' } },
     ],
   })
-  router.push(initialPath)
+  void router.push(initialPath)
   return router
 }
 
@@ -334,7 +334,6 @@ describe('QueueView — Milestone 5: project navigation and URL sync', () => {
     _projects.value = [makeProject('alpha')]
 
     const { wrapper, router } = await mountQueueView('/queue')
-    const historyLengthBefore = router.currentRoute.value.fullPath
 
     const alphaBtn = wrapper.findAll('.sidebar-item')[1]
     await alphaBtn.trigger('click')

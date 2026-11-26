@@ -8,7 +8,75 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
-Rolling log — add a dated bullet per commit.
+- **2026-11-26** — Fixed the 20 stale tests in tests/web. `releases-api-unwrap`: the sample release lacked `goal`/`description`, which `normaliseDates` now fills in. `AppHeaderRunIndicator`: the mocked agents store had no `agents` list, which `SwitchoverStatusButton` (rendered in AppHeader) reads through the providerSwitch store. tests/web now passes 1617/1617.
+
+- **2026-11-26** — Captured [[agent-sampling-parameters]] idea: optional per-agent / per-provider `sampling` block (temperature, top_p, top_k, min_p, max_tokens, seed, penalties, stop). Unset means not sent, so existing configs behave the same as before. Originates from Hugo Burton's PR #25 (`max_tokens`/`temperature`); its separate llama.cpp driver is superseded by `openai-compatible` + `providers`.
+
+- **2026-11-26** — Applied the 11 open Dependabot upgrades (PRs #26–#37) on kc-dev in one commit rather than merging them into `main`: chi 5.4.0; web: vite 6.4.6, vitest 4.1.12, markdown-it 14.3.3, js-yaml 4.3.2, undici override ^7.30.1, brace-expansion override ^2.1.7, source-map-js 1.2.4; tests/web: vite 6.4.6, vitest 4.1.12, happy-dom 21.0.4 (major), source-map-js 1.2.4. Lock files regenerated with pnpm 10.33.2 (Dependabot's dropped the `overrides:` block). Verified: `go vet`, `make test-unit`, `make build-web`/`build`, web vitest (285/285) pass; tests/web shows 20 failures in `AppHeaderRunIndicator` and `releases-api-unwrap`, which fail identically on the old dependencies (stale tests, not regressions).
+
+- **2026-09-03** — Abandoned the three blocked artifacts in [[requirements-analyst-suppress-empty-open-questions]] (`-3-be`, `-5-test`, `-6-test`). They stalled on a role/write-scope mismatch, not a product question: their milestones target `lifecycle/config.yaml` and `internal/**/*_test.go`, which no agent role may write. The Go backstop shipped and contains the harm; only the prompt half is undone. Headings renamed Open → Discarded Questions, without which the auto-block reverted the status within seconds.
+
+- **2026-09-03** — Closed [[agents-md-primary-directives-2]] (blocked → done) and its parent idea (clarifying → done). The work had shipped without the statuses being updated: `AGENTS.md` is the canonical directive file, `CLAUDE.md`/`GEMINI.md` are 11-byte `@AGENTS.md` imports, `migrate-directives` and `init --refresh-directives` both exist, and this repo is itself migrated. All four Open Questions were answered by the implementation and are recorded with their resolutions.
+
+- **2026-09-03** — Unblocked [[project-queue-view-3-be]]. Its three Open Questions were accurate on 2026-07-14 but have since been fixed in the dispatcher: `Enqueue` now broadcasts `queue.added` with the full job record and `Cancel` broadcasts `queue.cancelled`, both carrying `project`. Milestone 1 verified — client-side filter is sufficient, no endpoint required, no `internal/` changes. Milestone 2 marked not required. Status blocked → done.
+
+- **2026-09-03** — Closed the review cycle on [[agent-switchover-and-failover]]: all nine gaps answered, retry-with-backoff decided for `provider_disconnected` (pause after 3 disconnects in an hour), and failover state moved out of `lifecycle/config.yaml` to a gitignored `operations.yaml` at the project root. `operations.yaml` added to `.gitignore` and to the init template so scaffolded projects ignore it from the outset. [[automated-failover-always-rejected]] abandoned — the design removes the condition that caused it.
+
+- **2026-09-03** — Hardened the `grep` agent tool after run `ec4f45c70ba0b39a`, where the qa agent called `grep("FAIL", "")`, walked the whole repository including minified `web/dist` bundles, got 82 KB back and reasoned over its own grep hits as if they were test results. `path` is now required (and required in the tool schema, which previously said it defaulted to `.`), build/vendor directories are skipped, long lines are capped, binaries are skipped, and total output is capped. Both qa prompts updated to match.
+
+- **2026-08-30** — Instrumented the openai-compatible request cycle so a `provider_disconnected` is self-diagnosing: the run log now records when each turn's request was sent, how long response headers took, and on a stream failure how long it survived plus how many SSE lines arrived. Establishing those facts for run `97078a4c1bf40c04` previously required server-log forensics on the provider host.
+
+- **2026-08-30** — Corrected the `provider_disconnected` remediation, which blamed model swapping. Server-log forensics on run `97078a4c1bf40c04` disproved that: the llama.cpp backend logged no error, cancel, timeout, eviction, swap or restart, and the final request completed normally, while the client received zero bytes and a reset on the router port. The drop was in the router hop, not the model.
+
+- **2026-08-28** — Fixed the bash tool discarding the end of command output. It kept the first 16 KB and dropped the rest, but `go test` and `vitest` print their verdict last, so the qa agent never saw a pass/fail line for any suite over the cap. Run `8fe31d94d48f2b67` reported "All tests passed" while `make test-integration` had four failures. Truncation now keeps both ends.
+
+- **2026-08-28** — Moved code scanning from default to advanced setup so the analysis can load a config. Adds `.github/workflows/codeql.yml`, `.github/codeql/codeql-config.yml` and a local model pack declaring `sandbox.Resolve` and `config.ValidatePath` as `barrierModel` entries for the `path-injection` kind. All 116 open `go/path-injection` alerts trace through those sanitisers, which CodeQL does not model as barriers. Requires disabling default setup before the workflow takes effect.
+
+- **2026-08-28** — Triaged the 10 integration-test failures. Six were test-side and are fixed: `make lint` unbroken (gosec/gitleaks false positives), the five native-Ollama test files deleted (they stopped `tests/integration` compiling at all), `ollama` dropped from the drivers-must-load list, the two live-provider tests made opt-in via `KC_LIVE_PROVIDER_TESTS` with a run budget that matches their own timeout, provider DELETE corrected to 204, and the ADR write-path assertion changed to respect prefix matching. The remaining four are genuine product bugs, now raised as [[automated-failover-always-rejected]] and [[onboard-existing-project-rescaffolds]].
+
+- **2026-08-27** — Turn timeline now renders for `claude-code-cli` runs. `parseLogTurns` only understood the openai-compatible `# turn N` format, so every Claude Code run showed an empty timeline — a driver difference that looked like a success/failure difference. Added a stream-json parser (assistant text/thinking/tool_use + matching tool_result) behind a format check. Verified on real logs: 28 turns / 13 tool calls for a Claude Code run, 8 turns unchanged for an openai-compatible run.
+
+- **2026-08-27** — Fixed `App.UnmarshalYAML` discarding every app-level default when a config file exists. It decoded into a zero-valued `appRaw` and overwrote all fields, so a config omitting `auth:` got method `""` and was rejected by `validateApp` — the server refused to start on any minimal config. 33 integration tests each burned their full 15s readiness timeout as a result; integration failures drop 39 → 10.
+
+- **2026-08-27** — QA agent now runs the frontend suites: added `cd tests/web && pnpm test` and `cd web && pnpm test` to the qa allowlist and STEP 1 of its prompt. The agent previously ran only the two Go targets, so 149 frontend spec files were never exercised — including the frontend test plans it was being pointed at.
+
+- **2026-08-27** — Agent runs list gains a "View run details" button opening the structured `RunDetailModal` alongside the existing raw-log view; modal widened 600px → 900px.
+
+- **2026-08-25** — Milestone 6 — Agent Summary API & Project Agent Binding Integration ([[provider-model-for-agents-3-be]]): Update /api/p/{project}/agents serialization with provider, model, and configured flag, zeroing ready counts for unconfigured agents.
+
+- **2026-08-25** — Milestone 5 — Live Health Probing, Model Discovery & Extra Headers ([[provider-model-for-agents-3-be]]): Implement /health endpoint with 5-second timeout and latency tracking, wire /models discovery with extra headers and bearer token forwarding.
+
+- **2026-08-25** — Milestone 4 — Provider Management REST API (`/api/providers`) ([[provider-model-for-agents-3-be]]): Implement /api/providers REST endpoints for CRUD operations with masked secret hygiene, role authorization, and agent reference conflict protection.
+
+- **2026-08-25** — Milestone 3 — Outright Removal of Native Ollama Driver & Surface ([[provider-model-for-agents-3-be]]): Remove legacy native Ollama driver and tests, delete Ollama fields from Run and Project containers, and explicitly reject driver "ollama" with guidance to use openai-compatible providers.
+
+- **2026-08-25** — Milestone 2 — Agent Configuration Refactoring (`{provider, model}` Pair) ([[provider-model-for-agents-3-be]]): Refactor AgentConfig to support {provider, model} pairs, update project validation to require models on provider-backed agents, and default provider-backed agents to openai-compatible driver.
+
+- **2026-08-25** — Milestone 1 — Provider Entity Model, App Configuration & Startup Migration ([[provider-model-for-agents-3-be]]): Define ProviderConfig schema, attach Providers to App config with strict slug and URL validation, and implement automated startup migration from legacy ollama_instances to providers.
+
+- **2026-08-25** — Milestone 4 — Multi-turn Live Progress & Tool-Call Timeline ([[open-provider-support-4-fe]]): Implement multi-turn log parser, interactive turn timeline in RunDetailModal with collapsible tool arguments and outputs, FR-5a recovery badges, and TTFT display.
+
+- **2026-08-25** — Milestone 3 — Agent Configuration & Launcher Updates ([[open-provider-support-4-fe]]): Add OpenAI-compatible driver support, provider selector, model picker, and max tool iterations config to agent editor and panels with emerald badge styling.
+
+- **2026-08-25** — Milestone 2 — Provider Settings View & Pinia Store ([[open-provider-support-4-fe]]): Create centralized Provider Settings view with presets, API key reveal toggle, header editor, connection testing, and Pinia provider store replacing OllamaSettingsView.
+
+- **2026-08-25** — Milestone 1 — TypeScript Types & Provider API Client ([[open-provider-support-4-fe]]): Define TypeScript interfaces for Provider records, model discovery, and agent configuration extensions; implement provider management and probing API client module in web/src/api/providers.ts.
+
+- **2026-08-25** — Milestone 7 — Provider Management REST API Endpoints ([[open-provider-support-3-be]]): Implement `/api/providers` CRUD, secret masking for API keys (NFR-1), `/api/providers/test` capability probe, and `/api/providers/{name}/models` model catalog discovery.
+
+- **2026-08-25** — Milestone 6 — Manager Integration & Driver Registration ([[open-provider-support-3-be]]): Register `openai-compatible` driver in `agent.Manager`, wire provider resolution and run parameter initialization in `StartRun`, and route legacy Ollama configurations through the OpenAI-compatible engine.
+
+- **2026-08-25** — Milestone 5 — OpenAI-Compatible Driver Core & Multi-turn Loop ([[open-provider-support-3-be]]): Implement `OpenAICompatibleDriver` satisfying `Driver` and `Process` interfaces, managing SSE streaming deltas, TTFT callbacks, multi-turn tool calling loops with iteration caps, and structured run logging.
+
+- **2026-08-25** — Milestone 4 — Preflight Capability Verification & Token Delta Probing ([[open-provider-support-3-be]]): Implement preflight capability probe comparing prompt token deltas to hard-fail silent tool drops (Mode A), handle explicit 400 errors (Mode B), and check OpenRouter model parameter metadata (FR-5b).
+
+- **2026-08-25** — Milestone 3 — Native-Format Tool-Call Recovery Parser ([[open-provider-support-3-be]]): Implement fallback parser for XML and JSON tool call formats emitted by models through servers that do not structure tool calls natively (FR-5a).
+
+- **2026-08-25** — Milestone 2 — Sandboxed Local Tool Execution Engine ([[open-provider-support-3-be]]): Implement OpenAI tool definitions and sandboxed ToolExecutor for `read_file`, `write_file`, `list_dir`, and `grep`, scoping writes to `allowed_write_paths`.
+
+- **2026-08-25** — Milestone 1 — Provider & AgentConfig Data Model & Validation ([[open-provider-support-3-be]]): Extend App config with `Provider` records, update `AgentConfig` with `provider`, `model`, and `max_tool_iterations`, add validation and in-memory legacy `ollama_instances` migration.
+
+- **2026-08-25** — Author backend, frontend, and test plans for the OpenAI-Compatible Agent Driver ([[open-provider-support-3-be]], [[open-provider-support-4-fe]], [[open-provider-support-5-test]]) covering tool execution against sandbox resolver, native-format recovery parser (FR-5a), preflight capability verification (FR-5b), multi-turn agent loop, and Provider settings UI.
 
 - **2026-08-10** — Ship a **systemd user unit** for running the server as a Linux service ([packaging/systemd/kaos-control.service](../packaging/systemd/kaos-control.service)) plus a "Run as a service (Linux, systemd)" section in the [README](../README.md). A *user* unit (not a system unit) is deliberate: the server runs as the login user, so agent runs inherit `HOME`, `~/.claude` credentials, git identity, and `~/.kaos-control` — and the whole path is **rootless** (binary in `~/.local/bin`, unit in `~/.config/systemd/user`, and `loginctl enable-linger` for *self* is permitted by systemd's default polkit, so no sudo anywhere). Design notes: `ExecStart` invokes the **`serve` subcommand rather than `-d`** — equivalent on current builds, but pre-0.2.0 binaries reject `-d` with `unknown flag` and exit 1 (caught by smoke-testing against the installed v0.1.2); `-config` is pinned explicitly because the user manager doesn't reliably inherit `XDG_CONFIG_HOME`; `Environment=PATH` spells out the per-user tool dirs since agent runs shell out to `claude`/`git`/`go`/`node` and the user manager's default PATH is minimal (an optional `~/.config/kaos-control/service.env` overrides it — needed here, as nvm-managed `pnpm` was invisible to the service and would have broken `make build-web` pipeline steps); `TimeoutStopSec=30` covers the server's 10s graceful drain, after which the control-group kill reaps agent subprocesses. No hardening directives (`ProtectSystem` et al.) — agents legitimately write outside `$HOME` into project paths. Verified with `systemd-analyze --user verify` and smoke-tested end to end (enable/start/restart/stop, port release, `/api/health` — note `/health` alone falls through to the SPA).
 

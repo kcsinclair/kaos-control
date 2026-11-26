@@ -403,27 +403,28 @@ func TestQuotaStatus_AC8_NoRateLimitEvent_ZeroBroadcasts(t *testing.T) {
 	}
 }
 
-// TestQuotaStatus_NFR3_OllamaDriver_NoQuotaEvents covers NFR3: the
+// TestQuotaStatus_NFR3_NonClaudeDriver_NoQuotaEvents covers NFR3: the
 // rate_limit_event shape is Claude-Code-specific. A non-Claude driver
-// (Ollama) run never produces a rate_limit_event-shaped stream event, so it
+// run never produces a rate_limit_event-shaped stream event, so it
 // must emit zero agent.quota_status events.
-func TestQuotaStatus_NFR3_OllamaDriver_NoQuotaEvents(t *testing.T) {
-	const artifactPath = "lifecycle/ideas/quota-status-ollama.md"
-	env := newOllamaAgentTestEnv(t, []seedArtifact{{
+func TestQuotaStatus_NFR3_NonClaudeDriver_NoQuotaEvents(t *testing.T) {
+	const artifactPath = "lifecycle/ideas/quota-status-nonclaude.md"
+	env := newAgentTestEnv(t, []seedArtifact{{
 		relPath: artifactPath,
-		content: makeArtifact("Quota Status Ollama Test", "idea", "draft", "quota-status-ollama", "", "Body."),
-	}}, 2)
+		content: makeArtifact("Quota Status NonClaude Test", "idea", "draft", "quota-status-nonclaude", "", "Body."),
+	}})
+	setupFakeClaude(t, 0)
 
 	ch := make(chan []byte, 128)
 	env.proj.Hub.Register(ch)
 	defer env.proj.Hub.Unregister(ch)
 
 	env.login("admin@test.local", "admin-pass-123")
-	runID := startAgentRun(t, env.testEnv, "ollama-analyst", artifactPath)
+	runID := startAgentRun(t, env, "requirements-analyst", artifactPath)
 	quota := collectQuotaEvents(t, ch, runID)
 
 	if len(quota) != 0 {
-		t.Errorf("agent.quota_status count: got %d, want 0 for an Ollama-driven run (payloads: %v)", len(quota), quota)
+		t.Errorf("agent.quota_status count: got %d, want 0 for a non-Claude run (payloads: %v)", len(quota), quota)
 	}
 }
 

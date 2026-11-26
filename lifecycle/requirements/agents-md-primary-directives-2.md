@@ -2,7 +2,7 @@
 created: "2026-08-15T17:42:32+10:00"
 title: AGENTS.md-Primary Directive Files + Migration Command
 type: requirement
-status: blocked
+status: done
 lineage: agents-md-primary-directives
 priority: medium
 parent: lifecycle/ideas/agents-md-primary-directives.md
@@ -201,42 +201,75 @@ mechanism that keeps this file-structure work compatible with that later change.
 
 ## Acceptance Criteria
 
-- [ ] `kaos-control init` on a project with no root directive file emits
+- [x] `kaos-control init` on a project with no root directive file emits
       `AGENTS.md` (real content), `CLAUDE.md` (`@AGENTS.md`), and `GEMINI.md`
       (`@AGENTS.md`). *(FR-1, FR-5)* — see [[cli-init-scaffold]]
-- [ ] `AGENTS.md` contains repo layout, lineage convention, frontmatter
+- [x] `AGENTS.md` contains repo layout, lineage convention, frontmatter
       requirements, commit conventions, roles, and the required-reading pointer
       to `lifecycle/architecture/`, wrapped in managed-region BEGIN/END markers.
       *(FR-2, FR-3)*
-- [ ] `CLAUDE.md` and `GEMINI.md` each contain the `@AGENTS.md` import and no
+- [x] `CLAUDE.md` and `GEMINI.md` each contain the `@AGENTS.md` import and no
       duplicated body content. *(FR-4)*
-- [ ] `kaos-control migrate-directives` on a legacy single-`CLAUDE.md` project
+- [x] `kaos-control migrate-directives` on a legacy single-`CLAUDE.md` project
       renames `CLAUDE.md` → `AGENTS.md` (content preserved, managed region
       marked), and writes `CLAUDE.md` + `GEMINI.md` as `@AGENTS.md` imports.
       *(FR-7)*
-- [ ] Running `migrate-directives` where an `AGENTS.md` already exists **stops
+- [x] Running `migrate-directives` where an `AGENTS.md` already exists **stops
       and asks the user** and never overwrites it without an explicit choice.
       *(FR-8)*
-- [ ] Re-running `migrate-directives` on an already-canonical project produces no
+- [x] Re-running `migrate-directives` on an already-canonical project produces no
       net change; a second consecutive run yields no diff. *(FR-9, NFR-2)*
-- [ ] Before rewriting a directive file that differs from generated output, the
+- [x] Before rewriting a directive file that differs from generated output, the
       command shows a diff and requires confirmation (or an explicit force flag);
       non-existent files are created without a prompt. *(FR-10)*
-- [ ] The command reports, per file, whether it was created, rewritten, renamed,
+- [x] The command reports, per file, whether it was created, rewritten, renamed,
       skipped, or unchanged. *(FR-11)*
-- [ ] No directive file is indexed; no new indexing/watcher/WS path is added.
+- [x] No directive file is indexed; no new indexing/watcher/WS path is added.
       *(FR-12)*
-- [ ] No content is written outside the project root, and no user prose outside
+- [x] No content is written outside the project root, and no user prose outside
       the managed region is ever lost on any path. *(FR-13, NFR-3)*
-- [ ] Generation/migration runs offline in under 1 second. *(NFR-1, NFR-4)*
-- [ ] kaos-control's own repo is migrated: `CLAUDE.md` → `AGENTS.md` +
+- [x] Generation/migration runs offline in under 1 second. *(NFR-1, NFR-4)*
+- [x] kaos-control's own repo is migrated: `CLAUDE.md` → `AGENTS.md` +
       `@AGENTS.md` imports. *(FR-14)*
-- [ ] Tests cover fresh init, legacy migration, idempotent re-run, and the
+- [x] Tests cover fresh init, legacy migration, idempotent re-run, and the
       pre-existing-`AGENTS.md` guard. *(NFR-5)*
-- [ ] The stack-aware body and `config.yaml` prompt tuning remain out of scope
+- [x] The stack-aware body and `config.yaml` prompt tuning remain out of scope
       and stay tracked in [[agent-directives-generation]].
 
-## Open Questions
+## Verification result
+
+**Delivered and dogfooded — verified 2026-09-03.** Every acceptance criterion
+above is met by code already in the repository, so this requirement was
+`blocked` only because its status was never updated.
+
+| Requirement | Evidence |
+|---|---|
+| FR-1, FR-4 — canonical set | `AGENTS.md` (9,853 bytes) holds the content; `CLAUDE.md` and `GEMINI.md` are **11 bytes each** — the bare `@AGENTS.md` import and nothing else. |
+| FR-3 — managed region | `<!-- kaos-control:generated:start -->` is line 1 of this repo's `AGENTS.md`; markers defined at `internal/directives/render.go:20-21`. |
+| FR-5 — init emits the set | `internal/initcmd/initcmd.go` calls `directives.Generate` with `IncludeGemini: true`. |
+| FR-7 — migration command | `internal/migratecmd` and `internal/directives/migrate.go`, registered at `cmd/kaos-control/main.go:121`. |
+| FR-14 — dogfood | This repository is migrated; the layout above **is** the migrated result. |
+| NFR-5 — tests | `internal/directives` and `internal/initcmd` pass, plus `TestMigrateDirectivesCmd_LegacyLayout_ProducesAgentsClaudeGemini` and `TestMigrateDirectivesCmd_PendingDiff_ExitsNonZeroWithForceHint` in `tests/cli_directives_test.go`. |
+
+Coverage note: `internal/migratecmd` has no test files of its own; its behaviour
+is exercised through `tests/cli_directives_test.go`. NFR-5 explicitly allows
+this ("where a CLI surface is exercised, `tests/`"), so the criterion is met —
+recorded here because the package looks untested from a coverage report alone.
+
+## Resolved Questions
+
+All four were answered by the implementation rather than by a separate decision.
+They are kept with their answers so the reasoning is not lost.
+
+| # | Question | Resolution |
+|---|---|---|
+| OQ-1 | Managed-region marker syntax | `<!-- kaos-control:generated:start -->` / `<!-- kaos-control:generated:end -->` (`internal/directives/render.go:20-21`). Equivalent to the proposed form; the labels differ from the proposal, which named `kaos-control:directives BEGIN/END`. |
+| OQ-2 | Non-interactive migration default | Exits **non-zero with a hint to use the force flag**, rather than aborting silently or overwriting. Pinned by `TestMigrateDirectivesCmd_PendingDiff_ExitsNonZeroWithForceHint`. |
+| OQ-3 | Does `GEMINI.md` need Gemini/Antigravity framing? | **No wrapper required** — it is the bare `@AGENTS.md` import, 11 bytes, same as `CLAUDE.md`. |
+| OQ-4 | Standalone subcommand, `init` flag, or both? | **Both**, as FR-7 assumed: the `migrate-directives` subcommand and `init --refresh-directives` (`internal/initcmd/initcmd.go:176`), sharing one implementation. |
+
+### Original question text
+
 
 - **OQ-1** Managed-region marker syntax: what exact comment form delimits the
   generated block in `AGENTS.md`? It must be an HTML/markdown comment

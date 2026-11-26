@@ -5,14 +5,14 @@ status: draft
 lineage: artefacts-bulk-edit
 created: "2026-05-12T12:38:31+10:00"
 priority: high
+parent: lifecycle/ideas/artefact-sub-directories.md
 labels:
     - feature
     - artefacts
     - frontend
     - enhancement
     - usability
-release: KC-Release6
-parent: lifecycle/ideas/artefact-sub-directories.md
+release: KC-Release7
 ---
 
 # Bulk Edit Artifacts (Status, Priority, Release)

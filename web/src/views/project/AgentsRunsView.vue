@@ -13,10 +13,13 @@ import RunAgentDialog from '@/components/agent/RunAgentDialog.vue'
 import AgentPanelRow from '@/components/agent/AgentPanelRow.vue'
 import AgentLaunchModal from '@/components/agent/AgentLaunchModal.vue'
 import AgentConfigForm from '@/components/agent/AgentConfigForm.vue'
+import SwitchProviderModal from '@/components/agent/SwitchProviderModal.vue'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import RunFailureBanner from '@/components/agent/RunFailureBanner.vue'
 import RunSummaryCard from '@/components/agent/RunSummaryCard.vue'
 import RunDenialSummary from '@/components/agent/RunDenialSummary.vue'
 import RawLogModal from '@/components/agent/RawLogModal.vue'
+import RunDetailModal from '@/components/agent/RunDetailModal.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import SortHeader from '@/components/SortHeader.vue'
 import type { AgentSummary, AgentRunRow } from '@/types/api'
@@ -24,23 +27,47 @@ import type { AgentFormData } from '@/components/agent/AgentConfigForm.vue'
 import { useProjectConfigStore } from '@/stores/projectConfig'
 import { useQueueStore } from '@/stores/queue'
 import ProjectQueuePanel from '@/components/agent/ProjectQueuePanel.vue'
+import { getFailureReasonInfo } from '@/lib/failureReasons'
 
-function agentDriver(agentName: string, agents: AgentSummary[]): string {
-  const a = agents.find((ag) => ag.name === agentName)
-  if (!a) return ''
-  if (a.driver === 'ollama') return 'Ollama'
-  if (a.driver === 'claude-code-cli') return 'Claude Code'
-  if (a.driver === 'claude-mediated') return 'Claude Mediated'
-  if (a.driver === 'codex-cli') return 'Codex'
-  if (a.driver === 'gemini') return 'Gemini'
-  if (a.driver === 'gemini-cli') return 'Gemini CLI'
-  return a.driver
+const LEGACY_FAILURE_LABELS: Record<string, string> = {
+  permission_mode_default: 'Claude Code is in default permission mode',
+  precheck_timeout: 'Claude Code did not start within the expected time',
 }
 
-function agentHasTokenMetrics(agentName: string): boolean {
-  const driver = store.agents.find((ag) => ag.name === agentName)?.driver
+function failureBadgeTitle(reason: string): string {
+  return getFailureReasonInfo(reason)?.heading ?? LEGACY_FAILURE_LABELS[reason] ?? `Run failed: ${reason}`
+}
+
+function driverLabel(driver: string): string {
+  if (driver === 'ollama') return 'Ollama'
+  if (driver === 'claude-code-cli') return 'Claude Code'
+  if (driver === 'claude-mediated') return 'Claude Mediated'
+  if (driver === 'codex-cli') return 'Codex'
+  if (driver === 'gemini') return 'Gemini'
+  if (driver === 'gemini-cli') return 'Gemini CLI'
+  if (driver === 'openai-compatible') return 'OpenAI Compatible'
+  return driver
+}
+
+// Prefers the driver recorded on the run itself (immutable, set at
+// run-start) over the agent's current config, so a historical run keeps
+// showing the driver it actually ran with even after the agent's config
+// changes. Falls back to the config-derived driver only for legacy rows
+// with no run.driver recorded.
+function runDriverId(run: AgentRunRow, agents: AgentSummary[]): string {
+  if (run.driver) return run.driver
+  return agents.find((ag) => ag.name === run.agent_name)?.driver ?? ''
+}
+
+function runDriverLabel(run: AgentRunRow, agents: AgentSummary[]): string {
+  const driver = runDriverId(run, agents)
+  return driver ? driverLabel(driver) : ''
+}
+
+function agentHasTokenMetrics(run: AgentRunRow): boolean {
+  const driver = runDriverId(run, store.agents)
   if (!driver) return true
-  return driver === 'claude-code-cli' || driver === 'claude-mediated'
+  return driver === 'claude-code-cli' || driver === 'claude-mediated' || driver === 'openai-compatible'
 }
 
 const route = useRoute()
@@ -49,6 +76,7 @@ const store = useAgentsStore()
 const ui = useUiStore()
 const configStore = useProjectConfigStore()
 const queueStore = useQueueStore()
+const providerSwitchStore = useProviderSwitchStore()
 const project = route.params.project as string
 
 const showRunDialog = ref(false)
@@ -74,6 +102,18 @@ function closeAgentForm() {
   editAgent.value = null
 }
 
+// Switch-provider modal state (opened from an AgentPanelRow card).
+const switchProviderAgent = ref<string | null>(null)
+
+async function handleRestoreProvider(agent: AgentSummary) {
+  try {
+    await providerSwitchStore.restoreAgent(project, agent.name)
+    ui.success(`${agent.name} restored to primary provider`)
+  } catch (e: unknown) {
+    ui.error(e instanceof Error ? e.message : 'Failed to restore primary provider')
+  }
+}
+
 // Fields the editor form manages. Every other key on an existing entry
 // (active_status, source_types, done_on_success, permission fields,
 // endpoint, shell_command, base_url, auth_token, …) must survive a save
@@ -82,14 +122,12 @@ async function handleAgentFormSubmit(data: AgentFormData) {
   const wasEdit = !!editAgent.value
   try {
     const res = await configApi.getConfig(project)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cfg = configApi.parseConfigYaml(res.raw) as any
     const agents: unknown[] = Array.isArray(cfg.agents) ? cfg.agents : []
     const idx = agents.findIndex((a) => (a as Record<string, unknown>).name === data.name)
 
     // Start from a copy of the existing on-disk entry (or empty, for create)
     // and merge only the fields the form manages onto it.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const entry: Record<string, any> = idx >= 0 ? { ...(agents[idx] as Record<string, unknown>) } : {}
 
     entry.name = data.name
@@ -101,11 +139,11 @@ async function handleAgentFormSubmit(data: AgentFormData) {
 
     entry.timeout_minutes = data.timeout_minutes
 
-    if (data.driver === 'ollama') {
-      if (data.ollama_instance) entry.ollama_instance = data.ollama_instance
-      else delete entry.ollama_instance
-      if (data.ollama_endpoint !== 'chat') entry.ollama_endpoint = data.ollama_endpoint
-      else delete entry.ollama_endpoint
+    if (data.driver === 'openai-compatible') {
+      if (data.provider) entry.provider = data.provider
+      else delete entry.provider
+      if (data.max_tool_iterations) entry.max_tool_iterations = data.max_tool_iterations
+      else delete entry.max_tool_iterations
     }
 
     if (data.allowed_write_paths.length) entry.allowed_write_paths = data.allowed_write_paths
@@ -122,6 +160,14 @@ async function handleAgentFormSubmit(data: AgentFormData) {
 
     if (Object.keys(data.prompt_templates).length) entry.prompt_templates = data.prompt_templates
     else delete entry.prompt_templates
+
+    if (data.fallback_provider) {
+      entry.fallback_provider = data.fallback_provider
+      entry.fallback_model = data.fallback_model
+    } else {
+      delete entry.fallback_provider
+      delete entry.fallback_model
+    }
 
     if (idx >= 0) {
       agents[idx] = entry
@@ -169,6 +215,11 @@ watch([sortColumn, sortDirection], () => setPage(1))
 // run_id currently being viewed in the full-height RawLogModal (one open at a
 // time across the whole runs table). null = closed.
 const fullLogRunId = ref<string | null>(null)
+
+// run_id currently being viewed in the structured RunDetailModal. Independent
+// of fullLogRunId — the two modals show different things and are opened by
+// separate buttons.
+const detailRunId = ref<string | null>(null)
 
 // Run statuses that have produced a terminal type:result line we can summarise.
 // `running` / `queued` runs don't have one yet so the summary section is hidden.
@@ -223,12 +274,12 @@ async function kill(runId: string) {
 }
 
 onMounted(() => {
-  store.fetchRuns(project)
-  if (!store.agents.length) store.fetchAgents(project)
+  void store.fetchRuns(project)
+  if (!store.agents.length) void store.fetchAgents(project)
   // Ready counts populate the per-agent badge; without this initial fetch the
   // badges would read 0 until the first artifact.indexed WebSocket event.
   void store.fetchReadyCounts(project)
-  configStore.fetchRoles(project)
+  void configStore.fetchRoles(project)
   if (import.meta.env.MODE !== 'test') queueStore.fetch().catch(() => {})
 })
 </script>
@@ -258,6 +309,8 @@ onMounted(() => {
           :agents="store.agents"
           @select="selectedAgent = $event"
           @edit="openEditAgent($event)"
+          @switch-provider="switchProviderAgent = $event.name"
+          @restore-provider="handleRestoreProvider"
         />
 
         <div v-if="store.loading" class="state-msg">Loading…</div>
@@ -284,10 +337,11 @@ onMounted(() => {
                 <td>{{ run.agent_name }}</td>
                 <td>
                   <span
-                    v-if="agentDriver(run.agent_name, store.agents)"
+                    v-if="runDriverLabel(run, store.agents)"
                     class="driver-badge"
-                    :data-driver="store.agents.find(a => a.name === run.agent_name)?.driver"
-                  >{{ agentDriver(run.agent_name, store.agents) }}</span>
+                    :data-driver="runDriverId(run, store.agents)"
+                  >{{ runDriverLabel(run, store.agents) }}</span>
+                  <span v-if="run.provider" class="provider-sublabel">{{ run.provider }}</span>
                 </td>
                 <td class="cell-path">
                   <button
@@ -297,6 +351,20 @@ onMounted(() => {
                 </td>
                 <td>
                   <span class="status-chip" :data-status="run.status">{{ run.status }}</span>
+                  <span
+                    v-if="run.status === 'failed' && run.failure_reason"
+                    class="failure-badge"
+                    :title="failureBadgeTitle(run.failure_reason)"
+                  >{{ run.failure_reason }}</span>
+                  <span
+                    v-if="run.status === 'running' && (run.warmup_state === 'model_loading' || run.warmup_state === 'warming_up')"
+                    class="warmup-badge"
+                    role="status"
+                    :title="run.warmup_message ?? 'Warming up model weights...'"
+                  >
+                    <span class="warmup-dot" aria-hidden="true"></span>
+                    Warming up…
+                  </span>
                 </td>
                 <td class="cell-muted">{{ new Date(run.started_at).toLocaleString() }}</td>
                 <td class="cell-muted">{{ elapsed(run) }}</td>
@@ -317,6 +385,8 @@ onMounted(() => {
                     :failure-reason="run.failure_reason"
                     :observed-mode="run.observed_permission_mode"
                     :remediation="run.remediation"
+                    :error-details="run.error_details"
+                    :provider-name="store.agents.find(a => a.name === run.agent_name)?.provider"
                   />
                   <!-- Denial notice for done runs that had denials (on_denial: continue) -->
                   <RunFailureBanner
@@ -385,7 +455,7 @@ onMounted(() => {
                     <RunSummaryCard
                       v-else
                       :result="store.runResults.get(run.run_id) ?? null"
-                      :driver-available="agentHasTokenMetrics(run.agent_name)"
+                      :driver-available="agentHasTokenMetrics(run)"
                     />
                   </div>
                   <!-- Full log — opens in a full-height modal (same component
@@ -393,6 +463,7 @@ onMounted(() => {
                   <div class="detail-section">
                     <div class="detail-label">Run log</div>
                     <button class="btn-link" @click="fullLogRunId = run.run_id">View full log</button>
+                    <button class="btn-link" @click="detailRunId = run.run_id">View run details</button>
                   </div>
                   <div v-if="!run.stderr_tail && !run.artifacts_produced?.length && run.status !== 'running'" class="detail-empty">
                     No output recorded.
@@ -432,6 +503,14 @@ onMounted(() => {
       @cancel="selectedAgent = null"
     />
 
+    <SwitchProviderModal
+      v-if="switchProviderAgent"
+      :project="project"
+      :agent-name="switchProviderAgent"
+      @switched="switchProviderAgent = null"
+      @cancel="switchProviderAgent = null"
+    />
+
     <!-- Full-height log viewer — same component the artefact-screen
          run-detail modal uses, so the experience matches across views. -->
     <RawLogModal
@@ -439,6 +518,15 @@ onMounted(() => {
       :project="project"
       :run-id="fullLogRunId"
       @close="fullLogRunId = null"
+    />
+
+    <!-- Structured run details — the same modal the artefact screen opens
+         from its agent-runs list. -->
+    <RunDetailModal
+      v-if="detailRunId"
+      :project="project"
+      :run-id="detailRunId"
+      @close="detailRunId = null"
     />
 
     <!-- Agent config form modal -->
@@ -576,9 +664,51 @@ onMounted(() => {
 .status-chip[data-status="failed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
 .status-chip[data-status="killed"]         { background: var(--badge-blocked-bg);       color: var(--badge-blocked-text); }
 .status-chip[data-status="killed-timeout"] { background: var(--badge-in-progress-bg);  color: var(--badge-in-progress-text); }
+.failure-badge {
+  display: inline-block;
+  margin-left: var(--space-1);
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: monospace;
+  background: var(--badge-blocked-bg);
+  color: var(--badge-blocked-text);
+  border: 1px solid var(--color-error, #dc2626);
+  cursor: help;
+}
+.warmup-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: var(--space-1);
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  white-space: nowrap;
+  cursor: help;
+}
+.warmup-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22d3ee;
+  flex-shrink: 0;
+  animation: warmup-pulse 1.4s ease-in-out infinite;
+}
+@keyframes warmup-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
+}
 .run-detail { background: var(--color-surface); }
 .detail-cell { padding: var(--space-4) var(--space-6) !important; }
 .detail-section { margin-bottom: var(--space-3); }
+/* "View full log" and "View run details" sit side by side. */
+.detail-section .btn-link + .btn-link { margin-left: var(--space-3); }
 .detail-label {
   font-size: 11px;
   font-weight: 600;
@@ -631,6 +761,14 @@ onMounted(() => {
 .driver-badge[data-driver="codex-cli"] { background: #dcfce7; color: #166534; }
 .driver-badge[data-driver="gemini"] { background: #e0e7ff; color: #4338ca; }
 .driver-badge[data-driver="gemini-cli"] { background: #ccfbf1; color: #0f766e; }
+.driver-badge[data-driver="openai-compatible"] { background: #d1fae5; color: #065f46; }
+.provider-sublabel {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
 /* Queue pause banner */
 .queue-pause-banner {
   display: flex;

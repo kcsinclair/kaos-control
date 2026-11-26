@@ -176,3 +176,31 @@ func TestParseResultLine_PermissionDenials(t *testing.T) {
 		t.Errorf("first denial tool: got %q, want %q", first["tool"], "bash")
 	}
 }
+
+// TestParseResultLine_ErrorWithSuccessSubtype pins the is_error/subtype
+// contradiction observed in run e698997b315e5ca8: Claude Code emitted
+// subtype:"success" together with is_error:true and an API-error message. The
+// run row correctly said "failed" (exit -1) while the summary card said
+// "Success", because only Subtype was captured. IsError is the authoritative
+// signal and Result carries the reason — a killed process leaves stderr_tail
+// empty, so without Result the failure has no explanation anywhere.
+func TestParseResultLine_ErrorWithSuccessSubtype(t *testing.T) {
+	line := `{"type":"result","subtype":"success","is_error":true,` +
+		`"duration_ms":144290,"duration_api_ms":142993,"num_turns":49,` +
+		`"total_cost_usd":1.7163836,` +
+		`"result":"API Error: Connection closed mid-response. The response above may be incomplete."}`
+
+	r, err := ParseResultLine(line)
+	if err != nil {
+		t.Fatalf("ParseResultLine: %v", err)
+	}
+	if r.Subtype != "success" {
+		t.Errorf("Subtype = %q, want %q (the misleading value is preserved verbatim)", r.Subtype, "success")
+	}
+	if !r.IsError {
+		t.Error("IsError = false, want true — consumers must not read Subtype alone")
+	}
+	if r.Result == "" {
+		t.Error("Result is empty, want the API-error message (the only surviving reason)")
+	}
+}

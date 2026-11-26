@@ -10,7 +10,7 @@ labels:
     - feature
     - frontend
     - architecture
-release: KC-Release6
+release: KC-Release7
 ---
 
 # Lineage Visibility Controls

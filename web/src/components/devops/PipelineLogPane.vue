@@ -69,7 +69,7 @@ function scrollToBottom() {
 
 function engageFollow() {
   autoFollow.value = true
-  nextTick(scrollToBottom)
+  void nextTick(scrollToBottom)
 }
 
 // When auto-follow is active and new lines arrive, scroll to bottom
@@ -77,7 +77,7 @@ watch(
   () => filteredLines.value.length,
   () => {
     if (autoFollow.value && !props.runCompleted) {
-      nextTick(scrollToBottom)
+      void nextTick(scrollToBottom)
     }
   },
 )
@@ -92,7 +92,7 @@ watch(
 
 // Scroll to bottom on mount if auto-follow is on
 onMounted(() => {
-  if (autoFollow.value) nextTick(scrollToBottom)
+  if (autoFollow.value) void nextTick(scrollToBottom)
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -34,7 +34,7 @@ onMounted(async () => {
   } catch {
     // Degrades to the map on error (NFR-5) — it carries its own error state.
   }
-  router.replace(`/p/${project}/${target}`)
+  void router.replace(`/p/${project}/${target}`)
 })
 </script>
 

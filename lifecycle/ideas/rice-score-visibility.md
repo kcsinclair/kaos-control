@@ -12,7 +12,8 @@ labels:
     - artifacts
     - frontend
     - ux
-release: KC-Release6
+release: KC-Release7
+parent: lifecycle/ideas/frontend-lint-gap.md
 ---
 
 # Display RICE Scores in More Places

@@ -107,7 +107,7 @@ function onTriggerKeydown(e: KeyboardEvent) {
   if (props.readonly) return
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault()
-    if (!isOpen.value) openMenu()
+    if (!isOpen.value) void openMenu()
     else closeMenu()
   }
   if (e.key === 'Escape' && isOpen.value) {
@@ -141,7 +141,7 @@ function onMenuKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault()
     if (focusedIndex.value >= 0 && focusedIndex.value < PRIORITY_OPTIONS.length) {
-      select(PRIORITY_OPTIONS[focusedIndex.value])
+      void select(PRIORITY_OPTIONS[focusedIndex.value])
     }
   }
 }

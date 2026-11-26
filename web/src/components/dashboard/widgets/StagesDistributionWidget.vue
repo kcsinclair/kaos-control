@@ -106,7 +106,7 @@ function initChart() {
   chart.on('click', (params: { name?: string }) => {
     const stage = params.name
     if (stage) {
-      router.push({ name: 'artifacts', params: { project: props.project }, query: { stage } })
+      void router.push({ name: 'artifacts', params: { project: props.project }, query: { stage } })
     }
   })
   void fetchAndRender()

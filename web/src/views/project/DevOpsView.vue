@@ -5,7 +5,6 @@ import { computed, onMounted, onUnmounted, watch, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useDevOpsStore } from '@/stores/devops'
-import { useUiStore } from '@/stores/ui'
 import { useWebSocket } from '@/composables/useWebSocket'
 import type { WsEvent } from '@/types/api'
 import { Plus, CheckCircle, XCircle, MinusCircle } from 'lucide-vue-next'
@@ -21,7 +20,6 @@ import EditPipelineDialog from '@/components/devops/EditPipelineDialog.vue'
 const route = useRoute()
 const auth = useAuthStore()
 const devops = useDevOpsStore()
-const ui = useUiStore()
 
 const project = route.params.project as string
 
@@ -112,7 +110,7 @@ function handleEditUpdated() {
 
 onMounted(() => {
   if (hasAccess.value) {
-    devops.fetchPipelines(project)
+    void devops.fetchPipelines(project)
   }
 })
 

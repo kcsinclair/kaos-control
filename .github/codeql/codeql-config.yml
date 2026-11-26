@@ -1,0 +1,15 @@
+name: "kaos-control CodeQL config"
+
+# Model packs teaching CodeQL about this repository's own path sanitisers.
+# Resolved from source via codeql-workspace.yml rather than the registry.
+packs:
+  go:
+    - kaos-control/go-models
+
+# Only build output and vendored code. lifecycle/ and plans/ are deliberately
+# NOT ignored: they are markdown (which CodeQL does not analyse anyway), and
+# excluding them would hide lifecycle/prototypes/serve.py, leaving the Python
+# job with no source and failing the run.
+paths-ignore:
+  - web/dist
+  - "**/node_modules"

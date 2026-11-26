@@ -45,7 +45,7 @@ const previewMeta = computed(() => {
 
 // --- helpers ---
 function scrollToBottom() {
-  nextTick(() => {
+  void nextTick(() => {
     if (messagesEl.value) {
       messagesEl.value.scrollTop = messagesEl.value.scrollHeight
     }
@@ -69,13 +69,13 @@ async function send() {
   }
   await store.sendMessage(props.project, text)
   scrollToBottom()
-  nextTick(() => textareaEl.value?.focus())
+  void nextTick(() => textareaEl.value?.focus())
 }
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
-    send()
+    void send()
   }
 }
 
@@ -90,7 +90,7 @@ async function onAccept() {
 async function onEdit() {
   await store.sendMessage(props.project, "I'd like to make some changes")
   scrollToBottom()
-  nextTick(() => textareaEl.value?.focus())
+  void nextTick(() => textareaEl.value?.focus())
 }
 
 async function onDiscard() {
@@ -109,7 +109,7 @@ function tryClose() {
 
 function cancelDiscard() {
   confirmDiscard.value = false
-  nextTick(() => textareaEl.value?.focus())
+  void nextTick(() => textareaEl.value?.focus())
 }
 
 function confirmAndClose() {
@@ -158,7 +158,7 @@ watch(
 )
 
 onMounted(() => {
-  nextTick(() => textareaEl.value?.focus())
+  void nextTick(() => textareaEl.value?.focus())
 })
 
 onBeforeUnmount(() => {
@@ -235,6 +235,7 @@ onBeforeUnmount(() => {
           </div>
           <!-- Body preview -->
           <div class="icp-preview-divider" />
+          <!-- eslint-disable-next-line vue/no-v-html -- renderedPreviewBody is markdown-it output, not user-controlled raw HTML -->
           <div class="icp-preview-body md-preview" v-html="renderedPreviewBody" />
         </div>
         <div class="icp-proposal-actions">

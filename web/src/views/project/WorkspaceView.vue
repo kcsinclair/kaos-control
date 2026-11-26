@@ -9,12 +9,14 @@ import { useAgentsStore } from '@/stores/agents'
 import { useSchedulerStore } from '@/stores/scheduler'
 import { useAppStore } from '@/stores/app'
 import { useOpenQuestionsStore } from '@/stores/openQuestions'
+import { useProviderSwitchStore } from '@/stores/providerSwitch'
 import { getProjectWs } from '@/api/ws'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import InitRequiredBanner from '@/components/project/InitRequiredBanner.vue'
 import ConfigHealthBanner from '@/components/project/ConfigHealthBanner.vue'
 import DirectiveMigrationBanner from '@/components/project/DirectiveMigrationBanner.vue'
+import ProviderFailoverModal from '@/components/provider/ProviderFailoverModal.vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -23,14 +25,17 @@ const agentsStore = useAgentsStore()
 const schedulerStore = useSchedulerStore()
 const appStore = useAppStore()
 const openQuestionsStore = useOpenQuestionsStore()
+const providerSwitchStore = useProviderSwitchStore()
 
-const AGENT_EVENTS     = new Set(['agent.started', 'agent.progress', 'agent.finished', 'agent.failed', 'agent.permission', 'agent.quota_status'])
+const AGENT_EVENTS     = new Set(['agent.started', 'agent.progress', 'agent.status', 'agent.finished', 'agent.failed', 'agent.permission', 'agent.quota_status'])
 const LOCK_EVENTS      = new Set(['lock.acquired', 'lock.released'])
 const SCHEDULER_EVENTS = new Set(['scheduler.job.started', 'scheduler.job.completed'])
+const PROVIDER_SWITCH_EVENTS = new Set(['provider.switched', 'provider.restored', 'provider.primary_recovered', 'config.reloaded'])
 
 let wsUnsub: (() => void) | null = null
 let _readyCountDebounce: ReturnType<typeof setTimeout> | null = null
 let _awaitingCountDebounce: ReturnType<typeof setTimeout> | null = null
+let _agentsRefreshDebounce: ReturnType<typeof setTimeout> | null = null
 
 function getProject() { return route.params.project as string }
 
@@ -40,6 +45,12 @@ async function syncProject() {
   projectStore.setCurrent(name)
   await projectStore.checkInitRequired(name)
   void openQuestionsStore.fetchAwaitingAnswersCount(name)
+  void providerSwitchStore.fetchStatus(name)
+  void providerSwitchStore.fetchTemplates(name)
+  // Primes agentsStore.agents so the header's switchover status button
+  // (hasSecondaryConfigured) has real data on every project page, not just
+  // once the user has visited the Agents tab.
+  void agentsStore.fetchAgents(name)
 }
 
 function scheduleReadyCountRefresh(project: string) {
@@ -58,6 +69,17 @@ function scheduleAwaitingCountRefresh(project: string) {
   }, 500)
 }
 
+// AgentSummary carries fallback_provider/fallback_model/is_failover
+// (agentSummary in internal/http/agents.go); refresh it after config.reloaded
+// so AgentPanelRow's failover badge stays live without a manual reload.
+function scheduleAgentsRefresh(project: string) {
+  if (_agentsRefreshDebounce !== null) clearTimeout(_agentsRefreshDebounce)
+  _agentsRefreshDebounce = setTimeout(() => {
+    _agentsRefreshDebounce = null
+    void agentsStore.fetchAgents(project)
+  }, 500)
+}
+
 function subscribeWs(project: string) {
   wsUnsub?.()
   const ws = getProjectWs(project)
@@ -68,6 +90,9 @@ function subscribeWs(project: string) {
       locksStore.applyEvent(e.type, e.payload as Record<string, unknown>)
     } else if (SCHEDULER_EVENTS.has(e.type)) {
       schedulerStore.onWsEvent(e.type, e.payload as Record<string, unknown>)
+    } else if (PROVIDER_SWITCH_EVENTS.has(e.type)) {
+      providerSwitchStore.onWsEvent(project, e.type, e.payload as Record<string, unknown>)
+      if (e.type === 'config.reloaded') scheduleAgentsRefresh(project)
     } else if (e.type === 'artifact.indexed') {
       scheduleReadyCountRefresh(project)
       scheduleAwaitingCountRefresh(project)
@@ -76,14 +101,14 @@ function subscribeWs(project: string) {
 }
 
 onMounted(() => {
-  syncProject()
+  void syncProject()
   subscribeWs(getProject())
   void appStore.fetchVersion()
 })
 
 watch(() => route.params.project, (newProject) => {
   if (newProject) {
-    syncProject()
+    void syncProject()
     subscribeWs(newProject as string)
   }
 })
@@ -92,6 +117,7 @@ onUnmounted(() => {
   wsUnsub?.()
   if (_readyCountDebounce !== null) clearTimeout(_readyCountDebounce)
   if (_awaitingCountDebounce !== null) clearTimeout(_awaitingCountDebounce)
+  if (_agentsRefreshDebounce !== null) clearTimeout(_agentsRefreshDebounce)
 })
 </script>
 
@@ -115,6 +141,11 @@ onUnmounted(() => {
         </template>
       </main>
     </div>
+    <ProviderFailoverModal
+      v-if="providerSwitchStore.modalOpen"
+      :project="getProject()"
+      @close="providerSwitchStore.closeModal()"
+    />
   </div>
 </template>
 

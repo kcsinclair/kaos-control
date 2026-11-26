@@ -193,7 +193,7 @@ export const useDevOpsStore = defineStore('devops', () => {
   }
 
   function handlePipelineUpdated(project: string): void {
-    fetchPipelines(project)
+    void fetchPipelines(project)
   }
 
   async function fetchRunLog(project: string, runId: string): Promise<string> {

@@ -60,7 +60,7 @@ function onBlur() {
 
 function focus() {
   expanded.value = true
-  nextTick(() => inputRef.value?.focus())
+  void nextTick(() => inputRef.value?.focus())
 }
 
 defineExpose({ focus })

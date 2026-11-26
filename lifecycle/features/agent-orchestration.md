@@ -11,6 +11,7 @@ labels:
     - agents
 related_to:
     - lifecycle/requirements/Innovation Maker - Making Releases from Ideas-1.md
+parent: lifecycle/docs/open-provider-support-7-doc.md
 ---
 
 # Agent orchestration
@@ -25,8 +26,9 @@ citizens.
   optional model override, optional timeout.
 - **Drivers.** `claude-code-cli` (default) shells out to
   `claude --dangerously-skip-permissions -p`, parsing stream-json events for
-  live progress; other drivers cover mediated Claude, Codex, Gemini, and
-  Ollama.
+  live progress; other drivers cover mediated Claude, `claude-env`
+  (Anthropic-compatible endpoints), Codex, Gemini, and any OpenAI-compatible
+  endpoint via `openai-compatible` (see [[provider-management]]).
 - **Active-status lifecycle.** When an agent starts, the target's status
   moves to a configured `active_status` (e.g. `in-development`) and back to
   `done` on success — bundled into the agent's own commit.

@@ -148,7 +148,7 @@ function makeRouter(project = 'testproject') {
       { path: '/:pathMatch(.*)*', component: { template: '<div />' } },
     ],
   })
-  router.push(`/p/${project}/reports`)
+  void router.push(`/p/${project}/reports`)
   return router
 }
 
@@ -293,7 +293,7 @@ describe('ReportsView', () => {
     mockGetReport.mockResolvedValue(makeReport() as any)
 
     const router = makeRouter()
-    const wrapper = mount(ReportsView, {
+    mount(ReportsView, {
       global: { plugins: [router] },
     })
     await router.isReady()

@@ -23,7 +23,7 @@ const editMode = ref(false)
 
 function onSaved(job: SchedulerJob) {
   editMode.value = false
-  store.fetchJob(project, job.name)
+  void store.fetchJob(project, job.name)
 }
 
 // ─── actions ─────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ async function deleteJob() {
   try {
     await store.deleteJob(project, jobName.value)
     ui.success(`Job "${jobName.value}" deleted`)
-    router.push(`/p/${project}/scheduler`)
+    void router.push(`/p/${project}/scheduler`)
   } catch (e: unknown) {
     ui.error(e instanceof Error ? e.message : 'Failed to delete job')
   }
@@ -117,7 +117,7 @@ onMounted(async () => {
 watch(
   () => store.selectedJob?.last_run_at,
   (newVal, oldVal) => {
-    if (newVal && newVal !== oldVal) loadRuns()
+    if (newVal && newVal !== oldVal) void loadRuns()
   },
 )
 </script>

@@ -353,7 +353,6 @@ describe('ArtifactListView — pagination after sort', () => {
     await flushPromises()
 
     // Navigate to page 2 if pagination controls are rendered
-    const nextBtn = wrapper.find('button:not([disabled])')
     const paginationText = wrapper.find('.page-info')
     if (paginationText.exists()) {
       // Click Next if available

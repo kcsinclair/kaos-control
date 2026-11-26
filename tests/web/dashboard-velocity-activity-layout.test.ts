@@ -101,7 +101,6 @@ vi.mock('@/api/client', () => ({
 // Mock WebSocket composable — captures the registered handler so tests can
 // fire it directly.
 let capturedFeedWsHandler: ((e: unknown) => void) | null = null
-let capturedArtifactWsHandler: ((e: unknown) => void) | null = null
 
 vi.mock('@/composables/useWebSocket', () => ({
   useWebSocket: vi.fn((
@@ -109,8 +108,7 @@ vi.mock('@/composables/useWebSocket', () => ({
     eventType: string,
     handler: (e: unknown) => void,
   ) => {
-    if (eventType === 'feed.new')        capturedFeedWsHandler     = handler
-    if (eventType === 'artifact.indexed') capturedArtifactWsHandler = handler
+    if (eventType === 'feed.new') capturedFeedWsHandler = handler
   }),
 }))
 
@@ -166,7 +164,7 @@ function makeRouter(path = '/p/testproject/dashboard') {
       { path: '/:pathMatch(.*)*',      component: { template: '<div />' } },
     ],
   })
-  router.push(path)
+  void router.push(path)
   return router
 }
 
@@ -179,8 +177,7 @@ beforeEach(() => {
   widgetList.splice(0)
   mockPush.mockClear()
   mockRouterReplace.mockClear()
-  capturedFeedWsHandler     = null
-  capturedArtifactWsHandler = null
+  capturedFeedWsHandler = null
   vi.useFakeTimers()
 })
 
@@ -364,7 +361,7 @@ describe('M2 — DashboardGrid: side-by-side section structure', () => {
 
 describe('M4 — VelocityChartWidget: debounced resize logic', () => {
   it('TC1: chart.resize() is called after data loads on mount', async () => {
-    const wrapper = mount(VelocityChartWidget, {
+    mount(VelocityChartWidget, {
       props: { project: 'testproject' },
       global: { plugins: [makeRouter()] },
     })

@@ -26,16 +26,18 @@ var ValidStatuses = map[string]bool{
 
 // Release is a named, versioned bucket that groups artifacts.
 type Release struct {
-	ID        int64      `json:"id"`
-	ProjectID string     `json:"project_id"`
-	Name      string     `json:"name"`
-	Slug      string     `json:"slug"`
-	FilePath  string     `json:"file_path,omitempty"`
-	Status    string     `json:"status"`
-	StartDate *time.Time `json:"start_date,omitempty"`
-	EndDate   *time.Time `json:"end_date,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	ID          int64      `json:"id"`
+	ProjectID   string     `json:"project_id"`
+	Name        string     `json:"name"`
+	Slug        string     `json:"slug"`
+	FilePath    string     `json:"file_path,omitempty"`
+	Status      string     `json:"status"`
+	Goal        string     `json:"goal"`
+	Description string     `json:"description"`
+	StartDate   *time.Time `json:"start_date,omitempty"`
+	EndDate     *time.Time `json:"end_date,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 
 	// Summary counts populated by Store.Get.
 	IdeaCount   int `json:"idea_count,omitempty"`

@@ -57,7 +57,7 @@ function handleKeydown(e: KeyboardEvent) {
     const link = items[focusedIndex.value]?.querySelector<HTMLAnchorElement>('a')
     if (link) {
       const href = link.getAttribute('href')
-      if (href) router.push(href)
+      if (href) void router.push(href)
     }
   }
 }

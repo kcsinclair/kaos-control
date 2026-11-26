@@ -72,7 +72,7 @@ vi.mock('@/api/config', () => ({
 
 import RoadmapView from '../../web/src/views/project/RoadmapView.vue'
 
-function buildRouter(project = 'testproject') {
+function buildRouter(_project = 'testproject') {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
