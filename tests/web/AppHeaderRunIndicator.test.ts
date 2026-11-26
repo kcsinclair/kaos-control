@@ -66,6 +66,9 @@ vi.mock('@/stores/agents', () => ({
       get activeRuns() {
         return _runsRef.value.filter((r) => r.status === 'running')
       },
+      // AppHeader also renders SwitchoverStatusButton, whose providerSwitch
+      // store reads agentsStore.agents; an empty list keeps it hidden.
+      agents: [],
     }
   },
 }))

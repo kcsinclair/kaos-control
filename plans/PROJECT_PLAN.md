@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-11-26** — Fixed the 20 stale tests in tests/web. `releases-api-unwrap`: the sample release lacked `goal`/`description`, which `normaliseDates` now fills in. `AppHeaderRunIndicator`: the mocked agents store had no `agents` list, which `SwitchoverStatusButton` (rendered in AppHeader) reads through the providerSwitch store. tests/web now passes 1617/1617.
+
 - **2026-11-26** — Captured [[agent-sampling-parameters]] idea: optional per-agent / per-provider `sampling` block (temperature, top_p, top_k, min_p, max_tokens, seed, penalties, stop). Unset means not sent, so existing configs behave the same as before. Originates from Hugo Burton's PR #25 (`max_tokens`/`temperature`); its separate llama.cpp driver is superseded by `openai-compatible` + `providers`.
 
 - **2026-11-26** — Applied the 11 open Dependabot upgrades (PRs #26–#37) on kc-dev in one commit rather than merging them into `main`: chi 5.4.0; web: vite 6.4.6, vitest 4.1.12, markdown-it 14.3.3, js-yaml 4.3.2, undici override ^7.30.1, brace-expansion override ^2.1.7, source-map-js 1.2.4; tests/web: vite 6.4.6, vitest 4.1.12, happy-dom 21.0.4 (major), source-map-js 1.2.4. Lock files regenerated with pnpm 10.33.2 (Dependabot's dropped the `overrides:` block). Verified: `go vet`, `make test-unit`, `make build-web`/`build`, web vitest (285/285) pass; tests/web shows 20 failures in `AppHeaderRunIndicator` and `releases-api-unwrap`, which fail identically on the old dependencies (stale tests, not regressions).
