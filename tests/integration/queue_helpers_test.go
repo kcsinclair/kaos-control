@@ -402,7 +402,12 @@ func (e *queueTestEnv) queueSnapshot() map[string]any {
 func setupFakeClaudeWithScript(t *testing.T, script string) {
 	t.Helper()
 	fakeDir := t.TempDir()
-	full := "#!/bin/sh\n" + script
+	// The server runs `claude --version` at startup (checkClaudeVersion) from
+	// its own working directory, which under `go test` is this package
+	// directory inside the real kaos-control checkout. Answer it here so the
+	// scenario script only runs for agent invocations; otherwise a script
+	// that runs `git commit` lands that commit in the developer's repo.
+	full := "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then echo \"9.9.9 (Claude Code)\"; exit 0; fi\n" + script
 	fakeScript := filepath.Join(fakeDir, "claude")
 	if err := os.WriteFile(fakeScript, []byte(full), 0o755); err != nil {
 		t.Fatal(err)
