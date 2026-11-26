@@ -281,6 +281,12 @@ func (s *Server) handleDeleteProvider(w http.ResponseWriter, r *http.Request) {
 
 // handleTestProvider tests connectivity and tool-calling capability for a provider.
 func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
+	// Same gate as create/update/delete. Without it any authenticated user
+	// could make the server issue requests to an arbitrary base_url with
+	// arbitrary headers and read back the result (CodeQL go/request-forgery).
+	if !s.requireAppRole(w, r, RolesDevopsOrAdmin...) {
+		return
+	}
 	var req struct {
 		Name         string            `json:"name"`
 		BaseURL      string            `json:"base_url"`

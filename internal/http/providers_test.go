@@ -450,3 +450,30 @@ func TestProviders_TestAndModels(t *testing.T) {
 		}
 	}
 }
+
+// POST /api/providers/test makes the server send requests to a caller-chosen
+// base_url, so it is gated like provider create/update/delete. A user with no
+// devops/product-owner role must get 403 and the target must never be hit.
+func TestProviders_TestRequiresRole(t *testing.T) {
+	hit := false
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hit = true
+	}))
+	defer ts.Close()
+
+	s, _ := newTestServerWithProviders(t, nil, nil)
+	r := chi.NewRouter()
+	r.Post("/api/providers/test", s.handleTestProvider)
+
+	req := authedRequest(http.MethodPost, "/api/providers/test", map[string]any{"base_url": ts.URL})
+	req = req.WithContext(context.WithValue(req.Context(), userContextKey, &auth.User{Email: "nobody@test"}))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403: %s", w.Code, w.Body.String())
+	}
+	if hit {
+		t.Fatal("provider test reached base_url for a user without a role")
+	}
+}
