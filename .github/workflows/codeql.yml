@@ -21,6 +21,12 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    # The action resolves config `packs:` from the registry (ghcr.io) and
+    # ignores codeql-workspace.yml, so the local model pack must be put on the
+    # pack search path explicitly, for both init and analyze, or init fails
+    # with "'kaos-control/go-models' not found in the registry".
+    env:
+      CODEQL_ACTION_EXTRA_OPTIONS: '{"database":{"init":["--additional-packs=${{ github.workspace }}/.github/codeql/models"],"analyze":["--additional-packs=${{ github.workspace }}/.github/codeql/models"]}}'
     permissions:
       security-events: write
       packages: read
