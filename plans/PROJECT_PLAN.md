@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-11-26** — Checked the 35 open Dependabot security alerts against `main` after the kc-dev merge. Every alert's fixed version is already on `main` except nanoid in tests/web (3.3.11 via a stale postcss 8.5.12, alert #72). Added pnpm overrides in tests/web (`nanoid ^3.3.12`, `postcss ^8.5.18`, matching web/). tests/web 1617/1617 pass.
+
 - **2026-11-26** — Fixed the 20 stale tests in tests/web. `releases-api-unwrap`: the sample release lacked `goal`/`description`, which `normaliseDates` now fills in. `AppHeaderRunIndicator`: the mocked agents store had no `agents` list, which `SwitchoverStatusButton` (rendered in AppHeader) reads through the providerSwitch store. tests/web now passes 1617/1617.
 
 - **2026-11-26** — Captured [[agent-sampling-parameters]] idea: optional per-agent / per-provider `sampling` block (temperature, top_p, top_k, min_p, max_tokens, seed, penalties, stop). Unset means not sent, so existing configs behave the same as before. Originates from Hugo Burton's PR #25 (`max_tokens`/`temperature`); its separate llama.cpp driver is superseded by `openai-compatible` + `providers`.

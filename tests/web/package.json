@@ -24,6 +24,10 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "nanoid": "^3.3.12",
+      "postcss": "^8.5.18"
+    }
   }
 }
