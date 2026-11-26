@@ -1,7 +1,21 @@
 # CodeQL configuration
 
-Advanced setup, so the analysis can load `codeql-config.yml` and with it the
-local model pack in `models/`.
+Code scanning uses GitHub's **default setup**. The local model pack in
+`extensions/kaos-control-go/` is picked up automatically: default setup loads
+model packs from `.github/codeql/extensions/` without any workflow or config.
+
+History: an advanced-setup workflow (`.github/workflows/codeql.yml` +
+`codeql-config.yml`) was added on 2026-08-28 to load this pack, but it never
+took effect. Default setup was left enabled, so GitHub rejected its uploads
+("analyses from advanced configurations cannot be processed when the default
+setup is enabled"), and its Go job failed at init because the action resolved
+`packs:` from ghcr.io rather than from the repo. Removed 2026-11-27 in favour
+of the extensions directory.
+
+Caveat: GitHub lists model packs as public preview and does not name Go among
+the supported languages. The pack works with the Go queries in the CLI (see
+below). If code scanning still reports ~116+ `go/path-injection` alerts after a
+push to `main`, default setup is ignoring it for Go.
 
 ## Why the model pack exists
 
@@ -29,7 +43,7 @@ codeql database analyze /tmp/kc-db $Q --format=csv --output=/tmp/baseline.csv --
 
 # With the barrier models (79 alerts).
 codeql database analyze /tmp/kc-db $Q \
-  --additional-packs=.github/codeql/models \
+  --additional-packs=.github/codeql/extensions/kaos-control-go \
   --model-packs=kaos-control/go-models \
   --format=csv --output=/tmp/withpack.csv --rerun
 ```
