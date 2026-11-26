@@ -254,7 +254,7 @@ func writeRunLogHeader(w io.Writer, run Run, args any) {
 // stderr readers to hit EOF before calling cmd.Wait() (which force-closes the
 // pipe FDs). Normal runs drain in well under this; the grace only bites the
 // abnormal case of a detached grandchild holding a write end open.
-const readerDrainGrace = 5 * time.Second
+var readerDrainGrace = 5 * time.Second // var so tests can shorten it
 
 // It takes an already-configured exec.Cmd (with Dir and Env set by the caller)
 // plus the arg list (only used for the log-file header) and returns a process
@@ -364,19 +364,7 @@ func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []strin
 	// lost. Bound the wait with a grace so a detached grandchild still holding a
 	// write end can't hang us — after the grace we reap anyway, and cmd.Wait()
 	// force-closes the FDs to unblock the readers (the prior behaviour).
-	go func() {
-		readersDone := make(chan struct{})
-		go func() { wg.Wait(); close(readersDone) }()
-		select {
-		case <-readersDone:
-		case <-time.After(readerDrainGrace):
-			slog.Warn("agent: stdout readers did not drain within grace; reaping anyway (possible detached grandchild holding the pipe)",
-				"run_id", run.RunID, "grace", readerDrainGrace)
-		}
-		err := cmd.Wait()
-		waitErr <- err
-		close(waitErr)
-	}()
+	go reapAfterDrain(cmd, &wg, run.RunID, waitErr)
 
 	// Cleanup goroutine: wait for the readers to drain, write the run-log
 	// footer, then close the progress channel so the supervisor exits.
@@ -390,6 +378,26 @@ func startCommandProcess(_ context.Context, cmd *exec.Cmd, run Run, args []strin
 	}()
 
 	return p, nil
+}
+
+// reapAfterDrain waits for the stdout/stderr reader goroutines tracked by wg
+// to reach EOF (bounded by readerDrainGrace), then reaps the process and
+// delivers cmd.Wait()'s result on waitErr. cmd.Wait() closes the parent ends
+// of StdoutPipe/StderrPipe, so calling it before the readers drain drops the
+// final lines (including the terminal result event) and trips the
+// truncated-stream check on healthy runs. Shared by every CLI driver.
+func reapAfterDrain(cmd *exec.Cmd, wg *sync.WaitGroup, runID string, waitErr chan<- error) {
+	readersDone := make(chan struct{})
+	go func() { wg.Wait(); close(readersDone) }()
+	select {
+	case <-readersDone:
+	case <-time.After(readerDrainGrace):
+		slog.Warn("agent: stdout readers did not drain within grace; reaping anyway (possible detached grandchild holding the pipe)",
+			"run_id", runID, "grace", readerDrainGrace)
+	}
+	err := cmd.Wait()
+	waitErr <- err
+	close(waitErr)
 }
 
 func (p *cliProcess) Wait() error {

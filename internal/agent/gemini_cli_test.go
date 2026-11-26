@@ -217,6 +217,11 @@ func TestGeminiCliDriver_Start(t *testing.T) {
 // We reproduce the detached-grandchild scenario with a tiny Python script
 // that fork()s an idle grandchild before the parent exits.
 func TestGeminiCliDriver_DetachedChildHoldsPipes(t *testing.T) {
+	// The reaper waits readerDrainGrace for the readers before force-closing
+	// the pipes; shorten it so the 5s deadline below tests "does not hang".
+	oldGrace := readerDrainGrace
+	readerDrainGrace = 500 * time.Millisecond
+	t.Cleanup(func() { readerDrainGrace = oldGrace })
 	python, err := exec.LookPath("python3")
 	if err != nil {
 		t.Skip("python3 not found; skipping detached-child test")

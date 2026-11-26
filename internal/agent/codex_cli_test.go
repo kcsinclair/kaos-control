@@ -148,6 +148,11 @@ func TestCodexCLIDriver_Start(t *testing.T) {
 }
 
 func TestCodexCLIDriver_DetachedChildHoldsPipes(t *testing.T) {
+	// The reaper waits readerDrainGrace for the readers before force-closing
+	// the pipes; shorten it so the 5s deadline below tests "does not hang".
+	oldGrace := readerDrainGrace
+	readerDrainGrace = 500 * time.Millisecond
+	t.Cleanup(func() { readerDrainGrace = oldGrace })
 	python, err := exec.LookPath("python3")
 	if err != nil {
 		t.Skip("python3 not found; skipping detached-child test")

@@ -181,18 +181,14 @@ func (d *GeminiCliDriver) Start(ctx context.Context, run Run) (Process, error) {
 	}()
 
 	// Process-exit watcher: the agy CLI (Antigravity) detaches a grandchild
-	// that inherits stdout/stderr and keeps writing its FDs even after agy
-	// itself exits, so the pipe goroutines above would block on Read forever
-	// waiting for an EOF that never comes. Run cmd.Wait() asynchronously —
-	// it reaps the agy process and closes the parent ends of the pipes,
-	// which unblocks the readers. The result is stashed in waitErr so
-	// cliProcess.Wait() (called by supervise after the drain loop) can
-	// return it without double-calling cmd.Wait.
-	go func() {
-		err := cmd.Wait()
-		waitErr <- err
-		close(waitErr)
-	}()
+	// that inherits stdout/stderr and can keep the pipes open after agy exits,
+	// so the readers might never see EOF. reapAfterDrain lets them drain first
+	// (otherwise cmd.Wait() closing the pipes drops the final result line and
+	// the run is marked truncated_stream), and after readerDrainGrace reaps
+	// anyway, which closes the pipes and unblocks the readers. The result is
+	// stashed in waitErr so cliProcess.Wait() can return it without
+	// double-calling cmd.Wait.
+	go reapAfterDrain(cmd, &wg, run.RunID, waitErr)
 
 	// Wait and clean up goroutine.
 	go func() {

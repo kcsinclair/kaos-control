@@ -152,11 +152,7 @@ func (d *CodexCLIDriver) Start(ctx context.Context, run Run) (Process, error) {
 		}
 	}()
 
-	go func() {
-		err := cmd.Wait()
-		waitErr <- err
-		close(waitErr)
-	}()
+	go reapAfterDrain(cmd, &wg, run.RunID, waitErr)
 
 	go func() {
 		wg.Wait()
