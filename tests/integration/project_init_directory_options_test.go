@@ -261,37 +261,46 @@ func TestOnboard_ExistingMode_NotWritable(t *testing.T) {
 	}
 }
 
-// TestOnboard_ExistingMode_AlreadyInitialised verifies that a target already
-// containing an initialised project returns alreadyInitialised=true and the
-// directory is left unmodified (NFR2).
+// TestOnboard_ExistingMode_AlreadyInitialised verifies that adding a directory
+// that is already an initialised kaos-control project registers it as-is:
+// HTTP 201 with alreadyInitialised=true, and the existing config.yaml is left
+// byte-for-byte unchanged (NFR2/FR5). Registering rather than rejecting is the
+// deliberate behaviour since f54c5134 ("register an already-initialised dir
+// instead of erroring"); mode=new over an initialised dir stays a 409.
 func TestOnboard_ExistingMode_AlreadyInitialised(t *testing.T) {
 	env := newCRUDTestEnv(t, nil)
 	dir := makeTempProjectDir(t)
-	lcDir := filepath.Join(dir, "lifecycle")
-	if err := os.MkdirAll(lcDir, 0o755); err != nil {
-		t.Fatal(err)
+	if _, err := initcmd.ScaffoldProject(initcmd.ScaffoldOptions{
+		ProjectRoot: dir,
+		ProjectName: "existing-already-init",
+		OwnerEmail:  "owner@test",
+	}); err != nil {
+		t.Fatalf("ScaffoldProject: %v", err)
 	}
-	cfgContent := []byte("stages: []\n")
-	cfgPath := filepath.Join(lcDir, "config.yaml")
-	if err := os.WriteFile(cfgPath, cfgContent, 0o644); err != nil {
+	cfgPath := filepath.Join(dir, "lifecycle", "config.yaml")
+	cfgContent, err := os.ReadFile(cfgPath)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	resp := env.doRequest("POST", "/api/projects", createProjectBody("existing-already-init", "existing", map[string]any{
 		"path": dir,
 	}))
-	requireCRUDStatus(t, resp, 200)
+	requireCRUDStatus(t, resp, 201)
 	body := readCRUDJSON(t, resp)
 	if already, _ := body["alreadyInitialised"].(bool); !already {
 		t.Error("alreadyInitialised = false, want true")
 	}
+	if created, _ := body["created"].([]any); len(created) != 0 {
+		t.Errorf("created = %v, want nothing created in a fully-initialised project", created)
+	}
 
 	got, err := os.ReadFile(cfgPath)
 	if err != nil {
-		t.Fatalf("reading config.yaml after rejected re-scaffold: %v", err)
+		t.Fatalf("reading config.yaml after registration: %v", err)
 	}
 	if !bytes.Equal(got, cfgContent) {
-		t.Error("lifecycle/config.yaml was modified despite already-initialised rejection")
+		t.Error("lifecycle/config.yaml was modified when registering an already-initialised project")
 	}
 }
 

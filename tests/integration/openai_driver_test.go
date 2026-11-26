@@ -94,13 +94,24 @@ func TestOpenAIDriver_SingleRoundTrip(t *testing.T) {
 	if len(events) == 0 {
 		t.Fatal("expected progress events")
 	}
-	lastEvent := events[len(events)-1]
-	if lastEvent.Raw != "completed" {
-		t.Errorf("last event raw: got %q, want completed", lastEvent.Raw)
+	// The driver emits a "completed" event carrying the final answer, then a
+	// terminal Claude-style {"type":"result"} event with usage/cost telemetry.
+	var completed *agent.ProgressEvent
+	for i := range events {
+		if events[i].Raw == "completed" {
+			completed = &events[i]
+		}
 	}
-	respText, _ := lastEvent.Event["response"].(string)
+	if completed == nil {
+		t.Fatal("no completed event emitted")
+	}
+	respText, _ := completed.Event["response"].(string)
 	if !strings.Contains(respText, "read the idea file") {
 		t.Errorf("response text mismatch: %q", respText)
+	}
+	lastEvent := events[len(events)-1]
+	if lastEvent.Event["type"] != "result" || lastEvent.Event["subtype"] != "success" {
+		t.Errorf("last event: got type=%v subtype=%v, want result/success", lastEvent.Event["type"], lastEvent.Event["subtype"])
 	}
 }
 
