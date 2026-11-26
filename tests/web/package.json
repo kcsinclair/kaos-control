@@ -18,7 +18,7 @@
     "typescript": "^5.9.3",
     "vite": "^6.4.6",
     "vitest": "^4.1.12",
-    "vue": "^3.4.21",
+    "vue": "^3.5.42",
     "vue-router": "^4.3.0"
   },
   "pnpm": {
@@ -27,7 +27,13 @@
     ],
     "overrides": {
       "nanoid": "^3.3.12",
-      "postcss": "^8.5.18"
+      "postcss": "^8.5.18",
+      "brace-expansion@1": "^1.1.21",
+      "brace-expansion@2": "^2.1.7",
+      "brace-expansion@5": "^5.0.12",
+      "minimatch@>=7 <11.0.1": "^11.0.1",
+      "postcss-selector-parser@6": "^6.1.6",
+      "js-yaml": "^4.3.2"
     }
   }
 }

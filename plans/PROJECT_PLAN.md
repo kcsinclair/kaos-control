@@ -8,6 +8,8 @@ Living document summarising project state. Updated on every commit per the Commi
 
 ## Recent Changes
 
+- **2026-11-27** — All 35 original Dependabot alerts closed after the v0.4.0 merges. Fixed the 10 raised since, in both web/ and tests/web/ (Dependabot's own tests/web update jobs fail with npm registry 401/406 errors on its side): vue ^3.5.42 (→3.5.46, fixes @vue/server-renderer), and overrides for brace-expansion per major (1.1.21/2.1.7/5.0.12), `minimatch@>=7 <11.0.1` → ^11.0.1, postcss-selector-parser ^6.1.6, js-yaml ^4.3.2 (tests/web). build-web, web 285/285, tests/web 1617/1617, lint-frontend pass.
+
 - **2026-11-26** — Checked the 35 open Dependabot security alerts against `main` after the kc-dev merge. Every alert's fixed version is already on `main` except nanoid in tests/web (3.3.11 via a stale postcss 8.5.12, alert #72). Added pnpm overrides in tests/web (`nanoid ^3.3.12`, `postcss ^8.5.18`, matching web/). tests/web 1617/1617 pass.
 
 - **2026-11-26** — Fixed the 20 stale tests in tests/web. `releases-api-unwrap`: the sample release lacked `goal`/`description`, which `normaliseDates` now fills in. `AppHeaderRunIndicator`: the mocked agents store had no `agents` list, which `SwitchoverStatusButton` (rendered in AppHeader) reads through the providerSwitch store. tests/web now passes 1617/1617.
