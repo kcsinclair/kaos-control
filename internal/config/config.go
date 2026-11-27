@@ -643,9 +643,10 @@ type AgentConfig struct {
 
 	// Provider failover fields (switch-provider-3-be). FallbackProvider/Model
 	// name the provider+model to switch to on a transient upstream failure.
-	// PrimaryProvider/Model are populated automatically when a failover takes
-	// the agent off its configured Provider/Model, so it can be restored later;
-	// they are empty when the agent is on its normal (primary) provider.
+	// PrimaryProvider/Model are legacy: switches and failovers no longer write
+	// lifecycle/config.yaml — live active-vs-primary state is kept in the
+	// git-ignored operations.yaml (project.Operations). The fields are still
+	// parsed so older configs that carry them keep loading.
 	FallbackProvider string `yaml:"fallback_provider,omitempty" json:"fallback_provider,omitempty"`
 	FallbackModel    string `yaml:"fallback_model,omitempty" json:"fallback_model,omitempty"`
 	PrimaryProvider  string `yaml:"primary_provider,omitempty" json:"primary_provider,omitempty"`

@@ -267,9 +267,11 @@ agents:
     model: claude-sonnet-5
     fallback_provider: openrouter     # switched to on a matching failure
     fallback_model: anthropic/claude-sonnet-5
-    # primary_provider / primary_model are populated automatically by a
-    # failover and cleared on restore — do not set them by hand.
 ```
+
+`lifecycle/config.yaml` records declared intent only; a switch or failover
+never rewrites it. Which provider an agent is *currently* using lives in
+`operations.yaml` (see [Where switch state is recorded](#where-switch-state-is-recorded)).
 
 ### Automatic failover
 
@@ -288,10 +290,30 @@ When `auto_switch` is on, the queue dispatcher reacts to a matching failure
 kind on a queued job by switching the affected agent to its configured
 `fallback_provider`/`fallback_model` and re-enqueueing the job immediately,
 instead of pausing the whole queue for the usual 30–60 minute backoff. The
-switch preserves the agent's original `provider`/`model` as
-`primary_provider`/`primary_model` so it can be restored later, and is
-recorded in the project's event feed and git commit log (atomic config
-rewrite + hot-reload via `project.ReloadConfig()` — no server restart).
+switch takes effect immediately, with no config rewrite and no server
+restart.
+
+### Where switch state is recorded
+
+Every switch, failover, restore and template application is runtime state,
+not configuration, so it is kept out of `lifecycle/config.yaml` and out of
+git history:
+
+- **`operations.yaml`** at the project root (git-ignored; `kaos-control init`
+  adds it to `.gitignore`) holds each switched agent's *primary* (its
+  config-declared `provider`/`model`, snapshotted at switch time) and its
+  *active* provider/model, the reason and time of the switch, provider
+  reachability from the recovery prober, and a bounded history of the last
+  500 transitions. Restoring an agent clears its entry. Treat the file as
+  owned by the server and do not edit it by hand.
+- The **project event feed** gets a `provider_switched` / `provider_restored`
+  entry, and connected clients receive a `provider.switched` WebSocket event.
+- The **server log** records each transition (provider and model names only,
+  never credentials).
+
+No git commit is made. To see the failover history, use the event feed, the
+failover report, or `GET /api/p/{project}/provider-switch/status`; it is not
+in `git log`.
 
 A **recovery prober** re-probes each switched-away primary provider (a
 bounded `GET <base_url>/v1/models`, non-5xx counts as healthy) every
@@ -306,7 +328,7 @@ REST API (project-scoped, `RolesDevopsOrAdmin`):
 |---|---|---|
 | `GET` | `/api/p/{project}/provider-switch/status` | Current failover status — which agents are on a fallback, primary health. |
 | `POST` | `/api/p/{project}/agents/{name}/switch-provider` | Switch one agent to a named provider/model. |
-| `POST` | `/api/p/{project}/agents/{name}/restore-provider` | Restore one agent to its `primary_provider`/`primary_model`. |
+| `POST` | `/api/p/{project}/agents/{name}/restore-provider` | Restore one agent to its config-declared `provider`/`model` (clears its `operations.yaml` entry). |
 | `POST` | `/api/p/{project}/provider-switch/switch-all` | Batch-switch every agent on one provider to another. |
 | `POST` | `/api/p/{project}/provider-switch/restore-all` | Restore every agent currently on a fallback. |
 | `GET` | `/api/p/{project}/provider-templates` | List named provider templates (bulk provider/model presets across roles). |
