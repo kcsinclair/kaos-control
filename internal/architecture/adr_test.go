@@ -145,3 +145,22 @@ func TestCreateADR_DefaultStatusIsDraftWhenEmpty(t *testing.T) {
 		t.Errorf("expected status: draft, got:\n%s", content)
 	}
 }
+
+// The slug arrives from the API and becomes part of the filename; a slug
+// carrying path separators must not write outside decisions/.
+func TestCreateADR_SlugCannotEscapeDecisionsDir(t *testing.T) {
+	root := t.TempDir()
+	relPath, err := architecture.CreateADR(root, architecture.ADRRequest{
+		Slug:  "x/../../../../escaped",
+		Title: "Traversal attempt",
+	})
+	if err != nil {
+		t.Fatalf("CreateADR: %v", err)
+	}
+	if relPath != "lifecycle/architecture/decisions/adr-0001-x-escaped.md" {
+		t.Errorf("relPath: got %q, want the slug normalised inside decisions/", relPath)
+	}
+	if _, err := os.Stat(filepath.Join(root, "..", "escaped.md")); err == nil {
+		t.Error("CreateADR wrote outside the project root")
+	}
+}

@@ -74,6 +74,11 @@ func CreateADR(projectRoot string, req ADRRequest) (string, error) {
 	if status == "" {
 		status = "draft"
 	}
+	// The slug becomes part of the filename and arrives from the API, so
+	// normalise it: slugify maps everything outside [a-z0-9] to "-", which
+	// rules out path separators and ".." (a slug like "x/../../evil" would
+	// otherwise escape decisions/ once filepath.Join cleans the path).
+	slug := slugify(req.Slug)
 
 	decisionsDir := filepath.Join(projectRoot, filepath.FromSlash(architectureDir), "decisions")
 	if err := os.MkdirAll(decisionsDir, 0o755); err != nil {
@@ -85,7 +90,7 @@ func CreateADR(projectRoot string, req ADRRequest) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		filename := fmt.Sprintf("adr-%04d-%s.md", n, req.Slug)
+		filename := fmt.Sprintf("adr-%04d-%s.md", n, slug)
 		absPath := filepath.Join(decisionsDir, filename)
 
 		if _, statErr := os.Stat(absPath); statErr == nil {
