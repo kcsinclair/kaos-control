@@ -219,6 +219,12 @@ func (s *Server) handleGetRunLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	runID := chi.URLParam(r, "run_id")
+	// run_id becomes a filename under the devops logs dir; anything that is
+	// not a well-formed run ID is simply an unknown run.
+	if !runIDRe.MatchString(runID) {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "run log not found: "+runID))
+		return
+	}
 	data, err := p.DevopsLogs.ReadLogNDJSON(p.Entry.Name, runID)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, apiError("not_found", "run log not found: "+runID))

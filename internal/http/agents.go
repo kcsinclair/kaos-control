@@ -487,6 +487,12 @@ func (s *Server) handleGetAgentRunLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	runID := chi.URLParam(r, "run_id")
+	// run_id becomes a filename under the logs dir. Agent run IDs come from
+	// randomHex(8), the same 16-hex shape as devops runs.
+	if !runIDRe.MatchString(runID) {
+		writeJSON(w, http.StatusNotFound, apiError("not_found", "run not found"))
+		return
+	}
 	logPath := p.Agents.LogPath(runID)
 	if logPath == "" {
 		writeJSON(w, http.StatusNotFound, apiError("no_log", "log files are not enabled for this project"))
