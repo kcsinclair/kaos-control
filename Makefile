@@ -12,7 +12,7 @@ RELEASE_LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION) -X $(MODULE)/inter
 GOBIN := $(shell go env GOPATH)/bin
 export PATH := $(GOBIN):$(PATH)
 
-.PHONY: all build build-web release package test test-unit test-integration lint lint-go lint-frontend clean run
+.PHONY: all build build-web release package publish test test-unit test-integration lint lint-go lint-frontend clean run
 
 all: build-web build
 
@@ -36,6 +36,12 @@ release:
 ##          writes ./dist/SHA256SUMS.
 package: release
 	./scripts/package-release.sh
+
+## publish: create the GitHub release for VERSION (tag vX.Y.Z, title
+##          "kaos-control vX.Y.Z") and upload dist/ zips + SHA256SUMS.
+##          Usage: make publish NOTES=notes.md [DRAFT=0]  (draft by default)
+publish:
+	NOTES="$(NOTES)" DRAFT="$(or $(DRAFT),1)" ./scripts/publish-release.sh
 
 ## build-web: build the Vite frontend into web/dist
 build-web:
