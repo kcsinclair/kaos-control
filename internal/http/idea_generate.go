@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/kaos-control/kaos-control/internal/artifact"
 	"github.com/kaos-control/kaos-control/internal/ideachat"
 	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/project"
+	"github.com/kaos-control/kaos-control/internal/sandbox"
 )
 
 // handleIdeaGenerate handles POST /api/p/:project/ideas/generate.
@@ -39,10 +39,10 @@ func (s *Server) handleIdeaGenerate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Input          string `json:"input"`
-		ArtifactType   string `json:"type"`
-		SourceLineage  string `json:"source_lineage"`
-		SourcePath     string `json:"source_path"`
+		Input         string `json:"input"`
+		ArtifactType  string `json:"type"`
+		SourceLineage string `json:"source_lineage"`
+		SourcePath    string `json:"source_path"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, apiError("bad_request", "invalid JSON: "+err.Error()))
@@ -150,8 +150,18 @@ func buildDocSourceContext(p *project.Project, sourceLineage, sourcePath string)
 	var sb strings.Builder
 
 	// Helper to read and parse an artifact from disk, returning its body.
+	// sourcePath comes from the request body and the body read here is sent
+	// to the LLM (and can be echoed back), so only read indexed lifecycle
+	// artifacts, resolved through the sandbox. A path like
+	// "../../.kaos-control/config.yaml" is otherwise readable.
 	readBody := func(relPath string) string {
-		absPath := filepath.Join(p.Entry.Path, relPath)
+		if row, err := p.Idx.Get(relPath); err != nil || row == nil {
+			return ""
+		}
+		absPath, err := sandbox.Resolve(p.Entry.Path, relPath)
+		if err != nil {
+			return ""
+		}
 		raw, err := os.ReadFile(absPath)
 		if err != nil {
 			return ""
