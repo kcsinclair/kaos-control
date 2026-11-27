@@ -56,7 +56,7 @@ If your reaction to "I unleashed Claude Code on the repo overnight" is *"…and 
 
 ## Tech stack
 
-- **Backend**: Go 1.25, `chi`, `goldmark`, `modernc.org/sqlite` (pure-Go), `go-git`, `coder/websocket`, `fsnotify`. Local-model agents talk to Ollama over plain `net/http` — no extra library dependency.
+- **Backend**: Go 1.26, `chi`, `goldmark`, `modernc.org/sqlite` (pure-Go), `go-git`, `coder/websocket`, `fsnotify`. Local and hosted models are reached through the OpenAI-compatible driver over plain `net/http` — no extra library dependency.
 - **Frontend**: Vue 3, Vite 6, TypeScript, Pinia, `markdown-it`, `3d-force-graph` + three.js, Cytoscape.js + fcose, CodeMirror 6.
 
 ---
@@ -328,7 +328,7 @@ Rebuild + restart on demand (e.g. after a `git pull`): `launchctl kickstart -k g
 
 |                                  | Version | Why                                                                                                           |
 | -------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
-| **Go**                           | 1.25+   | Builds the server binary.                                                                                     |
+| **Go**                           | 1.26+   | Builds the server binary.                                                                                     |
 | **Node.js**                      | 20 LTS+ | Builds the embedded SPA. See [install steps](#nodejs-20-lts-or-newer) below.                                  |
 | **pnpm**                         | 9+      | The frontend's package manager. See [install steps](#pnpm-9) below.                                           |
 | **Git**                          | 2.30+   | The server commits artifact changes to your project's git repo.                                               |

@@ -966,7 +966,7 @@ const (
 	SwitchoverReasonModelUnloaded         = "model_unloaded"
 	SwitchoverReasonToolsUnsupported      = "tools_unsupported"
 	SwitchoverReasonContextWindowExceeded = "context_window_exceeded"
-	SwitchoverReasonTurnTokenCeiling      = "turn_token_ceiling"
+	SwitchoverReasonTurnTokenCeiling      = "turn_token_ceiling" // #nosec G101 -- failure-reason label, not a credential
 	SwitchoverReasonMaxIterationsReached  = "max_iterations_reached"
 	SwitchoverReasonTimeout               = "timeout"
 )

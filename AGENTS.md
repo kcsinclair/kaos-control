@@ -68,7 +68,7 @@ App config lives at `~/.kaos-control/config.yaml`; project registrations at `~/.
 
 ## Tech stack (in use)
 
-**Backend** — Go 1.25+ stdlib `net/http` + `go-chi/chi`; `goldmark` (markdown), `gopkg.in/yaml.v3`, `fsnotify`, `coder/websocket`, `modernc.org/sqlite` (pure-Go), `go-git/go-git`.
+**Backend** — Go 1.26+ stdlib `net/http` + `go-chi/chi`; `goldmark` (markdown), `gopkg.in/yaml.v3`, `fsnotify`, `coder/websocket`, `modernc.org/sqlite` (pure-Go), `go-git/go-git`.
 
 **Frontend** — Vite 5, Vue 3.5 SFCs, TypeScript, Pinia, Vue Router 4, `markdown-it`, `3d-force-graph` + three.js (3D), Cytoscape.js + cytoscape-fcose (2D), CodeMirror 6 (editor), lucide-vue-next (icons).
 
