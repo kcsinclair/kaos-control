@@ -81,7 +81,10 @@ stages:
 		t.Fatal(err)
 	}
 
-	// Create the SQLite DB with the releases schema.
+	// Create a SQLite DB with an older releases schema (no goal/description
+	// columns, no schema_version), as left behind by a pre-upgrade server.
+	// The CLI must open it through index.Open, which rebuilds it, rather than
+	// querying it directly.
 	dbDir := filepath.Join(dataDir, name)
 	if err := os.MkdirAll(dbDir, 0o755); err != nil {
 		t.Fatal(err)

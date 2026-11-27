@@ -5,7 +5,6 @@ package releasescmd
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"github.com/kaos-control/kaos-control/internal/config"
+	"github.com/kaos-control/kaos-control/internal/index"
 	"github.com/kaos-control/kaos-control/internal/release"
 )
 
@@ -79,15 +79,24 @@ func runRehydrate(args []string) error {
 		return fmt.Errorf("project %q not found in registry", *projectName)
 	}
 
-	// Open the project's SQLite DB.
-	dbPath := filepath.Join(appCfg.DataDir, entry.Name, "index.db")
-	db, err := sql.Open("sqlite", dbPath+"?_journal=WAL&_busy_timeout=5000")
+	// Open the project's index through index.Open, as the server does, so an
+	// index.db written by an older version is schema-checked and rebuilt
+	// first. Opening the SQLite file directly broke after upgrades: the
+	// release store queries columns (goal, description) that an older schema
+	// lacks. No hub/workflow/git is attached, so the rebuild only re-indexes;
+	// it never auto-transitions or rewrites artifacts.
+	projCfg, err := config.LoadProject(entry.Path)
 	if err != nil {
-		return fmt.Errorf("opening db at %s: %w", dbPath, err)
+		return fmt.Errorf("loading project config: %w", err)
 	}
-	defer db.Close()
+	dbPath := filepath.Join(appCfg.DataDir, entry.Name, "index.db")
+	idx, err := index.Open(dbPath, entry.Path, projCfg.Stages, index.WithIgnore(projCfg.Ignore))
+	if err != nil {
+		return fmt.Errorf("opening index at %s: %w", dbPath, err)
+	}
+	defer idx.Close()
 
-	store := release.NewStore(db)
+	store := release.NewStore(idx.DB())
 	result, err := release.Rehydrate(context.Background(), store, entry.Name, entry.Path)
 	if err != nil {
 		return fmt.Errorf("rehydrate: %w", err)
